@@ -178,8 +178,7 @@ namespace VideoTXL
 
         public override void OnInspectorGUI()
         {
-            if (UdonSharpGUI.DrawConvertToUdonBehaviourButton(target) ||
-                UdonSharpGUI.DrawProgramSource(target))
+            if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
 
             EditorGUILayout.PropertyField(multipleResolutionsProperty);
