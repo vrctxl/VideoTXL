@@ -48,12 +48,22 @@ namespace VideoTXL
         public GameObject muteToggleOff;
         public GameObject audio2DToggleOn;
         public GameObject audio2DToggleOff;
+        public GameObject infoToggleOn;
+        public GameObject infoToggleOff;
         public Slider volumeSlider;
 
         public Slider progressSlider;
         public Text statusText;
         public Text urlText;
         public Text placeholderText;
+
+        public GameObject infoPanel;
+        public Text instanceOwnerText;
+        public Text masterText;
+        public Text playerOwnerText;
+        public Text videoOwnerText;
+        public InputField currentVideoInput;
+        public InputField lastVideoInput;
 
         bool progressSliderValid;
 
@@ -75,6 +85,8 @@ namespace VideoTXL
         const int PLAYER_STATE_PAUSED = 2;
         const int PLAYER_STATE_PLAYING = 3;
         const int PLAYER_STATE_ERROR = 4;
+
+        bool infoPanelOpen = false;
 
         void Start()
         {
@@ -219,6 +231,14 @@ namespace VideoTXL
 
         }
 
+        public void _HandleInfo()
+        {
+            infoPanelOpen = !infoPanelOpen;
+            infoToggleOn.SetActive(infoPanelOpen);
+            infoToggleOff.SetActive(!infoPanelOpen);
+            infoPanel.SetActive(infoPanelOpen);
+        }
+
         bool _draggingProgressSlider = false;
 
         public void _HandleProgressBeginDrag()
@@ -346,7 +366,14 @@ namespace VideoTXL
                     urlInput.readOnly = false;
                 }
             }
-            
+
+            // Move out of update
+            instanceOwnerText.text = videoPlayer.instanceOwner;
+            masterText.text = videoPlayer.instanceMaster;
+            playerOwnerText.text = videoPlayer.playerOwner;
+            videoOwnerText.text = videoPlayer.videoOwner;
+            currentVideoInput.text = videoPlayer.currentUrl;
+            lastVideoInput.text = videoPlayer.lastUrl;
         }
 
         void SetStatusText(string msg)
@@ -418,12 +445,22 @@ namespace VideoTXL
         SerializedProperty muteToggleOffProperty;
         SerializedProperty audio2DToggleOnProperty;
         SerializedProperty audio2DToggleOffProperty;
+        SerializedProperty infoToggleOnProperty;
+        SerializedProperty infoToggleOffProperty;
         SerializedProperty volumeSliderProperty;
 
         SerializedProperty progressSliderProperty;
         SerializedProperty statusTextProperty;
         SerializedProperty urlTextProperty;
         SerializedProperty placeholderTextProperty;
+
+        SerializedProperty infoPanelProperty;
+        SerializedProperty instanceOwnerTextProperty;
+        SerializedProperty masterTextProperty;
+        SerializedProperty playerOwnerTextProperty;
+        SerializedProperty videoOwnerTextProperty;
+        SerializedProperty currentVideoInputProperty;
+        SerializedProperty lastVideoInputProperty;
 
         SerializedProperty backgroundImgsProperty;
         SerializedProperty backgroundMsgBarImgsProperty;
@@ -469,12 +506,22 @@ namespace VideoTXL
             muteToggleOffProperty = serializedObject.FindProperty(nameof(PlayerControls.muteToggleOff));
             audio2DToggleOnProperty = serializedObject.FindProperty(nameof(PlayerControls.audio2DToggleOn));
             audio2DToggleOffProperty = serializedObject.FindProperty(nameof(PlayerControls.audio2DToggleOff));
+            infoToggleOnProperty = serializedObject.FindProperty(nameof(PlayerControls.infoToggleOn));
+            infoToggleOffProperty = serializedObject.FindProperty(nameof(PlayerControls.infoToggleOff));
             volumeSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeSlider));
 
             statusTextProperty = serializedObject.FindProperty(nameof(PlayerControls.statusText));
             placeholderTextProperty = serializedObject.FindProperty(nameof(PlayerControls.placeholderText));
             urlTextProperty = serializedObject.FindProperty(nameof(PlayerControls.urlText));
             progressSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.progressSlider));
+
+            infoPanelProperty = serializedObject.FindProperty(nameof(PlayerControls.infoPanel));
+            instanceOwnerTextProperty = serializedObject.FindProperty(nameof(PlayerControls.instanceOwnerText));
+            masterTextProperty = serializedObject.FindProperty(nameof(PlayerControls.masterText));
+            playerOwnerTextProperty = serializedObject.FindProperty(nameof(PlayerControls.playerOwnerText));
+            videoOwnerTextProperty = serializedObject.FindProperty(nameof(PlayerControls.videoOwnerText));
+            currentVideoInputProperty = serializedObject.FindProperty(nameof(PlayerControls.currentVideoInput));
+            lastVideoInputProperty = serializedObject.FindProperty(nameof(PlayerControls.lastVideoInput));
 
             backgroundImgsProperty = serializedObject.FindProperty(nameof(PlayerControls.backgroundImgs));
             backgroundMsgBarImgsProperty = serializedObject.FindProperty(nameof(PlayerControls.backgroundMsgBarImgs));
@@ -538,11 +585,20 @@ namespace VideoTXL
                 EditorGUILayout.PropertyField(muteToggleOffProperty);
                 EditorGUILayout.PropertyField(audio2DToggleOnProperty);
                 EditorGUILayout.PropertyField(audio2DToggleOffProperty);
+                EditorGUILayout.PropertyField(infoToggleOnProperty);
+                EditorGUILayout.PropertyField(infoToggleOffProperty);
                 EditorGUILayout.PropertyField(volumeSliderProperty);
                 EditorGUILayout.PropertyField(progressSliderProperty);
                 EditorGUILayout.PropertyField(statusTextProperty);
                 EditorGUILayout.PropertyField(urlTextProperty);
                 EditorGUILayout.PropertyField(placeholderTextProperty);
+                EditorGUILayout.PropertyField(infoPanelProperty);
+                EditorGUILayout.PropertyField(instanceOwnerTextProperty);
+                EditorGUILayout.PropertyField(masterTextProperty);
+                EditorGUILayout.PropertyField(playerOwnerTextProperty);
+                EditorGUILayout.PropertyField(videoOwnerTextProperty);
+                EditorGUILayout.PropertyField(currentVideoInputProperty);
+                EditorGUILayout.PropertyField(lastVideoInputProperty);
                 EditorGUI.indentLevel--;
             }
             EditorGUILayout.Space();

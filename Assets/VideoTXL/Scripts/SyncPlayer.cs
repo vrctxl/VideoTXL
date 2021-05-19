@@ -112,6 +112,19 @@ namespace VideoTXL
         [NonSerialized]
         public float trackPosition;
 
+        [NonSerialized]
+        public string instanceOwner;
+        [NonSerialized]
+        public string instanceMaster;
+        [NonSerialized]
+        public string playerOwner;
+        [NonSerialized]
+        public string videoOwner;
+        [NonSerialized]
+        public string currentUrl;
+        [NonSerialized]
+        public string lastUrl;
+
         // Constants
 
         const int PLAYER_MODE_VIDEO = 0;
@@ -233,6 +246,9 @@ namespace VideoTXL
                 _Resync();
             else
                 _PlayVideo(_GetSelectedUrl());
+
+            //if (Networking.IsOwner(gameObject))
+            //    videoOwner = Networking.LocalPlayer.displayName;
         }
 
         public void _SetTargetTime(float time)
@@ -264,6 +280,9 @@ namespace VideoTXL
 
             if (!isOwner)
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            lastUrl = currentUrl;
+            currentUrl = url.Get();
 
             _syncUrl = url;
             _syncVideoNumber += isOwner ? 1 : 2;
@@ -609,6 +628,44 @@ namespace VideoTXL
             _currentPlayer.Stop();
             if (_syncOwnerPlaying)
                 _StartVideoLoad(_syncUrl);
+        }
+
+        public override void OnPlayerJoined(VRCPlayerApi player)
+        {
+            _RefreshOwnerData();
+        }
+
+        public override void OnPlayerLeft(VRCPlayerApi player)
+        {
+            _RefreshOwnerData();
+        }
+
+        public override void OnOwnershipTransferred(VRCPlayerApi player)
+        {
+            _RefreshOwnerData();
+        }
+
+        void _RefreshOwnerData()
+        {
+            int playerCount = VRCPlayerApi.GetPlayerCount();
+            VRCPlayerApi[] playerList = new VRCPlayerApi[playerCount];
+            playerList = VRCPlayerApi.GetPlayers(playerList);
+
+            foreach (VRCPlayerApi player in playerList)
+            {
+                if (!Utilities.IsValid(player))
+                    continue;
+                if (player.isInstanceOwner)
+                    instanceOwner = player.displayName;
+                if (player.isMaster)
+                    instanceMaster = player.displayName;
+            }
+
+            VRCPlayerApi objOwner = Networking.GetOwner(gameObject);
+            if (Utilities.IsValid(objOwner))
+                playerOwner = objOwner.displayName;
+            else
+                playerOwner = "";
         }
 
         // Debug
