@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using VRC.SDKBase;
 using VRC.Udon;
 using VRC.SDK3.Components;
+using VRC.SDK3.Components.Video;
 
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
 using UnityEditor;
@@ -36,6 +37,8 @@ namespace VideoTXL
 
         public GameObject volumeSliderControl;
         public GameObject audio2DControl;
+        public GameObject urlInputControl;
+        public GameObject progressSliderControl;
 
         //public GameObject toggle720On;
         //public GameObject toggle720Off;
@@ -49,6 +52,10 @@ namespace VideoTXL
 
         public Slider progressSlider;
         public Text statusText;
+        public Text urlText;
+        public Text placeholderText;
+
+        bool progressSliderValid;
 
         public Image[] backgroundImgs;
         public Image[] backgroundMsgBarImgs;
@@ -63,6 +70,12 @@ namespace VideoTXL
         public Image[] sliderDimImgs;
         public Image[] sliderGrabImgs;
 
+        const int PLAYER_STATE_STOPPED = 0;
+        const int PLAYER_STATE_LOADING = 1;
+        const int PLAYER_STATE_PAUSED = 2;
+        const int PLAYER_STATE_PLAYING = 3;
+        const int PLAYER_STATE_ERROR = 4;
+
         void Start()
         {
             //SendCustomEventDelayedFrames("_UpdateLayout", 1);
@@ -71,6 +84,8 @@ namespace VideoTXL
                 volumeController._RegisterControls(gameObject);
             //if (Utilities.IsValid(staticUrlSource))
             //    staticUrlSource._RegisterControls(gameObject);
+
+            progressSliderValid = Utilities.IsValid(progressSliderControl);
 
             _UpdateColor();
         }
@@ -171,6 +186,7 @@ namespace VideoTXL
         {
             if (Utilities.IsValid(videoPlayer))
                 videoPlayer._ChangeUrl(urlInput.GetUrl());
+            urlInput.SetUrl(VRCUrl.Empty);
         }
 
         public void _UrlChanged()
@@ -194,7 +210,8 @@ namespace VideoTXL
 
         public void _HandleStop()
         {
-
+            if (Utilities.IsValid(videoPlayer))
+                videoPlayer._TriggerStop();
         }
 
         public void _HandlePlayPause()
@@ -255,21 +272,81 @@ namespace VideoTXL
 
         private void Update()
         {
-            if (float.IsInfinity(videoPlayer.trackDuration) || videoPlayer.trackDuration <= 0)
-                SetStatusText("Streaming...");
-            else if (_draggingProgressSlider)
+            if (videoPlayer.localPlayerState == PLAYER_STATE_PLAYING)
             {
-                string durationStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration).ToString(@"hh\:mm\:ss");
-                string positionStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration * progressSlider.value).ToString(@"hh\:mm\:ss");
-                SetStatusText(positionStr + "/" + durationStr);
-            }
-            else
+                urlInput.readOnly = true;
+                urlInputControl.SetActive(false);
+                if (!videoPlayer.seekableSource)
+                {
+                    SetStatusText("Streaming...");
+                    if (progressSliderValid)
+                        progressSliderControl.SetActive(false);
+                    
+                    
+                }
+                else if (_draggingProgressSlider)
+                {
+                    string durationStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration).ToString(@"hh\:mm\:ss");
+                    string positionStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration * progressSlider.value).ToString(@"hh\:mm\:ss");
+                    SetStatusText(positionStr + "/" + durationStr);
+                    if (progressSliderValid)
+                        progressSliderControl.SetActive(true);
+                }
+                else
+                {
+                    string durationStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration).ToString(@"hh\:mm\:ss");
+                    string positionStr = System.TimeSpan.FromSeconds(videoPlayer.trackPosition).ToString(@"hh\:mm\:ss");
+                    SetStatusText(positionStr + "/" + durationStr);
+                    if (progressSliderValid)
+                    {
+                        progressSliderControl.SetActive(true);
+                        progressSlider.value = Mathf.Clamp01(videoPlayer.trackPosition / videoPlayer.trackDuration);
+                    }
+                }
+            } else
             {
-                string durationStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration).ToString(@"hh\:mm\:ss");
-                string positionStr = System.TimeSpan.FromSeconds(videoPlayer.trackPosition).ToString(@"hh\:mm\:ss");
-                SetStatusText(positionStr + "/" + durationStr);
-                progressSlider.value = Mathf.Clamp01(videoPlayer.trackPosition / videoPlayer.trackDuration);
+                urlInput.readOnly = false;
+                urlInputControl.SetActive(true);
+                SetStatusText("");
+                if (progressSliderValid)
+                    progressSliderControl.SetActive(false);
+
+                if (videoPlayer.localPlayerState == PLAYER_STATE_LOADING)
+                {
+                    placeholderText.text = "Loading...";
+                    urlInput.readOnly = true;
+                }
+                else if (videoPlayer.localPlayerState == PLAYER_STATE_ERROR)
+                {
+                    switch (videoPlayer.localLastErrorCode)
+                    {
+                        case VideoError.RateLimited:
+                            placeholderText.text = "Rate limited, wait and try again";
+                            break;
+                        case VideoError.PlayerError:
+                            placeholderText.text = "Video player error";
+                            break;
+                        case VideoError.InvalidURL:
+                            placeholderText.text = "Invalid URL or source offline";
+                            break;
+                        case VideoError.AccessDenied:
+                            placeholderText.text = "Video blocked, enable untrusted URLs";
+                            break;
+                        case VideoError.Unknown:
+                        default:
+                            placeholderText.text = "Failed to load video";
+                            break;
+                    }
+
+                    urlInput.readOnly = false;
+                }
+                else if (videoPlayer.localPlayerState == PLAYER_STATE_STOPPED)
+                {
+                    placeholderText.text = "Enter Video URL...";
+                    urlInput.readOnly = false;
+                }
             }
+            
         }
 
         void SetStatusText(string msg)
@@ -331,6 +408,8 @@ namespace VideoTXL
 
         SerializedProperty volumeSliderControlProperty;
         SerializedProperty audio2DControlProperty;
+        SerializedProperty urlInputControlProperty;
+        SerializedProperty progressSliderControlProperty;
         //SerializedProperty toggle720OnProperty;
         //SerializedProperty toggle720OffProperty;
         //SerializedProperty toggle1080OnProperty;
@@ -343,6 +422,8 @@ namespace VideoTXL
 
         SerializedProperty progressSliderProperty;
         SerializedProperty statusTextProperty;
+        SerializedProperty urlTextProperty;
+        SerializedProperty placeholderTextProperty;
 
         SerializedProperty backgroundImgsProperty;
         SerializedProperty backgroundMsgBarImgsProperty;
@@ -378,6 +459,8 @@ namespace VideoTXL
 
             volumeSliderControlProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeSliderControl));
             audio2DControlProperty = serializedObject.FindProperty(nameof(PlayerControls.audio2DControl));
+            progressSliderControlProperty = serializedObject.FindProperty(nameof(PlayerControls.progressSliderControl));
+            urlInputControlProperty = serializedObject.FindProperty(nameof(PlayerControls.urlInputControl));
             //toggle720OnProperty = serializedObject.FindProperty(nameof(LocalControls.toggle720On));
             //toggle720OffProperty = serializedObject.FindProperty(nameof(LocalControls.toggle720Off));
             //toggle1080OnProperty = serializedObject.FindProperty(nameof(LocalControls.toggle1080On));
@@ -389,6 +472,8 @@ namespace VideoTXL
             volumeSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeSlider));
 
             statusTextProperty = serializedObject.FindProperty(nameof(PlayerControls.statusText));
+            placeholderTextProperty = serializedObject.FindProperty(nameof(PlayerControls.placeholderText));
+            urlTextProperty = serializedObject.FindProperty(nameof(PlayerControls.urlText));
             progressSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.progressSlider));
 
             backgroundImgsProperty = serializedObject.FindProperty(nameof(PlayerControls.backgroundImgs));
@@ -443,6 +528,8 @@ namespace VideoTXL
                 EditorGUILayout.PropertyField(urlInputProperty);
                 EditorGUILayout.PropertyField(volumeSliderControlProperty);
                 EditorGUILayout.PropertyField(audio2DControlProperty);
+                EditorGUILayout.PropertyField(urlInputControlProperty);
+                EditorGUILayout.PropertyField(progressSliderControlProperty);
                 //EditorGUILayout.PropertyField(toggle720OnProperty);
                 //EditorGUILayout.PropertyField(toggle720OffProperty);
                 //EditorGUILayout.PropertyField(toggle1080OnProperty);
@@ -454,6 +541,8 @@ namespace VideoTXL
                 EditorGUILayout.PropertyField(volumeSliderProperty);
                 EditorGUILayout.PropertyField(progressSliderProperty);
                 EditorGUILayout.PropertyField(statusTextProperty);
+                EditorGUILayout.PropertyField(urlTextProperty);
+                EditorGUILayout.PropertyField(placeholderTextProperty);
                 EditorGUI.indentLevel--;
             }
             EditorGUILayout.Space();

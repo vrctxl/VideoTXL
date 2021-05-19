@@ -43,6 +43,8 @@ namespace VideoTXL
         float syncFrequency = 5;
         float syncThreshold = 1;
 
+        GameObject[] eventHandlers;
+
         public Text statusText;
 
         [UdonSynced]
@@ -58,13 +60,26 @@ namespace VideoTXL
         int _syncVideoNumber;
         int _loadedVideoNumber;
 
-        [UdonSynced]
-        bool _syncOwnerPlaying;
+        [UdonSynced, NonSerialized]
+        public bool _syncOwnerPlaying;
+        bool _localLoading = false;
+        bool _localPlaying = false;
 
         [UdonSynced]
         float _syncVideoStartNetworkTime;
 
         bool _rtsptSource = false;
+
+        const int PLAYER_STATE_STOPPED = 0;
+        const int PLAYER_STATE_LOADING = 1;
+        const int PLAYER_STATE_PAUSED = 2;
+        const int PLAYER_STATE_PLAYING = 3;
+        const int PLAYER_STATE_ERROR = 4;
+
+        [NonSerialized]
+        public int localPlayerState = PLAYER_STATE_STOPPED;
+        [NonSerialized]
+        public VideoError localLastErrorCode;
 
         const int SCREEN_MODE_NORMAL = 0;
         const int SCREEN_MODE_LOGO = 1;
@@ -78,7 +93,6 @@ namespace VideoTXL
 
         BaseVRCVideoPlayer _currentPlayer;
 
-        bool _seekableSource;
         float _lastVideoPosition = 0;
         float _videoTargetTime = 0;
 
@@ -91,6 +105,8 @@ namespace VideoTXL
 
         // Realtime state
 
+        [NonSerialized]
+        public bool seekableSource;
         [NonSerialized]
         public float trackDuration;
         [NonSerialized]
@@ -140,6 +156,45 @@ namespace VideoTXL
             _initComplete = true;
         }
 
+        public void _RegisterEventHandler(GameObject handler)
+        {
+            if (!Utilities.IsValid(handler))
+                return;
+
+            if (!Utilities.IsValid(eventHandlers))
+                eventHandlers = new GameObject[0];
+
+            foreach (GameObject h in eventHandlers)
+            {
+                if (h == handler)
+                    return;
+            }
+
+            GameObject[] newHandlers = new GameObject[eventHandlers.Length + 1];
+            for (int i = 0; i < eventHandlers.Length; i++)
+                newHandlers[i] = eventHandlers[i];
+
+            newHandlers[eventHandlers.Length] = handler;
+            eventHandlers = newHandlers;
+
+            Debug.Log("[VideoTXL:SyncPlayer] registering new event handler");
+        }
+
+        void _EmitEvent(string eventName)
+        {
+            if (!Utilities.IsValid(eventHandlers))
+                return;
+
+            foreach (GameObject handler in eventHandlers)
+            {
+                if (!Utilities.IsValid(handler))
+                    continue;
+                UdonBehaviour script = (UdonBehaviour)handler.GetComponent(typeof(UdonBehaviour));
+                if (Utilities.IsValid(script))
+                    script.SendCustomEvent(eventName);
+            }
+        }
+
         public void _TriggerPlay()
         {
             DebugLog("Trigger play");
@@ -155,6 +210,7 @@ namespace VideoTXL
         public void _TriggerStop()
         {
             _StopVideo();
+            localPlayerState = PLAYER_STATE_STOPPED;
             _UpdateScreenMaterial(SCREEN_MODE_LOGO);
         }
 
@@ -181,7 +237,7 @@ namespace VideoTXL
 
         public void _SetTargetTime(float time)
         {
-            _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInMilliseconds() - time;
+            _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - time;
             SyncVideo();
         }
 
@@ -232,7 +288,7 @@ namespace VideoTXL
                 string urlStr = url.Get();
 
                 // RTSPT sources (and maybe others!?) trigger a spontaneous OnVideoEnd event at video start
-                if (unityVideo == null && urlStr.Contains("rtspt://"))
+                if (_currentPlayer == avProVideo && urlStr.Contains("rtspt://"))
                 {
                     _rtsptSource = true;
                     DebugLog("Detected RTSPT source");
@@ -242,8 +298,11 @@ namespace VideoTXL
             }
 
             playingOrLoading = true;
+            localPlayerState = PLAYER_STATE_LOADING;
 
             _UpdateScreenMaterial(SCREEN_MODE_LOADING);
+            _EmitEvent("_SyncPlayer_Play");
+
             _currentPlayer.Stop();
 #if !UNITY_EDITOR
             _currentPlayer.LoadURL(url);
@@ -262,11 +321,15 @@ namespace VideoTXL
 
             playAt = 0;
             playingOrLoading = false;
+            localPlayerState = PLAYER_STATE_STOPPED;
+
+            _EmitEvent("_SyncPlayer_Stop");
         }
 
         public override void OnVideoReady()
         {
-            DebugLog("Video ready");
+            float duration = _currentPlayer.GetDuration();
+            DebugLog("Video ready, duration: " + duration);
 
             if (_hasTriggerManager && !triggerManager._IsTriggerActive())
             {
@@ -279,8 +342,7 @@ namespace VideoTXL
                 audioManager._VideoStart();
 
             // If a seekable video is loaded it should have a positive duration.  Otherwise we assume it's a non-seekable stream
-            float duration = _currentPlayer.GetDuration();
-            _seekableSource = !float.IsInfinity(duration) && !float.IsNaN(duration) && duration > 1;
+            seekableSource = !float.IsInfinity(duration) && !float.IsNaN(duration) && duration > 1;
 
             // If player is owner: play video
             // If Player is remote:
@@ -322,6 +384,8 @@ namespace VideoTXL
                 _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _videoTargetTime;
                 _syncOwnerPlaying = true;
                 _UpdateScreenMaterial(SCREEN_MODE_NORMAL);
+                localPlayerState = PLAYER_STATE_PLAYING;
+                _EmitEvent("_SyncPlayer_Start");
             }
             else
             {
@@ -333,6 +397,7 @@ namespace VideoTXL
                 } else
                 {
                     _UpdateScreenMaterial(SCREEN_MODE_NORMAL);
+                    localPlayerState = PLAYER_STATE_PLAYING;
                     SyncVideo();
                 }
             }
@@ -349,6 +414,7 @@ namespace VideoTXL
             }
 
             playingOrLoading = false;
+            localPlayerState = PLAYER_STATE_STOPPED;
 
             DebugLog("Video end");
             _lastVideoPosition = 0;
@@ -358,7 +424,12 @@ namespace VideoTXL
                 audioManager._VideoStop();
 
             if (Networking.IsOwner(gameObject))
+            {
                 _syncVideoStartNetworkTime = 0;
+                _syncOwnerPlaying = false;
+            }
+
+            _EmitEvent("_SyncPlayer_Stop");
         }
 
         public override void OnVideoError(VideoError videoError)
@@ -371,6 +442,8 @@ namespace VideoTXL
             DebugLog("Error code: " + videoError);
 
             playingOrLoading = false;
+            localPlayerState = PLAYER_STATE_ERROR;
+            localLastErrorCode = videoError;
 
             if (_hasScreenManager)
                 screenManager._UpdateVideoError(videoError);
@@ -379,6 +452,8 @@ namespace VideoTXL
 
             if (Utilities.IsValid(audioManager))
                 audioManager._VideoStop();
+
+            _EmitEvent("_SyncPlayer_Error");
 
             if (retryOnError)
                 _PlayVideoAfter(url, retryTimeout);
@@ -466,8 +541,11 @@ namespace VideoTXL
                 _PlayVideo(playAtUrl);
             }
 
-            trackDuration = _currentPlayer.GetDuration();
-            trackPosition = _currentPlayer.GetTime();
+            if (seekableSource && localPlayerState == PLAYER_STATE_PLAYING)
+            {
+                trackDuration = _currentPlayer.GetDuration();
+                trackPosition = _currentPlayer.GetTime();
+            }
 
             // Video is playing: periodically sync with owner
             if (isOwner || !_waitForSync)
@@ -484,6 +562,9 @@ namespace VideoTXL
             _waitForSync = false;
             _currentPlayer.Play();
 
+            _EmitEvent("_SyncPlayer_Start");
+            localPlayerState = PLAYER_STATE_PLAYING;
+
             SyncVideo();
         }
 
@@ -498,7 +579,7 @@ namespace VideoTXL
 
         void SyncVideo()
         {
-            if (_seekableSource)
+            if (seekableSource)
             {
                 float offsetTime = Mathf.Clamp((float)Networking.GetServerTimeInSeconds() - _syncVideoStartNetworkTime, 0f, _currentPlayer.GetDuration());
                 if (Mathf.Abs(_currentPlayer.GetTime() - offsetTime) > syncThreshold)
@@ -511,7 +592,7 @@ namespace VideoTXL
             bool isOwner = Networking.IsOwner(gameObject);
             if (isOwner)
             {
-                if (_seekableSource)
+                if (seekableSource)
                 {
                     float startTime = _videoTargetTime;
                     if (_currentPlayer.IsPlaying)
