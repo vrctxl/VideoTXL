@@ -15,20 +15,20 @@ Prefabs for sync and local video players built from common components.  Local vi
 * Video seeking and current position / duration
 
 ## Shared Components
-* Screen Manager
+### Screen Manager
   * Can show alternate screens for stopped, loading, error, and audio-only states
   * Can update materials on multiple screen objects
   * Can update textures on multiple materials
   * Auto-detect audio-only sources
-* Audio Manager
+### Audio Manager
   * Manage volume on multiple audio sources
   * Supports separate base and overlay audio sources with different volume ratio when using an AVPro vidoe source
   * Supports artificially scaling volume between two collision boundaries
-* Trigger Manager
+### Trigger Manager
   * Support playing video on world load
   * Support playing video when entering or leaving zones
   * Support playing video with play/stop buttons
-* Local Controls
+### Local Controls
   * A separate UI providing local-only AV options that can be duplicated in the world any number of times
   * Quickly setup for any of these options:
     * Volume slider
