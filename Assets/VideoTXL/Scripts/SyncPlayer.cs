@@ -290,6 +290,7 @@ namespace VideoTXL
             _syncOwnerPlaying = false;
 
             _syncVideoStartNetworkTime = float.MaxValue;
+            RequestSerialization();
 
             _StartVideoLoad(url);
         }
@@ -336,7 +337,9 @@ namespace VideoTXL
             _currentPlayer.Stop();
             _syncVideoStartNetworkTime = 0;
             _syncOwnerPlaying = false;
+            _syncUrl = VRCUrl.Empty;
             _videoTargetTime = 0;
+            RequestSerialization();
 
             playAt = 0;
             playingOrLoading = false;
@@ -402,6 +405,7 @@ namespace VideoTXL
             {
                 _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _videoTargetTime;
                 _syncOwnerPlaying = true;
+                RequestSerialization();
                 _UpdateScreenMaterial(SCREEN_MODE_NORMAL);
                 localPlayerState = PLAYER_STATE_PLAYING;
                 _EmitEvent("_SyncPlayer_Start");
@@ -446,6 +450,7 @@ namespace VideoTXL
             {
                 _syncVideoStartNetworkTime = 0;
                 _syncOwnerPlaying = false;
+                RequestSerialization();
             }
 
             _EmitEvent("_SyncPlayer_Stop");
@@ -497,6 +502,7 @@ namespace VideoTXL
                 _currentPlayer = avProVideo;
 
             _localPlayerMode = mode;
+            RequestSerialization();
         }
 
         bool LocalIsOwner()
@@ -515,10 +521,10 @@ namespace VideoTXL
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
         }
 
-        int _deserializeCounter;
+        //int _deserializeCounter;
         public override void OnPreSerialization()
         {
-            _deserializeCounter = 0;
+            //_deserializeCounter = 0;
         }
 
         public override void OnDeserialization()
@@ -526,16 +532,21 @@ namespace VideoTXL
             if (Networking.IsOwner(gameObject))
                 return;
 
+            DebugLog($"Deserialize: video #{_syncVideoNumber}");
+
             // Needed to prevent "rewinding" behaviour of Udon synced strings/VRCUrl's where, when switching ownership 
             // the string will be populated with the second to last value locally observed.
-            if (_deserializeCounter < 10)
-            {
-                _deserializeCounter++;
-                return;
-            }
+            //if (_deserializeCounter < 10)
+            //{
+            //    _deserializeCounter++;
+            //    return;
+            //}
 
             if (_localPlayerMode != _syncPlayerMode)
                 ChangePlayerMode(_syncPlayerMode);
+
+            if (localPlayerState == PLAYER_STATE_PLAYING && !_syncOwnerPlaying)
+                _StopVideo();
 
             if (_syncVideoNumber == _loadedVideoNumber)
                 return;
@@ -544,6 +555,9 @@ namespace VideoTXL
 
             _localUrl = _syncUrl;
             _loadedVideoNumber = _syncVideoNumber;
+
+            lastUrl = currentUrl;
+            currentUrl = _localUrl.Get();
 
             DebugLog("Starting video load from sync");
 

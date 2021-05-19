@@ -50,6 +50,11 @@ namespace VideoTXL
         public GameObject audio2DToggleOff;
         public GameObject infoToggleOn;
         public GameObject infoToggleOff;
+        public GameObject stopButton;
+        public GameObject stopButtonDisabled;
+        public GameObject pauseButton;
+        public GameObject playButton;
+        public GameObject playButtonDisabled;
         public Slider volumeSlider;
 
         public Slider progressSlider;
@@ -296,6 +301,9 @@ namespace VideoTXL
             {
                 urlInput.readOnly = true;
                 urlInputControl.SetActive(false);
+                stopButton.SetActive(true);
+                stopButtonDisabled.SetActive(false);
+
                 if (!videoPlayer.seekableSource)
                 {
                     SetStatusText("Streaming...");
@@ -327,6 +335,9 @@ namespace VideoTXL
             {
                 urlInput.readOnly = false;
                 urlInputControl.SetActive(true);
+                stopButton.SetActive(false);
+                stopButtonDisabled.SetActive(true);
+
                 SetStatusText("");
                 if (progressSliderValid)
                     progressSliderControl.SetActive(false);
@@ -447,6 +458,11 @@ namespace VideoTXL
         SerializedProperty audio2DToggleOffProperty;
         SerializedProperty infoToggleOnProperty;
         SerializedProperty infoToggleOffProperty;
+        SerializedProperty stopButtonProperty;
+        SerializedProperty stopButtonDisabledProperty;
+        SerializedProperty pauseButtonProperty;
+        SerializedProperty playButtonProperty;
+        SerializedProperty playButtonDisabledProperty;
         SerializedProperty volumeSliderProperty;
 
         SerializedProperty progressSliderProperty;
@@ -508,6 +524,11 @@ namespace VideoTXL
             audio2DToggleOffProperty = serializedObject.FindProperty(nameof(PlayerControls.audio2DToggleOff));
             infoToggleOnProperty = serializedObject.FindProperty(nameof(PlayerControls.infoToggleOn));
             infoToggleOffProperty = serializedObject.FindProperty(nameof(PlayerControls.infoToggleOff));
+            stopButtonProperty = serializedObject.FindProperty(nameof(PlayerControls.stopButton));
+            stopButtonDisabledProperty = serializedObject.FindProperty(nameof(PlayerControls.stopButtonDisabled));
+            pauseButtonProperty = serializedObject.FindProperty(nameof(PlayerControls.pauseButton));
+            playButtonProperty = serializedObject.FindProperty(nameof(PlayerControls.playButton));
+            playButtonDisabledProperty = serializedObject.FindProperty(nameof(PlayerControls.playButtonDisabled));
             volumeSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeSlider));
 
             statusTextProperty = serializedObject.FindProperty(nameof(PlayerControls.statusText));
@@ -586,6 +607,11 @@ namespace VideoTXL
                 EditorGUILayout.PropertyField(audio2DToggleOffProperty);
                 EditorGUILayout.PropertyField(infoToggleOnProperty);
                 EditorGUILayout.PropertyField(infoToggleOffProperty);
+                EditorGUILayout.PropertyField(stopButtonProperty);
+                EditorGUILayout.PropertyField(stopButtonDisabledProperty);
+                EditorGUILayout.PropertyField(pauseButtonProperty);
+                EditorGUILayout.PropertyField(playButtonProperty);
+                EditorGUILayout.PropertyField(playButtonDisabledProperty);
                 EditorGUILayout.PropertyField(volumeSliderProperty);
                 EditorGUILayout.PropertyField(progressSliderProperty);
                 EditorGUILayout.PropertyField(statusTextProperty);
