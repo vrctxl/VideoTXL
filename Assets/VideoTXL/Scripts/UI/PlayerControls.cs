@@ -55,6 +55,9 @@ namespace VideoTXL
         public GameObject pauseButton;
         public GameObject playButton;
         public GameObject playButtonDisabled;
+        public GameObject lockButtonOpen;
+        public GameObject lockButtonClosed;
+        public GameObject lockButtonDenied;
         public Slider volumeSlider;
 
         public Slider progressSlider;
@@ -244,6 +247,12 @@ namespace VideoTXL
             infoPanel.SetActive(infoPanelOpen);
         }
 
+        public void _HandleLock()
+        {
+            if (Utilities.IsValid(videoPlayer))
+                videoPlayer._TriggerLock();
+        }
+
         bool _draggingProgressSlider = false;
 
         public void _HandleProgressBeginDrag()
@@ -378,6 +387,10 @@ namespace VideoTXL
                 }
             }
 
+            lockButtonClosed.SetActive(videoPlayer.locked && videoPlayer.localPlayerAccess);
+            lockButtonDenied.SetActive(videoPlayer.locked && !videoPlayer.localPlayerAccess);
+            lockButtonOpen.SetActive(!videoPlayer.locked);
+
             // Move out of update
             instanceOwnerText.text = videoPlayer.instanceOwner;
             masterText.text = videoPlayer.instanceMaster;
@@ -463,6 +476,9 @@ namespace VideoTXL
         SerializedProperty pauseButtonProperty;
         SerializedProperty playButtonProperty;
         SerializedProperty playButtonDisabledProperty;
+        SerializedProperty lockButtonOpenProperty;
+        SerializedProperty lockButtonClosedProperty;
+        SerializedProperty lockButtonDeniedProperty;
         SerializedProperty volumeSliderProperty;
 
         SerializedProperty progressSliderProperty;
@@ -529,6 +545,9 @@ namespace VideoTXL
             pauseButtonProperty = serializedObject.FindProperty(nameof(PlayerControls.pauseButton));
             playButtonProperty = serializedObject.FindProperty(nameof(PlayerControls.playButton));
             playButtonDisabledProperty = serializedObject.FindProperty(nameof(PlayerControls.playButtonDisabled));
+            lockButtonOpenProperty = serializedObject.FindProperty(nameof(PlayerControls.lockButtonOpen));
+            lockButtonClosedProperty = serializedObject.FindProperty(nameof(PlayerControls.lockButtonClosed));
+            lockButtonDeniedProperty = serializedObject.FindProperty(nameof(PlayerControls.lockButtonDenied));
             volumeSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeSlider));
 
             statusTextProperty = serializedObject.FindProperty(nameof(PlayerControls.statusText));
@@ -612,6 +631,9 @@ namespace VideoTXL
                 EditorGUILayout.PropertyField(pauseButtonProperty);
                 EditorGUILayout.PropertyField(playButtonProperty);
                 EditorGUILayout.PropertyField(playButtonDisabledProperty);
+                EditorGUILayout.PropertyField(lockButtonOpenProperty);
+                EditorGUILayout.PropertyField(lockButtonClosedProperty);
+                EditorGUILayout.PropertyField(lockButtonDeniedProperty);
                 EditorGUILayout.PropertyField(volumeSliderProperty);
                 EditorGUILayout.PropertyField(progressSliderProperty);
                 EditorGUILayout.PropertyField(statusTextProperty);

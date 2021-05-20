@@ -22,9 +22,14 @@ namespace VideoTXL
     [AddComponentMenu("VideoTXL/Sync Player")]
     public class SyncPlayer : UdonSharpBehaviour
     {
+        [Tooltip("Optional component to control and synchronize player video screens and materials")]
         public ScreenManager screenManager;
+        [Tooltip("Optional component to control and synchronize player audio sources")]
         public VolumeController audioManager;
+        [Tooltip("Optional component to start or stop player based on common trigger events")]
         public TriggerManager triggerManager;
+        [Tooltip("Optional component to control access to player controls based on player type or whitelist")]
+        public AccessControl accessControl;
 
         [Tooltip("Video Player Reference")]
         public VRCUnityVideoPlayer unityVideo;
@@ -34,6 +39,8 @@ namespace VideoTXL
         public VRCUrl defaultUrl;
         public bool legacyVideoPlayback = false;
         public bool defaultStream = false;
+
+        public bool defaultLocked = false;
 
         public bool loop;
         public bool resumePosition;
@@ -68,6 +75,9 @@ namespace VideoTXL
         [UdonSynced]
         float _syncVideoStartNetworkTime;
 
+        [UdonSynced]
+        bool _syncLocked = true;
+
         bool _rtsptSource = false;
 
         const int PLAYER_STATE_STOPPED = 0;
@@ -90,6 +100,7 @@ namespace VideoTXL
         bool _hasScreenManager = false;
         bool _hasTriggerManager = false;
         bool _hasAudioManager = false;
+        bool _hasAccessControl = false;
 
         BaseVRCVideoPlayer _currentPlayer;
 
@@ -125,6 +136,11 @@ namespace VideoTXL
         [NonSerialized]
         public string lastUrl;
 
+        [NonSerialized]
+        public bool locked;
+        [NonSerialized]
+        public bool localPlayerAccess;
+
         // Constants
 
         const int PLAYER_MODE_VIDEO = 0;
@@ -144,6 +160,10 @@ namespace VideoTXL
             if (!Utilities.IsValid(audioManager))
                 audioManager = GetComponentInChildren<VolumeController>();
             _hasAudioManager = Utilities.IsValid(audioManager);
+
+            if (!Utilities.IsValid(accessControl))
+                accessControl = GetComponentInChildren<AccessControl>();
+            _hasAccessControl = Utilities.IsValid(accessControl);
 
             unityVideo.Loop = false;
             unityVideo.Stop();
@@ -222,6 +242,11 @@ namespace VideoTXL
 
         public void _TriggerStop()
         {
+            if (_syncLocked && !CanTakeControl())
+                return;
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
             _StopVideo();
             localPlayerState = PLAYER_STATE_STOPPED;
             _UpdateScreenMaterial(SCREEN_MODE_LOGO);
@@ -231,6 +256,18 @@ namespace VideoTXL
         {
             _StopVideo();
             _PlayVideo(_GetSelectedUrl());
+        }
+
+        public void _TriggerLock()
+        {
+            if (!CanTakeControl())
+                return;
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            _syncLocked = !_syncLocked;
+            locked = _syncLocked;
+            RequestSerialization();
         }
 
         public void _UrlChanged()
@@ -512,7 +549,15 @@ namespace VideoTXL
 
         bool CanTakeControl()
         {
-            return true;
+            // TODO: not the right place for this
+            if (_hasAccessControl)
+                localPlayerAccess = accessControl._LocalHasAccess();
+            else
+                localPlayerAccess = false;
+
+            if (_hasAccessControl)
+                return accessControl._LocalHasAccess();
+            return !_syncLocked;
         }
 
         void TakeOwnership()
@@ -541,6 +586,8 @@ namespace VideoTXL
             //    _deserializeCounter++;
             //    return;
             //}
+
+            locked = _syncLocked;
 
             if (_localPlayerMode != _syncPlayerMode)
                 ChangePlayerMode(_syncPlayerMode);
@@ -735,6 +782,7 @@ namespace VideoTXL
         SerializedProperty screenManagerProperty;
         SerializedProperty audioManagerProperty;
         SerializedProperty triggerManagerProperty;
+        SerializedProperty accessControlProperty;
 
         SerializedProperty avProVideoPlayerProperty;
         SerializedProperty unityVideoPlayerProperty;
@@ -752,6 +800,7 @@ namespace VideoTXL
             screenManagerProperty = serializedObject.FindProperty(nameof(SyncPlayer.screenManager));
             audioManagerProperty = serializedObject.FindProperty(nameof(SyncPlayer.audioManager));
             triggerManagerProperty = serializedObject.FindProperty(nameof(SyncPlayer.triggerManager));
+            accessControlProperty = serializedObject.FindProperty(nameof(SyncPlayer.accessControl));
 
             avProVideoPlayerProperty = serializedObject.FindProperty(nameof(SyncPlayer.avProVideo));
             unityVideoPlayerProperty = serializedObject.FindProperty(nameof(SyncPlayer.unityVideo));
@@ -773,6 +822,7 @@ namespace VideoTXL
             EditorGUILayout.PropertyField(screenManagerProperty);
             EditorGUILayout.PropertyField(audioManagerProperty);
             EditorGUILayout.PropertyField(triggerManagerProperty);
+            EditorGUILayout.PropertyField(accessControlProperty);
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(unityVideoPlayerProperty);
             EditorGUILayout.PropertyField(avProVideoPlayerProperty);
