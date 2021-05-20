@@ -91,6 +91,9 @@ namespace VideoTXL
         [NonSerialized]
         public VideoError localLastErrorCode;
 
+        public const int SCREEN_SOURCE_UNITY = 0;
+        public const int SCREEN_SOURCE_AVPRO = 1;
+
         const int SCREEN_MODE_NORMAL = 0;
         const int SCREEN_MODE_LOGO = 1;
         const int SCREEN_MODE_LOADING = 2;
@@ -184,6 +187,9 @@ namespace VideoTXL
         public void _Init()
         {
             ChangePlayerMode(defaultStream ? PLAYER_MODE_STREAM : PLAYER_MODE_VIDEO);
+
+            if (_hasScreenManager)
+                screenManager._UpdateScreenSource((_localPlayerMode == PLAYER_MODE_VIDEO && legacyVideoPlayback) ? SCREEN_SOURCE_UNITY : SCREEN_SOURCE_AVPRO);
 
             _UpdateScreenMaterial(SCREEN_MODE_LOGO);
             _initComplete = true;
@@ -454,7 +460,8 @@ namespace VideoTXL
                     // TODO: Owner bypass
                     _currentPlayer.Pause();
                     _waitForSync = true;
-                } else
+                }
+                else
                 {
                     _UpdateScreenMaterial(SCREEN_MODE_NORMAL);
                     localPlayerState = PLAYER_STATE_PLAYING;
@@ -534,9 +541,19 @@ namespace VideoTXL
 
             _currentPlayer.Stop();
             if (mode == PLAYER_MODE_VIDEO && legacyVideoPlayback)
+            {
                 _currentPlayer = unityVideo;
+                if (_hasScreenManager)
+                    screenManager._UpdateScreenSource(SCREEN_SOURCE_UNITY);
+                DebugLog($"Change player mode to {mode}, using unity video");
+            }
             else
+            {
                 _currentPlayer = avProVideo;
+                if (_hasScreenManager)
+                    screenManager._UpdateScreenSource(SCREEN_SOURCE_AVPRO);
+                DebugLog($"Change player mode to {mode}, using AVPro");
+            }
 
             _localPlayerMode = mode;
             RequestSerialization();
@@ -752,7 +769,8 @@ namespace VideoTXL
             if (!Utilities.IsValid(debugText))
                 return;
 
-            if (debugLines == null || debugLines.Length == 0) {
+            if (debugLines == null || debugLines.Length == 0)
+            {
                 debugLines = new string[28];
                 for (int i = 0; i < debugLines.Length; i++)
                     debugLines[i] = "";
@@ -790,6 +808,7 @@ namespace VideoTXL
         //SerializedProperty staticUrlSourceProperty;
         SerializedProperty urlProperty;
 
+        SerializedProperty legacyVideoProperty;
         SerializedProperty loopProperty;
         SerializedProperty resumePositionProperty;
 
@@ -808,6 +827,7 @@ namespace VideoTXL
             //staticUrlSourceProperty = serializedObject.FindProperty(nameof(SyncPlayer.staticUrlSource));
             urlProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultUrl));
 
+            legacyVideoProperty = serializedObject.FindProperty(nameof(SyncPlayer.legacyVideoPlayback));
             loopProperty = serializedObject.FindProperty(nameof(SyncPlayer.loop));
             resumePositionProperty = serializedObject.FindProperty(nameof(SyncPlayer.resumePosition));
 
@@ -829,12 +849,14 @@ namespace VideoTXL
             EditorGUILayout.Space();
             //EditorGUILayout.PropertyField(staticUrlSourceProperty);
             //if (staticUrlSourceProperty.objectReferenceValue == null)
-                EditorGUILayout.PropertyField(urlProperty);
+            EditorGUILayout.PropertyField(urlProperty);
             if (unityVideoPlayerProperty.objectReferenceValue != null)
             {
                 EditorGUILayout.PropertyField(loopProperty);
                 EditorGUILayout.PropertyField(resumePositionProperty);
             }
+
+            EditorGUILayout.PropertyField(legacyVideoProperty);
 
             EditorGUILayout.PropertyField(debugTextProperty);
 

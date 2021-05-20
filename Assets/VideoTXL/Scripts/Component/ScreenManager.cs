@@ -165,7 +165,8 @@ namespace VideoTXL
                 Texture tex = null;
                 int avPro = 0;
 
-                if (replacemenMat == null) {
+                if (replacemenMat == null)
+                {
                     tex = captureMaterial.GetTexture(captureTextureProperty);
                     if (_screenSource == SCREEN_SOURCE_AVPRO)
                         avPro = 1;
@@ -193,6 +194,8 @@ namespace VideoTXL
                 int delay = _checkFrameCount < 100 ? 1 : 10;
                 SendCustomEventDelayedFrames("_CheckUpdateScreenMaterial", delay);
             }
+            else
+                Debug.Log("[VideoTXL:ScreenManager] Capture valid");
         }
 
         public void _UpdateScreenMaterial(int screenMode)
