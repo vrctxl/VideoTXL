@@ -33,7 +33,7 @@ namespace VideoTXL
 
         public bool retryOnError = true;
         public float retryTimeout = 6;
-        
+
         bool _rtsptSource = false;
 
         const int SCREEN_SOURCE_UNITY = 0;
@@ -64,16 +64,13 @@ namespace VideoTXL
 
         VRCUrl playAtUrl;
         float playAt = 0;
+        float playStartTime = 0;
+        float trackDuration = 0;
         bool playingOrLoading = false;
 
         void Start()
         {
-            if (!Utilities.IsValid(screenManager))
-                screenManager = GetComponentInChildren<ScreenManager>();
             _hasScreenManager = Utilities.IsValid(screenManager);
-
-            if (!Utilities.IsValid(triggerManager))
-                triggerManager = GetComponentInChildren<TriggerManager>();
             _hasTriggerManager = Utilities.IsValid(triggerManager);
 
             if (Utilities.IsValid(staticUrlSource))
@@ -109,6 +106,7 @@ namespace VideoTXL
 
         public void _TriggerPlay()
         {
+            Debug.Log("[VideoTXL:ZonedStreamPlayer] Trigger play");
             if (playAt > 0 || playingOrLoading)
                 return;
 
@@ -154,25 +152,24 @@ namespace VideoTXL
         void _PlayVideo(VRCUrl url)
         {
             playAt = 0;
-            if (url == null || url.Get() == "")
+            if (!Utilities.IsValid(url))
                 return;
 
-            Debug.Log("[VideoTXL:ZonedStreamPlayer] Play video stream " + url);
+            string urlStr = url.Get();
+            if (urlStr == null || urlStr == "")
+                return;
 
-            if (url != null)
+            Debug.Log("[VideoTXL:ZonedStreamPlayer] Play video stream " + urlStr);
+
+            // RTSPT sources (and maybe others!?) trigger a spontaneous OnVideoEnd event at video start
+            if (!Utilities.IsValid(unityVideo) && urlStr.Contains("rtspt://"))
             {
-                string urlStr = url.Get();
-
-                // RTSPT sources (and maybe others!?) trigger a spontaneous OnVideoEnd event at video start
-                if (unityVideo == null && urlStr.Contains("rtspt://"))
-                {
-                    _rtsptSource = true;
-                    Debug.Log("[VideoTXL:ZonedStreamPlayer] Detected RTSPT source");
-                }
-                else
-                    _rtsptSource = false;
                 _rtsptSource = true;
+                Debug.Log("[VideoTXL:ZonedStreamPlayer] Detected RTSPT source");
             }
+            else
+                _rtsptSource = false;
+            _rtsptSource = true;
 
             //if (audio != null)
             //    audio.enabled = true;
@@ -236,16 +233,26 @@ namespace VideoTXL
                     _currentPlayer.SetTime(_lastVideoPosition);
                     _lastVideoPosition = 0;
                 }
+                trackDuration = _currentPlayer.GetDuration();
+                playStartTime = Time.time;
             }
         }
 
         public override void OnVideoEnd()
         {
-            if (_rtsptSource)
+            if (float.IsInfinity(trackDuration) || trackDuration == 0)
             {
-                Debug.Log("[VideoTXL:ZonedStreamPlayer] Video ended (ignored) for RTSPT source");
-                return;
+                if (Time.time < playStartTime + 1)
+                {
+                    Debug.Log("[VideoTXL:ZonedStreamPlayer] Video stream ended within 1s of start, ignoring event");
+                    return;
+                }
             }
+            //if (_rtsptSource)
+            //{
+            //    Debug.Log("[VideoTXL:ZonedStreamPlayer] Video ended (ignored) for RTSPT source");
+            //    return;
+            //}
 
             playingOrLoading = false;
 
@@ -338,7 +345,8 @@ namespace VideoTXL
 
         public override void OnInspectorGUI()
         {
-            if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
+            if (UdonSharpGUI.DrawConvertToUdonBehaviourButton(target) ||
+                UdonSharpGUI.DrawProgramSource(target))
                 return;
 
             EditorGUILayout.PropertyField(screenManagerProperty);

@@ -25,13 +25,11 @@ namespace VideoTXL
 
         public bool autoLayout = true;
         //public bool enableResync = true;
-        //public bool enableQualitySelect = false;
         public bool enableVolume = true;
         public bool enable2DAudioToggle = true;
 
         public GameObject volumeGroup;
         //public GameObject resyncGroup;
-        //public GameObject toggleGroup;
 
         public VRCUrlInputField urlInput;
 
@@ -40,10 +38,6 @@ namespace VideoTXL
         public GameObject urlInputControl;
         public GameObject progressSliderControl;
 
-        //public GameObject toggle720On;
-        //public GameObject toggle720Off;
-        //public GameObject toggle1080On;
-        //public GameObject toggle1080Off;
         public GameObject muteToggleOn;
         public GameObject muteToggleOff;
         public GameObject audio2DToggleOn;
@@ -90,20 +84,23 @@ namespace VideoTXL
 
         const int PLAYER_STATE_STOPPED = 0;
         const int PLAYER_STATE_LOADING = 1;
-        const int PLAYER_STATE_PAUSED = 2;
-        const int PLAYER_STATE_PLAYING = 3;
-        const int PLAYER_STATE_ERROR = 4;
+        const int PLAYER_STATE_PLAYING = 2;
+        const int PLAYER_STATE_ERROR = 3;
 
         bool infoPanelOpen = false;
 
+        string statusOverride = null;
+        string instanceMaster = "";
+        string instanceOwner = "";
+
         void Start()
         {
-            //SendCustomEventDelayedFrames("_UpdateLayout", 1);
-
             if (Utilities.IsValid(volumeController))
                 volumeController._RegisterControls(gameObject);
-            //if (Utilities.IsValid(staticUrlSource))
-            //    staticUrlSource._RegisterControls(gameObject);
+
+#if !UNITY_EDITOR
+            instanceMaster = Networking.GetOwner(gameObject).displayName;
+#endif
 
             progressSliderValid = Utilities.IsValid(progressSliderControl);
 
@@ -141,40 +138,6 @@ namespace VideoTXL
                 if (image != null) image.color = colorProfile.sliderGrabColor;
         }
 
-        /*public void _UpdateLayout()
-        {
-            if (!autoLayout)
-                return;
-
-            bool volumePresent = Utilities.IsValid(volumeGroup) && Utilities.IsValid(volumeController);
-
-            if (enableVolume && volumePresent)
-            {
-                if (Utilities.IsValid(audio2DControl))
-                    audio2DControl.SetActive(enable2DAudioToggle);
-
-                RectTransform volumeRT = volumeSlider.GetComponent<RectTransform>();
-                if (Utilities.IsValid(audio2DControl) && enable2DAudioToggle)
-                    volumeRT.offsetMax = new Vector2(-25, volumeRT.offsetMax.y);
-                else
-                    volumeRT.offsetMax = new Vector2(0, volumeRT.offsetMax.y);
-            }
-
-            if (Utilities.IsValid(volumeGroup))
-                volumeGroup.SetActive(enableVolume);
-
-            bool qualityDepsMet = Utilities.IsValid(staticUrlSource) && staticUrlSource.multipleResolutions;
-
-            if (Utilities.IsValid(resyncGroup))
-                resyncGroup.SetActive(enableResync);
-            if (Utilities.IsValid(toggleGroup))
-                toggleGroup.SetActive(enableQualitySelect && qualityDepsMet);
-            if (Utilities.IsValid(messageBarGroup))
-                messageBarGroup.SetActive(enableMessageBar);
-
-            UpdateToggleVisual();
-        }*/
-
         bool inVolumeControllerUpdate = false;
 
         public void _VolumeControllerUpdate()
@@ -209,29 +172,21 @@ namespace VideoTXL
             urlInput.SetUrl(VRCUrl.Empty);
         }
 
-        public void _UrlChanged()
+        public void _HandleUrlInputClick()
         {
-            UpdateToggleVisual();
+            if (!videoPlayer._CanTakeControl())
+                _SetStatusOverride(MakeOwnerMessage(), 3);
         }
-
-        /*public void _SetQuality720()
-        {
-            if (Utilities.IsValid(staticUrlSource))
-                staticUrlSource._SetQuality720();
-            UpdateToggleVisual();
-        }
-
-        public void _SetQuality1080()
-        {
-            if (Utilities.IsValid(staticUrlSource))
-                staticUrlSource._SetQuality1080();
-            UpdateToggleVisual();
-        }*/
 
         public void _HandleStop()
         {
-            if (Utilities.IsValid(videoPlayer))
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
+            if (videoPlayer._CanTakeControl())
                 videoPlayer._TriggerStop();
+            else
+                _SetStatusOverride(MakeOwnerMessage(), 3);
         }
 
         public void _HandlePlayPause()
@@ -249,8 +204,13 @@ namespace VideoTXL
 
         public void _HandleLock()
         {
-            if (Utilities.IsValid(videoPlayer))
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
+            if (videoPlayer._CanTakeControl())
                 videoPlayer._TriggerLock();
+            else
+                _SetStatusOverride(MakeOwnerMessage(), 3);
         }
 
         bool _draggingProgressSlider = false;
@@ -304,20 +264,34 @@ namespace VideoTXL
                 volumeController._ApplyVolume(volumeSlider.value);
         }
 
+        void _SetStatusOverride(string msg, float timeout)
+        {
+            statusOverride = msg;
+            SendCustomEventDelayedSeconds("_ClearStatusOverride", timeout);
+        }
+
+        public void _ClearStatusOverride()
+        {
+            statusOverride = null;
+        }
+
         private void Update()
         {
+            bool canControl = videoPlayer._CanTakeControl();
+
             if (videoPlayer.localPlayerState == PLAYER_STATE_PLAYING)
             {
                 urlInput.readOnly = true;
                 urlInputControl.SetActive(false);
-                stopButton.SetActive(true);
-                stopButtonDisabled.SetActive(false);
+
+                bool enableControl = !videoPlayer.locked || canControl;
+                stopButton.SetActive(enableControl);
+                stopButtonDisabled.SetActive(!enableControl);
 
                 if (!videoPlayer.seekableSource)
                 {
                     SetStatusText("Streaming...");
-                    if (progressSliderValid)
-                        progressSliderControl.SetActive(false);
+                    progressSliderControl.SetActive(false);
                     
                     
                 }
@@ -326,97 +300,132 @@ namespace VideoTXL
                     string durationStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration).ToString(@"hh\:mm\:ss");
                     string positionStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration * progressSlider.value).ToString(@"hh\:mm\:ss");
                     SetStatusText(positionStr + "/" + durationStr);
-                    if (progressSliderValid)
-                        progressSliderControl.SetActive(true);
+                    progressSliderControl.SetActive(true);
                 }
                 else
                 {
                     string durationStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration).ToString(@"hh\:mm\:ss");
                     string positionStr = System.TimeSpan.FromSeconds(videoPlayer.trackPosition).ToString(@"hh\:mm\:ss");
                     SetStatusText(positionStr + "/" + durationStr);
-                    if (progressSliderValid)
-                    {
-                        progressSliderControl.SetActive(true);
-                        progressSlider.value = Mathf.Clamp01(videoPlayer.trackPosition / videoPlayer.trackDuration);
-                    }
+                    progressSliderControl.SetActive(true);
+                    progressSlider.value = Mathf.Clamp01(videoPlayer.trackPosition / videoPlayer.trackDuration);
                 }
+                progressSlider.interactable = canControl;
             } else
             {
-                urlInput.readOnly = false;
-                urlInputControl.SetActive(true);
                 stopButton.SetActive(false);
                 stopButtonDisabled.SetActive(true);
-
-                SetStatusText("");
-                if (progressSliderValid)
-                    progressSliderControl.SetActive(false);
+                progressSliderControl.SetActive(false);
+                urlInputControl.SetActive(true);
 
                 if (videoPlayer.localPlayerState == PLAYER_STATE_LOADING)
                 {
-                    placeholderText.text = "Loading...";
+                    SetPlaceholderText("Loading...");
                     urlInput.readOnly = true;
+                    SetStatusText("");
                 }
                 else if (videoPlayer.localPlayerState == PLAYER_STATE_ERROR)
                 {
                     switch (videoPlayer.localLastErrorCode)
                     {
                         case VideoError.RateLimited:
-                            placeholderText.text = "Rate limited, wait and try again";
+                            SetPlaceholderText("Rate limited, wait and try again");
                             break;
                         case VideoError.PlayerError:
-                            placeholderText.text = "Video player error";
+                            SetPlaceholderText("Video player error");
                             break;
                         case VideoError.InvalidURL:
-                            placeholderText.text = "Invalid URL or source offline";
+                            SetPlaceholderText("Invalid URL or source offline");
                             break;
                         case VideoError.AccessDenied:
-                            placeholderText.text = "Video blocked, enable untrusted URLs";
+                            SetPlaceholderText("Video blocked, enable untrusted URLs");
                             break;
                         case VideoError.Unknown:
                         default:
-                            placeholderText.text = "Failed to load video";
+                            SetPlaceholderText("Failed to load video");
                             break;
                     }
 
-                    urlInput.readOnly = false;
+                    urlInput.readOnly = !canControl;
+                    SetStatusText("");
                 }
                 else if (videoPlayer.localPlayerState == PLAYER_STATE_STOPPED)
                 {
-                    placeholderText.text = "Enter Video URL...";
-                    urlInput.readOnly = false;
+                    urlInput.readOnly = !canControl;
+                    if (canControl)
+                    {
+                        SetPlaceholderText("Enter Video URL...");
+                        SetStatusText("");
+                    }
+                    else
+                    {
+                        SetPlaceholderText("");
+                        SetStatusText(MakeOwnerMessage());
+                    }
                 }
             }
 
-            lockButtonClosed.SetActive(videoPlayer.locked && videoPlayer.localPlayerAccess);
-            lockButtonDenied.SetActive(videoPlayer.locked && !videoPlayer.localPlayerAccess);
+            lockButtonClosed.SetActive(videoPlayer.locked && canControl);
+            lockButtonDenied.SetActive(videoPlayer.locked && !canControl);
             lockButtonOpen.SetActive(!videoPlayer.locked);
 
             // Move out of update
-            instanceOwnerText.text = videoPlayer.instanceOwner;
-            masterText.text = videoPlayer.instanceMaster;
-            playerOwnerText.text = videoPlayer.playerOwner;
-            videoOwnerText.text = videoPlayer.videoOwner;
+            instanceOwnerText.text = instanceOwner;
+            masterText.text = instanceMaster;
+            playerOwnerText.text = Networking.GetOwner(videoPlayer.gameObject).displayName;
+            // videoOwnerText.text = videoPlayer.videoOwner;
             currentVideoInput.text = videoPlayer.currentUrl;
             lastVideoInput.text = videoPlayer.lastUrl;
         }
 
         void SetStatusText(string msg)
         {
-            statusText.text = msg;
+            if (statusOverride != null)
+                statusText.text = statusOverride;
+            else
+                statusText.text = msg;
+        }
+
+        void SetPlaceholderText(string msg)
+        {
+            if (statusOverride != null)
+                placeholderText.text = "";
+            else
+                placeholderText.text = msg;
+        }
+
+        void FindOwners()
+        {
+            int playerCount = VRCPlayerApi.GetPlayerCount();
+            VRCPlayerApi[] playerList = new VRCPlayerApi[playerCount];
+            playerList = VRCPlayerApi.GetPlayers(playerList);
+
+            foreach (VRCPlayerApi player in playerList)
+            {
+                if (!Utilities.IsValid(player))
+                    continue;
+                if (player.isInstanceOwner)
+                    instanceOwner = player.displayName;
+                if (player.isMaster)
+                    instanceMaster = player.displayName;
+            }
+        }
+
+        string MakeOwnerMessage()
+        {
+            if (instanceMaster == instanceOwner || instanceOwner == "")
+                return $"Controls locked to master {instanceMaster}";
+            else
+                return $"Controls locked to master {instanceMaster} and owner {instanceOwner}";
+        }
+
+        public override void OnPlayerLeft(VRCPlayerApi player)
+        {
+            instanceMaster = Networking.GetOwner(gameObject).displayName;
         }
 
         void UpdateToggleVisual()
         {
-            /*if (Utilities.IsValid(staticUrlSource))
-            {
-                bool is720 = staticUrlSource._IsQuality720();
-                bool is1080 = staticUrlSource._IsQuality1080();
-                toggle720On.SetActive(is720);
-                toggle720Off.SetActive(!is720);
-                toggle1080On.SetActive(is1080);
-                toggle1080Off.SetActive(!is1080);
-            }*/
-
             if (Utilities.IsValid(volumeController))
             {
                 if (Utilities.IsValid(muteToggleOn) && Utilities.IsValid(muteToggleOff))
@@ -441,19 +450,16 @@ namespace VideoTXL
         static bool _showColorFoldout;
 
         SerializedProperty videoPlayerProperty;
-        //SerializedProperty staticUrlSourceProperty;
         SerializedProperty volumeControllerProperty;
         SerializedProperty colorProfileProperty;
 
         SerializedProperty autoLayoutProperty;
         //SerializedProperty enableResyncProprety;
-        //SerializedProperty enableQualitySelectProperty;
         SerializedProperty enableVolumeProperty;
         SerializedProperty enable2DAudioProperty;
 
         SerializedProperty volumeGroupProperty;
         //SerializedProperty resyncGroupProperty;
-        //SerializedProperty qualityGroupproperty;
 
         SerializedProperty urlInputProperty;
 
@@ -461,10 +467,6 @@ namespace VideoTXL
         SerializedProperty audio2DControlProperty;
         SerializedProperty urlInputControlProperty;
         SerializedProperty progressSliderControlProperty;
-        //SerializedProperty toggle720OnProperty;
-        //SerializedProperty toggle720OffProperty;
-        //SerializedProperty toggle1080OnProperty;
-        //SerializedProperty toggle1080OffProperty;
         SerializedProperty muteToggleOnProperty;
         SerializedProperty muteToggleOffProperty;
         SerializedProperty audio2DToggleOnProperty;
@@ -510,19 +512,16 @@ namespace VideoTXL
         private void OnEnable()
         {
             videoPlayerProperty = serializedObject.FindProperty(nameof(PlayerControls.videoPlayer));
-            //staticUrlSourceProperty = serializedObject.FindProperty(nameof(LocalControls.staticUrlSource));
             volumeControllerProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeController));
             colorProfileProperty = serializedObject.FindProperty(nameof(PlayerControls.colorProfile));
 
             autoLayoutProperty = serializedObject.FindProperty(nameof(PlayerControls.autoLayout));
             //enableResyncProprety = serializedObject.FindProperty(nameof(LocalControls.enableResync));
-            //enableQualitySelectProperty = serializedObject.FindProperty(nameof(LocalControls.enableQualitySelect));
             enableVolumeProperty = serializedObject.FindProperty(nameof(PlayerControls.enableVolume));
             enable2DAudioProperty = serializedObject.FindProperty(nameof(PlayerControls.enable2DAudioToggle));
 
             volumeGroupProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeGroup));
             //resyncGroupProperty = serializedObject.FindProperty(nameof(LocalControls.resyncGroup));
-            //qualityGroupproperty = serializedObject.FindProperty(nameof(LocalControls.toggleGroup));
 
             urlInputProperty = serializedObject.FindProperty(nameof(PlayerControls.urlInput));
 
@@ -530,10 +529,6 @@ namespace VideoTXL
             audio2DControlProperty = serializedObject.FindProperty(nameof(PlayerControls.audio2DControl));
             progressSliderControlProperty = serializedObject.FindProperty(nameof(PlayerControls.progressSliderControl));
             urlInputControlProperty = serializedObject.FindProperty(nameof(PlayerControls.urlInputControl));
-            //toggle720OnProperty = serializedObject.FindProperty(nameof(LocalControls.toggle720On));
-            //toggle720OffProperty = serializedObject.FindProperty(nameof(LocalControls.toggle720Off));
-            //toggle1080OnProperty = serializedObject.FindProperty(nameof(LocalControls.toggle1080On));
-            //toggle1080OffProperty = serializedObject.FindProperty(nameof(LocalControls.toggle1080Off));
             muteToggleOnProperty = serializedObject.FindProperty(nameof(PlayerControls.muteToggleOn));
             muteToggleOffProperty = serializedObject.FindProperty(nameof(PlayerControls.muteToggleOff));
             audio2DToggleOnProperty = serializedObject.FindProperty(nameof(PlayerControls.audio2DToggleOn));
@@ -583,7 +578,6 @@ namespace VideoTXL
                 return;
 
             EditorGUILayout.PropertyField(videoPlayerProperty);
-            //EditorGUILayout.PropertyField(staticUrlSourceProperty);
             EditorGUILayout.PropertyField(volumeControllerProperty);
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(colorProfileProperty);
@@ -594,8 +588,6 @@ namespace VideoTXL
                 GUI.enabled = videoPlayerProperty.objectReferenceValue != null;
                 //EditorGUILayout.PropertyField(enableResyncProprety);
                 //GUI.enabled = staticUrlSourceProperty.objectReferenceValue != null;
-                //EditorGUILayout.PropertyField(enableQualitySelectProperty);
-                //GUI.enabled = volumeControllerProperty.objectReferenceValue != null;
                 EditorGUILayout.PropertyField(enableVolumeProperty);
                 EditorGUILayout.PropertyField(enable2DAudioProperty);
                 GUI.enabled = true;
@@ -609,17 +601,12 @@ namespace VideoTXL
                 EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(volumeGroupProperty);
                 //EditorGUILayout.PropertyField(resyncGroupProperty);
-                //EditorGUILayout.PropertyField(qualityGroupproperty);
                 EditorGUILayout.Space();
                 EditorGUILayout.PropertyField(urlInputProperty);
                 EditorGUILayout.PropertyField(volumeSliderControlProperty);
                 EditorGUILayout.PropertyField(audio2DControlProperty);
                 EditorGUILayout.PropertyField(urlInputControlProperty);
                 EditorGUILayout.PropertyField(progressSliderControlProperty);
-                //EditorGUILayout.PropertyField(toggle720OnProperty);
-                //EditorGUILayout.PropertyField(toggle720OffProperty);
-                //EditorGUILayout.PropertyField(toggle1080OnProperty);
-                //EditorGUILayout.PropertyField(toggle1080OffProperty);
                 EditorGUILayout.PropertyField(muteToggleOnProperty);
                 EditorGUILayout.PropertyField(muteToggleOffProperty);
                 EditorGUILayout.PropertyField(audio2DToggleOnProperty);
@@ -673,7 +660,6 @@ namespace VideoTXL
             {
                 serializedObject.ApplyModifiedProperties();
                 PlayerControls lc = (PlayerControls)target;
-                //lc._UpdateLayout();
                 lc._UpdateColor();
             }
         }

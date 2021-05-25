@@ -47,6 +47,7 @@ namespace VideoTXL
         public string[] materialAVPropertyList;
 
         Material[] _originalScreenMaterial;
+        Texture[] _originalMaterialTexture;
 
         public const int SCREEN_SOURCE_UNITY = 0;
         public const int SCREEN_SOURCE_AVPRO = 1;
@@ -73,6 +74,7 @@ namespace VideoTXL
             if (_initComplete)
                 return;
 
+            // Capture original screen materials
             _originalScreenMaterial = new Material[screenMesh.Length];
             for (int i = 0; i < screenMesh.Length; i++)
             {
@@ -93,6 +95,22 @@ namespace VideoTXL
                 _originalScreenMaterial[i] = materials[index];
             }
 
+#if COMPILER_UDONSHARP
+            // Capture original material textures
+            _originalMaterialTexture = new Texture[materialUpdateList.Length];
+            for (int i = 0; i < materialUpdateList.Length; i++)
+            {
+                if (materialUpdateList[i] == null)
+                    continue;
+
+                string name = materialTexPropertyList[i];
+                if (name == null || name.Length == 0)
+                    continue;
+
+                _originalMaterialTexture[i] = materialUpdateList[i].GetTexture(name);
+            }
+#endif
+
             _initComplete = true;
         }
 
@@ -108,6 +126,19 @@ namespace VideoTXL
                 Material[] materials = screenMesh[i].sharedMaterials;
                 materials[index] = _originalScreenMaterial[i];
                 screenMesh[i].sharedMaterials = materials;
+            }
+
+            for (int i = 0; i < materialUpdateList.Length; i++)
+            {
+                Material mat = materialUpdateList[i];
+                string name = materialTexPropertyList[i];
+                if (mat == null || name == null || name.Length == 0)
+                    continue;
+
+                mat.SetTexture(name, _originalMaterialTexture[i]);
+                string avProProp = materialAVPropertyList[i];
+                if (avProProp != null && avProProp.Length > 0)
+                    mat.SetInt(avProProp, 0);
             }
 #endif
         }

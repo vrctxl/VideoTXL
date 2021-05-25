@@ -37,17 +37,31 @@ namespace VideoTXL
 
         const int PLAYER_STATE_STOPPED = 0;
         const int PLAYER_STATE_LOADING = 1;
-        const int PLAYER_STATE_PAUSED = 2;
-        const int PLAYER_STATE_PLAYING = 3;
-        const int PLAYER_STATE_ERROR = 4;
+        const int PLAYER_STATE_PLAYING = 2;
+        const int PLAYER_STATE_ERROR = 3;
 
         string statusOverride = null;
+        string instanceMaster = "";
+        string instanceOwner = "";
+
+        private void Start()
+        {
+#if !UNITY_EDITOR
+            instanceMaster = Networking.GetOwner(gameObject).displayName;
+#endif
+        }
 
         public void _HandleUrlInput()
         {
             if (Utilities.IsValid(videoPlayer))
                 videoPlayer._ChangeUrl(urlInput.GetUrl());
             urlInput.SetUrl(VRCUrl.Empty);
+        }
+
+        public void _HandleUrlInputClick()
+        {
+            if (!videoPlayer._CanTakeControl())
+                _SetStatusOverride(MakeOwnerMessage(), 3);
         }
 
         public void _HandleStop()
@@ -58,7 +72,7 @@ namespace VideoTXL
             if (videoPlayer._CanTakeControl())
                 videoPlayer._TriggerStop();
             else
-                _SetStatusOverride("Locked by instance owner or master", 3);
+                _SetStatusOverride(MakeOwnerMessage(), 3);
         }
 
         public void _HandleLock()
@@ -69,20 +83,18 @@ namespace VideoTXL
             if (videoPlayer._CanTakeControl())
                 videoPlayer._TriggerLock();
             else
-                _SetStatusOverride("Locked by instance owner or master", 3);
+                _SetStatusOverride(MakeOwnerMessage(), 3);
         }
 
         bool _draggingProgressSlider = false;
 
         public void _HandleProgressBeginDrag()
         {
-            Debug.Log("[VideoTXL] Drag Start");
             _draggingProgressSlider = true;
         }
 
         public void _HandleProgressEndDrag()
         {
-            Debug.Log("[VideoTXL] Drag Stop");
             _draggingProgressSlider = false;
         }
 
@@ -96,7 +108,6 @@ namespace VideoTXL
 
             float targetTime = videoPlayer.trackDuration * progressSlider.value;
             videoPlayer._SetTargetTime(targetTime);
-            Debug.Log("[VideoTXL] Drag Change");
         }
 
         void _SetStatusOverride(string msg, float timeout)
@@ -118,15 +129,15 @@ namespace VideoTXL
             {
                 urlInput.readOnly = true;
                 urlInputControl.SetActive(false);
-                stopButton.SetActive(true);
-                stopButtonDisabled.SetActive(false);
+
+                bool enableControl = !videoPlayer.locked || canControl;
+                stopButton.SetActive(enableControl);
+                stopButtonDisabled.SetActive(!enableControl);
 
                 if (!videoPlayer.seekableSource)
                 {
                     SetStatusText("Streaming...");
                     progressSliderControl.SetActive(false);
-
-
                 }
                 else if (_draggingProgressSlider)
                 {
@@ -147,47 +158,55 @@ namespace VideoTXL
             }
             else
             {
-                urlInput.readOnly = false;
-                urlInputControl.SetActive(true);
                 stopButton.SetActive(false);
                 stopButtonDisabled.SetActive(true);
-
-                SetStatusText("");
                 progressSliderControl.SetActive(false);
+                urlInputControl.SetActive(true);
 
                 if (videoPlayer.localPlayerState == PLAYER_STATE_LOADING)
                 {
-                    placeholderText.text = "Loading...";
+                    SetPlaceholderText("Loading...");
                     urlInput.readOnly = true;
+                    SetStatusText("");
                 }
                 else if (videoPlayer.localPlayerState == PLAYER_STATE_ERROR)
                 {
                     switch (videoPlayer.localLastErrorCode)
                     {
                         case VideoError.RateLimited:
-                            placeholderText.text = "Rate limited, wait and try again";
+                            SetPlaceholderText("Rate limited, wait and try again");
                             break;
                         case VideoError.PlayerError:
-                            placeholderText.text = "Video player error";
+                            SetPlaceholderText("Video player error");
                             break;
                         case VideoError.InvalidURL:
-                            placeholderText.text = "Invalid URL or source offline";
+                            SetPlaceholderText("Invalid URL or source offline");
                             break;
                         case VideoError.AccessDenied:
-                            placeholderText.text = "Video blocked, enable untrusted URLs";
+                            SetPlaceholderText("Video blocked, enable untrusted URLs");
                             break;
                         case VideoError.Unknown:
                         default:
-                            placeholderText.text = "Failed to load video";
+                            SetPlaceholderText("Failed to load video");
                             break;
                     }
 
-                    urlInput.readOnly = false;
+                    urlInput.readOnly = !canControl;
+                    SetStatusText("");
                 }
                 else if (videoPlayer.localPlayerState == PLAYER_STATE_STOPPED)
                 {
-                    placeholderText.text = "Enter Video URL...";
-                    urlInput.readOnly = false;
+                    urlInput.readOnly = !canControl;
+                    if (canControl)
+                    {
+                        SetPlaceholderText("Enter Video URL...");
+                        SetStatusText("");
+                    } else
+                    {
+                        SetPlaceholderText("");
+                        SetStatusText(MakeOwnerMessage());
+                    }
+                    
                 }
             }
 
@@ -202,6 +221,44 @@ namespace VideoTXL
                 statusText.text = statusOverride;
             else
                 statusText.text = msg;
+        }
+
+        void SetPlaceholderText(string msg)
+        {
+            if (statusOverride != null)
+                placeholderText.text = "";
+            else
+                placeholderText.text = msg;
+        }
+
+        void FindOwners()
+        {
+            int playerCount = VRCPlayerApi.GetPlayerCount();
+            VRCPlayerApi[] playerList = new VRCPlayerApi[playerCount];
+            playerList = VRCPlayerApi.GetPlayers(playerList);
+
+            foreach (VRCPlayerApi player in playerList)
+            {
+                if (!Utilities.IsValid(player))
+                    continue;
+                if (player.isInstanceOwner)
+                    instanceOwner = player.displayName;
+                if (player.isMaster)
+                    instanceMaster = player.displayName;
+            }
+        }
+
+        string MakeOwnerMessage()
+        {
+            if (instanceMaster == instanceOwner || instanceOwner == "")
+                return $"Controls locked to master {instanceMaster}";
+            else
+                return $"Controls locked to master {instanceMaster} and owner {instanceOwner}";
+        }
+
+        public override void OnPlayerLeft(VRCPlayerApi player)
+        {
+            instanceMaster = Networking.GetOwner(gameObject).displayName;
         }
     }
 
