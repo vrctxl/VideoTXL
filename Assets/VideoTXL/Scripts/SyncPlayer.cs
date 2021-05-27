@@ -6,6 +6,7 @@ using VRC.SDK3.Components.Video;
 using VRC.SDK3.Video.Components.AVPro;
 using VRC.SDK3.Video.Components.Base;
 using VRC.SDKBase;
+using VRC.Udon;
 using VRC.Udon.Common;
 
 namespace VideoTXL
@@ -13,6 +14,8 @@ namespace VideoTXL
     [AddComponentMenu("VideoTXL/Sync Player")]
     public class SyncPlayer : UdonSharpBehaviour
     {
+        public VideoPlayerProxy dataProxy;
+
         [Tooltip("Optional component to control and synchronize player video screens and materials")]
         public ScreenManager screenManager;
         [Tooltip("Optional component to control and synchronize player audio sources")]
@@ -106,21 +109,26 @@ namespace VideoTXL
 
         void Start()
         {
+            dataProxy._Init();
+
             avProVideo.Loop = false;
             avProVideo.Stop();
-
             _currentPlayer = avProVideo;
+
+            _UpdatePlayerState(PLAYER_STATE_STOPPED);
 
             if (Networking.IsOwner(gameObject))
             {
                 _syncLocked = defaultLocked;
                 locked = _syncLocked;
                 RequestSerialization();
-
-                _StartExtra();
-
-                _PlayVideo(defaultUrl);
             }
+
+            _StartExtra();
+
+
+            if (Networking.IsOwner(gameObject))
+                _PlayVideo(defaultUrl);
         }
 
         public void _TriggerPlay()
@@ -265,7 +273,8 @@ namespace VideoTXL
                 return;
 
             DebugLog("Start video load " + _syncUrl);
-            localPlayerState = PLAYER_STATE_LOADING;
+            _UpdatePlayerState(PLAYER_STATE_LOADING);
+            //localPlayerState = PLAYER_STATE_LOADING;
 
             _UpdateScreenMaterial(SCREEN_MODE_LOADING);
 
@@ -291,7 +300,8 @@ namespace VideoTXL
             _pendingPlayTime = 0;
             _pendingLoadTime = 0;
             _playStartTime = 0;
-            localPlayerState = PLAYER_STATE_STOPPED;
+            _UpdatePlayerState(PLAYER_STATE_STOPPED);
+            //localPlayerState = PLAYER_STATE_STOPPED;
 
             _UpdateScreenMaterial(SCREEN_MODE_LOGO);
         }
@@ -334,8 +344,9 @@ namespace VideoTXL
                 _syncOwnerPlaying = true;
                 RequestSerialization();
 
-                localPlayerState = PLAYER_STATE_PLAYING;
+                //localPlayerState = PLAYER_STATE_PLAYING;
                 _playStartTime = Time.time;
+                _UpdatePlayerState(PLAYER_STATE_PLAYING);
 
                 _currentPlayer.SetTime(_videoTargetTime);
                 _UpdateScreenMaterial(SCREEN_MODE_NORMAL);
@@ -350,8 +361,9 @@ namespace VideoTXL
                 }
                 else
                 {
-                    localPlayerState = PLAYER_STATE_PLAYING;
+                    //localPlayerState = PLAYER_STATE_PLAYING;
                     _playStartTime = Time.time;
+                    _UpdatePlayerState(PLAYER_STATE_PLAYING);
                     _UpdateScreenMaterial(SCREEN_MODE_NORMAL);
                     SyncVideo();
                 }
@@ -360,17 +372,20 @@ namespace VideoTXL
 
         public override void OnVideoEnd()
         {
-            if (seekableSource && Time.time - _playStartTime < 1)
+            if (!seekableSource && Time.time - _playStartTime < 1)
             {
                 Debug.Log("Video end encountered at start of stream, ignoring");
                 return;
             }
 
-            localPlayerState = PLAYER_STATE_STOPPED;
+            //localPlayerState = PLAYER_STATE_STOPPED;
             seekableSource = false;
 
             DebugLog("Video end");
             _lastVideoPosition = 0;
+
+            dataProxy.seekableSource = false;
+            _UpdatePlayerState(PLAYER_STATE_STOPPED);
 
             _UpdateScreenMaterial(SCREEN_MODE_LOGO);
             _AudioStop();
@@ -391,8 +406,9 @@ namespace VideoTXL
             DebugLog("Video stream failed: " + _syncUrl);
             DebugLog("Error code: " + videoError);
 
-            localPlayerState = PLAYER_STATE_ERROR;
-            localLastErrorCode = videoError;
+            //localPlayerState = PLAYER_STATE_ERROR;
+            //localLastErrorCode = videoError;
+            _UpdatePlayerStateError(videoError);
 
             _UpdateScreenVideoError(videoError);
             _UpdateScreenMaterial(SCREEN_MODE_ERROR);
@@ -493,7 +509,8 @@ namespace VideoTXL
             _waitForSync = false;
             _currentPlayer.Play();
 
-            localPlayerState = PLAYER_STATE_PLAYING;
+            _UpdatePlayerState(PLAYER_STATE_PLAYING);
+            //localPlayerState = PLAYER_STATE_PLAYING;
 
             SyncVideo();
         }
@@ -539,6 +556,22 @@ namespace VideoTXL
                 _StartVideoLoad();
         }
 
+        void _UpdatePlayerState(int state)
+        {
+            localPlayerState = state;
+            dataProxy.playerState = state;
+            dataProxy._EmitStateUpdate();
+        }
+
+        void _UpdatePlayerStateError(VideoError error)
+        {
+            localPlayerState = PLAYER_STATE_ERROR;
+            localLastErrorCode = error;
+            dataProxy.playerState = PLAYER_STATE_ERROR;
+            dataProxy.lastErrorCode = error;
+            dataProxy._EmitStateUpdate();
+        }
+
         void _UpdateLastUrl()
         {
             lastUrl = currentUrl;
@@ -568,8 +601,8 @@ namespace VideoTXL
 
         void _UpdateScreenMaterial(int screenMode)
         {
-            if (_hasScreenManager)
-                screenManager._UpdateScreenMaterial(screenMode);
+            //if (_hasScreenManager)
+            //    screenManager._UpdateScreenMaterial(screenMode);
         }
 
         void _UpdateScreenSource(int screenSource)

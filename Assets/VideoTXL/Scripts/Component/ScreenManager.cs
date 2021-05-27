@@ -16,6 +16,8 @@ namespace VideoTXL
     [AddComponentMenu("VideoTXL/Component/Screen Manager")]
     public class ScreenManager : UdonSharpBehaviour
     {
+        public VideoPlayerProxy dataProxy;
+
         [Tooltip("The material capturing the video or stream source")]
         public Material captureMaterial;
         [Tooltip("The name of the property holding the main texture in the capture material")]
@@ -58,6 +60,11 @@ namespace VideoTXL
         public const int SCREEN_MODE_ERROR = 3;
         public const int SCREEN_MODE_AUDIO = 4;
 
+        const int PLAYER_STATE_STOPPED = 0;
+        const int PLAYER_STATE_LOADING = 1;
+        const int PLAYER_STATE_PLAYING = 2;
+        const int PLAYER_STATE_ERROR = 3;
+
         bool _initComplete = false;
         int _screenSource = SCREEN_SOURCE_UNITY;
         int _screenMode = SCREEN_MODE_NORMAL;
@@ -66,6 +73,9 @@ namespace VideoTXL
 
         void Start()
         {
+            if (Utilities.IsValid(dataProxy))
+                dataProxy._RegisterEventHandler(gameObject, "_VideoStateUpdate");
+
             _Init();
         }
 
@@ -120,7 +130,7 @@ namespace VideoTXL
             for (int i = 0; i < screenMesh.Length; i++)
             {
                 int index = screenMaterialIndex[i];
-                if (index < 0)
+                if (index < 0 || !Utilities.IsValid(screenMesh[i]))
                     continue;
 
                 Material[] materials = screenMesh[i].sharedMaterials;
@@ -141,6 +151,26 @@ namespace VideoTXL
                     mat.SetInt(avProProp, 0);
             }
 #endif
+        }
+
+        public void _VideoStateUpdate()
+        {
+            switch (dataProxy.playerState)
+            {
+                case PLAYER_STATE_STOPPED:
+                    _UpdateScreenMaterial(SCREEN_MODE_LOGO);
+                    break;
+                case PLAYER_STATE_LOADING:
+                    _UpdateScreenMaterial(SCREEN_MODE_LOADING);
+                    break;
+                case PLAYER_STATE_PLAYING:
+                    _UpdateScreenMaterial(SCREEN_MODE_NORMAL);
+                    break;
+                case PLAYER_STATE_ERROR:
+                    _lastErrorCode = dataProxy.lastErrorCode;
+                    _UpdateScreenMaterial(SCREEN_MODE_ERROR);
+                    break;
+            }
         }
 
         public void _UpdateVideoError(VideoError error)
@@ -216,6 +246,7 @@ namespace VideoTXL
                     string avProProp = materialAVPropertyList[i];
                     if (avProProp != null && avProProp.Length > 0)
                         mat.SetInt(avProProp, avPro);
+                    Debug.Log($"[VideoTXL:ScreenManager] Update material {mat}, {name}, {avProProp}, {avPro}");
                 }
             }
 
@@ -233,6 +264,8 @@ namespace VideoTXL
         {
             if (!_initComplete)
                 _Init();
+
+            Debug.Log($"[VideoTXL:ScreenManager] Update screen mode: {screenMode}");
 
             _screenMode = screenMode;
             _checkFrameCount = 0;
@@ -356,6 +389,8 @@ namespace VideoTXL
         static bool _showMaterialListFoldout;
         static bool[] _showMaterialFoldout = new bool[0];
 
+        SerializedProperty dataProxyProperty;
+
         SerializedProperty captureMaterialProperty;
         SerializedProperty captureTexturePropertyProperty;
 
@@ -378,6 +413,8 @@ namespace VideoTXL
 
         private void OnEnable()
         {
+            dataProxyProperty = serializedObject.FindProperty(nameof(ScreenManager.dataProxy));
+
             captureMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.captureMaterial));
             captureTexturePropertyProperty = serializedObject.FindProperty(nameof(ScreenManager.captureTextureProperty));
 
@@ -404,6 +441,7 @@ namespace VideoTXL
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
 
+            EditorGUILayout.PropertyField(dataProxyProperty);
             EditorGUILayout.PropertyField(captureMaterialProperty);
             if (captureMaterialProperty.objectReferenceValue != null)
                 EditorGUILayout.PropertyField(captureTexturePropertyProperty);
