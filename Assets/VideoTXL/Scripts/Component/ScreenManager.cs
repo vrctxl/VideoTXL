@@ -246,7 +246,6 @@ namespace VideoTXL
                     string avProProp = materialAVPropertyList[i];
                     if (avProProp != null && avProProp.Length > 0)
                         mat.SetInt(avProProp, avPro);
-                    Debug.Log($"[VideoTXL:ScreenManager] Update material {mat}, {name}, {avProProp}, {avPro}");
                 }
             }
 
@@ -264,8 +263,6 @@ namespace VideoTXL
         {
             if (!_initComplete)
                 _Init();
-
-            Debug.Log($"[VideoTXL:ScreenManager] Update screen mode: {screenMode}");
 
             _screenMode = screenMode;
             _checkFrameCount = 0;
