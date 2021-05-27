@@ -125,7 +125,7 @@ namespace VideoTXL
 
         public void _TriggerLock()
         {
-            if (!_CanTakeControl())
+            if (!_IsAdmin())
                 return;
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
@@ -398,6 +398,12 @@ namespace VideoTXL
             {
                 _StartVideoLoadDelay(retryTimeout);
             }
+        }
+
+        public bool _IsAdmin()
+        {
+            VRCPlayerApi player = Networking.LocalPlayer;
+            return player.isMaster || player.isInstanceOwner;
         }
 
         public bool _CanTakeControl()
