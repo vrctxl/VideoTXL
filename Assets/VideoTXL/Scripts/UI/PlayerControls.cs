@@ -313,6 +313,8 @@ namespace VideoTXL
                 progressSlider.interactable = canControl;
             } else
             {
+                _draggingProgressSlider = false;
+
                 stopButton.SetActive(false);
                 stopButtonDisabled.SetActive(true);
                 progressSliderControl.SetActive(false);
