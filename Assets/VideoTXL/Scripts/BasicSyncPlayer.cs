@@ -26,6 +26,9 @@ namespace VideoTXL
 
         [Tooltip("Write out video player events to VRChat log")]
         public bool debugLogging = true;
+
+        [Tooltip("Automatically loop track when finished")]
+        public bool loop = false;
         
         float retryTimeout = 6;
         float syncFrequency = 5;
@@ -189,6 +192,11 @@ namespace VideoTXL
             _StartVideoLoad();
         }
 
+        public void _LoopVideo()
+        {
+            _PlayVideo(_syncUrl);
+        }
+
         // Time parsing code adapted from USharpVideo project by Merlin
         float _ParseTimeFromUrl(string urlStr)
         {
@@ -329,7 +337,7 @@ namespace VideoTXL
 
         public override void OnVideoEnd()
         {
-            if (seekableSource && Time.time - _playStartTime < 1)
+            if (!seekableSource && Time.time - _playStartTime < 1)
             {
                 Debug.Log("Video end encountered at start of stream, ignoring");
                 return;
@@ -343,9 +351,14 @@ namespace VideoTXL
 
             if (Networking.IsOwner(gameObject))
             {
-                _syncVideoStartNetworkTime = 0;
-                _syncOwnerPlaying = false;
-                RequestSerialization();
+                if (loop)
+                    SendCustomEventDelayedFrames("_LoopVideo", 1);
+                else
+                {
+                    _syncVideoStartNetworkTime = 0;
+                    _syncOwnerPlaying = false;
+                    RequestSerialization();
+                }
             }
         }
 

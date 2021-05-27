@@ -24,16 +24,20 @@ namespace VideoTXL
         public GameObject urlInputControl;
         public GameObject progressSliderControl;
 
-        public GameObject stopButton;
-        public GameObject stopButtonDisabled;
-        public GameObject lockButtonOpen;
-        public GameObject lockButtonClosed;
-        public GameObject lockButtonDenied;
+        public Image stopIcon;
+        public Image lockedIcon;
+        public Image unlockedIcon;
+        public Image loadIcon;
 
         public Slider progressSlider;
         public Text statusText;
         public Text urlText;
         public Text placeholderText;
+
+        Color normalColor = new Color(1f, 1f, 1f, .8f);
+        Color disabledColor = new Color(.5f, .5f, .5f, .4f);
+        Color activeColor = new Color(1f, .8f, 0f, .7f);
+        Color attentionColor = new Color(.9f, 0f, 0f, .5f);
 
         const int PLAYER_STATE_STOPPED = 0;
         const int PLAYER_STATE_LOADING = 1;
@@ -44,11 +48,18 @@ namespace VideoTXL
         string instanceMaster = "";
         string instanceOwner = "";
 
+        bool loadActive = false;
+
         private void Start()
         {
 #if !UNITY_EDITOR
             instanceMaster = Networking.GetOwner(gameObject).displayName;
 #endif
+
+            stopIcon.color = normalColor;
+            lockedIcon.color = normalColor;
+            unlockedIcon.color = normalColor;
+            loadIcon.color = normalColor;
         }
 
         public void _HandleUrlInput()
@@ -56,6 +67,7 @@ namespace VideoTXL
             if (Utilities.IsValid(videoPlayer))
                 videoPlayer._ChangeUrl(urlInput.GetUrl());
             urlInput.SetUrl(VRCUrl.Empty);
+            loadActive = false;
         }
 
         public void _HandleUrlInputClick()
@@ -84,6 +96,23 @@ namespace VideoTXL
                 videoPlayer._TriggerLock();
             else
                 _SetStatusOverride(MakeOwnerMessage(), 3);
+        }
+
+        public void _HandleLoad()
+        {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
+            if (!videoPlayer._CanTakeControl())
+            {
+                _SetStatusOverride(MakeOwnerMessage(), 3);
+                return;
+            }
+
+            if (videoPlayer.localPlayerState == PLAYER_STATE_ERROR)
+                loadActive = false;
+            else
+                loadActive = !loadActive;
         }
 
         bool _draggingProgressSlider = false;
@@ -121,18 +150,21 @@ namespace VideoTXL
             statusOverride = null;
         }
 
+        // TODO: This is branchy and repetetive.  Try to pull as much out of constant update loop as possible once player can signal
+        // a suitable update event.
+
         private void Update()
         {
             bool canControl = videoPlayer._CanTakeControl();
+            bool enableControl = !videoPlayer.locked || canControl;
 
-            if (videoPlayer.localPlayerState == PLAYER_STATE_PLAYING)
+            if (videoPlayer.localPlayerState == PLAYER_STATE_PLAYING && !loadActive)
             {
                 urlInput.readOnly = true;
                 urlInputControl.SetActive(false);
 
-                bool enableControl = !videoPlayer.locked || canControl;
-                stopButton.SetActive(enableControl);
-                stopButtonDisabled.SetActive(!enableControl);
+                stopIcon.color = enableControl ? normalColor : disabledColor;
+                loadIcon.color = enableControl ? normalColor : disabledColor;
 
                 if (!videoPlayer.seekableSource)
                 {
@@ -154,23 +186,30 @@ namespace VideoTXL
                     progressSliderControl.SetActive(true);
                     progressSlider.value = Mathf.Clamp01(videoPlayer.trackPosition / videoPlayer.trackDuration);
                 }
-                progressSlider.interactable = canControl;
+                progressSlider.interactable = enableControl;
             }
             else
             {
-                stopButton.SetActive(false);
-                stopButtonDisabled.SetActive(true);
+                stopIcon.color = disabledColor;
+                loadIcon.color = disabledColor;
                 progressSliderControl.SetActive(false);
                 urlInputControl.SetActive(true);
 
                 if (videoPlayer.localPlayerState == PLAYER_STATE_LOADING)
                 {
+                    stopIcon.color = enableControl ? normalColor : disabledColor;
+                    loadIcon.color = enableControl ? normalColor : disabledColor;
+
                     SetPlaceholderText("Loading...");
                     urlInput.readOnly = true;
                     SetStatusText("");
                 }
                 else if (videoPlayer.localPlayerState == PLAYER_STATE_ERROR)
                 {
+                    stopIcon.color = disabledColor;
+                    loadIcon.color = normalColor;
+                    loadActive = false;
+
                     switch (videoPlayer.localLastErrorCode)
                     {
                         case VideoError.RateLimited:
@@ -194,8 +233,19 @@ namespace VideoTXL
                     urlInput.readOnly = !canControl;
                     SetStatusText("");
                 }
-                else if (videoPlayer.localPlayerState == PLAYER_STATE_STOPPED)
+                else if (videoPlayer.localPlayerState == PLAYER_STATE_STOPPED || videoPlayer.localPlayerState == PLAYER_STATE_PLAYING)
                 {
+                    if (videoPlayer.localPlayerState == PLAYER_STATE_STOPPED)
+                    {
+                        loadActive = false;
+                        stopIcon.color = disabledColor;
+                        loadIcon.color = disabledColor;
+                    } else
+                    {
+                        stopIcon.color = normalColor;
+                        loadIcon.color = activeColor;
+                    }
+
                     urlInput.readOnly = !canControl;
                     if (canControl)
                     {
@@ -210,9 +260,10 @@ namespace VideoTXL
                 }
             }
 
-            lockButtonClosed.SetActive(videoPlayer.locked && canControl);
-            lockButtonDenied.SetActive(videoPlayer.locked && !canControl);
-            lockButtonOpen.SetActive(!videoPlayer.locked);
+            lockedIcon.enabled = videoPlayer.locked;
+            unlockedIcon.enabled = !videoPlayer.locked;
+            if (videoPlayer.locked)
+                lockedIcon.color = canControl ? normalColor : attentionColor;
         }
 
         void SetStatusText(string msg)
@@ -273,11 +324,11 @@ namespace VideoTXL
         SerializedProperty urlInputProperty;
         SerializedProperty urlInputControlProperty;
         SerializedProperty progressSliderControlProperty;
-        SerializedProperty stopButtonProperty;
-        SerializedProperty stopButtonDisabledProperty;
-        SerializedProperty lockButtonOpenProperty;
-        SerializedProperty lockButtonClosedProperty;
-        SerializedProperty lockButtonDeniedProperty;
+
+        SerializedProperty stopIconProperty;
+        SerializedProperty lockedIconProperty;
+        SerializedProperty unlockedIconProperty;
+        SerializedProperty loadIconProperty;
 
         SerializedProperty progressSliderProperty;
         SerializedProperty statusTextProperty;
@@ -291,11 +342,11 @@ namespace VideoTXL
 
             progressSliderControlProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.progressSliderControl));
             urlInputControlProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.urlInputControl));
-            stopButtonProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.stopButton));
-            stopButtonDisabledProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.stopButtonDisabled));
-            lockButtonOpenProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.lockButtonOpen));
-            lockButtonClosedProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.lockButtonClosed));
-            lockButtonDeniedProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.lockButtonDenied));
+
+            stopIconProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.stopIcon));
+            lockedIconProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.lockedIcon));
+            unlockedIconProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.unlockedIcon));
+            loadIconProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.loadIcon));
 
             statusTextProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.statusText));
             placeholderTextProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.placeholderText));
@@ -318,11 +369,10 @@ namespace VideoTXL
                 EditorGUILayout.PropertyField(urlInputProperty);
                 EditorGUILayout.PropertyField(urlInputControlProperty);
                 EditorGUILayout.PropertyField(progressSliderControlProperty);
-                EditorGUILayout.PropertyField(stopButtonProperty);
-                EditorGUILayout.PropertyField(stopButtonDisabledProperty);
-                EditorGUILayout.PropertyField(lockButtonOpenProperty);
-                EditorGUILayout.PropertyField(lockButtonClosedProperty);
-                EditorGUILayout.PropertyField(lockButtonDeniedProperty);
+                EditorGUILayout.PropertyField(stopIconProperty);
+                EditorGUILayout.PropertyField(lockedIconProperty);
+                EditorGUILayout.PropertyField(unlockedIconProperty);
+                EditorGUILayout.PropertyField(loadIconProperty);
                 EditorGUILayout.PropertyField(progressSliderProperty);
                 EditorGUILayout.PropertyField(statusTextProperty);
                 EditorGUILayout.PropertyField(urlTextProperty);
