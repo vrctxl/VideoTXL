@@ -153,6 +153,9 @@ namespace VideoTXL
         {
             if (_syncLocked && !_CanTakeControl())
                 return;
+            if (localPlayerState != PLAYER_STATE_PLAYING)
+                return;
+
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 

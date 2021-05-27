@@ -190,6 +190,8 @@ namespace VideoTXL
             }
             else
             {
+                _draggingProgressSlider = false;
+
                 stopIcon.color = disabledColor;
                 loadIcon.color = disabledColor;
                 progressSliderControl.SetActive(false);
