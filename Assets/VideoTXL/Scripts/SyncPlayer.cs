@@ -39,12 +39,16 @@ namespace VideoTXL
         [Tooltip("Write out video player events to VRChat log")]
         public bool debugLogging = true;
 
+        [Tooltip("Automatically loop track when finished")]
+        public bool loop = false;
+
         float retryTimeout = 6;
         float syncFrequency = 5;
         float syncThreshold = 1;
 
         [UdonSynced]
         VRCUrl _syncUrl;
+        VRCUrl _queuedUrl;
 
         [UdonSynced]
         int _syncVideoNumber;
@@ -58,6 +62,9 @@ namespace VideoTXL
 
         [UdonSynced]
         bool _syncLocked = true;
+
+        [UdonSynced]
+        bool _syncRepeatPlaylist;
 
         [NonSerialized]
         public int localPlayerState = PLAYER_STATE_STOPPED;
@@ -88,9 +95,11 @@ namespace VideoTXL
         [NonSerialized]
         public bool locked;
         [NonSerialized]
-        public string currentUrl;
+        public bool repeatPlaylist;
         [NonSerialized]
-        public string lastUrl;
+        public VRCUrl currentUrl = VRCUrl.Empty;
+        [NonSerialized]
+        public VRCUrl lastUrl = VRCUrl.Empty;
 
         // Constants
 
@@ -120,7 +129,9 @@ namespace VideoTXL
             if (Networking.IsOwner(gameObject))
             {
                 _syncLocked = defaultLocked;
+                _syncRepeatPlaylist = loop;
                 locked = _syncLocked;
+                repeatPlaylist = _syncRepeatPlaylist;
                 RequestSerialization();
             }
 
@@ -153,13 +164,26 @@ namespace VideoTXL
 
         public void _TriggerLock()
         {
-            if (!_CanTakeControl())
+            if (!_IsAdmin())
                 return;
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             _syncLocked = !_syncLocked;
             locked = _syncLocked;
+            RequestSerialization();
+        }
+
+        public void _TriggerRepeatMode()
+        {
+            DebugLog("Trigger repeat mode");
+            if (_syncLocked && !_CanTakeControl())
+                return;
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            _syncRepeatPlaylist = !_syncRepeatPlaylist;
+            repeatPlaylist = _syncRepeatPlaylist;
             RequestSerialization();
         }
 
@@ -174,6 +198,18 @@ namespace VideoTXL
                 return;
 
             _PlayVideo(url);
+
+            _queuedUrl = VRCUrl.Empty;
+        }
+
+        public void _UpdateQueuedUrl(VRCUrl url)
+        {
+            if (_syncLocked && !_CanTakeControl())
+                return;
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            _queuedUrl = url;
         }
 
         public void _SetTargetTime(float time)
@@ -202,12 +238,8 @@ namespace VideoTXL
             if (!Utilities.IsValid(url))
                 return;
 
-            string urlStr = url.Get();
-            if (urlStr == null || urlStr == "")
+            if (!_IsUrlValid(url))
                 return;
-
-            if (!isOwner)
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             _syncUrl = url;
             _syncVideoNumber += isOwner ? 1 : 2;
@@ -217,10 +249,33 @@ namespace VideoTXL
             _syncVideoStartNetworkTime = float.MaxValue;
             RequestSerialization();
 
-            _videoTargetTime = _ParseTimeFromUrl(urlStr);
+            _videoTargetTime = _ParseTimeFromUrl(url.Get());
             _UpdateLastUrl();
 
             _StartVideoLoad();
+        }
+
+        public void _LoopVideo()
+        {
+            _PlayVideo(_syncUrl);
+        }
+
+        public void _PlayQueuedUrl()
+        {
+            _PlayVideo(_queuedUrl);
+            _queuedUrl = VRCUrl.Empty;
+        }
+
+        bool _IsUrlValid(VRCUrl url)
+        {
+            if (!Utilities.IsValid(url))
+                return false;
+
+            string urlStr = url.Get();
+            if (urlStr == null || urlStr == "")
+                return false;
+
+            return true;
         }
 
         // Time parsing code adapted from USharpVideo project by Merlin
@@ -395,9 +450,16 @@ namespace VideoTXL
 
             if (Networking.IsOwner(gameObject))
             {
-                _syncVideoStartNetworkTime = 0;
-                _syncOwnerPlaying = false;
-                RequestSerialization();
+                if (_IsUrlValid(_queuedUrl))
+                    SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
+                else if (_syncRepeatPlaylist)
+                    SendCustomEventDelayedFrames("_LoopVideo", 1);
+                else
+                {
+                    _syncVideoStartNetworkTime = 0;
+                    _syncOwnerPlaying = false;
+                    RequestSerialization();
+                }
             }
         }
 
@@ -435,6 +497,15 @@ namespace VideoTXL
             }
         }
 
+        public bool _IsAdmin()
+        {
+            if (_hasAccessControl)
+                return accessControl._LocalHasAccess();
+
+            VRCPlayerApi player = Networking.LocalPlayer;
+            return player.isMaster || player.isInstanceOwner;
+        }
+
         public bool _CanTakeControl()
         {
             if (_hasAccessControl)
@@ -452,6 +523,7 @@ namespace VideoTXL
             DebugLog($"Deserialize: video #{_syncVideoNumber}");
 
             locked = _syncLocked;
+            repeatPlaylist = _syncRepeatPlaylist;
 
             if (_syncVideoNumber == _loadedVideoNumber)
             {
@@ -575,11 +647,11 @@ namespace VideoTXL
 
         void _UpdateLastUrl()
         {
+            if (_syncUrl == currentUrl)
+                return;
+
             lastUrl = currentUrl;
-            if (Utilities.IsValid(_syncUrl))
-                currentUrl = _syncUrl.Get();
-            else
-                currentUrl = "";
+            currentUrl = _syncUrl;
         }
 
         // Extra

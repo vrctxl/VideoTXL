@@ -38,6 +38,16 @@ namespace VideoTXL
         public GameObject urlInputControl;
         public GameObject progressSliderControl;
 
+        public Image stopIcon;
+        public Image pauseIcon;
+        public Image lockedIcon;
+        public Image unlockedIcon;
+        public Image loadIcon;
+        public Image repeatIcon;
+        public Image infoIcon;
+        public Image playCurrentIcon;
+        public Image playLastIcon;
+
         public GameObject muteToggleOn;
         public GameObject muteToggleOff;
         public GameObject audio2DToggleOn;
@@ -67,6 +77,11 @@ namespace VideoTXL
         public InputField currentVideoInput;
         public InputField lastVideoInput;
 
+        Color normalColor = new Color(1f, 1f, 1f, .8f);
+        Color disabledColor = new Color(.5f, .5f, .5f, .4f);
+        Color activeColor = new Color(1f, .8f, 0f, .7f);
+        Color attentionColor = new Color(.9f, 0f, 0f, .5f);
+
         bool progressSliderValid;
 
         public Image[] backgroundImgs;
@@ -93,6 +108,10 @@ namespace VideoTXL
         string instanceMaster = "";
         string instanceOwner = "";
 
+        bool loadActive = false;
+        VRCUrl pendingSubmit;
+        bool pendingFromLoadOverride = false;
+
         void Start()
         {
             if (Utilities.IsValid(volumeController))
@@ -101,6 +120,16 @@ namespace VideoTXL
 #if !UNITY_EDITOR
             instanceMaster = Networking.GetOwner(gameObject).displayName;
 #endif
+
+            stopIcon.color = normalColor;
+            pauseIcon.color = disabledColor;
+            lockedIcon.color = normalColor;
+            unlockedIcon.color = normalColor;
+            loadIcon.color = normalColor;
+            repeatIcon.color = normalColor;
+            infoIcon.color = normalColor;
+            playCurrentIcon.color = disabledColor;
+            playLastIcon.color = disabledColor;
 
             progressSliderValid = Utilities.IsValid(progressSliderControl);
 
@@ -167,15 +196,44 @@ namespace VideoTXL
 
         public void _HandleUrlInput()
         {
-            if (Utilities.IsValid(videoPlayer))
-                videoPlayer._ChangeUrl(urlInput.GetUrl());
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
+            pendingFromLoadOverride = loadActive;
+            pendingSubmit = urlInput.GetUrl();
+
+            SendCustomEventDelayedSeconds("_HandleUrlInputDelay", 0.5f);
+        }
+
+        public void _HandleUrlInputDelay()
+        {
+            VRCUrl url = urlInput.GetUrl();
             urlInput.SetUrl(VRCUrl.Empty);
+
+            // Hack to get around Unity always firing OnEndEdit event for submit and lost focus
+            // If loading override was on, but it's off immediately after submit, assume user closed override
+            // instead of submitting.  Half second delay is a crude defense against a UI race.
+            if (pendingFromLoadOverride && !loadActive)
+                return;
+
+            videoPlayer._ChangeUrl(url);
+            loadActive = false;
         }
 
         public void _HandleUrlInputClick()
         {
             if (!videoPlayer._CanTakeControl())
                 _SetStatusOverride(MakeOwnerMessage(), 3);
+        }
+
+        public void _HandleUrlInputChange()
+        {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
+            VRCUrl url = urlInput.GetUrl();
+            if (url.Get().Length > 0)
+                videoPlayer._UpdateQueuedUrl(urlInput.GetUrl());
         }
 
         public void _HandleStop()
@@ -194,12 +252,37 @@ namespace VideoTXL
 
         }
 
+        public void _HandlePlayCurrent()
+        {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+            if (videoPlayer.currentUrl == VRCUrl.Empty)
+                return;
+
+            if (videoPlayer._CanTakeControl())
+                videoPlayer._ChangeUrl(videoPlayer.currentUrl);
+            else
+                _SetStatusOverride(MakeOwnerMessage(), 3);
+        }
+
+        public void _HandlePlayLast()
+        {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+            if (videoPlayer.lastUrl == VRCUrl.Empty)
+                return;
+
+            if (videoPlayer._CanTakeControl())
+                videoPlayer._ChangeUrl(videoPlayer.lastUrl);
+            else
+                _SetStatusOverride(MakeOwnerMessage(), 3);
+        }
+
         public void _HandleInfo()
         {
             infoPanelOpen = !infoPanelOpen;
-            infoToggleOn.SetActive(infoPanelOpen);
-            infoToggleOff.SetActive(!infoPanelOpen);
             infoPanel.SetActive(infoPanelOpen);
+            infoIcon.color = infoPanelOpen ? activeColor : normalColor;
         }
 
         public void _HandleLock()
@@ -209,6 +292,34 @@ namespace VideoTXL
 
             if (videoPlayer._CanTakeControl())
                 videoPlayer._TriggerLock();
+            else
+                _SetStatusOverride(MakeOwnerMessage(), 3);
+        }
+
+        public void _HandleLoad()
+        {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
+            if (!videoPlayer._CanTakeControl())
+            {
+                _SetStatusOverride(MakeOwnerMessage(), 3);
+                return;
+            }
+
+            if (videoPlayer.localPlayerState == PLAYER_STATE_ERROR)
+                loadActive = false;
+            else
+                loadActive = !loadActive;
+        }
+
+        public void _HandleRepeat()
+        {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
+            if (videoPlayer._CanTakeControl())
+                videoPlayer._TriggerRepeatMode();
             else
                 _SetStatusOverride(MakeOwnerMessage(), 3);
         }
@@ -278,22 +389,20 @@ namespace VideoTXL
         private void Update()
         {
             bool canControl = videoPlayer._CanTakeControl();
+            bool enableControl = !videoPlayer.locked || canControl;
 
-            if (videoPlayer.localPlayerState == PLAYER_STATE_PLAYING)
+            if (videoPlayer.localPlayerState == PLAYER_STATE_PLAYING && !loadActive)
             {
                 urlInput.readOnly = true;
                 urlInputControl.SetActive(false);
 
-                bool enableControl = !videoPlayer.locked || canControl;
-                stopButton.SetActive(enableControl);
-                stopButtonDisabled.SetActive(!enableControl);
+                stopIcon.color = enableControl ? normalColor : disabledColor;
+                loadIcon.color = enableControl ? normalColor : disabledColor;
 
                 if (!videoPlayer.seekableSource)
                 {
                     SetStatusText("Streaming...");
                     progressSliderControl.SetActive(false);
-                    
-                    
                 }
                 else if (_draggingProgressSlider)
                 {
@@ -310,24 +419,31 @@ namespace VideoTXL
                     progressSliderControl.SetActive(true);
                     progressSlider.value = Mathf.Clamp01(videoPlayer.trackPosition / videoPlayer.trackDuration);
                 }
-                progressSlider.interactable = canControl;
+                progressSlider.interactable = enableControl;
             } else
             {
                 _draggingProgressSlider = false;
 
-                stopButton.SetActive(false);
-                stopButtonDisabled.SetActive(true);
+                stopIcon.color = disabledColor;
+                loadIcon.color = disabledColor;
                 progressSliderControl.SetActive(false);
                 urlInputControl.SetActive(true);
 
                 if (videoPlayer.localPlayerState == PLAYER_STATE_LOADING)
                 {
+                    stopIcon.color = enableControl ? normalColor : disabledColor;
+                    loadIcon.color = enableControl ? normalColor : disabledColor;
+
                     SetPlaceholderText("Loading...");
                     urlInput.readOnly = true;
                     SetStatusText("");
                 }
                 else if (videoPlayer.localPlayerState == PLAYER_STATE_ERROR)
                 {
+                    stopIcon.color = disabledColor;
+                    loadIcon.color = normalColor;
+                    loadActive = false;
+
                     switch (videoPlayer.localLastErrorCode)
                     {
                         case VideoError.RateLimited:
@@ -351,8 +467,21 @@ namespace VideoTXL
                     urlInput.readOnly = !canControl;
                     SetStatusText("");
                 }
-                else if (videoPlayer.localPlayerState == PLAYER_STATE_STOPPED)
+                else if (videoPlayer.localPlayerState == PLAYER_STATE_STOPPED || videoPlayer.localPlayerState == PLAYER_STATE_PLAYING)
                 {
+                    if (videoPlayer.localPlayerState == PLAYER_STATE_STOPPED)
+                    {
+                        loadActive = false;
+                        pendingFromLoadOverride = false;
+                        stopIcon.color = disabledColor;
+                        loadIcon.color = disabledColor;
+                    }
+                    else
+                    {
+                        stopIcon.color = normalColor;
+                        loadIcon.color = activeColor;
+                    }
+
                     urlInput.readOnly = !canControl;
                     if (canControl)
                     {
@@ -367,17 +496,23 @@ namespace VideoTXL
                 }
             }
 
-            lockButtonClosed.SetActive(videoPlayer.locked && canControl);
-            lockButtonDenied.SetActive(videoPlayer.locked && !canControl);
-            lockButtonOpen.SetActive(!videoPlayer.locked);
+            lockedIcon.enabled = videoPlayer.locked;
+            unlockedIcon.enabled = !videoPlayer.locked;
+            if (videoPlayer.locked)
+                lockedIcon.color = canControl ? normalColor : attentionColor;
+
+            repeatIcon.color = videoPlayer.repeatPlaylist ? activeColor : normalColor;
+
+            playCurrentIcon.color = (enableControl && videoPlayer.currentUrl != VRCUrl.Empty )? normalColor : disabledColor;
+            playLastIcon.color = (enableControl && videoPlayer.lastUrl != VRCUrl.Empty) ? normalColor : disabledColor;
 
             // Move out of update
             instanceOwnerText.text = instanceOwner;
             masterText.text = instanceMaster;
             playerOwnerText.text = Networking.GetOwner(videoPlayer.gameObject).displayName;
             // videoOwnerText.text = videoPlayer.videoOwner;
-            currentVideoInput.text = videoPlayer.currentUrl;
-            lastVideoInput.text = videoPlayer.lastUrl;
+            currentVideoInput.text = videoPlayer.currentUrl.Get();
+            lastVideoInput.text = videoPlayer.lastUrl.Get();
         }
 
         void SetStatusText(string msg)
@@ -469,6 +604,17 @@ namespace VideoTXL
         SerializedProperty audio2DControlProperty;
         SerializedProperty urlInputControlProperty;
         SerializedProperty progressSliderControlProperty;
+
+        SerializedProperty stopIconProperty;
+        SerializedProperty pauseIconProperty;
+        SerializedProperty lockedIconProperty;
+        SerializedProperty unlockedIconProperty;
+        SerializedProperty loadIconProperty;
+        SerializedProperty repeatIconProperty;
+        SerializedProperty infoIconProperty;
+        SerializedProperty playCurrentIconProperty;
+        SerializedProperty playlastIconProperty;
+
         SerializedProperty muteToggleOnProperty;
         SerializedProperty muteToggleOffProperty;
         SerializedProperty audio2DToggleOnProperty;
@@ -531,6 +677,17 @@ namespace VideoTXL
             audio2DControlProperty = serializedObject.FindProperty(nameof(PlayerControls.audio2DControl));
             progressSliderControlProperty = serializedObject.FindProperty(nameof(PlayerControls.progressSliderControl));
             urlInputControlProperty = serializedObject.FindProperty(nameof(PlayerControls.urlInputControl));
+
+            stopIconProperty = serializedObject.FindProperty(nameof(PlayerControls.stopIcon));
+            pauseIconProperty = serializedObject.FindProperty(nameof(PlayerControls.pauseIcon));
+            lockedIconProperty = serializedObject.FindProperty(nameof(PlayerControls.lockedIcon));
+            unlockedIconProperty = serializedObject.FindProperty(nameof(PlayerControls.unlockedIcon));
+            loadIconProperty = serializedObject.FindProperty(nameof(PlayerControls.loadIcon));
+            repeatIconProperty = serializedObject.FindProperty(nameof(PlayerControls.repeatIcon));
+            infoIconProperty = serializedObject.FindProperty(nameof(PlayerControls.infoIcon));
+            playCurrentIconProperty = serializedObject.FindProperty(nameof(PlayerControls.playCurrentIcon));
+            playlastIconProperty = serializedObject.FindProperty(nameof(PlayerControls.playLastIcon));
+
             muteToggleOnProperty = serializedObject.FindProperty(nameof(PlayerControls.muteToggleOn));
             muteToggleOffProperty = serializedObject.FindProperty(nameof(PlayerControls.muteToggleOff));
             audio2DToggleOnProperty = serializedObject.FindProperty(nameof(PlayerControls.audio2DToggleOn));
@@ -609,6 +766,15 @@ namespace VideoTXL
                 EditorGUILayout.PropertyField(audio2DControlProperty);
                 EditorGUILayout.PropertyField(urlInputControlProperty);
                 EditorGUILayout.PropertyField(progressSliderControlProperty);
+                EditorGUILayout.PropertyField(stopIconProperty);
+                EditorGUILayout.PropertyField(pauseIconProperty);
+                EditorGUILayout.PropertyField(lockedIconProperty);
+                EditorGUILayout.PropertyField(unlockedIconProperty);
+                EditorGUILayout.PropertyField(loadIconProperty);
+                EditorGUILayout.PropertyField(repeatIconProperty);
+                EditorGUILayout.PropertyField(infoIconProperty);
+                EditorGUILayout.PropertyField(playCurrentIconProperty);
+                EditorGUILayout.PropertyField(playlastIconProperty);
                 EditorGUILayout.PropertyField(muteToggleOnProperty);
                 EditorGUILayout.PropertyField(muteToggleOffProperty);
                 EditorGUILayout.PropertyField(audio2DToggleOnProperty);
