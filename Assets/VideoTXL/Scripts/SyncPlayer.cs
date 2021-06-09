@@ -218,9 +218,28 @@ namespace VideoTXL
                 return;
             if (localPlayerState != PLAYER_STATE_PLAYING)
                 return;
+            if (!seekableSource)
+                return;
 
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            // Allowing AVPro to set time directly to end of track appears to trigger deadlock sometimes
+            float duration = _currentPlayer.GetDuration();
+            if (duration - time < 1)
+            {
+                if (_IsUrlValid(_queuedUrl))
+                {
+                    SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
+                    return;
+                }
+                else if (_syncRepeatPlaylist)
+                {
+                    SendCustomEventDelayedFrames("_LoopVideo", 1);
+                    return;
+                }
+                time = duration - 1;
+            }
 
             _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - time;
             SyncVideo();
@@ -251,6 +270,16 @@ namespace VideoTXL
 
             _videoTargetTime = _ParseTimeFromUrl(url.Get());
             _UpdateLastUrl();
+
+            // Conditional player stop to try and avoid piling on AVPro at end of track
+            // and maybe triggering bad things
+            if (localPlayerState == PLAYER_STATE_PLAYING && _currentPlayer.IsPlaying && seekableSource)
+            {
+                float duration = _currentPlayer.GetDuration();
+                float remaining = duration - _currentPlayer.GetTime();
+                if (remaining > 2)
+                    _currentPlayer.Stop();
+            }
 
             _StartVideoLoad();
         }
@@ -601,8 +630,10 @@ namespace VideoTXL
         {
             if (seekableSource)
             {
-                float offsetTime = Mathf.Clamp((float)Networking.GetServerTimeInSeconds() - _syncVideoStartNetworkTime, 0f, _currentPlayer.GetDuration());
-                if (Mathf.Abs(_currentPlayer.GetTime() - offsetTime) > syncThreshold)
+                float duration = _currentPlayer.GetDuration();
+                float current = _currentPlayer.GetTime();
+                float offsetTime = Mathf.Clamp((float)Networking.GetServerTimeInSeconds() - _syncVideoStartNetworkTime, 0f, duration);
+                if (Mathf.Abs(current - offsetTime) > syncThreshold && (duration - current) > 2)
                     _currentPlayer.SetTime(offsetTime);
             }
         }
