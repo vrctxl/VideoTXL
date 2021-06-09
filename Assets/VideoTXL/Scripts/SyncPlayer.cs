@@ -57,6 +57,9 @@ namespace VideoTXL
         [UdonSynced, NonSerialized]
         public bool _syncOwnerPlaying;
 
+        [UdonSynced, NonSerialized]
+        public bool _syncOwnerPaused = false;
+
         [UdonSynced]
         float _syncVideoStartNetworkTime;
 
@@ -107,6 +110,7 @@ namespace VideoTXL
         const int PLAYER_STATE_LOADING = 1;
         const int PLAYER_STATE_PLAYING = 2;
         const int PLAYER_STATE_ERROR = 3;
+        const int PLAYER_STATE_PAUSED = 4;
 
         const int SCREEN_MODE_NORMAL = 0;
         const int SCREEN_MODE_LOGO = 1;
@@ -160,6 +164,28 @@ namespace VideoTXL
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             _StopVideo();
+        }
+
+        public void _TriggerPause()
+        {
+            DebugLog("Trigger pause");
+            if (_syncLocked && !_CanTakeControl())
+                return;
+            if (!seekableSource || (localPlayerState != PLAYER_STATE_PLAYING && localPlayerState != PLAYER_STATE_PAUSED))
+                return;
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            _syncOwnerPaused = !_syncOwnerPaused;
+
+            if (_syncOwnerPaused) {
+                _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _currentPlayer.GetTime();
+                _currentPlayer.Pause();
+                _UpdatePlayerState(PLAYER_STATE_PAUSED);
+            } else
+                _currentPlayer.Play();
+
+            RequestSerialization();
         }
 
         public void _TriggerLock()
@@ -216,7 +242,7 @@ namespace VideoTXL
         {
             if (_syncLocked && !_CanTakeControl())
                 return;
-            if (localPlayerState != PLAYER_STATE_PLAYING)
+            if (localPlayerState != PLAYER_STATE_PLAYING && localPlayerState != PLAYER_STATE_PAUSED)
                 return;
             if (!seekableSource)
                 return;
@@ -264,6 +290,7 @@ namespace VideoTXL
             _syncVideoNumber += isOwner ? 1 : 2;
             _loadedVideoNumber = _syncVideoNumber;
             _syncOwnerPlaying = false;
+            _syncOwnerPaused = false;
 
             _syncVideoStartNetworkTime = float.MaxValue;
             RequestSerialization();
@@ -273,7 +300,8 @@ namespace VideoTXL
 
             // Conditional player stop to try and avoid piling on AVPro at end of track
             // and maybe triggering bad things
-            if (localPlayerState == PLAYER_STATE_PLAYING && _currentPlayer.IsPlaying && seekableSource)
+            bool playingState = localPlayerState == PLAYER_STATE_PLAYING || localPlayerState == PLAYER_STATE_PAUSED;
+            if (playingState && _currentPlayer.IsPlaying && seekableSource)
             {
                 float duration = _currentPlayer.GetDuration();
                 float remaining = duration - _currentPlayer.GetTime();
@@ -390,6 +418,7 @@ namespace VideoTXL
             {
                 _syncVideoStartNetworkTime = 0;
                 _syncOwnerPlaying = false;
+                _syncOwnerPaused = false;
                 _syncUrl = VRCUrl.Empty;
                 RequestSerialization();
             }
@@ -429,23 +458,33 @@ namespace VideoTXL
 
             if (Networking.IsOwner(gameObject))
             {
+                bool paused = localPlayerState == PLAYER_STATE_PAUSED;
+                if (paused)
+                    _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _currentPlayer.GetTime();
+                else
+                    _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _videoTargetTime;
+
                 _UpdatePlayerState(PLAYER_STATE_PLAYING);
                 _UpdateScreenMaterial(SCREEN_MODE_NORMAL);
                 _playStartTime = Time.time;
 
-                _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _videoTargetTime;
                 _syncOwnerPlaying = true;
+                _syncOwnerPaused = false;
                 RequestSerialization();
 
-                _currentPlayer.SetTime(_videoTargetTime);
+                if (!paused)
+                    _currentPlayer.SetTime(_videoTargetTime);
             }
             else
             {
-                if (!_syncOwnerPlaying)
+                if (!_syncOwnerPlaying || _syncOwnerPaused)
                 {
                     // TODO: Owner bypass
                     _currentPlayer.Pause();
                     _waitForSync = true;
+
+                    if (_syncOwnerPaused)
+                        _UpdatePlayerState(PLAYER_STATE_PAUSED);
                 }
                 else
                 {
@@ -538,7 +577,7 @@ namespace VideoTXL
         public bool _CanTakeControl()
         {
             if (_hasAccessControl)
-                return accessControl._LocalHasAccess();
+                return !_syncLocked || accessControl._LocalHasAccess();
 
             VRCPlayerApi player = Networking.LocalPlayer;
             return player.isMaster || player.isInstanceOwner || !_syncLocked;
@@ -556,11 +595,23 @@ namespace VideoTXL
 
             if (_syncVideoNumber == _loadedVideoNumber)
             {
-                if (localPlayerState == PLAYER_STATE_PLAYING && !_syncOwnerPlaying)
+                bool playingState = localPlayerState == PLAYER_STATE_PLAYING || localPlayerState == PLAYER_STATE_PAUSED;
+                if (playingState && !_syncOwnerPlaying)
                     SendCustomEventDelayedFrames("_StopVideo", 1);
+                else if (localPlayerState == PLAYER_STATE_PAUSED && !_syncOwnerPaused)
+                {
+                    DebugLog("Unpausing video");
+                    _currentPlayer.Play();
+                    _UpdatePlayerState(PLAYER_STATE_PLAYING);
+                } else if (localPlayerState == PLAYER_STATE_PLAYING && _syncOwnerPaused)
+                {
+                    DebugLog("Pausing video");
+                    _currentPlayer.Pause();
+                    _UpdatePlayerState(PLAYER_STATE_PAUSED);
+                }
+
                 return;
             }
-
 
             // There was some code here to bypass load owner sync bla bla
 
@@ -591,11 +642,16 @@ namespace VideoTXL
             if (_pendingLoadTime > 0 && Time.time > _pendingLoadTime)
                 _StartVideoLoad();
 
-            if (seekableSource && localPlayerState == PLAYER_STATE_PLAYING)
+            bool playingState = localPlayerState == PLAYER_STATE_PLAYING || localPlayerState == PLAYER_STATE_PAUSED;
+            if (seekableSource && playingState)
             {
                 trackDuration = _currentPlayer.GetDuration();
                 trackPosition = _currentPlayer.GetTime();
             }
+
+            if (seekableSource && _syncOwnerPaused)
+                _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _currentPlayer.GetTime();
+
 
             // Video is playing: periodically sync with owner
             if (isOwner || !_waitForSync)
@@ -605,7 +661,7 @@ namespace VideoTXL
             }
 
             // Video is not playing, but still waiting for go-ahead from owner
-            if (!_syncOwnerPlaying)
+            if (!_syncOwnerPlaying || _syncOwnerPaused)
                 return;
 
             // Got go-ahead from owner, start playing video

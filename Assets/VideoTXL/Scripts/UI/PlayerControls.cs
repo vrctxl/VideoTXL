@@ -23,14 +23,6 @@ namespace VideoTXL
         public VolumeController volumeController;
         public ControlColorProfile colorProfile;
 
-        public bool autoLayout = true;
-        //public bool enableResync = true;
-        public bool enableVolume = true;
-        public bool enable2DAudioToggle = true;
-
-        public GameObject volumeGroup;
-        //public GameObject resyncGroup;
-
         public VRCUrlInputField urlInput;
 
         public GameObject volumeSliderControl;
@@ -43,6 +35,7 @@ namespace VideoTXL
         public Image lockedIcon;
         public Image unlockedIcon;
         public Image loadIcon;
+        public Image resyncIcon;
         public Image repeatIcon;
         public Image infoIcon;
         public Image playCurrentIcon;
@@ -52,16 +45,6 @@ namespace VideoTXL
         public GameObject muteToggleOff;
         public GameObject audio2DToggleOn;
         public GameObject audio2DToggleOff;
-        public GameObject infoToggleOn;
-        public GameObject infoToggleOff;
-        public GameObject stopButton;
-        public GameObject stopButtonDisabled;
-        public GameObject pauseButton;
-        public GameObject playButton;
-        public GameObject playButtonDisabled;
-        public GameObject lockButtonOpen;
-        public GameObject lockButtonClosed;
-        public GameObject lockButtonDenied;
         public Slider volumeSlider;
 
         public Slider progressSlider;
@@ -101,6 +84,7 @@ namespace VideoTXL
         const int PLAYER_STATE_LOADING = 1;
         const int PLAYER_STATE_PLAYING = 2;
         const int PLAYER_STATE_ERROR = 3;
+        const int PLAYER_STATE_PAUSED = 4;
 
         bool infoPanelOpen = false;
 
@@ -126,6 +110,7 @@ namespace VideoTXL
             lockedIcon.color = normalColor;
             unlockedIcon.color = normalColor;
             loadIcon.color = normalColor;
+            resyncIcon.color = disabledColor;
             repeatIcon.color = normalColor;
             infoIcon.color = normalColor;
             playCurrentIcon.color = disabledColor;
@@ -133,6 +118,7 @@ namespace VideoTXL
 
             progressSliderValid = Utilities.IsValid(progressSliderControl);
 
+            _FindOwners();
             _UpdateColor();
         }
 
@@ -247,9 +233,23 @@ namespace VideoTXL
                 _SetStatusOverride(MakeOwnerMessage(), 3);
         }
 
-        public void _HandlePlayPause()
+        public void _HandlePause()
         {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
 
+            if (videoPlayer._CanTakeControl())
+                videoPlayer._TriggerPause();
+            else
+                _SetStatusOverride(MakeOwnerMessage(), 3);
+        }
+
+        public void _HandleResync()
+        {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
+            videoPlayer._Resync();
         }
 
         public void _HandlePlayCurrent()
@@ -391,13 +391,20 @@ namespace VideoTXL
             bool canControl = videoPlayer._CanTakeControl();
             bool enableControl = !videoPlayer.locked || canControl;
 
-            if (videoPlayer.localPlayerState == PLAYER_STATE_PLAYING && !loadActive)
+            bool playingState = videoPlayer.localPlayerState == PLAYER_STATE_PLAYING || videoPlayer.localPlayerState == PLAYER_STATE_PAUSED;
+            if (playingState && !loadActive)
             {
                 urlInput.readOnly = true;
                 urlInputControl.SetActive(false);
 
                 stopIcon.color = enableControl ? normalColor : disabledColor;
                 loadIcon.color = enableControl ? normalColor : disabledColor;
+                resyncIcon.color = normalColor;
+
+                if (videoPlayer.localPlayerState == PLAYER_STATE_PAUSED)
+                    pauseIcon.color = activeColor;
+                else
+                    pauseIcon.color = (enableControl && videoPlayer.seekableSource) ? normalColor : disabledColor;
 
                 if (!videoPlayer.seekableSource)
                 {
@@ -433,6 +440,8 @@ namespace VideoTXL
                 {
                     stopIcon.color = enableControl ? normalColor : disabledColor;
                     loadIcon.color = enableControl ? normalColor : disabledColor;
+                    resyncIcon.color = normalColor;
+                    pauseIcon.color = disabledColor;
 
                     SetPlaceholderText("Loading...");
                     urlInput.readOnly = true;
@@ -442,6 +451,8 @@ namespace VideoTXL
                 {
                     stopIcon.color = disabledColor;
                     loadIcon.color = normalColor;
+                    resyncIcon.color = normalColor;
+                    pauseIcon.color = disabledColor;
                     loadActive = false;
 
                     switch (videoPlayer.localLastErrorCode)
@@ -467,7 +478,7 @@ namespace VideoTXL
                     urlInput.readOnly = !canControl;
                     SetStatusText("");
                 }
-                else if (videoPlayer.localPlayerState == PLAYER_STATE_STOPPED || videoPlayer.localPlayerState == PLAYER_STATE_PLAYING)
+                else if (videoPlayer.localPlayerState == PLAYER_STATE_STOPPED || playingState)
                 {
                     if (videoPlayer.localPlayerState == PLAYER_STATE_STOPPED)
                     {
@@ -475,11 +486,19 @@ namespace VideoTXL
                         pendingFromLoadOverride = false;
                         stopIcon.color = disabledColor;
                         loadIcon.color = disabledColor;
+                        resyncIcon.color = disabledColor;
+                        pauseIcon.color = disabledColor;
                     }
                     else
                     {
-                        stopIcon.color = normalColor;
+                        stopIcon.color = enableControl ? normalColor : disabledColor;
                         loadIcon.color = activeColor;
+                        resyncIcon.color = normalColor;
+
+                        if (videoPlayer.localPlayerState == PLAYER_STATE_PAUSED)
+                            pauseIcon.color = activeColor;
+                        else
+                            pauseIcon.color = (enableControl && videoPlayer.seekableSource) ? normalColor : disabledColor;
                     }
 
                     urlInput.readOnly = !canControl;
@@ -503,16 +522,19 @@ namespace VideoTXL
 
             repeatIcon.color = videoPlayer.repeatPlaylist ? activeColor : normalColor;
 
-            playCurrentIcon.color = (enableControl && videoPlayer.currentUrl != VRCUrl.Empty )? normalColor : disabledColor;
-            playLastIcon.color = (enableControl && videoPlayer.lastUrl != VRCUrl.Empty) ? normalColor : disabledColor;
+            string currentUrl = videoPlayer.currentUrl.Get();
+            string lastUrl = videoPlayer.lastUrl.Get();
+
+            playCurrentIcon.color = (enableControl && currentUrl != "" )? normalColor : disabledColor;
+            playLastIcon.color = (enableControl && lastUrl != "") ? normalColor : disabledColor;
 
             // Move out of update
             instanceOwnerText.text = instanceOwner;
             masterText.text = instanceMaster;
             playerOwnerText.text = Networking.GetOwner(videoPlayer.gameObject).displayName;
             // videoOwnerText.text = videoPlayer.videoOwner;
-            currentVideoInput.text = videoPlayer.currentUrl.Get();
-            lastVideoInput.text = videoPlayer.lastUrl.Get();
+            currentVideoInput.text = currentUrl;
+            lastVideoInput.text = lastUrl;
         }
 
         void SetStatusText(string msg)
@@ -531,7 +553,7 @@ namespace VideoTXL
                 placeholderText.text = msg;
         }
 
-        void FindOwners()
+        void _FindOwners()
         {
             int playerCount = VRCPlayerApi.GetPlayerCount();
             VRCPlayerApi[] playerList = new VRCPlayerApi[playerCount];
@@ -590,14 +612,6 @@ namespace VideoTXL
         SerializedProperty volumeControllerProperty;
         SerializedProperty colorProfileProperty;
 
-        SerializedProperty autoLayoutProperty;
-        //SerializedProperty enableResyncProprety;
-        SerializedProperty enableVolumeProperty;
-        SerializedProperty enable2DAudioProperty;
-
-        SerializedProperty volumeGroupProperty;
-        //SerializedProperty resyncGroupProperty;
-
         SerializedProperty urlInputProperty;
 
         SerializedProperty volumeSliderControlProperty;
@@ -610,6 +624,7 @@ namespace VideoTXL
         SerializedProperty lockedIconProperty;
         SerializedProperty unlockedIconProperty;
         SerializedProperty loadIconProperty;
+        SerializedProperty resyncIconProperty;
         SerializedProperty repeatIconProperty;
         SerializedProperty infoIconProperty;
         SerializedProperty playCurrentIconProperty;
@@ -619,16 +634,6 @@ namespace VideoTXL
         SerializedProperty muteToggleOffProperty;
         SerializedProperty audio2DToggleOnProperty;
         SerializedProperty audio2DToggleOffProperty;
-        SerializedProperty infoToggleOnProperty;
-        SerializedProperty infoToggleOffProperty;
-        SerializedProperty stopButtonProperty;
-        SerializedProperty stopButtonDisabledProperty;
-        SerializedProperty pauseButtonProperty;
-        SerializedProperty playButtonProperty;
-        SerializedProperty playButtonDisabledProperty;
-        SerializedProperty lockButtonOpenProperty;
-        SerializedProperty lockButtonClosedProperty;
-        SerializedProperty lockButtonDeniedProperty;
         SerializedProperty volumeSliderProperty;
 
         SerializedProperty progressSliderProperty;
@@ -663,14 +668,6 @@ namespace VideoTXL
             volumeControllerProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeController));
             colorProfileProperty = serializedObject.FindProperty(nameof(PlayerControls.colorProfile));
 
-            autoLayoutProperty = serializedObject.FindProperty(nameof(PlayerControls.autoLayout));
-            //enableResyncProprety = serializedObject.FindProperty(nameof(LocalControls.enableResync));
-            enableVolumeProperty = serializedObject.FindProperty(nameof(PlayerControls.enableVolume));
-            enable2DAudioProperty = serializedObject.FindProperty(nameof(PlayerControls.enable2DAudioToggle));
-
-            volumeGroupProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeGroup));
-            //resyncGroupProperty = serializedObject.FindProperty(nameof(LocalControls.resyncGroup));
-
             urlInputProperty = serializedObject.FindProperty(nameof(PlayerControls.urlInput));
 
             volumeSliderControlProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeSliderControl));
@@ -683,6 +680,7 @@ namespace VideoTXL
             lockedIconProperty = serializedObject.FindProperty(nameof(PlayerControls.lockedIcon));
             unlockedIconProperty = serializedObject.FindProperty(nameof(PlayerControls.unlockedIcon));
             loadIconProperty = serializedObject.FindProperty(nameof(PlayerControls.loadIcon));
+            resyncIconProperty = serializedObject.FindProperty(nameof(PlayerControls.resyncIcon));
             repeatIconProperty = serializedObject.FindProperty(nameof(PlayerControls.repeatIcon));
             infoIconProperty = serializedObject.FindProperty(nameof(PlayerControls.infoIcon));
             playCurrentIconProperty = serializedObject.FindProperty(nameof(PlayerControls.playCurrentIcon));
@@ -692,16 +690,6 @@ namespace VideoTXL
             muteToggleOffProperty = serializedObject.FindProperty(nameof(PlayerControls.muteToggleOff));
             audio2DToggleOnProperty = serializedObject.FindProperty(nameof(PlayerControls.audio2DToggleOn));
             audio2DToggleOffProperty = serializedObject.FindProperty(nameof(PlayerControls.audio2DToggleOff));
-            infoToggleOnProperty = serializedObject.FindProperty(nameof(PlayerControls.infoToggleOn));
-            infoToggleOffProperty = serializedObject.FindProperty(nameof(PlayerControls.infoToggleOff));
-            stopButtonProperty = serializedObject.FindProperty(nameof(PlayerControls.stopButton));
-            stopButtonDisabledProperty = serializedObject.FindProperty(nameof(PlayerControls.stopButtonDisabled));
-            pauseButtonProperty = serializedObject.FindProperty(nameof(PlayerControls.pauseButton));
-            playButtonProperty = serializedObject.FindProperty(nameof(PlayerControls.playButton));
-            playButtonDisabledProperty = serializedObject.FindProperty(nameof(PlayerControls.playButtonDisabled));
-            lockButtonOpenProperty = serializedObject.FindProperty(nameof(PlayerControls.lockButtonOpen));
-            lockButtonClosedProperty = serializedObject.FindProperty(nameof(PlayerControls.lockButtonClosed));
-            lockButtonDeniedProperty = serializedObject.FindProperty(nameof(PlayerControls.lockButtonDenied));
             volumeSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeSlider));
 
             statusTextProperty = serializedObject.FindProperty(nameof(PlayerControls.statusText));
@@ -740,26 +728,12 @@ namespace VideoTXL
             EditorGUILayout.PropertyField(volumeControllerProperty);
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(colorProfileProperty);
-            EditorGUILayout.PropertyField(autoLayoutProperty);
-            if (autoLayoutProperty.boolValue)
-            {
-                EditorGUI.indentLevel++;
-                GUI.enabled = videoPlayerProperty.objectReferenceValue != null;
-                //EditorGUILayout.PropertyField(enableResyncProprety);
-                //GUI.enabled = staticUrlSourceProperty.objectReferenceValue != null;
-                EditorGUILayout.PropertyField(enableVolumeProperty);
-                EditorGUILayout.PropertyField(enable2DAudioProperty);
-                GUI.enabled = true;
-                EditorGUI.indentLevel--;
-            }
             EditorGUILayout.Space();
 
             _showObjectFoldout = EditorGUILayout.Foldout(_showObjectFoldout, "Internal Object References");
             if (_showObjectFoldout)
             {
                 EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(volumeGroupProperty);
-                //EditorGUILayout.PropertyField(resyncGroupProperty);
                 EditorGUILayout.Space();
                 EditorGUILayout.PropertyField(urlInputProperty);
                 EditorGUILayout.PropertyField(volumeSliderControlProperty);
@@ -771,6 +745,7 @@ namespace VideoTXL
                 EditorGUILayout.PropertyField(lockedIconProperty);
                 EditorGUILayout.PropertyField(unlockedIconProperty);
                 EditorGUILayout.PropertyField(loadIconProperty);
+                EditorGUILayout.PropertyField(resyncIconProperty);
                 EditorGUILayout.PropertyField(repeatIconProperty);
                 EditorGUILayout.PropertyField(infoIconProperty);
                 EditorGUILayout.PropertyField(playCurrentIconProperty);
@@ -779,16 +754,6 @@ namespace VideoTXL
                 EditorGUILayout.PropertyField(muteToggleOffProperty);
                 EditorGUILayout.PropertyField(audio2DToggleOnProperty);
                 EditorGUILayout.PropertyField(audio2DToggleOffProperty);
-                EditorGUILayout.PropertyField(infoToggleOnProperty);
-                EditorGUILayout.PropertyField(infoToggleOffProperty);
-                EditorGUILayout.PropertyField(stopButtonProperty);
-                EditorGUILayout.PropertyField(stopButtonDisabledProperty);
-                EditorGUILayout.PropertyField(pauseButtonProperty);
-                EditorGUILayout.PropertyField(playButtonProperty);
-                EditorGUILayout.PropertyField(playButtonDisabledProperty);
-                EditorGUILayout.PropertyField(lockButtonOpenProperty);
-                EditorGUILayout.PropertyField(lockButtonClosedProperty);
-                EditorGUILayout.PropertyField(lockButtonDeniedProperty);
                 EditorGUILayout.PropertyField(volumeSliderProperty);
                 EditorGUILayout.PropertyField(progressSliderProperty);
                 EditorGUILayout.PropertyField(statusTextProperty);

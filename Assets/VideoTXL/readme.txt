@@ -1,11 +1,7 @@
-AudioSource Config Cards
+VideoTXL
 
-Place prefab in world and set the audio source field.  You can carry the card
-around and change several audio source values at runtime.
-
-The card may not work as expected for all options for all audio sources (e.g.
-those attached to a unity video player or AV Pro player).  These are likely
-limitations of those players and/or vrchat.
+A collection of video player prefabs for local or sync video playback.
+See project readme on GitHub for more information.
 
 MIT License
 
