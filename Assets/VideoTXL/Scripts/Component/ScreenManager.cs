@@ -64,9 +64,10 @@ namespace VideoTXL
         const int PLAYER_STATE_LOADING = 1;
         const int PLAYER_STATE_PLAYING = 2;
         const int PLAYER_STATE_ERROR = 3;
+        const int PLAYER_STATE_PAUSED = 4;
 
         bool _initComplete = false;
-        int _screenSource = SCREEN_SOURCE_UNITY;
+        int _screenSource = SCREEN_SOURCE_AVPRO;
         int _screenMode = SCREEN_MODE_NORMAL;
         VideoError _lastErrorCode = 0;
         int _checkFrameCount = 0;

@@ -21,15 +21,18 @@ public class VideoPlayerProxy : UdonSharpBehaviour
     [NonSerialized]
     public bool locked;
     [NonSerialized]
-    public string currentUrl;
+    public bool repeatPlaylist;
     [NonSerialized]
-    public string lastUrl;
+    public VRCUrl currentUrl;
+    [NonSerialized]
+    public VRCUrl lastUrl;
 
     bool init = false;
     GameObject[] playerStateHandlers;
     GameObject[] trackingHandlers;
     GameObject[] lockHandlers;
     GameObject[] infoHandlers;
+    GameObject[] playlistHandlers;
 
     public void _Init()
     {
@@ -40,6 +43,7 @@ public class VideoPlayerProxy : UdonSharpBehaviour
         trackingHandlers = new GameObject[0];
         lockHandlers = new GameObject[0];
         infoHandlers = new GameObject[0];
+        playlistHandlers = new GameObject[0];
         init = true;
     }
 
@@ -64,6 +68,9 @@ public class VideoPlayerProxy : UdonSharpBehaviour
                 break;
             case "_VideoLockUpdate":
                 lockHandlers = _RegsiterEventHandlerIntoList(lockHandlers, handler);
+                break;
+            case "_VideoPlaylistUpdate":
+                playlistHandlers = _RegsiterEventHandlerIntoList(playlistHandlers, handler);
                 break;
             default:
                 return;
@@ -100,17 +107,22 @@ public class VideoPlayerProxy : UdonSharpBehaviour
 
     public void _EmitTrackingUpdate()
     {
-        _EmitEvent(playerStateHandlers, "_VideoTrackingUpdate");
+        _EmitEvent(trackingHandlers, "_VideoTrackingUpdate");
     }
 
     public void _EmitLockUpdate()
     {
-        _EmitEvent(playerStateHandlers, "_VideoLockUpdate");
+        _EmitEvent(lockHandlers, "_VideoLockUpdate");
     }
 
     public void _EmitInfoUpdate()
     {
-        _EmitEvent(playerStateHandlers, "_VideoInfoUpdate");
+        _EmitEvent(infoHandlers, "_VideoInfoUpdate");
+    }
+
+    public void _EmitPlaylistUpdate()
+    {
+        _EmitEvent(playlistHandlers, "_VideoPlaylistUpdate");
     }
 
     void _EmitEvent(GameObject[] handlerList, string eventName)

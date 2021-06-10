@@ -60,25 +60,12 @@ namespace VideoTXL
         public InputField currentVideoInput;
         public InputField lastVideoInput;
 
+        VideoPlayerProxy dataProxy;
+
         Color normalColor = new Color(1f, 1f, 1f, .8f);
         Color disabledColor = new Color(.5f, .5f, .5f, .4f);
         Color activeColor = new Color(1f, .8f, 0f, .7f);
         Color attentionColor = new Color(.9f, 0f, 0f, .5f);
-
-        bool progressSliderValid;
-
-        public Image[] backgroundImgs;
-        public Image[] backgroundMsgBarImgs;
-        public Image[] buttonImgs;
-        public Image[] buttonSelectedImgs;
-        public Text[] brightTexts;
-        public Text[] dimTexts;
-        public Image[] brightImgs;
-        public Image[] dimImgs;
-        public Image[] redImgs;
-        public Image[] sliderBrightImgs;
-        public Image[] sliderDimImgs;
-        public Image[] sliderGrabImgs;
 
         const int PLAYER_STATE_STOPPED = 0;
         const int PLAYER_STATE_LOADING = 1;
@@ -98,59 +85,39 @@ namespace VideoTXL
 
         void Start()
         {
+            infoIcon.color = normalColor;
+            _DisableAllVideoControls();
+
             if (Utilities.IsValid(volumeController))
                 volumeController._RegisterControls(gameObject);
+            if (Utilities.IsValid(videoPlayer) && Utilities.IsValid(videoPlayer.dataProxy)) {
+                dataProxy = videoPlayer.dataProxy;
+                dataProxy._RegisterEventHandler(gameObject, "_VideoStateUpdate");
+                dataProxy._RegisterEventHandler(gameObject, "_VideoLockUpdate");
+                dataProxy._RegisterEventHandler(gameObject, "_VideoTrackingUpdate");
+                dataProxy._RegisterEventHandler(gameObject, "_VideoInfoUpdate");
+                dataProxy._RegisterEventHandler(gameObject, "_VideoPlaylistUpdate");
+
+                unlockedIcon.color = normalColor;
+            }
 
 #if !UNITY_EDITOR
             instanceMaster = Networking.GetOwner(gameObject).displayName;
-#endif
-
-            stopIcon.color = normalColor;
-            pauseIcon.color = disabledColor;
-            lockedIcon.color = normalColor;
-            unlockedIcon.color = normalColor;
-            loadIcon.color = normalColor;
-            resyncIcon.color = disabledColor;
-            repeatIcon.color = normalColor;
-            infoIcon.color = normalColor;
-            playCurrentIcon.color = disabledColor;
-            playLastIcon.color = disabledColor;
-
-            progressSliderValid = Utilities.IsValid(progressSliderControl);
-
             _FindOwners();
-            _UpdateColor();
+#endif
         }
 
-        public void _UpdateColor()
+        void _DisableAllVideoControls()
         {
-            if (!Utilities.IsValid(colorProfile))
-                return;
-
-            foreach (Image image in backgroundImgs)
-                if (image != null) image.color = colorProfile.backgroundColor;
-            foreach (Image image in backgroundMsgBarImgs)
-                if (image != null) image.color = colorProfile.backgroundMsgBarColor;
-            foreach (Image image in buttonImgs)
-                if (image != null) image.color = colorProfile.buttonColor;
-            foreach (Image image in buttonSelectedImgs)
-                if (image != null) image.color = colorProfile.buttonSelectedColor;
-            foreach (Text text in brightTexts)
-                if (text != null) text.color = colorProfile.brightLabelColor;
-            foreach (Text text in dimTexts)
-                if (text != null) text.color = colorProfile.dimLabelColor;
-            foreach (Image image in brightImgs)
-                if (image != null) image.color = colorProfile.brightLabelColor;
-            foreach (Image image in dimImgs)
-                if (image != null) image.color = colorProfile.dimLabelColor;
-            foreach (Image image in redImgs)
-                if (image != null) image.color = colorProfile.redLabelColor;
-            foreach (Image image in sliderBrightImgs)
-                if (image != null) image.color = colorProfile.brightSliderColor;
-            foreach (Image image in sliderDimImgs)
-                if (image != null) image.color = colorProfile.dimSliderColor;
-            foreach (Image image in sliderGrabImgs)
-                if (image != null) image.color = colorProfile.sliderGrabColor;
+            stopIcon.color = disabledColor;
+            pauseIcon.color = disabledColor;
+            lockedIcon.color = disabledColor;
+            unlockedIcon.color = disabledColor;
+            loadIcon.color = disabledColor;
+            resyncIcon.color = disabledColor;
+            repeatIcon.color = disabledColor;
+            playCurrentIcon.color = disabledColor;
+            playLastIcon.color = disabledColor;
         }
 
         bool inVolumeControllerUpdate = false;
@@ -174,11 +141,30 @@ namespace VideoTXL
             inVolumeControllerUpdate = false;
         }
 
-        /*public void _Resync()
+        public void _VideoStateUpdate()
         {
-            if (Utilities.IsValid(videoPlayer))
-                videoPlayer.SendCustomEvent("_Resync");
-        }*/
+            _UpdateAll();
+        }
+
+        public void _VideoLockUpdate()
+        {
+            _UpdateAll();
+        }
+
+        public void _VideoTrackingUpdate()
+        {
+            _UpdateTracking();
+        }
+
+        public void _VideoInfoUpdate()
+        {
+            _UpdateInfo();
+        }
+
+        public void _VideoPlaylistUpdate()
+        {
+            _UpdatePlaylistInfo();
+        }
 
         public void _HandleUrlInput()
         {
@@ -204,6 +190,7 @@ namespace VideoTXL
 
             videoPlayer._ChangeUrl(url);
             loadActive = false;
+            _UpdateAll();
         }
 
         public void _HandleUrlInputClick()
@@ -311,6 +298,8 @@ namespace VideoTXL
                 loadActive = false;
             else
                 loadActive = !loadActive;
+
+            _UpdateAll();
         }
 
         public void _HandleRepeat()
@@ -329,6 +318,7 @@ namespace VideoTXL
         public void _HandleProgressBeginDrag()
         {
             _draggingProgressSlider = true;
+            _UpdateTrackingDragging();
         }
 
         public void _HandleProgressEndDrag()
@@ -341,10 +331,10 @@ namespace VideoTXL
             if (!_draggingProgressSlider)
                 return;
 
-            if (float.IsInfinity(videoPlayer.trackDuration) || videoPlayer.trackDuration <= 0)
+            if (float.IsInfinity(dataProxy.trackDuration) || dataProxy.trackDuration <= 0)
                 return;
 
-            float targetTime = videoPlayer.trackDuration * progressSlider.value;
+            float targetTime = dataProxy.trackDuration * progressSlider.value;
             videoPlayer._SetTargetTime(targetTime);
         }
 
@@ -379,19 +369,86 @@ namespace VideoTXL
         {
             statusOverride = msg;
             SendCustomEventDelayedSeconds("_ClearStatusOverride", timeout);
+            _UpdateAll();
         }
 
         public void _ClearStatusOverride()
         {
             statusOverride = null;
+            _UpdateAll();
         }
 
-        private void Update()
+        public void _UpdateTrackingDragging()
+        {
+            int playerState = dataProxy.playerState;
+            bool playingState = playerState == PLAYER_STATE_PLAYING || playerState == PLAYER_STATE_PAUSED;
+
+            if (!_draggingProgressSlider || !playingState || loadActive || !dataProxy.seekableSource)
+                return;
+
+            string durationStr = System.TimeSpan.FromSeconds(dataProxy.trackDuration).ToString(@"hh\:mm\:ss");
+            string positionStr = System.TimeSpan.FromSeconds(dataProxy.trackDuration * progressSlider.value).ToString(@"hh\:mm\:ss");
+            SetStatusText(positionStr + "/" + durationStr);
+            progressSliderControl.SetActive(true);
+
+            SendCustomEventDelayedSeconds("_UpdateTrackingDragging", 0.1f);
+        }
+
+        public void _UpdateTracking()
+        {
+            int playerState = dataProxy.playerState;
+            bool playingState = playerState == PLAYER_STATE_PLAYING || playerState == PLAYER_STATE_PAUSED;
+
+            if (!playingState || loadActive)
+                return;
+
+            if (!videoPlayer.seekableSource)
+            {
+                SetStatusText("Streaming...");
+                progressSliderControl.SetActive(false);
+            }
+            else if (!_draggingProgressSlider)
+            {
+                string durationStr = System.TimeSpan.FromSeconds(dataProxy.trackDuration).ToString(@"hh\:mm\:ss");
+                string positionStr = System.TimeSpan.FromSeconds(dataProxy.trackPosition).ToString(@"hh\:mm\:ss");
+                SetStatusText(positionStr + "/" + durationStr);
+                progressSliderControl.SetActive(true);
+                progressSlider.value = Mathf.Clamp01(dataProxy.trackPosition / dataProxy.trackDuration);
+            }
+        }
+
+        public void _UpdateInfo()
         {
             bool canControl = videoPlayer._CanTakeControl();
             bool enableControl = !videoPlayer.locked || canControl;
 
-            bool playingState = videoPlayer.localPlayerState == PLAYER_STATE_PLAYING || videoPlayer.localPlayerState == PLAYER_STATE_PAUSED;
+            string currentUrl = videoPlayer.currentUrl.Get();
+            string lastUrl = videoPlayer.lastUrl.Get();
+
+            playCurrentIcon.color = (enableControl && currentUrl != "") ? normalColor : disabledColor;
+            playLastIcon.color = (enableControl && lastUrl != "") ? normalColor : disabledColor;
+
+            instanceOwnerText.text = instanceOwner;
+            masterText.text = instanceMaster;
+            playerOwnerText.text = Networking.GetOwner(videoPlayer.gameObject).displayName;
+            // videoOwnerText.text = videoPlayer.videoOwner;
+            currentVideoInput.text = currentUrl;
+            lastVideoInput.text = lastUrl;
+        }
+
+        public void _UpdatePlaylistInfo()
+        {
+            repeatIcon.color = videoPlayer.repeatPlaylist ? activeColor : normalColor;
+        }
+
+        public void _UpdateAll()
+        {
+            bool canControl = videoPlayer._CanTakeControl();
+            bool enableControl = !videoPlayer.locked || canControl;
+
+            int playerState = dataProxy.playerState;
+
+            bool playingState = playerState == PLAYER_STATE_PLAYING || playerState == PLAYER_STATE_PAUSED;
             if (playingState && !loadActive)
             {
                 urlInput.readOnly = true;
@@ -401,33 +458,15 @@ namespace VideoTXL
                 loadIcon.color = enableControl ? normalColor : disabledColor;
                 resyncIcon.color = normalColor;
 
-                if (videoPlayer.localPlayerState == PLAYER_STATE_PAUSED)
+                if (playerState == PLAYER_STATE_PAUSED)
                     pauseIcon.color = activeColor;
                 else
                     pauseIcon.color = (enableControl && videoPlayer.seekableSource) ? normalColor : disabledColor;
 
-                if (!videoPlayer.seekableSource)
-                {
-                    SetStatusText("Streaming...");
-                    progressSliderControl.SetActive(false);
-                }
-                else if (_draggingProgressSlider)
-                {
-                    string durationStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration).ToString(@"hh\:mm\:ss");
-                    string positionStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration * progressSlider.value).ToString(@"hh\:mm\:ss");
-                    SetStatusText(positionStr + "/" + durationStr);
-                    progressSliderControl.SetActive(true);
-                }
-                else
-                {
-                    string durationStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration).ToString(@"hh\:mm\:ss");
-                    string positionStr = System.TimeSpan.FromSeconds(videoPlayer.trackPosition).ToString(@"hh\:mm\:ss");
-                    SetStatusText(positionStr + "/" + durationStr);
-                    progressSliderControl.SetActive(true);
-                    progressSlider.value = Mathf.Clamp01(videoPlayer.trackPosition / videoPlayer.trackDuration);
-                }
                 progressSlider.interactable = enableControl;
-            } else
+                _UpdateTracking();
+            }
+            else
             {
                 _draggingProgressSlider = false;
 
@@ -436,7 +475,7 @@ namespace VideoTXL
                 progressSliderControl.SetActive(false);
                 urlInputControl.SetActive(true);
 
-                if (videoPlayer.localPlayerState == PLAYER_STATE_LOADING)
+                if (playerState == PLAYER_STATE_LOADING)
                 {
                     stopIcon.color = enableControl ? normalColor : disabledColor;
                     loadIcon.color = enableControl ? normalColor : disabledColor;
@@ -447,7 +486,7 @@ namespace VideoTXL
                     urlInput.readOnly = true;
                     SetStatusText("");
                 }
-                else if (videoPlayer.localPlayerState == PLAYER_STATE_ERROR)
+                else if (playerState == PLAYER_STATE_ERROR)
                 {
                     stopIcon.color = disabledColor;
                     loadIcon.color = normalColor;
@@ -478,9 +517,9 @@ namespace VideoTXL
                     urlInput.readOnly = !canControl;
                     SetStatusText("");
                 }
-                else if (videoPlayer.localPlayerState == PLAYER_STATE_STOPPED || playingState)
+                else if (playerState == PLAYER_STATE_STOPPED || playingState)
                 {
-                    if (videoPlayer.localPlayerState == PLAYER_STATE_STOPPED)
+                    if (playerState == PLAYER_STATE_STOPPED)
                     {
                         loadActive = false;
                         pendingFromLoadOverride = false;
@@ -495,7 +534,7 @@ namespace VideoTXL
                         loadIcon.color = activeColor;
                         resyncIcon.color = normalColor;
 
-                        if (videoPlayer.localPlayerState == PLAYER_STATE_PAUSED)
+                        if (playerState == PLAYER_STATE_PAUSED)
                             pauseIcon.color = activeColor;
                         else
                             pauseIcon.color = (enableControl && videoPlayer.seekableSource) ? normalColor : disabledColor;
@@ -519,22 +558,6 @@ namespace VideoTXL
             unlockedIcon.enabled = !videoPlayer.locked;
             if (videoPlayer.locked)
                 lockedIcon.color = canControl ? normalColor : attentionColor;
-
-            repeatIcon.color = videoPlayer.repeatPlaylist ? activeColor : normalColor;
-
-            string currentUrl = videoPlayer.currentUrl.Get();
-            string lastUrl = videoPlayer.lastUrl.Get();
-
-            playCurrentIcon.color = (enableControl && currentUrl != "" )? normalColor : disabledColor;
-            playLastIcon.color = (enableControl && lastUrl != "") ? normalColor : disabledColor;
-
-            // Move out of update
-            instanceOwnerText.text = instanceOwner;
-            masterText.text = instanceMaster;
-            playerOwnerText.text = Networking.GetOwner(videoPlayer.gameObject).displayName;
-            // videoOwnerText.text = videoPlayer.videoOwner;
-            currentVideoInput.text = currentUrl;
-            lastVideoInput.text = lastUrl;
         }
 
         void SetStatusText(string msg)
@@ -606,7 +629,6 @@ namespace VideoTXL
     internal class PlayerControlsInspector : Editor
     {
         static bool _showObjectFoldout;
-        static bool _showColorFoldout;
 
         SerializedProperty videoPlayerProperty;
         SerializedProperty volumeControllerProperty;
@@ -648,19 +670,6 @@ namespace VideoTXL
         SerializedProperty videoOwnerTextProperty;
         SerializedProperty currentVideoInputProperty;
         SerializedProperty lastVideoInputProperty;
-
-        SerializedProperty backgroundImgsProperty;
-        SerializedProperty backgroundMsgBarImgsProperty;
-        SerializedProperty buttonImgsProperty;
-        SerializedProperty buttonSelectedImgsProperty;
-        SerializedProperty brightTextsProperty;
-        SerializedProperty dimTextsProperty;
-        SerializedProperty brightImgsProperty;
-        SerializedProperty dimImgsProperty;
-        SerializedProperty redImgsProperty;
-        SerializedProperty sliderBrightImgsProperty;
-        SerializedProperty sliderDimImgsProperty;
-        SerializedProperty sliderGrabImgsProperty;
 
         private void OnEnable()
         {
@@ -704,19 +713,6 @@ namespace VideoTXL
             videoOwnerTextProperty = serializedObject.FindProperty(nameof(PlayerControls.videoOwnerText));
             currentVideoInputProperty = serializedObject.FindProperty(nameof(PlayerControls.currentVideoInput));
             lastVideoInputProperty = serializedObject.FindProperty(nameof(PlayerControls.lastVideoInput));
-
-            backgroundImgsProperty = serializedObject.FindProperty(nameof(PlayerControls.backgroundImgs));
-            backgroundMsgBarImgsProperty = serializedObject.FindProperty(nameof(PlayerControls.backgroundMsgBarImgs));
-            buttonImgsProperty = serializedObject.FindProperty(nameof(PlayerControls.buttonImgs));
-            buttonSelectedImgsProperty = serializedObject.FindProperty(nameof(PlayerControls.buttonSelectedImgs));
-            brightTextsProperty = serializedObject.FindProperty(nameof(PlayerControls.brightTexts));
-            dimTextsProperty = serializedObject.FindProperty(nameof(PlayerControls.dimTexts));
-            brightImgsProperty = serializedObject.FindProperty(nameof(PlayerControls.brightImgs));
-            dimImgsProperty = serializedObject.FindProperty(nameof(PlayerControls.dimImgs));
-            redImgsProperty = serializedObject.FindProperty(nameof(PlayerControls.redImgs));
-            sliderBrightImgsProperty = serializedObject.FindProperty(nameof(PlayerControls.sliderBrightImgs));
-            sliderDimImgsProperty = serializedObject.FindProperty(nameof(PlayerControls.sliderDimImgs));
-            sliderGrabImgsProperty = serializedObject.FindProperty(nameof(PlayerControls.sliderGrabImgs));
         }
 
         public override void OnInspectorGUI()
@@ -770,31 +766,8 @@ namespace VideoTXL
             }
             EditorGUILayout.Space();
 
-            _showColorFoldout = EditorGUILayout.Foldout(_showColorFoldout, "Color Profile Object References");
-            if (_showColorFoldout)
-            {
-                EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(backgroundImgsProperty, true);
-                EditorGUILayout.PropertyField(backgroundMsgBarImgsProperty, true);
-                EditorGUILayout.PropertyField(buttonImgsProperty, true);
-                EditorGUILayout.PropertyField(buttonSelectedImgsProperty, true);
-                EditorGUILayout.PropertyField(brightTextsProperty, true);
-                EditorGUILayout.PropertyField(dimTextsProperty, true);
-                EditorGUILayout.PropertyField(brightImgsProperty, true);
-                EditorGUILayout.PropertyField(dimImgsProperty, true);
-                EditorGUILayout.PropertyField(redImgsProperty, true);
-                EditorGUILayout.PropertyField(sliderBrightImgsProperty, true);
-                EditorGUILayout.PropertyField(sliderDimImgsProperty, true);
-                EditorGUILayout.PropertyField(sliderGrabImgsProperty, true);
-                EditorGUI.indentLevel--;
-            }
-
             if (serializedObject.hasModifiedProperties)
-            {
                 serializedObject.ApplyModifiedProperties();
-                PlayerControls lc = (PlayerControls)target;
-                lc._UpdateColor();
-            }
         }
     }
 #endif

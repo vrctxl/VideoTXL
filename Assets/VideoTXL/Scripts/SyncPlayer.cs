@@ -16,10 +16,10 @@ namespace VideoTXL
     {
         public VideoPlayerProxy dataProxy;
 
-        [Tooltip("Optional component to control and synchronize player video screens and materials")]
-        public ScreenManager screenManager;
-        [Tooltip("Optional component to control and synchronize player audio sources")]
-        public VolumeController audioManager;
+        //[Tooltip("Optional component to control and synchronize player video screens and materials")]
+        //public ScreenManager screenManager;
+        //[Tooltip("Optional component to control and synchronize player audio sources")]
+        //public VolumeController audioManager;
         //[Tooltip("Optional component to start or stop player based on common trigger events")]
         //public TriggerManager triggerManager;
         [Tooltip("Optional component to control access to player controls based on player type or whitelist")]
@@ -87,6 +87,8 @@ namespace VideoTXL
         float _pendingPlayTime = 0;
         VRCUrl _pendingPlayUrl;
 
+        bool _hasAccessControl = false;
+
         // Realtime state
 
         [NonSerialized]
@@ -95,6 +97,8 @@ namespace VideoTXL
         public float trackDuration;
         [NonSerialized]
         public float trackPosition;
+        [NonSerialized]
+        public float previousTrackPosition;
         [NonSerialized]
         public bool locked;
         [NonSerialized]
@@ -124,6 +128,8 @@ namespace VideoTXL
         {
             dataProxy._Init();
 
+            _hasAccessControl = Utilities.IsValid(accessControl);
+
             avProVideo.Loop = false;
             avProVideo.Stop();
             _currentPlayer = avProVideo;
@@ -134,13 +140,10 @@ namespace VideoTXL
             {
                 _syncLocked = defaultLocked;
                 _syncRepeatPlaylist = loop;
-                locked = _syncLocked;
-                repeatPlaylist = _syncRepeatPlaylist;
+                _UpdateLockState(_syncLocked);
+                _UpdateRepeatMode(_syncRepeatPlaylist);
                 RequestSerialization();
             }
-
-            _StartExtra();
-
 
             if (Networking.IsOwner(gameObject))
                 _PlayVideo(defaultUrl);
@@ -196,7 +199,7 @@ namespace VideoTXL
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             _syncLocked = !_syncLocked;
-            locked = _syncLocked;
+            _UpdateLockState(_syncLocked);
             RequestSerialization();
         }
 
@@ -209,7 +212,7 @@ namespace VideoTXL
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             _syncRepeatPlaylist = !_syncRepeatPlaylist;
-            repeatPlaylist = _syncRepeatPlaylist;
+            _UpdateRepeatMode(_syncRepeatPlaylist);
             RequestSerialization();
         }
 
@@ -389,9 +392,6 @@ namespace VideoTXL
 
             DebugLog("Start video load " + _syncUrl);
             _UpdatePlayerState(PLAYER_STATE_LOADING);
-            //localPlayerState = PLAYER_STATE_LOADING;
-
-            _UpdateScreenMaterial(SCREEN_MODE_LOADING);
 
 #if !UNITY_EDITOR
             _currentPlayer.LoadURL(_syncUrl);
@@ -406,7 +406,6 @@ namespace VideoTXL
                 _lastVideoPosition = _currentPlayer.GetTime();
 
             _UpdatePlayerState(PLAYER_STATE_STOPPED);
-            _UpdateScreenMaterial(SCREEN_MODE_LOGO);
 
             _currentPlayer.Stop();
             _videoTargetTime = 0;
@@ -426,13 +425,14 @@ namespace VideoTXL
 
         public override void OnVideoReady()
         {
+            float position = _currentPlayer.GetTime();
             float duration = _currentPlayer.GetDuration();
-            DebugLog("Video ready, duration: " + duration + ", position: " + _currentPlayer.GetTime());
-
-            _AudioStart();
+            DebugLog("Video ready, duration: " + duration + ", position: " + position);
 
             // If a seekable video is loaded it should have a positive duration.  Otherwise we assume it's a non-seekable stream
             seekableSource = !float.IsInfinity(duration) && !float.IsNaN(duration) && duration > 1;
+            dataProxy.seekableSource = seekableSource;
+            _UpdateTracking(position, duration);
 
             // If player is owner: play video
             // If Player is remote:
@@ -465,7 +465,6 @@ namespace VideoTXL
                     _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _videoTargetTime;
 
                 _UpdatePlayerState(PLAYER_STATE_PLAYING);
-                _UpdateScreenMaterial(SCREEN_MODE_NORMAL);
                 _playStartTime = Time.time;
 
                 _syncOwnerPlaying = true;
@@ -489,7 +488,6 @@ namespace VideoTXL
                 else
                 {
                     _UpdatePlayerState(PLAYER_STATE_PLAYING);
-                    _UpdateScreenMaterial(SCREEN_MODE_NORMAL);
                     _playStartTime = Time.time;
                     
                     SyncVideo();
@@ -509,12 +507,9 @@ namespace VideoTXL
             dataProxy.seekableSource = false;
 
             _UpdatePlayerState(PLAYER_STATE_STOPPED);
-            _UpdateScreenMaterial(SCREEN_MODE_LOGO);
 
             DebugLog("Video end");
             _lastVideoPosition = 0;
-
-            _AudioStop();
 
             if (Networking.IsOwner(gameObject))
             {
@@ -538,12 +533,7 @@ namespace VideoTXL
             DebugLog("Video stream failed: " + _syncUrl);
             DebugLog("Error code: " + videoError);
 
-            //localPlayerState = PLAYER_STATE_ERROR;
-            //localLastErrorCode = videoError;
             _UpdatePlayerStateError(videoError);
-            _UpdateScreenVideoError(videoError);
-            _UpdateScreenMaterial(SCREEN_MODE_ERROR);
-            _AudioStop();
 
             if (Networking.IsOwner(gameObject))
             {
@@ -590,8 +580,8 @@ namespace VideoTXL
 
             DebugLog($"Deserialize: video #{_syncVideoNumber}");
 
-            locked = _syncLocked;
-            repeatPlaylist = _syncRepeatPlaylist;
+            _UpdateLockState(_syncLocked);
+            _UpdateRepeatMode(_syncRepeatPlaylist);
 
             if (_syncVideoNumber == _loadedVideoNumber)
             {
@@ -645,8 +635,12 @@ namespace VideoTXL
             bool playingState = localPlayerState == PLAYER_STATE_PLAYING || localPlayerState == PLAYER_STATE_PAUSED;
             if (seekableSource && playingState)
             {
-                trackDuration = _currentPlayer.GetDuration();
-                trackPosition = _currentPlayer.GetTime();
+                float position = Mathf.Floor(_currentPlayer.GetTime());
+                if (position != previousTrackPosition)
+                {
+                    previousTrackPosition = position;
+                    _UpdateTracking(position, _currentPlayer.GetDuration());
+                }
             }
 
             if (seekableSource && _syncOwnerPaused)
@@ -732,6 +726,29 @@ namespace VideoTXL
             dataProxy._EmitStateUpdate();
         }
 
+        void _UpdateLockState(bool state)
+        {
+            locked = state;
+            dataProxy.locked = state;
+            dataProxy._EmitLockUpdate();
+        }
+
+        void _UpdateTracking(float position, float duration)
+        {
+            trackPosition = position;
+            trackDuration = duration;
+            dataProxy.trackPosition = position;
+            dataProxy.trackDuration = duration;
+            dataProxy._EmitTrackingUpdate();
+        }
+
+        void _UpdateRepeatMode(bool state)
+        {
+            repeatPlaylist = state;
+            dataProxy.repeatPlaylist = state;
+            dataProxy._EmitPlaylistUpdate();
+        }
+
         void _UpdateLastUrl()
         {
             if (_syncUrl == currentUrl)
@@ -739,54 +756,9 @@ namespace VideoTXL
 
             lastUrl = currentUrl;
             currentUrl = _syncUrl;
-        }
-
-        // Extra
-
-        bool _hasScreenManager = false;
-        //bool _hasTriggerManager = false;
-        bool _hasAudioManager = false;
-        bool _hasAccessControl = false;
-
-        void _StartExtra()
-        {
-            _hasScreenManager = Utilities.IsValid(screenManager);
-            _hasAudioManager = Utilities.IsValid(audioManager);
-            //_hasTriggerManager = Utilities.IsValid(triggerManager);
-            _hasAccessControl = Utilities.IsValid(accessControl);
-
-            _UpdateScreenSource(SCREEN_SOURCE_AVPRO);
-            _UpdateScreenMaterial(SCREEN_MODE_LOGO);
-        }
-
-        void _UpdateScreenMaterial(int screenMode)
-        {
-            //if (_hasScreenManager)
-            //    screenManager._UpdateScreenMaterial(screenMode);
-        }
-
-        void _UpdateScreenSource(int screenSource)
-        {
-            if (_hasScreenManager)
-                screenManager._UpdateScreenSource(screenSource);
-        }
-
-        void _UpdateScreenVideoError(VideoError error)
-        {
-            if (_hasScreenManager)
-                screenManager._UpdateVideoError(error);
-        }
-
-        void _AudioStart()
-        {
-            if (_hasAudioManager)
-                audioManager._VideoStart();
-        }
-
-        void _AudioStop()
-        {
-            if (_hasAudioManager)
-                audioManager._VideoStop();
+            dataProxy.currentUrl = currentUrl;
+            dataProxy.lastUrl = lastUrl;
+            dataProxy._EmitInfoUpdate();
         }
 
         // Debug

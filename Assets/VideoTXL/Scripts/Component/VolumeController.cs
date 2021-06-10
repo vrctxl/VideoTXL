@@ -10,12 +10,13 @@ namespace VideoTXL
     [AddComponentMenu("VideoTXL/Component/Volume Controller")]
     public class VolumeController : UdonSharpBehaviour
     {
-        
+        public VideoPlayerProxy dataProxy;
+
         public float volume = 0.85f;
         public bool muted = false;
         public bool audio2D = false;
-        [Tooltip("Disable audio sources when video is not actively playing")]
-        public bool disableUnusedSources = true;
+        [Tooltip("Disable audio sources when video is not actively playing.  Not recommended for sources attached to AVPro.")]
+        public bool disableUnusedSources = false;
 
         public AudioSource videoAudioSource;
         public AudioSource streamAudioSourceBase;
@@ -33,8 +34,19 @@ namespace VideoTXL
         Bounds outerBox;
         float zoneFadeScale = 1;
 
+        bool sourcesEnabled = true;
+
+        const int PLAYER_STATE_STOPPED = 0;
+        const int PLAYER_STATE_LOADING = 1;
+        const int PLAYER_STATE_PLAYING = 2;
+        const int PLAYER_STATE_ERROR = 3;
+        const int PLAYER_STATE_PAUSED = 4;
+
         private void Start()
         {
+            if (Utilities.IsValid(dataProxy))
+                dataProxy._RegisterEventHandler(gameObject, "_VideoStateUpdate");
+
             if (!Utilities.IsValid(volumeControls))
                 volumeControls = new GameObject[0];
 
@@ -103,10 +115,31 @@ namespace VideoTXL
             UpdateControls();
         }
 
+        public void _VideoStateUpdate()
+        {
+            switch (dataProxy.playerState)
+            {
+                case PLAYER_STATE_PLAYING:
+                case PLAYER_STATE_LOADING:
+                case PLAYER_STATE_PAUSED:
+                    if (!sourcesEnabled)
+                        _VideoStart();
+                    break;
+                default:
+                    if (sourcesEnabled)
+                        _VideoStop();
+                    break;
+            }
+        }
+
         public void _VideoStart()
         {
             if (!disableUnusedSources)
                 return;
+            if (sourcesEnabled)
+                return;
+
+            sourcesEnabled = true;
 
             Debug.Log("[VideoTXL:VolumeController] enable audio sources");
             if (Utilities.IsValid(videoAudioSource))
@@ -135,6 +168,10 @@ namespace VideoTXL
         {
             if (!disableUnusedSources)
                 return;
+            if (!sourcesEnabled)
+                return;
+
+            sourcesEnabled = false;
 
             Debug.Log("[VideoTXL:VolumeController] disable audio sources");
             if (Utilities.IsValid(videoAudioSource))
