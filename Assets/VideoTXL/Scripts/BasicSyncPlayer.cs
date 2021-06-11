@@ -11,6 +11,7 @@ using VRC.Udon.Common;
 namespace VideoTXL
 {
     [AddComponentMenu("VideoTXL/Sync Player")]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class BasicSyncPlayer : UdonSharpBehaviour
     {
         [Tooltip("AVPro video player component")]

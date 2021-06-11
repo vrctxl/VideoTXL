@@ -12,6 +12,7 @@ using VRC.Udon.Common;
 namespace VideoTXL
 {
     [AddComponentMenu("VideoTXL/Sync Player")]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class SyncPlayer : UdonSharpBehaviour
     {
         public VideoPlayerProxy dataProxy;
