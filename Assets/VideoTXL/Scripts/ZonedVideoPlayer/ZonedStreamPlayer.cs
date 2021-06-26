@@ -22,7 +22,7 @@ namespace VideoTXL
     public class ZonedStreamPlayer : UdonSharpBehaviour
     {
         public ScreenManager screenManager;
-        public VolumeController audioManager;
+        public AudioManager audioManager;
         public TriggerManager triggerManager;
 
         public StaticUrlSource staticUrlSource;

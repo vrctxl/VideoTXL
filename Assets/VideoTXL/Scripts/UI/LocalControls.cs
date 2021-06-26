@@ -18,7 +18,7 @@ namespace VideoTXL
     {
         public UdonBehaviour videoPlayer;
         public StaticUrlSource staticUrlSource;
-        public VolumeController volumeController;
+        public Texel.AudioManager AudioManager;
         public ControlColorProfile colorProfile;
 
         public bool autoLayout = true;
@@ -65,8 +65,8 @@ namespace VideoTXL
         {
             SendCustomEventDelayedFrames("_UpdateLayout", 1);
 
-            if (Utilities.IsValid(volumeController))
-                volumeController._RegisterControls(gameObject);
+            if (Utilities.IsValid(AudioManager))
+                AudioManager._RegisterControls(gameObject);
             if (Utilities.IsValid(staticUrlSource))
                 staticUrlSource._RegisterControls(gameObject);
 
@@ -109,7 +109,7 @@ namespace VideoTXL
             if (!autoLayout)
                 return;
 
-            bool volumePresent = Utilities.IsValid(volumeGroup) && Utilities.IsValid(volumeController);
+            bool volumePresent = Utilities.IsValid(volumeGroup) && Utilities.IsValid(AudioManager);
 
             if (enableVolume && volumePresent)
             {
@@ -140,16 +140,17 @@ namespace VideoTXL
 
         bool inVolumeControllerUpdate = false;
 
-        public void _VolumeControllerUpdate()
+        //public void _VolumeControllerUpdate()
+        public void _AudioManagerUpdate()
         {
-            if (!Utilities.IsValid(volumeController))
+            if (!Utilities.IsValid(AudioManager))
                 return;
 
             inVolumeControllerUpdate = true;
 
             if (Utilities.IsValid(volumeSlider))
             {
-                float volume = volumeController.volume;
+                float volume = AudioManager.masterVolume;
                 if (volume != volumeSlider.value)
                     volumeSlider.value = volume;
             }
@@ -196,8 +197,8 @@ namespace VideoTXL
             if (inVolumeControllerUpdate)
                 return;
 
-            if (Utilities.IsValid(volumeController))
-                volumeController._ToggleMute();
+            if (Utilities.IsValid(AudioManager))
+                AudioManager._SetMasterMute(!AudioManager.masterMute);
         }
 
         public void _ToggleAudio2D()
@@ -205,8 +206,8 @@ namespace VideoTXL
             if (inVolumeControllerUpdate)
                 return;
 
-            if (Utilities.IsValid(volumeController))
-                volumeController._ToggleAudio2D();
+            //if (Utilities.IsValid(AudioManager))
+            //    AudioManager._ToggleAudio2D();
         }
 
         public void _UpdateVolumeSlider()
@@ -214,8 +215,8 @@ namespace VideoTXL
             if (inVolumeControllerUpdate)
                 return;
 
-            if (Utilities.IsValid(volumeController) && Utilities.IsValid(volumeSlider))
-                volumeController._ApplyVolume(volumeSlider.value);
+            if (Utilities.IsValid(AudioManager) && Utilities.IsValid(volumeSlider))
+                AudioManager._SetMasterVolume(volumeSlider.value);
         }
 
         void UpdateToggleVisual()
@@ -239,17 +240,17 @@ namespace VideoTXL
                     toggleAudioOff.SetActive(!isAudio);
             }
             
-            if (Utilities.IsValid(volumeController))
+            if (Utilities.IsValid(AudioManager))
             {
                 if (Utilities.IsValid(muteToggleOn) && Utilities.IsValid(muteToggleOff))
                 {
-                    muteToggleOn.SetActive(volumeController.muted);
-                    muteToggleOff.SetActive(!volumeController.muted);
+                    muteToggleOn.SetActive(AudioManager.masterMute);
+                    muteToggleOff.SetActive(!AudioManager.masterMute);
                 }
                 if (Utilities.IsValid(audio2DToggleOn) && Utilities.IsValid(audio2DToggleOff))
                 {
-                    audio2DToggleOn.SetActive(volumeController.audio2D);
-                    audio2DToggleOff.SetActive(!volumeController.audio2D);
+                    //audio2DToggleOn.SetActive(AudioManager.audio2D);
+                    //audio2DToggleOff.SetActive(!AudioManager.audio2D);
                 }
             }
         }
@@ -310,7 +311,7 @@ namespace VideoTXL
         {
             videoPlayerProperty = serializedObject.FindProperty(nameof(LocalControls.videoPlayer));
             staticUrlSourceProperty = serializedObject.FindProperty(nameof(LocalControls.staticUrlSource));
-            volumeControllerProperty = serializedObject.FindProperty(nameof(LocalControls.volumeController));
+            volumeControllerProperty = serializedObject.FindProperty(nameof(LocalControls.AudioManager));
             colorProfileProperty = serializedObject.FindProperty(nameof(LocalControls.colorProfile));
 
             autoLayoutProperty = serializedObject.FindProperty(nameof(LocalControls.autoLayout));

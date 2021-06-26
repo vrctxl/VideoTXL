@@ -4,6 +4,7 @@ using UnityEngine;
 using VRC.SDK3.Components.Video;
 using VRC.SDKBase;
 using VRC.Udon;
+using Texel;
 
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
 using UnityEditor;
@@ -13,16 +14,18 @@ using UdonSharpEditor;
 
 namespace VideoTXL
 {
-    [AddComponentMenu("VideoTXL/Component/Screen Manager")]
+    [AddComponentMenu("Texel/VideoTXL/Screen Manager")]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class ScreenManager : UdonSharpBehaviour
     {
+        [Tooltip("A proxy for dispatching video-related events to this object")]
         public VideoPlayerProxy dataProxy;
 
-        [Tooltip("The material capturing the video or stream source")]
-        public Material captureMaterial;
-        [Tooltip("The name of the property holding the main texture in the capture material")]
-        public string captureTextureProperty;
+        [Tooltip("Log debug statements to a world object")]
+        public DebugLog debugLog;
 
+        [Tooltip("Whether to update material assignments on a set of video screen objects")]
+        public bool useMaterialOverrides = false;
         [Tooltip("The screen material to apply when no video is playing or loading.")]
         public Material logoMaterial;
         [Tooltip("The screen material to apply when a video is being loaded.  Falls back to Logo Material.")]
@@ -43,6 +46,31 @@ namespace VideoTXL
 
         public MeshRenderer[] screenMesh;
         public int[] screenMaterialIndex;
+
+        [Tooltip("Whether to update textures properties on a set of shared material objects")]
+        public bool useTextureOverrides = false;
+        [Tooltip("The material capturing the video or stream source")]
+        public Material captureMaterial;
+        [Tooltip("The name of the property holding the main texture in the capture material")]
+        public string captureTextureProperty;
+
+        [Tooltip("The screen texture to apply when no video is playing or loading.")]
+        public Texture logoTexture;
+        [Tooltip("The screen texture to apply when a video is being loaded.  Falls back to Logo Texture.")]
+        public Texture loadingTexture;
+        [Tooltip("The screen texture to apply when an audio-only video is detected.")]
+        public Texture audioTexture;
+        [Tooltip("The screen texture to apply when an error has occurred.  Falls back to Logo Texture.")]
+        public Texture errorTexture;
+        [Tooltip("The screen texture to apply when an invalid URL or offline stream has been loaded.  Falls back to Error Texture.")]
+        public Texture errorInvalidTexture;
+        [Tooltip("The screen texture to apply when loading has been temporarily rate-limited.  Falls back to Error Texture.")]
+        public Texture errorRateLimitedTexture;
+        [Tooltip("The screen texture to apply when an untrusted URL has been loaded and untrusted URLs are blocked.  Falls back to Error Texture.")]
+        public Texture errorBlockedTexture;
+
+        [Tooltip("The screen texture to apply in Unity's editor runtime")]
+        public Texture editorTexture;
 
         public Material[] materialUpdateList;
         public string[] materialTexPropertyList;
@@ -85,6 +113,34 @@ namespace VideoTXL
             if (_initComplete)
                 return;
 
+#if COMPILER_UDONSHARP
+            _InitMaterialOverrides();
+            _InitTextureOverrides();
+#endif
+
+            _initComplete = true;
+        }
+
+        private void OnDisable()
+        {
+
+#if COMPILER_UDONSHARP
+            _RestoreMaterialOverrides();
+            _RestoreTextureOverrides();
+#endif
+        }
+
+        void _InitMaterialOverrides()
+        {
+            if (!useMaterialOverrides)
+                return;
+
+            if (!Utilities.IsValid(screenMesh) || screenMesh.Length == 0)
+            {
+                useMaterialOverrides = false;
+                return;
+            }
+
             // Capture original screen materials
             _originalScreenMaterial = new Material[screenMesh.Length];
             for (int i = 0; i < screenMesh.Length; i++)
@@ -105,8 +161,25 @@ namespace VideoTXL
 
                 _originalScreenMaterial[i] = materials[index];
             }
+        }
 
-#if COMPILER_UDONSHARP
+        void _InitTextureOverrides()
+        {
+            if (!useTextureOverrides)
+                return;
+
+            if (!Utilities.IsValid(materialUpdateList) || materialUpdateList.Length == 0)
+            {
+                useTextureOverrides = false;
+                return;
+            }
+
+            if (!Utilities.IsValid(captureMaterial) || !Utilities.IsValid(captureTextureProperty) || captureTextureProperty == "")
+            {
+                useTextureOverrides = false;
+                return;
+            }
+
             // Capture original material textures
             _originalMaterialTexture = new Texture[materialUpdateList.Length];
             for (int i = 0; i < materialUpdateList.Length; i++)
@@ -120,14 +193,13 @@ namespace VideoTXL
 
                 _originalMaterialTexture[i] = materialUpdateList[i].GetTexture(name);
             }
-#endif
-
-            _initComplete = true;
         }
 
-        private void OnDisable()
+        void _RestoreMaterialOverrides()
         {
-#if COMPILER_UDONSHARP
+            if (!useMaterialOverrides)
+                return;
+
             for (int i = 0; i < screenMesh.Length; i++)
             {
                 int index = screenMaterialIndex[i];
@@ -138,6 +210,12 @@ namespace VideoTXL
                 materials[index] = _originalScreenMaterial[i];
                 screenMesh[i].sharedMaterials = materials;
             }
+        }
+
+        void _RestoreTextureOverrides()
+        {
+            if (!useTextureOverrides)
+                return;
 
             for (int i = 0; i < materialUpdateList.Length; i++)
             {
@@ -151,7 +229,6 @@ namespace VideoTXL
                 if (avProProp != null && avProProp.Length > 0)
                     mat.SetInt(avProProp, 0);
             }
-#endif
         }
 
         public void _VideoStateUpdate()
@@ -184,94 +261,10 @@ namespace VideoTXL
             _screenSource = source;
         }
 
-        public void _CheckUpdateScreenMaterial()
+        Material _GetReplacementMaterial(bool captureValid)
         {
-            if (!_initComplete)
-                _Init();
-            if (_screenMode != SCREEN_MODE_NORMAL)
-                return;
-
-            bool captureValid = CaptureValid();
-            Material replacemenMat = null;
-
-            if (!captureValid)
-            {
-                if (loadingMaterial != null && _checkFrameCount < 10)
-                    replacemenMat = loadingMaterial;
-                else if (audioMaterial != null && _checkFrameCount >= 10)
-                    replacemenMat = audioMaterial;
-                else if (logoMaterial != null)
-                    replacemenMat = logoMaterial;
-            }
-
-            for (int i = 0; i < screenMesh.Length; i++)
-            {
-                int index = screenMaterialIndex[i];
-                if (index < 0)
-                    continue;
-
-                Material newMat = replacemenMat;
-                if (newMat == null)
-                    newMat = _originalScreenMaterial[i];
-
-                if (newMat != null)
-                {
-                    Material[] materials = screenMesh[i].sharedMaterials;
-                    materials[index] = newMat;
-                    screenMesh[i].sharedMaterials = materials;
-                }
-            }
-
-            if (Utilities.IsValid(captureMaterial) && materialUpdateList.Length > 0)
-            {
-                Texture tex = null;
-                int avPro = 0;
-
-                if (replacemenMat == null)
-                {
-                    tex = captureMaterial.GetTexture(captureTextureProperty);
-                    if (_screenSource == SCREEN_SOURCE_AVPRO)
-                        avPro = 1;
-                }
-                else
-                    tex = replacemenMat.GetTexture(captureTextureProperty);
-
-                for (int i = 0; i < materialUpdateList.Length; i++)
-                {
-                    Material mat = materialUpdateList[i];
-                    string name = materialTexPropertyList[i];
-                    if (mat == null || name == null || name.Length == 0)
-                        continue;
-
-                    mat.SetTexture(name, tex);
-                    string avProProp = materialAVPropertyList[i];
-                    if (avProProp != null && avProProp.Length > 0)
-                        mat.SetInt(avProProp, avPro);
-                }
-            }
-
-            if (!captureValid)
-            {
-                _checkFrameCount += 1;
-                int delay = _checkFrameCount < 100 ? 1 : 10;
-                SendCustomEventDelayedFrames("_CheckUpdateScreenMaterial", delay);
-            }
-            else
-                Debug.Log("[VideoTXL:ScreenManager] Capture valid");
-        }
-
-        public void _UpdateScreenMaterial(int screenMode)
-        {
-            if (!_initComplete)
-                _Init();
-
-            _screenMode = screenMode;
-            _checkFrameCount = 0;
-
-            bool captureValid = CaptureValid();
-
             Material replacementMat = null;
-            switch (screenMode)
+            switch (_screenMode)
             {
                 case SCREEN_MODE_LOGO:
                     replacementMat = logoMaterial;
@@ -303,46 +296,106 @@ namespace VideoTXL
                 replacementMat = loadingMaterial;
             }
 
-            // Update all screen meshes with correct display material
-            for (int i = 0; i < screenMesh.Length; i++)
+            return replacementMat;
+        }
+
+        Texture _GetReplacemenTexture(bool captureValid)
+        {
+            Texture replacementTex = null;
+            switch (_screenMode)
             {
-                int index = screenMaterialIndex[i];
-                if (index < 0)
-                    continue;
+                case SCREEN_MODE_LOGO:
+                    replacementTex = logoTexture;
+                    break;
+                case SCREEN_MODE_LOADING:
+                    replacementTex = loadingTexture;
+                    break;
+                case SCREEN_MODE_ERROR:
+                    if (_lastErrorCode == VideoError.AccessDenied)
+                        replacementTex = errorBlockedTexture;
+                    else if (_lastErrorCode == VideoError.InvalidURL)
+                        replacementTex = errorInvalidTexture;
+                    else if (_lastErrorCode == VideoError.RateLimited)
+                        replacementTex = errorRateLimitedTexture;
 
-                Material newMat = replacementMat;
-                if (newMat == null)
-                    newMat = _originalScreenMaterial[i];
-                if (newMat == null && logoMaterial != null)
-                    newMat = logoMaterial;
+                    if (replacementTex == null)
+                        replacementTex = errorTexture;
+                    break;
+                case SCREEN_MODE_NORMAL:
+                default:
+                    replacementTex = null;
+                    break;
+            }
 
+            // Try to detect audio-only source
+            if (replacementTex == null && !captureValid)
+            {
+                // Will fill in with audio material on future check cycle
+                replacementTex = loadingTexture;
+            }
+
+            return replacementTex;
+        }
+
+        public void _UpdateScreenMaterial(int screenMode)
+        {
+            if (!_initComplete)
+                _Init();
+
+            _screenMode = screenMode;
+            _checkFrameCount = 0;
+
+            bool captureValid = CaptureValid();
+
+            if (useMaterialOverrides)
+            {
+                Material replacementMat = _GetReplacementMaterial(captureValid);
+                
 #if UNITY_EDITOR
                 if (editorMaterial != null)
-                    newMat = editorMaterial;
+                    replacementMat = editorMaterial;
 #endif
-
-                if (newMat != null)
+                // Update all screen meshes with correct display material
+                for (int i = 0; i < screenMesh.Length; i++)
                 {
-                    Material[] materials = screenMesh[i].sharedMaterials;
-                    materials[index] = newMat;
-                    screenMesh[i].sharedMaterials = materials;
+                    int index = screenMaterialIndex[i];
+                    if (index < 0)
+                        continue;
+
+                    Material newMat = replacementMat;
+                    if (newMat == null)
+                        newMat = _originalScreenMaterial[i];
+                    if (newMat == null && logoMaterial != null)
+                        newMat = logoMaterial;
+
+                    if (newMat != null)
+                    {
+                        Material[] materials = screenMesh[i].sharedMaterials;
+                        materials[index] = newMat;
+                        screenMesh[i].sharedMaterials = materials;
+                    }
                 }
             }
 
-            // Update all extra screen materials with correct predefined or captured texture
-            if (Utilities.IsValid(captureMaterial) && materialUpdateList.Length > 0)
+            if (useTextureOverrides)
             {
-                Texture tex = null;
+                Texture replacementTex = _GetReplacemenTexture(captureValid);
+                
+#if UNITY_EDITOR
+                if (editorTexture != null)
+                    replacementTex = editorTexture;
+#endif
+                Texture tex = replacementTex;
                 int avPro = 0;
-                if (replacementMat == null)
+
+                if (replacementTex == null)
                 {
                     tex = captureMaterial.GetTexture(captureTextureProperty);
                     if (_screenSource == SCREEN_SOURCE_AVPRO)
                         avPro = 1;
                 }
-                else
-                    tex = replacementMat.GetTexture(captureTextureProperty);
 
+                // Update all extra screen materials with correct predefined or captured texture
                 for (int i = 0; i < materialUpdateList.Length; i++)
                 {
                     Material mat = materialUpdateList[i];
@@ -360,7 +413,107 @@ namespace VideoTXL
 #if !UNITY_EDITOR
             if (!captureValid)
                 SendCustomEventDelayedFrames("_CheckUpdateScreenMaterial", 1);
+            else
+                DebugLog("Capture valid");
 #endif
+        }
+
+        public void _CheckUpdateScreenMaterial()
+        {
+            if (!_initComplete)
+                _Init();
+            if (_screenMode != SCREEN_MODE_NORMAL)
+                return;
+
+            bool captureValid = CaptureValid();
+
+            if (useMaterialOverrides)
+            {
+                Material replacementMat = null;
+                if (!captureValid)
+                {
+                    if (loadingMaterial != null && _checkFrameCount < 10)
+                        replacementMat = loadingMaterial;
+                    else if (audioMaterial != null && _checkFrameCount >= 10)
+                        replacementMat = audioMaterial;
+                    else if (logoMaterial != null)
+                        replacementMat = logoMaterial;
+                }
+
+#if UNITY_EDITOR
+                if (editorMaterial != null)
+                    replacementMat = editorMaterial;
+#endif
+
+                for (int i = 0; i < screenMesh.Length; i++)
+                {
+                    int index = screenMaterialIndex[i];
+                    if (index < 0)
+                        continue;
+
+                    Material newMat = replacementMat;
+                    if (newMat == null)
+                        newMat = _originalScreenMaterial[i];
+
+                    if (newMat != null)
+                    {
+                        Material[] materials = screenMesh[i].sharedMaterials;
+                        materials[index] = newMat;
+                        screenMesh[i].sharedMaterials = materials;
+                    }
+                }
+            }
+
+            if (useTextureOverrides)
+            {
+                Texture replacementTex = null;
+                if (!captureValid)
+                {
+                    if (loadingTexture != null && _checkFrameCount < 10)
+                        replacementTex = loadingTexture;
+                    else if (audioTexture != null && _checkFrameCount >= 10)
+                        replacementTex = audioTexture;
+                    else if (logoTexture != null)
+                        replacementTex = logoTexture;
+                }
+
+#if UNITY_EDITOR
+                if (editorTexture != null)
+                    replacementTex = editorTexture;
+#endif
+
+                Texture tex = replacementTex;
+                int avPro = 0;
+
+                if (replacementTex == null)
+                {
+                    tex = captureMaterial.GetTexture(captureTextureProperty);
+                    if (_screenSource == SCREEN_SOURCE_AVPRO)
+                        avPro = 1;
+                }
+
+                for (int i = 0; i < materialUpdateList.Length; i++)
+                {
+                    Material mat = materialUpdateList[i];
+                    string name = materialTexPropertyList[i];
+                    if (mat == null || name == null || name.Length == 0)
+                        continue;
+
+                    mat.SetTexture(name, tex);
+                    string avProProp = materialAVPropertyList[i];
+                    if (avProProp != null && avProProp.Length > 0)
+                        mat.SetInt(avProProp, avPro);
+                }
+            }
+
+            if (!captureValid)
+            {
+                _checkFrameCount += 1;
+                int delay = _checkFrameCount < 100 ? 1 : 10;
+                SendCustomEventDelayedFrames("_CheckUpdateScreenMaterial", delay);
+            }
+            else
+                DebugLog("Capture valid");
         }
 
         bool CaptureValid()
@@ -370,10 +523,17 @@ namespace VideoTXL
                 Texture tex = captureMaterial.GetTexture(captureTextureProperty);
                 if (tex == null)
                     return false;
-                else if (tex.width <= 1 || tex.height <= 1)
+                else if (tex.width < 16 || tex.height < 16)
                     return false;
             }
             return true;
+        }
+
+        void DebugLog(string message)
+        {
+            Debug.Log("[VideoTXL:ScreenManager] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write("ScreenManager", message);
         }
     }
 
@@ -382,6 +542,7 @@ namespace VideoTXL
     internal class ScreenManagerInspector : Editor
     {
         static bool _showErrorMatFoldout;
+        static bool _showErrorTexFoldout;
         static bool _showScreenListFoldout;
         static bool[] _showScreenFoldout = new bool[0];
         static bool _showMaterialListFoldout;
@@ -389,9 +550,9 @@ namespace VideoTXL
 
         SerializedProperty dataProxyProperty;
 
-        SerializedProperty captureMaterialProperty;
-        SerializedProperty captureTexturePropertyProperty;
+        SerializedProperty debugLogProperty;
 
+        SerializedProperty useMaterialOverrideProperty;
         SerializedProperty logoMaterialProperty;
         SerializedProperty loadingMaterialProperty;
         SerializedProperty audioMaterialProperty;
@@ -399,11 +560,23 @@ namespace VideoTXL
         SerializedProperty errorInvalidMaterialProperty;
         SerializedProperty errorBlockedMaterialProperty;
         SerializedProperty errorRateLimitedMaterialProperty;
-
         SerializedProperty editorMaterialProperty;
 
         SerializedProperty screenMeshListProperty;
         SerializedProperty screenMatIndexListProperty;
+
+        SerializedProperty captureMaterialProperty;
+        SerializedProperty captureTexturePropertyProperty;
+
+        SerializedProperty useTextureOverrideProperty;
+        SerializedProperty logoTextureProperty;
+        SerializedProperty loadingTextureProperty;
+        SerializedProperty audioTextureProperty;
+        SerializedProperty errorTextureProperty;
+        SerializedProperty errorInvalidTextureProperty;
+        SerializedProperty errorBlockedTextureProperty;
+        SerializedProperty errorRateLimitedTextureProperty;
+        SerializedProperty editorTextureProperty;
 
         SerializedProperty materialUpdateListProperty;
         SerializedProperty materialTexPropertyListProperty;
@@ -413,9 +586,9 @@ namespace VideoTXL
         {
             dataProxyProperty = serializedObject.FindProperty(nameof(ScreenManager.dataProxy));
 
-            captureMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.captureMaterial));
-            captureTexturePropertyProperty = serializedObject.FindProperty(nameof(ScreenManager.captureTextureProperty));
+            debugLogProperty = serializedObject.FindProperty(nameof(ScreenManager.debugLog));
 
+            useMaterialOverrideProperty = serializedObject.FindProperty(nameof(ScreenManager.useMaterialOverrides));
             logoMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.logoMaterial));
             loadingMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.loadingMaterial));
             audioMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.audioMaterial));
@@ -423,11 +596,23 @@ namespace VideoTXL
             errorInvalidMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.errorInvalidMaterial));
             errorBlockedMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.errorBlockedMaterial));
             errorRateLimitedMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.errorRateLimitedMaterial));
-
             editorMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.editorMaterial));
 
             screenMeshListProperty = serializedObject.FindProperty(nameof(ScreenManager.screenMesh));
             screenMatIndexListProperty = serializedObject.FindProperty(nameof(ScreenManager.screenMaterialIndex));
+
+            captureMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.captureMaterial));
+            captureTexturePropertyProperty = serializedObject.FindProperty(nameof(ScreenManager.captureTextureProperty));
+
+            useTextureOverrideProperty = serializedObject.FindProperty(nameof(ScreenManager.useTextureOverrides));
+            logoTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.logoTexture));
+            loadingTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.loadingTexture));
+            audioTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.audioTexture));
+            errorTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.errorTexture));
+            errorInvalidTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.errorInvalidTexture));
+            errorBlockedTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.errorBlockedTexture));
+            errorRateLimitedTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.errorRateLimitedTexture));
+            editorTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.editorTexture));
 
             materialUpdateListProperty = serializedObject.FindProperty(nameof(ScreenManager.materialUpdateList));
             materialTexPropertyListProperty = serializedObject.FindProperty(nameof(ScreenManager.materialTexPropertyList));
@@ -440,31 +625,67 @@ namespace VideoTXL
                 return;
 
             EditorGUILayout.PropertyField(dataProxyProperty);
-            EditorGUILayout.PropertyField(captureMaterialProperty);
-            if (captureMaterialProperty.objectReferenceValue != null)
-                EditorGUILayout.PropertyField(captureTexturePropertyProperty);
 
             EditorGUILayout.Space();
-            EditorGUILayout.PropertyField(logoMaterialProperty);
-            EditorGUILayout.PropertyField(loadingMaterialProperty);
-            EditorGUILayout.PropertyField(audioMaterialProperty);
-            EditorGUILayout.PropertyField(errorMaterialProperty);
+            EditorGUILayout.LabelField("Optional Components", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(debugLogProperty);
 
-            _showErrorMatFoldout = EditorGUILayout.Foldout(_showErrorMatFoldout, "Error Material Overrides");
-            if (_showErrorMatFoldout)
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Object Material Overrides", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(useMaterialOverrideProperty);
+            if (useMaterialOverrideProperty.boolValue)
             {
-                EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(errorInvalidMaterialProperty);
-                EditorGUILayout.PropertyField(errorBlockedMaterialProperty);
-                EditorGUILayout.PropertyField(errorRateLimitedMaterialProperty);
-                EditorGUI.indentLevel--;
+                EditorGUILayout.PropertyField(logoMaterialProperty);
+                EditorGUILayout.PropertyField(loadingMaterialProperty);
+                EditorGUILayout.PropertyField(audioMaterialProperty);
+                EditorGUILayout.PropertyField(errorMaterialProperty);
+
+                _showErrorMatFoldout = EditorGUILayout.Foldout(_showErrorMatFoldout, "Error Material Overrides");
+                if (_showErrorMatFoldout)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(errorInvalidMaterialProperty);
+                    EditorGUILayout.PropertyField(errorBlockedMaterialProperty);
+                    EditorGUILayout.PropertyField(errorRateLimitedMaterialProperty);
+                    EditorGUI.indentLevel--;
+                }
+
+                EditorGUILayout.PropertyField(editorMaterialProperty);
+
+                EditorGUILayout.Space();
+                ScreenFoldout();
             }
 
-            EditorGUILayout.PropertyField(editorMaterialProperty);
-
             EditorGUILayout.Space();
-            ScreenFoldout();
-            MaterialFoldout();
+            EditorGUILayout.LabelField("Material Texture Overrides", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(useTextureOverrideProperty);
+            if (useTextureOverrideProperty.boolValue)
+            {
+                EditorGUILayout.PropertyField(captureMaterialProperty);
+                if (captureMaterialProperty.objectReferenceValue != null)
+                    EditorGUILayout.PropertyField(captureTexturePropertyProperty);
+
+                EditorGUILayout.Space();
+                EditorGUILayout.PropertyField(logoTextureProperty);
+                EditorGUILayout.PropertyField(loadingTextureProperty);
+                EditorGUILayout.PropertyField(audioTextureProperty);
+                EditorGUILayout.PropertyField(errorTextureProperty);
+
+                _showErrorTexFoldout = EditorGUILayout.Foldout(_showErrorTexFoldout, "Error Texture Overrides");
+                if (_showErrorTexFoldout)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(errorInvalidTextureProperty);
+                    EditorGUILayout.PropertyField(errorBlockedTextureProperty);
+                    EditorGUILayout.PropertyField(errorRateLimitedTextureProperty);
+                    EditorGUI.indentLevel--;
+                }
+
+                EditorGUILayout.PropertyField(editorTextureProperty);
+
+                EditorGUILayout.Space();
+                MaterialFoldout();
+            }
 
             serializedObject.ApplyModifiedProperties();
         }

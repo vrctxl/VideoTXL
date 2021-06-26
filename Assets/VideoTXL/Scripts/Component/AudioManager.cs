@@ -1,4 +1,5 @@
 ﻿
+using Texel;
 using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,20 +8,33 @@ using VRC.Udon;
 
 namespace VideoTXL
 {
-    [AddComponentMenu("VideoTXL/Component/Volume Controller")]
-    public class VolumeController : UdonSharpBehaviour
+    [AddComponentMenu("VideoTXL/Component/Audio Manager")]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+    public class AudioManager : UdonSharpBehaviour
     {
+        [Header("Optional Components")]
+        [Tooltip("A proxy for dispatching video-related events to this object")]
         public VideoPlayerProxy dataProxy;
+        [Tooltip("Log debug statements to a world object")]
+        public DebugLog debugLog;
 
+        [Header("Default Options")]
+        [Range(0, 1)] [Tooltip("Default volume level of base audio sources.  Overlay sources are scaled relative to this.")]
         public float volume = 0.85f;
+        [Tooltip("Whether audio sources are muted by default")]
         public bool muted = false;
+        [Tooltip("Whether base sources are reconfigured to a full 2D blend by default.  When enabled, overlay sources are also muted.")]
         public bool audio2D = false;
         [Tooltip("Disable audio sources when video is not actively playing.  Not recommended for sources attached to AVPro.")]
         public bool disableUnusedSources = false;
 
+        [Header("Audio Sources")]
         public AudioSource videoAudioSource;
         public AudioSource streamAudioSourceBase;
         public AudioSource[] streamAudioSourceOverlay;
+
+        [Header("Audio Fade")]
+        public ZoneController fadeZone;
 
         GameObject[] volumeControls;
 
@@ -29,7 +43,7 @@ namespace VideoTXL
         float scale2D = 1.05f;
         float scale3D = 3.5f;
 
-        public ZoneController fadeZone;
+        
         Bounds innerBox;
         Bounds outerBox;
         float zoneFadeScale = 1;
@@ -82,8 +96,6 @@ namespace VideoTXL
 
             newControls[volumeControls.Length] = controls;
             volumeControls = newControls;
-
-            Debug.Log("[VideoTXL:VolumeController] registering new controls set");
         }
 
         public void _InitializeControls()
@@ -103,14 +115,14 @@ namespace VideoTXL
 
         public void _ToggleMute()
         {
-            Debug.Log("[VideoTXL:VolumeController] mute toggled");
+            DebugLog("mute toggled");
             ApplyMute(!muted, false);
             UpdateControls();
         }
 
         public void _ToggleAudio2D()
         {
-            Debug.Log("[VideoTXL:VolumeController] audio 2D toggled");
+            DebugLog("audio 2D toggled");
             ApplyAudio2D(!audio2D, false);
             UpdateControls();
         }
@@ -141,7 +153,7 @@ namespace VideoTXL
 
             sourcesEnabled = true;
 
-            Debug.Log("[VideoTXL:VolumeController] enable audio sources");
+            DebugLog("enable audio sources");
             if (Utilities.IsValid(videoAudioSource))
             {
                 videoAudioSource.enabled = true;
@@ -173,7 +185,7 @@ namespace VideoTXL
 
             sourcesEnabled = false;
 
-            Debug.Log("[VideoTXL:VolumeController] disable audio sources");
+            DebugLog("disable audio sources");
             if (Utilities.IsValid(videoAudioSource))
                 videoAudioSource.mute = true;
             if (Utilities.IsValid(streamAudioSourceBase))
@@ -332,6 +344,13 @@ namespace VideoTXL
                 if (Utilities.IsValid(source))
                     source.volume = (audioVolume / scale3D) * zoneFadeScale;
             }
+        }
+
+        void DebugLog(string message)
+        {
+            Debug.Log("[VideoTXL:AudioManager] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write("AudioManager", message);
         }
     }
 }

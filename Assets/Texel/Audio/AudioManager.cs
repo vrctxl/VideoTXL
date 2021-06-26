@@ -1,0 +1,176 @@
+﻿
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+using VRC.Udon;
+
+namespace Texel
+{
+    [AddComponentMenu("Texel/Audio/Audio Manager")]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+    public class AudioManager : UdonSharpBehaviour
+    {
+        [Header("Optional Components")]
+        [Tooltip("A sync attachment to AudioManager that will share audio settings with all players, allowing some to be locally overridden.")]
+        public SyncAudioManager syncAudioManager;
+        [Tooltip("A proxy for dispatching video-related events to this object")]
+        public VideoPlayerProxy dataProxy;
+
+        [Header("Default Options")]
+        [Range(0, 1)]
+        public float inputVolume = 1f;
+        public bool inputMute = false;
+        [Range(0, 1)]
+        public float masterVolume = 0.9f;
+        public bool masterMute = false;
+
+        [Header("Audio Channels")]
+        public AudioSource[] channelAudio;
+        public string[] channelNames;
+        [Range(0, 1)]
+        public float[] channelVolume;
+        public bool[] channelMute;
+
+        bool initialized = false;
+        GameObject[] audioControls;
+
+        int channelCount = 0;
+        bool hasSync = false;
+        bool ovrMasterMute = false;
+        bool ovrMasterVolume = false;
+
+        void Start()
+        {
+            if (!Utilities.IsValid(audioControls))
+                audioControls = new GameObject[0];
+
+            channelCount = channelAudio.Length;
+            if (Utilities.IsValid(syncAudioManager))
+            {
+                hasSync = true;
+                UdonBehaviour behavior = (UdonBehaviour)GetComponent(typeof(UdonBehaviour));
+                syncAudioManager._Initialize(behavior, inputVolume, masterVolume, channelVolume, inputMute, masterMute, channelMute, channelNames);
+            }
+
+            initialized = true;
+            _UpdateAll();
+        }
+
+        public void _RegisterControls(GameObject controls)
+        {
+            if (!Utilities.IsValid(controls))
+                return;
+
+            if (!Utilities.IsValid(audioControls))
+                audioControls = new GameObject[0];
+
+            foreach (GameObject c in audioControls)
+            {
+                if (c == controls)
+                    return;
+            }
+
+            GameObject[] newControls = new GameObject[audioControls.Length + 1];
+            for (int i = 0; i < audioControls.Length; i++)
+                newControls[i] = audioControls[i];
+
+            newControls[audioControls.Length] = controls;
+            audioControls = newControls;
+
+            if (initialized)
+                _UpdateAudioControl(controls);
+        }
+
+        public void _SetMasterVolume(float value)
+        {
+            ovrMasterVolume = true;
+            masterVolume = value;
+
+            _UpdateAll();
+        }
+
+        public void _SetMasterMute(bool state)
+        {
+            ovrMasterMute = true;
+            masterMute = state;
+
+            _UpdateAll();
+        }
+
+        public void _SyncUpdate()
+        {
+            _UpdateAll();
+        }
+
+        void _UpdateAll()
+        {
+            _UpdateAudioSources();
+            _UpdateAudioControls();
+        }
+
+        void _UpdateAudioSources()
+        {
+            bool baseMute = _InputMute() || _MasterMute();
+            float baseVolume = _InputVolume() * _MasterVolume();
+
+            for (int i = 0; i < channelCount; i++)
+            {
+                AudioSource source = channelAudio[i];
+                if (!Utilities.IsValid(source))
+                    continue;
+
+                float rawVolume = baseVolume * _ChannelVolume(i);
+                float expVolume = Mathf.Clamp01(3.1623e-3f * Mathf.Exp(rawVolume * 5.757f) - 3.1623e-3f);
+
+                source.mute = baseMute || _ChannelMute(i);
+                source.volume = expVolume;
+            }
+        }
+
+        void _UpdateAudioControls()
+        {
+            foreach (var control in audioControls)
+                _UpdateAudioControl(control);
+        }
+
+        void _UpdateAudioControl(GameObject control)
+        {
+            if (!Utilities.IsValid(control))
+                return;
+
+            UdonBehaviour script = (UdonBehaviour)control.GetComponent(typeof(UdonBehaviour));
+            if (Utilities.IsValid(script))
+                script.SendCustomEvent("_AudioManagerUpdate");
+        }
+
+        bool _InputMute()
+        {
+            return hasSync ? syncAudioManager.syncInputMute : inputMute;
+        }
+
+        float _InputVolume()
+        {
+            return hasSync ? syncAudioManager.syncInputVolume : inputVolume;
+        }
+
+        bool _MasterMute()
+        {
+            return (hasSync && !ovrMasterMute) ? syncAudioManager.syncMasterMute : masterMute;
+        }
+
+        float _MasterVolume()
+        {
+            return (hasSync && !ovrMasterVolume) ? syncAudioManager.syncMasterVolume : masterVolume;
+        }
+
+        bool _ChannelMute(int channel)
+        {
+            return hasSync ? syncAudioManager.syncChannelMutes[channel] : channelMute[channel];
+        }
+
+        float _ChannelVolume(int channel)
+        {
+            return hasSync ? syncAudioManager.syncChannelVolumes[channel] : channelVolume[channel];
+        }
+    }
+}

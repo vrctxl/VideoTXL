@@ -1,5 +1,6 @@
 ﻿
 using System;
+using Texel;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components.Video;
@@ -15,7 +16,18 @@ namespace VideoTXL
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class SyncPlayer : UdonSharpBehaviour
     {
+        [Tooltip("A proxy for dispatching video-related events to other listening behaviors, such as a screen manager")]
         public VideoPlayerProxy dataProxy;
+
+        [Header("Optional Components")]
+        [Tooltip("Pre-populated playlist to iterate through.  Overrides default URL option")]
+        public Playlist playlist;
+
+        [Tooltip("Control access to player controls based on player type or whitelist")]
+        public AccessControl accessControl;
+
+        [Tooltip("Log debug statements to a world object")]
+        public DebugLog debugLog;
 
         //[Tooltip("Optional component to control and synchronize player video screens and materials")]
         //public ScreenManager screenManager;
@@ -23,25 +35,26 @@ namespace VideoTXL
         //public VolumeController audioManager;
         //[Tooltip("Optional component to start or stop player based on common trigger events")]
         //public TriggerManager triggerManager;
-        [Tooltip("Optional component to control access to player controls based on player type or whitelist")]
-        public AccessControl accessControl;
 
-        [Tooltip("AVPro video player component")]
-        public VRCAVProVideoPlayer avProVideo;
-
+        [Header("Default Options")]
         [Tooltip("Optional default URL to play on world load")]
         public VRCUrl defaultUrl;
 
         [Tooltip("Whether player controls are locked to master and instance owner by default")]
         public bool defaultLocked = false;
 
-        public bool retryOnError = true;
-
         [Tooltip("Write out video player events to VRChat log")]
         public bool debugLogging = true;
 
         [Tooltip("Automatically loop track when finished")]
         public bool loop = false;
+
+        [Tooltip("Whether to keep playing the same URL if an error occurs")]
+        public bool retryOnError = true;
+
+        [Header("Internal Objects")]
+        [Tooltip("AVPro video player component")]
+        public VRCAVProVideoPlayer avProVideo;
 
         float retryTimeout = 6;
         float syncFrequency = 5;
@@ -144,10 +157,18 @@ namespace VideoTXL
                 _UpdateLockState(_syncLocked);
                 _UpdateRepeatMode(_syncRepeatPlaylist);
                 RequestSerialization();
+
+                if (Utilities.IsValid(playlist))
+                    playlist._Init();
             }
 
             if (Networking.IsOwner(gameObject))
-                _PlayVideo(defaultUrl);
+            {
+                if (Utilities.IsValid(playlist) && playlist.trackCount > 0)
+                    _PlayVideo(playlist._GetCurrent());
+                else             
+                    _PlayVideo(defaultUrl);
+            }
         }
 
         public void _TriggerPlay()
@@ -258,12 +279,19 @@ namespace VideoTXL
             float duration = _currentPlayer.GetDuration();
             if (duration - time < 1)
             {
+                bool hasPlaylist = Utilities.IsValid(playlist);
                 if (_IsUrlValid(_queuedUrl))
                 {
                     SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
                     return;
                 }
-                else if (_syncRepeatPlaylist)
+                else if (hasPlaylist && playlist._MoveNext())
+                {
+                    _queuedUrl = playlist._GetCurrent();
+                    SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
+                    return;
+                }
+                else if (!hasPlaylist && _syncRepeatPlaylist)
                 {
                     SendCustomEventDelayedFrames("_LoopVideo", 1);
                     return;
@@ -514,9 +542,14 @@ namespace VideoTXL
 
             if (Networking.IsOwner(gameObject))
             {
+                bool hasPlaylist = Utilities.IsValid(playlist);
                 if (_IsUrlValid(_queuedUrl))
                     SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
-                else if (_syncRepeatPlaylist)
+                else if (hasPlaylist && playlist._MoveNext()) {
+                    _queuedUrl = playlist._GetCurrent();
+                    SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
+                }
+                else if (!hasPlaylist && _syncRepeatPlaylist)
                     SendCustomEventDelayedFrames("_LoopVideo", 1);
                 else
                 {
@@ -572,6 +605,17 @@ namespace VideoTXL
 
             VRCPlayerApi player = Networking.LocalPlayer;
             return player.isMaster || player.isInstanceOwner || !_syncLocked;
+        }
+
+        public bool _TakeControl()
+        {
+            if (!_CanTakeControl())
+                return false;
+
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            return true;
         }
 
         public override void OnDeserialization()
@@ -685,7 +729,10 @@ namespace VideoTXL
                 float current = _currentPlayer.GetTime();
                 float offsetTime = Mathf.Clamp((float)Networking.GetServerTimeInSeconds() - _syncVideoStartNetworkTime, 0f, duration);
                 if (Mathf.Abs(current - offsetTime) > syncThreshold && (duration - current) > 2)
+                {
                     _currentPlayer.SetTime(offsetTime);
+                    Debug.Log($"Sync time (off by {current - offsetTime}s)");
+                }
             }
         }
 
@@ -766,8 +813,10 @@ namespace VideoTXL
 
         void DebugLog(string message)
         {
-            if (debugLogging)
+            if (!debugLogging)
                 Debug.Log("[VideoTXL:SyncPlayer] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write("SyncPlayer", message);
         }
     }
 }

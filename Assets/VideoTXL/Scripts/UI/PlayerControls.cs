@@ -20,7 +20,8 @@ namespace VideoTXL
     {
         public SyncPlayer videoPlayer;
         public StaticUrlSource staticUrlSource;
-        public VolumeController volumeController;
+        public Texel.AudioManager audioManager;
+        public Playlist playlist;
         public ControlColorProfile colorProfile;
 
         public VRCUrlInputField urlInput;
@@ -37,9 +38,13 @@ namespace VideoTXL
         public Image loadIcon;
         public Image resyncIcon;
         public Image repeatIcon;
+        public Image shuffleIcon;
         public Image infoIcon;
         public Image playCurrentIcon;
         public Image playLastIcon;
+        public Image nextIcon;
+        public Image prevIcon;
+        public Image playlistIcon;
 
         public GameObject muteToggleOn;
         public GameObject muteToggleOff;
@@ -51,6 +56,8 @@ namespace VideoTXL
         public Text statusText;
         public Text urlText;
         public Text placeholderText;
+
+        public Text playlistText;
 
         public GameObject infoPanel;
         public Text instanceOwnerText;
@@ -64,7 +71,7 @@ namespace VideoTXL
 
         Color normalColor = new Color(1f, 1f, 1f, .8f);
         Color disabledColor = new Color(.5f, .5f, .5f, .4f);
-        Color activeColor = new Color(1f, .8f, 0f, .7f);
+        Color activeColor = new Color(0f, 1f, .5f, .7f);
         Color attentionColor = new Color(.9f, 0f, 0f, .5f);
 
         const int PLAYER_STATE_STOPPED = 0;
@@ -88,8 +95,8 @@ namespace VideoTXL
             infoIcon.color = normalColor;
             _DisableAllVideoControls();
 
-            if (Utilities.IsValid(volumeController))
-                volumeController._RegisterControls(gameObject);
+            if (Utilities.IsValid(audioManager))
+                audioManager._RegisterControls(gameObject);
             if (Utilities.IsValid(videoPlayer) && Utilities.IsValid(videoPlayer.dataProxy)) {
                 dataProxy = videoPlayer.dataProxy;
                 dataProxy._RegisterEventHandler(gameObject, "_VideoStateUpdate");
@@ -116,22 +123,26 @@ namespace VideoTXL
             loadIcon.color = disabledColor;
             resyncIcon.color = disabledColor;
             repeatIcon.color = disabledColor;
+            shuffleIcon.color = disabledColor;
             playCurrentIcon.color = disabledColor;
             playLastIcon.color = disabledColor;
+            nextIcon.color = disabledColor;
+            prevIcon.color = disabledColor;
+            playlistIcon.color = disabledColor;
         }
 
         bool inVolumeControllerUpdate = false;
 
-        public void _VolumeControllerUpdate()
+        public void _AudioManagerUpdate()
         {
-            if (!Utilities.IsValid(volumeController))
+            if (!Utilities.IsValid(audioManager))
                 return;
 
             inVolumeControllerUpdate = true;
 
             if (Utilities.IsValid(volumeSlider))
             {
-                float volume = volumeController.volume;
+                float volume = audioManager.masterVolume;
                 if (volume != volumeSlider.value)
                     volumeSlider.value = volume;
             }
@@ -140,6 +151,25 @@ namespace VideoTXL
 
             inVolumeControllerUpdate = false;
         }
+
+        /*public void _VolumeControllerUpdate()
+        {
+            if (!Utilities.IsValid(audioManager))
+                return;
+
+            inVolumeControllerUpdate = true;
+
+            if (Utilities.IsValid(volumeSlider))
+            {
+                float volume = audioManager.volume;
+                if (volume != volumeSlider.value)
+                    volumeSlider.value = volume;
+            }
+
+            UpdateToggleVisual();
+
+            inVolumeControllerUpdate = false;
+        }*/
 
         public void _VideoStateUpdate()
         {
@@ -189,6 +219,7 @@ namespace VideoTXL
                 return;
 
             videoPlayer._ChangeUrl(url);
+            playlist._SetEnabled(false);
             loadActive = false;
             _UpdateAll();
         }
@@ -343,8 +374,9 @@ namespace VideoTXL
             if (inVolumeControllerUpdate)
                 return;
 
-            if (Utilities.IsValid(volumeController))
-                volumeController._ToggleMute();
+            if (Utilities.IsValid(audioManager))
+                audioManager._SetMasterMute(!audioManager.masterMute);
+                //audioManager._ToggleMute();
         }
 
         public void _ToggleAudio2D()
@@ -352,8 +384,8 @@ namespace VideoTXL
             if (inVolumeControllerUpdate)
                 return;
 
-            if (Utilities.IsValid(volumeController))
-                volumeController._ToggleAudio2D();
+            //if (Utilities.IsValid(audioManager))
+            //    audioManager._ToggleAudio2D();
         }
 
         public void _UpdateVolumeSlider()
@@ -361,8 +393,39 @@ namespace VideoTXL
             if (inVolumeControllerUpdate)
                 return;
 
-            if (Utilities.IsValid(volumeController) && Utilities.IsValid(volumeSlider))
-                volumeController._ApplyVolume(volumeSlider.value);
+            if (Utilities.IsValid(audioManager) && Utilities.IsValid(volumeSlider))
+                audioManager._SetMasterVolume(volumeSlider.value);
+                //audioManager._ApplyVolume(volumeSlider.value);
+        }
+
+        public void _HandlePlaylist()
+        {
+            if (!Utilities.IsValid(playlist) || !Utilities.IsValid(videoPlayer))
+                return;
+
+            if (playlist.playlistEnabled)
+                return;
+
+            playlist._SetEnabled(true);
+            videoPlayer._ChangeUrl(playlist._GetCurrent());
+        }
+
+        public void _HandlePlaylistNext()
+        {
+            if (!Utilities.IsValid(playlist) || !Utilities.IsValid(videoPlayer))
+                return;
+
+            if (playlist._MoveNext())
+                videoPlayer._ChangeUrl(playlist._GetCurrent());
+        }
+
+        public void _HandlePlaylistPrev()
+        {
+            if (!Utilities.IsValid(playlist) || !Utilities.IsValid(videoPlayer))
+                return;
+
+            if (playlist._MovePrev())
+                videoPlayer._ChangeUrl(playlist._GetCurrent());
         }
 
         void _SetStatusOverride(string msg, float timeout)
@@ -388,7 +451,7 @@ namespace VideoTXL
 
             string durationStr = System.TimeSpan.FromSeconds(dataProxy.trackDuration).ToString(@"hh\:mm\:ss");
             string positionStr = System.TimeSpan.FromSeconds(dataProxy.trackDuration * progressSlider.value).ToString(@"hh\:mm\:ss");
-            SetStatusText(positionStr + "/" + durationStr);
+            SetStatusText(positionStr + " / " + durationStr);
             progressSliderControl.SetActive(true);
 
             SendCustomEventDelayedSeconds("_UpdateTrackingDragging", 0.1f);
@@ -411,7 +474,7 @@ namespace VideoTXL
             {
                 string durationStr = System.TimeSpan.FromSeconds(dataProxy.trackDuration).ToString(@"hh\:mm\:ss");
                 string positionStr = System.TimeSpan.FromSeconds(dataProxy.trackPosition).ToString(@"hh\:mm\:ss");
-                SetStatusText(positionStr + "/" + durationStr);
+                SetStatusText(positionStr + " / " + durationStr);
                 progressSliderControl.SetActive(true);
                 progressSlider.value = Mathf.Clamp01(dataProxy.trackPosition / dataProxy.trackDuration);
             }
@@ -438,7 +501,27 @@ namespace VideoTXL
 
         public void _UpdatePlaylistInfo()
         {
+            bool canControl = videoPlayer._CanTakeControl();
+            bool enableControl = !videoPlayer.locked || canControl;
+
             repeatIcon.color = videoPlayer.repeatPlaylist ? activeColor : normalColor;
+
+            if (Utilities.IsValid(playlist) && playlist.trackCount > 0)
+            {
+                nextIcon.color = (enableControl && playlist.playlistEnabled && playlist._HasNextTrack()) ? normalColor : disabledColor;
+                prevIcon.color = (enableControl && playlist.playlistEnabled && playlist._HasPrevTrack()) ? normalColor : disabledColor;
+                playlistIcon.color = enableControl ? normalColor : disabledColor;
+
+                string curIndex = playlist.playlistEnabled ? (playlist.currentIndex + 1).ToString() : "--";
+                playlistText.text = $"{curIndex} / {playlist.trackCount}";
+            }
+            else
+            {
+                nextIcon.color = disabledColor;
+                prevIcon.color = disabledColor;
+                playlistIcon.color = disabledColor;
+                playlistText.text = "";
+            }
         }
 
         public void _UpdateAll()
@@ -558,6 +641,8 @@ namespace VideoTXL
             unlockedIcon.enabled = !videoPlayer.locked;
             if (videoPlayer.locked)
                 lockedIcon.color = canControl ? normalColor : attentionColor;
+
+            _UpdatePlaylistInfo();
         }
 
         void SetStatusText(string msg)
@@ -608,17 +693,17 @@ namespace VideoTXL
 
         void UpdateToggleVisual()
         {
-            if (Utilities.IsValid(volumeController))
+            if (Utilities.IsValid(audioManager))
             {
                 if (Utilities.IsValid(muteToggleOn) && Utilities.IsValid(muteToggleOff))
                 {
-                    muteToggleOn.SetActive(volumeController.muted);
-                    muteToggleOff.SetActive(!volumeController.muted);
+                    muteToggleOn.SetActive(audioManager.masterMute);
+                    muteToggleOff.SetActive(!audioManager.masterMute);
                 }
                 if (Utilities.IsValid(audio2DToggleOn) && Utilities.IsValid(audio2DToggleOff))
                 {
-                    audio2DToggleOn.SetActive(volumeController.audio2D);
-                    audio2DToggleOff.SetActive(!volumeController.audio2D);
+                    //audio2DToggleOn.SetActive(audioManager.audio2D);
+                    //audio2DToggleOff.SetActive(!audioManager.audio2D);
                 }
             }
         }
@@ -632,6 +717,7 @@ namespace VideoTXL
 
         SerializedProperty videoPlayerProperty;
         SerializedProperty volumeControllerProperty;
+        SerializedProperty playlistProperty;
         SerializedProperty colorProfileProperty;
 
         SerializedProperty urlInputProperty;
@@ -648,9 +734,13 @@ namespace VideoTXL
         SerializedProperty loadIconProperty;
         SerializedProperty resyncIconProperty;
         SerializedProperty repeatIconProperty;
+        SerializedProperty shuffleIconProperty;
         SerializedProperty infoIconProperty;
         SerializedProperty playCurrentIconProperty;
         SerializedProperty playlastIconProperty;
+        SerializedProperty nextIconProperty;
+        SerializedProperty prevIconProperty;
+        SerializedProperty playlistIconProperty;
 
         SerializedProperty muteToggleOnProperty;
         SerializedProperty muteToggleOffProperty;
@@ -663,6 +753,8 @@ namespace VideoTXL
         SerializedProperty urlTextProperty;
         SerializedProperty placeholderTextProperty;
 
+        SerializedProperty playlistTextProperty;
+
         SerializedProperty infoPanelProperty;
         SerializedProperty instanceOwnerTextProperty;
         SerializedProperty masterTextProperty;
@@ -674,7 +766,8 @@ namespace VideoTXL
         private void OnEnable()
         {
             videoPlayerProperty = serializedObject.FindProperty(nameof(PlayerControls.videoPlayer));
-            volumeControllerProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeController));
+            volumeControllerProperty = serializedObject.FindProperty(nameof(PlayerControls.audioManager));
+            playlistProperty = serializedObject.FindProperty(nameof(PlayerControls.playlist));
             colorProfileProperty = serializedObject.FindProperty(nameof(PlayerControls.colorProfile));
 
             urlInputProperty = serializedObject.FindProperty(nameof(PlayerControls.urlInput));
@@ -691,9 +784,13 @@ namespace VideoTXL
             loadIconProperty = serializedObject.FindProperty(nameof(PlayerControls.loadIcon));
             resyncIconProperty = serializedObject.FindProperty(nameof(PlayerControls.resyncIcon));
             repeatIconProperty = serializedObject.FindProperty(nameof(PlayerControls.repeatIcon));
+            shuffleIconProperty = serializedObject.FindProperty(nameof(PlayerControls.shuffleIcon));
             infoIconProperty = serializedObject.FindProperty(nameof(PlayerControls.infoIcon));
             playCurrentIconProperty = serializedObject.FindProperty(nameof(PlayerControls.playCurrentIcon));
             playlastIconProperty = serializedObject.FindProperty(nameof(PlayerControls.playLastIcon));
+            nextIconProperty = serializedObject.FindProperty(nameof(PlayerControls.nextIcon));
+            prevIconProperty = serializedObject.FindProperty(nameof(PlayerControls.prevIcon));
+            playlistIconProperty = serializedObject.FindProperty(nameof(PlayerControls.playlistIcon));
 
             muteToggleOnProperty = serializedObject.FindProperty(nameof(PlayerControls.muteToggleOn));
             muteToggleOffProperty = serializedObject.FindProperty(nameof(PlayerControls.muteToggleOff));
@@ -705,6 +802,8 @@ namespace VideoTXL
             placeholderTextProperty = serializedObject.FindProperty(nameof(PlayerControls.placeholderText));
             urlTextProperty = serializedObject.FindProperty(nameof(PlayerControls.urlText));
             progressSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.progressSlider));
+
+            playlistTextProperty = serializedObject.FindProperty(nameof(PlayerControls.playlistText));
 
             infoPanelProperty = serializedObject.FindProperty(nameof(PlayerControls.infoPanel));
             instanceOwnerTextProperty = serializedObject.FindProperty(nameof(PlayerControls.instanceOwnerText));
@@ -722,6 +821,7 @@ namespace VideoTXL
 
             EditorGUILayout.PropertyField(videoPlayerProperty);
             EditorGUILayout.PropertyField(volumeControllerProperty);
+            EditorGUILayout.PropertyField(playlistProperty);
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(colorProfileProperty);
             EditorGUILayout.Space();
@@ -743,9 +843,13 @@ namespace VideoTXL
                 EditorGUILayout.PropertyField(loadIconProperty);
                 EditorGUILayout.PropertyField(resyncIconProperty);
                 EditorGUILayout.PropertyField(repeatIconProperty);
+                EditorGUILayout.PropertyField(shuffleIconProperty);
                 EditorGUILayout.PropertyField(infoIconProperty);
                 EditorGUILayout.PropertyField(playCurrentIconProperty);
                 EditorGUILayout.PropertyField(playlastIconProperty);
+                EditorGUILayout.PropertyField(nextIconProperty);
+                EditorGUILayout.PropertyField(prevIconProperty);
+                EditorGUILayout.PropertyField(playlistIconProperty);
                 EditorGUILayout.PropertyField(muteToggleOnProperty);
                 EditorGUILayout.PropertyField(muteToggleOffProperty);
                 EditorGUILayout.PropertyField(audio2DToggleOnProperty);
@@ -755,6 +859,7 @@ namespace VideoTXL
                 EditorGUILayout.PropertyField(statusTextProperty);
                 EditorGUILayout.PropertyField(urlTextProperty);
                 EditorGUILayout.PropertyField(placeholderTextProperty);
+                EditorGUILayout.PropertyField(playlistTextProperty);
                 EditorGUILayout.PropertyField(infoPanelProperty);
                 EditorGUILayout.PropertyField(instanceOwnerTextProperty);
                 EditorGUILayout.PropertyField(masterTextProperty);
