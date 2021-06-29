@@ -28,6 +28,7 @@ namespace VideoTXL
         public Image lockedIcon;
         public Image unlockedIcon;
         public Image loadIcon;
+        public Image syncIcon;
 
         public Slider progressSlider;
         public Text statusText;
@@ -62,6 +63,7 @@ namespace VideoTXL
             lockedIcon.color = normalColor;
             unlockedIcon.color = normalColor;
             loadIcon.color = normalColor;
+            syncIcon.color = normalColor;
         }
 
         public void _HandleUrlInput()
@@ -104,6 +106,14 @@ namespace VideoTXL
             VRCUrl url = urlInput.GetUrl();
             if (url.Get().Length > 0)
                 videoPlayer._UpdateQueuedUrl(urlInput.GetUrl());
+        }
+
+        public void _HandleSync()
+        {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
+            videoPlayer._Resync();
         }
 
         public void _HandleStop()
@@ -195,6 +205,7 @@ namespace VideoTXL
 
                 stopIcon.color = enableControl ? normalColor : disabledColor;
                 loadIcon.color = enableControl ? normalColor : disabledColor;
+                syncIcon.color = normalColor;
 
                 if (!videoPlayer.seekableSource)
                 {
@@ -231,6 +242,7 @@ namespace VideoTXL
                 {
                     stopIcon.color = enableControl ? normalColor : disabledColor;
                     loadIcon.color = enableControl ? normalColor : disabledColor;
+                    syncIcon.color = normalColor;
 
                     SetPlaceholderText("Loading...");
                     urlInput.readOnly = true;
@@ -240,6 +252,7 @@ namespace VideoTXL
                 {
                     stopIcon.color = disabledColor;
                     loadIcon.color = normalColor;
+                    syncIcon.color = normalColor;
                     loadActive = false;
 
                     switch (videoPlayer.localLastErrorCode)
@@ -273,10 +286,12 @@ namespace VideoTXL
                         pendingFromLoadOverride = false;
                         stopIcon.color = disabledColor;
                         loadIcon.color = disabledColor;
+                        syncIcon.color = disabledColor;
                     } else
                     {
                         stopIcon.color = normalColor;
                         loadIcon.color = activeColor;
+                        syncIcon.color = normalColor;
                     }
 
                     urlInput.readOnly = !canControl;
@@ -362,6 +377,7 @@ namespace VideoTXL
         SerializedProperty lockedIconProperty;
         SerializedProperty unlockedIconProperty;
         SerializedProperty loadIconProperty;
+        SerializedProperty syncIconProperty;
 
         SerializedProperty progressSliderProperty;
         SerializedProperty statusTextProperty;
@@ -380,6 +396,7 @@ namespace VideoTXL
             lockedIconProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.lockedIcon));
             unlockedIconProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.unlockedIcon));
             loadIconProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.loadIcon));
+            syncIconProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.syncIcon));
 
             statusTextProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.statusText));
             placeholderTextProperty = serializedObject.FindProperty(nameof(BasicPlayerControls.placeholderText));
@@ -406,6 +423,7 @@ namespace VideoTXL
                 EditorGUILayout.PropertyField(lockedIconProperty);
                 EditorGUILayout.PropertyField(unlockedIconProperty);
                 EditorGUILayout.PropertyField(loadIconProperty);
+                EditorGUILayout.PropertyField(syncIconProperty);
                 EditorGUILayout.PropertyField(progressSliderProperty);
                 EditorGUILayout.PropertyField(statusTextProperty);
                 EditorGUILayout.PropertyField(urlTextProperty);
