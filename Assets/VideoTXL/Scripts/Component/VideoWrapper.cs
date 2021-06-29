@@ -32,5 +32,20 @@ namespace VideoTXL
         {
             syncPlayer.OnVideoError(videoError);
         }
+
+        public override void OnVideoLoop()
+        {
+            syncPlayer.OnVideoLoop();
+        }
+
+        public override void OnVideoPause()
+        {
+            //syncPlayer.OnVideoPause();
+        }
+
+        public override void OnVideoPlay()
+        {
+            //syncPlayer.OnVideoPlay();
+        }
     }
 }

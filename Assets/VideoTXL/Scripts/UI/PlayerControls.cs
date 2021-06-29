@@ -219,7 +219,8 @@ namespace VideoTXL
                 return;
 
             videoPlayer._ChangeUrl(url);
-            playlist._SetEnabled(false);
+            if (Utilities.IsValid(playlist))
+                playlist._SetEnabled(false);
             loadActive = false;
             _UpdateAll();
         }

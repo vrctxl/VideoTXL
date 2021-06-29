@@ -279,7 +279,7 @@ namespace VideoTXL
             float duration = _currentPlayer.GetDuration();
             if (duration - time < 1)
             {
-                bool hasPlaylist = Utilities.IsValid(playlist);
+                bool hasPlaylist = Utilities.IsValid(playlist) && playlist.playlistEnabled;
                 if (_IsUrlValid(_queuedUrl))
                 {
                     SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
@@ -542,7 +542,7 @@ namespace VideoTXL
 
             if (Networking.IsOwner(gameObject))
             {
-                bool hasPlaylist = Utilities.IsValid(playlist);
+                bool hasPlaylist = Utilities.IsValid(playlist) && playlist.playlistEnabled;
                 if (_IsUrlValid(_queuedUrl))
                     SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
                 else if (hasPlaylist && playlist._MoveNext()) {
@@ -558,6 +558,24 @@ namespace VideoTXL
                     RequestSerialization();
                 }
             }
+        }
+
+        // AVPro sends loop event but does not auto-loop, and setting time sometimes deadlocks player *sigh*
+        public override void OnVideoLoop()
+        {
+            /*
+            float current = _currentPlayer.GetTime();
+            float duration = _currentPlayer.GetDuration();
+            DebugLog($"Video loop duration={duration}, position={current}");
+
+            _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds();
+
+            if (Networking.IsOwner(gameObject))
+                RequestSerialization();
+
+            _lastSyncTime = Time.realtimeSinceStartup;
+            _currentPlayer.SetTime(0);
+            */
         }
 
         public override void OnVideoError(VideoError videoError)
