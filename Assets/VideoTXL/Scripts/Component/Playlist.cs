@@ -1,5 +1,6 @@
 ﻿
 using System;
+using Texel;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -12,6 +13,10 @@ namespace VideoTXL
     public class Playlist : UdonSharpBehaviour
     {
         public SyncPlayer syncPlayer;
+
+        [Header("Optional Components")]
+        [Tooltip("Log debug statements to a world object")]
+        public DebugLog debugLog;
 
         public bool shuffle;
 
@@ -27,6 +32,7 @@ namespace VideoTXL
         bool syncShuffle;
 
         bool end = false;
+        bool init = false;
 
         [NonSerialized]
         public bool playlistEnabled;
@@ -37,11 +43,37 @@ namespace VideoTXL
 
         private void Start()
         {
+            _CommonInit();
+        }
+
+        void _CommonInit()
+        {
+            if (init)
+                return;
+
+            DebugLog("Common initialization");
             trackCount = playlist.Length;
+            for (int i = 0; i < trackCount; i++)
+            {
+                if (!Utilities.IsValid(playlist[i]))
+                    playlist[i] = VRCUrl.Empty;
+            }
+
+            syncShuffle = shuffle;
+            syncCurrentIndex = 0;
+
+            syncTrackerOrder = new byte[playlist.Length];
+            for (int i = 0; i < syncTrackerOrder.Length; i++)
+                syncTrackerOrder[i] = (byte)i;
+
+            init = true;
         }
 
         public void _Init()
         {
+            _CommonInit();
+
+            DebugLog("Master initialization");
             syncEnabled = true;
 
             if (!syncPlayer._TakeControl())
@@ -49,15 +81,9 @@ namespace VideoTXL
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
-            syncShuffle = shuffle;
-            syncTrackerOrder = new byte[playlist.Length];
-            for (int i = 0; i < syncTrackerOrder.Length; i++)
-                syncTrackerOrder[i] = (byte)i;
-
             if (syncShuffle)
                 _Shuffle();
 
-            syncCurrentIndex = 0;
             RequestSerialization();
             _UpdateLocal();
         }
@@ -89,6 +115,8 @@ namespace VideoTXL
                 return false;
             }
 
+            DebugLog($"Move next track {syncCurrentIndex}");
+
             RequestSerialization();
             _UpdateLocal();
 
@@ -112,6 +140,8 @@ namespace VideoTXL
             if (end)
                 end = false;
 
+            DebugLog($"Move previous track {syncCurrentIndex}");
+
             RequestSerialization();
             _UpdateLocal();
 
@@ -134,6 +164,8 @@ namespace VideoTXL
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
+            DebugLog($"Set playlist enabled {state}");
+
             syncEnabled = state;
             RequestSerialization();
             _UpdateLocal();
@@ -150,6 +182,8 @@ namespace VideoTXL
                 return;
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            DebugLog($"Set shuffle mode {state}");
 
             syncShuffle = state;
             if (syncShuffle)
@@ -172,6 +206,7 @@ namespace VideoTXL
 
         void _Shuffle()
         {
+            DebugLog("Shuffling track list");
             int[] temp = new int[trackCount];
             for (int i = 0; i < trackCount; i++)
                 temp[i] = i;
@@ -179,6 +214,13 @@ namespace VideoTXL
             Utilities.ShuffleArray(temp);
             for (int i = 0; i < trackCount; i++)
                 syncTrackerOrder[i] = (byte)temp[i];
+        }
+
+        void DebugLog(string message)
+        {
+            Debug.Log("[VideoTXL:Playlist] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write("Playlist", message);
         }
     }
 }

@@ -56,7 +56,9 @@ namespace VideoTXL
         private void Start()
         {
 #if !UNITY_EDITOR
-            instanceMaster = Networking.GetOwner(gameObject).displayName;
+            VRCPlayerApi owner = Networking.GetOwner(gameObject);
+            if (Utilities.IsValid(owner) && owner.IsValid())
+                instanceMaster = owner.displayName;
 #endif
 
             stopIcon.color = normalColor;
@@ -357,7 +359,9 @@ namespace VideoTXL
 
         public override void OnPlayerLeft(VRCPlayerApi player)
         {
-            instanceMaster = Networking.GetOwner(gameObject).displayName;
+            VRCPlayerApi owner = Networking.GetOwner(gameObject);
+            if (Utilities.IsValid(owner) && owner.IsValid())
+                instanceMaster = owner.displayName;
         }
     }
 

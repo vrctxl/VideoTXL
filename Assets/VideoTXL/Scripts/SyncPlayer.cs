@@ -307,15 +307,12 @@ namespace VideoTXL
         void _PlayVideo(VRCUrl url)
         {
             _pendingPlayTime = 0;
+            if (!_IsUrlValid(url))
+                return;
+
             DebugLog("Play video " + url);
             bool isOwner = Networking.IsOwner(gameObject);
-            if (!isOwner && !_CanTakeControl())
-                return;
-
-            if (!Utilities.IsValid(url))
-                return;
-
-            if (!_IsUrlValid(url))
+            if (!isOwner && !_TakeControl())
                 return;
 
             _syncUrl = url;
