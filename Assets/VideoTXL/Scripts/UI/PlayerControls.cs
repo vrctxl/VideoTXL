@@ -670,7 +670,7 @@ namespace VideoTXL
 
             foreach (VRCPlayerApi player in playerList)
             {
-                if (!Utilities.IsValid(player))
+                if (!Utilities.IsValid(player) || !player.IsValid())
                     continue;
                 if (player.isInstanceOwner)
                     instanceOwner = player.displayName;
@@ -689,7 +689,11 @@ namespace VideoTXL
 
         public override void OnPlayerLeft(VRCPlayerApi player)
         {
-            instanceMaster = Networking.GetOwner(gameObject).displayName;
+            VRCPlayerApi owner = Networking.GetOwner(gameObject);
+            if (Utilities.IsValid(owner) && owner.IsValid())
+                instanceMaster = owner.displayName;
+            else
+                instanceMaster = "";
         }
 
         void UpdateToggleVisual()
