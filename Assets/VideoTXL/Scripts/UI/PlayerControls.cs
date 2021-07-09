@@ -494,10 +494,16 @@ namespace VideoTXL
 
             instanceOwnerText.text = instanceOwner;
             masterText.text = instanceMaster;
-            playerOwnerText.text = Networking.GetOwner(videoPlayer.gameObject).displayName;
             // videoOwnerText.text = videoPlayer.videoOwner;
             currentVideoInput.text = currentUrl;
             lastVideoInput.text = lastUrl;
+
+            VRCPlayerApi owner = Networking.GetOwner(videoPlayer.gameObject);
+            if (Utilities.IsValid(owner) && owner.IsValid())
+                playerOwnerText.text = owner.displayName;
+            else
+                playerOwnerText.text = "";
+            
         }
 
         public void _UpdatePlaylistInfo()

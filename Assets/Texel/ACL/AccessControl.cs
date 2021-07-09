@@ -35,18 +35,22 @@ namespace Texel
 
         void Start()
         {
-            if (Utilities.IsValid(userWhitelist))
+            VRCPlayerApi player = Networking.LocalPlayer;
+            if (Utilities.IsValid(player))
             {
-                string playerName = Networking.LocalPlayer.displayName;
-                foreach (string user in userWhitelist)
+                if (Utilities.IsValid(userWhitelist))
                 {
-                    if (playerName == user)
-                        _localPlayerWhitelisted = true;
+                    string playerName = player.displayName;
+                    foreach (string user in userWhitelist)
+                    {
+                        if (playerName == user)
+                            _localPlayerWhitelisted = true;
+                    }
                 }
-            }
 
-            _localPlayerMaster = Networking.LocalPlayer.isMaster;
-            _localPlayerInstanceOwner = Networking.LocalPlayer.isInstanceOwner;
+                _localPlayerMaster = player.isMaster;
+                _localPlayerInstanceOwner = player.isInstanceOwner;
+            }
 
             if (allowInstanceOwner && _localPlayerInstanceOwner)
                 _localCalculatedAccess = true;
@@ -73,7 +77,10 @@ namespace Texel
 
         public bool _LocalHasAccess()
         {
-            return _localCalculatedAccess || (allowMaster && Networking.LocalPlayer.isMaster);
+            VRCPlayerApi player = Networking.LocalPlayer;
+            bool isMaster = Utilities.IsValid(player) ? player.isMaster : false;
+
+            return _localCalculatedAccess || (allowMaster && isMaster);
         }
 
         void DebugLog(string message)

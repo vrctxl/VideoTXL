@@ -7,7 +7,7 @@ using VRC.Udon;
 namespace Texel
 {
     [AddComponentMenu("Texel/Audio/Audio Manager")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
     public class AudioManager : UdonSharpBehaviour
     {
         [Header("Optional Components")]
@@ -30,6 +30,9 @@ namespace Texel
         [Range(0, 1)]
         public float[] channelVolume;
         public bool[] channelMute;
+        public AudioFadeZone[] channelFadeZone;
+
+        float[] channelFade;
 
         bool initialized = false;
         GameObject[] audioControls;
@@ -45,6 +48,14 @@ namespace Texel
                 audioControls = new GameObject[0];
 
             channelCount = channelAudio.Length;
+            channelFade = new float[channelCount];
+            for (int i = 0; i < channelCount; i++)
+            {
+                channelFade[i] = 1;
+                if (i < channelFadeZone.Length && Utilities.IsValid(channelFadeZone[i]))
+                    channelFadeZone[i]._RegisterAudioManager(this, i);
+            }
+
             if (Utilities.IsValid(syncAudioManager))
             {
                 hasSync = true;
@@ -97,6 +108,16 @@ namespace Texel
             _UpdateAll();
         }
 
+        public void _SetChannelFade(int channel, float fade)
+        {
+            if (channel < 0 || channel >= channelCount)
+                return;
+
+            channelFade[channel] = Mathf.Clamp01(fade);
+
+            _UpdateAudioChannel(channel);
+        }
+
         public void _SyncUpdate()
         {
             _UpdateAll();
@@ -114,17 +135,29 @@ namespace Texel
             float baseVolume = _InputVolume() * _MasterVolume();
 
             for (int i = 0; i < channelCount; i++)
-            {
-                AudioSource source = channelAudio[i];
-                if (!Utilities.IsValid(source))
-                    continue;
+                _UpdateAudioChannelWithBase(i, baseMute, baseVolume);
+        }
 
-                float rawVolume = baseVolume * _ChannelVolume(i);
-                float expVolume = Mathf.Clamp01(3.1623e-3f * Mathf.Exp(rawVolume * 5.757f) - 3.1623e-3f);
+        void _UpdateAudioChannel(int channel)
+        {
+            bool baseMute = _InputMute() || _MasterMute();
+            float baseVolume = _InputVolume() * _MasterVolume();
 
-                source.mute = baseMute || _ChannelMute(i);
-                source.volume = expVolume;
-            }
+            _UpdateAudioChannelWithBase(channel, baseMute, baseVolume);
+        }
+
+        // todo: private internal and cache some stuff
+        void _UpdateAudioChannelWithBase(int channel, bool baseMute, float baseVolume)
+        {
+            AudioSource source = channelAudio[channel];
+            if (!Utilities.IsValid(source))
+                return;
+
+            float rawVolume = baseVolume * _ChannelVolume(channel) * channelFade[channel];
+            float expVolume = Mathf.Clamp01(3.1623e-3f * Mathf.Exp(rawVolume * 5.757f) - 3.1623e-3f);
+
+            source.mute = baseMute || _ChannelMute(channel);
+            source.volume = expVolume;
         }
 
         void _UpdateAudioControls()

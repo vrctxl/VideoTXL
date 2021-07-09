@@ -126,6 +126,16 @@ namespace Texel
             targetBehavior.SendCustomEvent(playerLeaveEvent);
             enterLatched = false;
         }
+
+        public void _LogEnter()
+        {
+            Debug.Log("Enter");
+        }
+
+        public void _LogLeave()
+        {
+            Debug.Log("Leave");
+        }
     }
 
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
