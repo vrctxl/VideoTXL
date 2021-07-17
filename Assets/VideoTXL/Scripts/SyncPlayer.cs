@@ -742,11 +742,12 @@ namespace VideoTXL
             {
                 float duration = _currentPlayer.GetDuration();
                 float current = _currentPlayer.GetTime();
+                float serverTime = (float)Networking.GetServerTimeInSeconds();
                 float offsetTime = Mathf.Clamp((float)Networking.GetServerTimeInSeconds() - _syncVideoStartNetworkTime, 0f, duration);
                 if (Mathf.Abs(current - offsetTime) > syncThreshold && (duration - current) > 2)
                 {
                     _currentPlayer.SetTime(offsetTime);
-                    Debug.Log($"Sync time (off by {current - offsetTime}s)");
+                    DebugLog($"Sync time (off by {current - offsetTime}s) [net={serverTime}, sync={_syncVideoStartNetworkTime}, cur={current}]");
                 }
             }
         }
