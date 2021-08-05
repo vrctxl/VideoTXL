@@ -59,6 +59,7 @@ namespace VideoTXL
         float retryTimeout = 6;
         float syncFrequency = 5;
         float syncThreshold = 1;
+        float syncLatchUpdateFrequency = 0.1f;
 
         [UdonSynced]
         VRCUrl _syncUrl;
@@ -124,11 +125,12 @@ namespace VideoTXL
 
         // Constants
 
-        const int PLAYER_STATE_STOPPED = 0;
-        const int PLAYER_STATE_LOADING = 1;
-        const int PLAYER_STATE_PLAYING = 2;
-        const int PLAYER_STATE_ERROR = 3;
-        const int PLAYER_STATE_PAUSED = 4;
+        const int PLAYER_STATE_STOPPED = 0x01;
+        const int PLAYER_STATE_LOADING = 0x02;
+        const int PLAYER_STATE_SYNC = 0x04;
+        const int PLAYER_STATE_PLAYING = 0x08;
+        const int PLAYER_STATE_ERROR = 0x10;
+        const int PLAYER_STATE_PAUSED = 0x20;
 
         const int SCREEN_MODE_NORMAL = 0;
         const int SCREEN_MODE_LOGO = 1;
@@ -137,6 +139,11 @@ namespace VideoTXL
 
         const int SCREEN_SOURCE_UNITY = 0;
         const int SCREEN_SOURCE_AVPRO = 1;
+
+        bool _StateIs(int state, int set)
+        {
+            return (state & set) > 0;
+        }
 
         void Start()
         {
@@ -169,12 +176,14 @@ namespace VideoTXL
                 else             
                     _PlayVideo(defaultUrl);
             }
+
+            SendCustomEventDelayedSeconds("_AVSyncStart", 1);
         }
 
         public void _TriggerPlay()
         {
             DebugLog("Trigger play");
-            if (localPlayerState == PLAYER_STATE_PLAYING || localPlayerState == PLAYER_STATE_LOADING)
+            if (_StateIs(localPlayerState, PLAYER_STATE_PLAYING | PLAYER_STATE_LOADING | PLAYER_STATE_SYNC))
                 return;
 
             _PlayVideo(_syncUrl);
@@ -196,7 +205,7 @@ namespace VideoTXL
             DebugLog("Trigger pause");
             if (_syncLocked && !_CanTakeControl())
                 return;
-            if (!seekableSource || (localPlayerState != PLAYER_STATE_PLAYING && localPlayerState != PLAYER_STATE_PAUSED))
+            if (!seekableSource || !_StateIs(localPlayerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED))
                 return;
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
@@ -267,7 +276,7 @@ namespace VideoTXL
         {
             if (_syncLocked && !_CanTakeControl())
                 return;
-            if (localPlayerState != PLAYER_STATE_PLAYING && localPlayerState != PLAYER_STATE_PAUSED)
+            if (!_StateIs(localPlayerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED | PLAYER_STATE_SYNC))
                 return;
             if (!seekableSource)
                 return;
@@ -329,7 +338,7 @@ namespace VideoTXL
 
             // Conditional player stop to try and avoid piling on AVPro at end of track
             // and maybe triggering bad things
-            bool playingState = localPlayerState == PLAYER_STATE_PLAYING || localPlayerState == PLAYER_STATE_PAUSED;
+            bool playingState = _StateIs(localPlayerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED | PLAYER_STATE_SYNC);
             if (playingState && _currentPlayer.IsPlaying && seekableSource)
             {
                 float duration = _currentPlayer.GetDuration();
@@ -458,7 +467,7 @@ namespace VideoTXL
             // If a seekable video is loaded it should have a positive duration.  Otherwise we assume it's a non-seekable stream
             seekableSource = !float.IsInfinity(duration) && !float.IsNaN(duration) && duration > 1;
             dataProxy.seekableSource = seekableSource;
-            _UpdateTracking(position, duration);
+            _UpdateTracking(position, position, duration);
 
             // If player is owner: play video
             // If Player is remote:
@@ -484,7 +493,7 @@ namespace VideoTXL
 
             if (Networking.IsOwner(gameObject))
             {
-                bool paused = localPlayerState == PLAYER_STATE_PAUSED;
+                bool paused = _StateIs(localPlayerState, PLAYER_STATE_PAUSED);
                 if (paused)
                     _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _currentPlayer.GetTime();
                 else
@@ -499,6 +508,8 @@ namespace VideoTXL
 
                 if (!paused)
                     _currentPlayer.SetTime(_videoTargetTime);
+
+                SyncVideo();
             }
             else
             {
@@ -645,15 +656,15 @@ namespace VideoTXL
 
             if (_syncVideoNumber == _loadedVideoNumber)
             {
-                bool playingState = localPlayerState == PLAYER_STATE_PLAYING || localPlayerState == PLAYER_STATE_PAUSED;
+                bool playingState = _StateIs(localPlayerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED | PLAYER_STATE_SYNC);
                 if (playingState && !_syncOwnerPlaying)
                     SendCustomEventDelayedFrames("_StopVideo", 1);
-                else if (localPlayerState == PLAYER_STATE_PAUSED && !_syncOwnerPaused)
+                else if (_StateIs(localPlayerState, PLAYER_STATE_PAUSED) && !_syncOwnerPaused)
                 {
                     DebugLog("Unpausing video");
                     _currentPlayer.Play();
                     _UpdatePlayerState(PLAYER_STATE_PLAYING);
-                } else if (localPlayerState == PLAYER_STATE_PLAYING && _syncOwnerPaused)
+                } else if (_StateIs(localPlayerState, PLAYER_STATE_PLAYING) && _syncOwnerPaused)
                 {
                     DebugLog("Pausing video");
                     _currentPlayer.Pause();
@@ -692,14 +703,18 @@ namespace VideoTXL
             if (_pendingLoadTime > 0 && Time.time > _pendingLoadTime)
                 _StartVideoLoad();
 
-            bool playingState = localPlayerState == PLAYER_STATE_PLAYING || localPlayerState == PLAYER_STATE_PAUSED;
+            bool playingState = _StateIs(localPlayerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED | PLAYER_STATE_SYNC);
             if (seekableSource && playingState)
             {
                 float position = Mathf.Floor(_currentPlayer.GetTime());
                 if (position != previousTrackPosition)
                 {
                     previousTrackPosition = position;
-                    _UpdateTracking(position, _currentPlayer.GetDuration());
+                    float target = position;
+                    if (syncLatched)
+                        target = GetTargetTime();
+
+                    _UpdateTracking(position, target, _currentPlayer.GetDuration());
                 }
             }
 
@@ -738,18 +753,74 @@ namespace VideoTXL
 
         void SyncVideo()
         {
-            if (seekableSource)
+            if (seekableSource && !syncLatched)
             {
                 float duration = _currentPlayer.GetDuration();
                 float current = _currentPlayer.GetTime();
                 float serverTime = (float)Networking.GetServerTimeInSeconds();
-                float offsetTime = Mathf.Clamp((float)Networking.GetServerTimeInSeconds() - _syncVideoStartNetworkTime, 0f, duration);
+                float offsetTime = Mathf.Clamp(serverTime - _syncVideoStartNetworkTime, 0f, duration);
                 if (Mathf.Abs(current - offsetTime) > syncThreshold && (duration - current) > 2)
                 {
                     _currentPlayer.SetTime(offsetTime);
                     DebugLog($"Sync time (off by {current - offsetTime}s) [net={serverTime}, sync={_syncVideoStartNetworkTime}, cur={current}]");
+
+                    float readbackTime = _currentPlayer.GetTime();
+                    if (offsetTime - readbackTime > 1)
+                    {
+                        DebugLog($"Starting extended synchronization (target={offsetTime}, readback={readbackTime})");
+                        syncLatched = true;
+                        _UpdatePlayerState(PLAYER_STATE_SYNC);
+                        SendCustomEventDelayedSeconds("_SyncLatch", syncLatchUpdateFrequency);
+                    }
                 }
             }
+        }
+
+        bool syncLatched = false;
+
+        public void _SyncLatch()
+        {
+            syncLatched = false;
+
+            float duration = _currentPlayer.GetDuration();
+            float current = _currentPlayer.GetTime();
+            float serverTime = (float)Networking.GetServerTimeInSeconds();
+            float offsetTime = Mathf.Clamp(serverTime - _syncVideoStartNetworkTime, 0f, duration);
+            if (Mathf.Abs(current - offsetTime) > syncThreshold && (duration - current) > 2)
+            {
+                _currentPlayer.SetTime(offsetTime);
+                float readbackTime = _currentPlayer.GetTime();
+                if (offsetTime - readbackTime > 1)
+                {
+                    syncLatched = true;
+                    SendCustomEventDelayedSeconds("_SyncLatch", syncLatchUpdateFrequency);
+                }
+            }
+
+            if (!syncLatched)
+            {
+                DebugLog("Synchronized");
+                _UpdatePlayerState(PLAYER_STATE_PLAYING);
+            }
+        }
+
+        public void _AVSyncStart()
+        {
+            _currentPlayer.EnableAutomaticResync = true;
+            SendCustomEventDelayedSeconds("_AVSyncEnd", 1);
+        }
+
+        public void _AVSyncEnd()
+        {
+            _currentPlayer.EnableAutomaticResync = false;
+            SendCustomEventDelayedSeconds("_AVSyncStart", 30);
+        }
+
+        float GetTargetTime()
+        {
+            float duration = _currentPlayer.GetDuration();
+            float serverTime = (float)Networking.GetServerTimeInSeconds();
+            return Mathf.Clamp(serverTime - _syncVideoStartNetworkTime, 0f, duration);
         }
 
         public void _ForceResync()
@@ -797,11 +868,12 @@ namespace VideoTXL
             dataProxy._EmitLockUpdate();
         }
 
-        void _UpdateTracking(float position, float duration)
+        void _UpdateTracking(float position, float target, float duration)
         {
             trackPosition = position;
             trackDuration = duration;
             dataProxy.trackPosition = position;
+            dataProxy.trackTarget = target;
             dataProxy.trackDuration = duration;
             dataProxy._EmitTrackingUpdate();
         }

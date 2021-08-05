@@ -19,6 +19,8 @@ public class VideoPlayerProxy : UdonSharpBehaviour
     [NonSerialized]
     public float trackPosition;
     [NonSerialized]
+    public float trackTarget;
+    [NonSerialized]
     public bool locked;
     [NonSerialized]
     public bool repeatPlaylist;

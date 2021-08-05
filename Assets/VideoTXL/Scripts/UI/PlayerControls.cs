@@ -30,6 +30,7 @@ namespace VideoTXL
         public GameObject audio2DControl;
         public GameObject urlInputControl;
         public GameObject progressSliderControl;
+        public GameObject syncSliderControl;
 
         public Image stopIcon;
         public Image pauseIcon;
@@ -53,6 +54,7 @@ namespace VideoTXL
         public Slider volumeSlider;
 
         public Slider progressSlider;
+        public Slider syncSlider;
         public Text statusText;
         public Text urlText;
         public Text placeholderText;
@@ -74,11 +76,17 @@ namespace VideoTXL
         Color activeColor = new Color(0f, 1f, .5f, .7f);
         Color attentionColor = new Color(.9f, 0f, 0f, .5f);
 
-        const int PLAYER_STATE_STOPPED = 0;
-        const int PLAYER_STATE_LOADING = 1;
-        const int PLAYER_STATE_PLAYING = 2;
-        const int PLAYER_STATE_ERROR = 3;
-        const int PLAYER_STATE_PAUSED = 4;
+        const int PLAYER_STATE_STOPPED = 0x01;
+        const int PLAYER_STATE_LOADING = 0x02;
+        const int PLAYER_STATE_SYNC = 0x04;
+        const int PLAYER_STATE_PLAYING = 0x08;
+        const int PLAYER_STATE_ERROR = 0x10;
+        const int PLAYER_STATE_PAUSED = 0x20;
+
+        bool _StateIs(int state, int set)
+        {
+            return (state & set) > 0;
+        }
 
         bool infoPanelOpen = false;
 
@@ -445,7 +453,7 @@ namespace VideoTXL
         public void _UpdateTrackingDragging()
         {
             int playerState = dataProxy.playerState;
-            bool playingState = playerState == PLAYER_STATE_PLAYING || playerState == PLAYER_STATE_PAUSED;
+            bool playingState = _StateIs(playerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED);
 
             if (!_draggingProgressSlider || !playingState || loadActive || !dataProxy.seekableSource)
                 return;
@@ -454,6 +462,7 @@ namespace VideoTXL
             string positionStr = System.TimeSpan.FromSeconds(dataProxy.trackDuration * progressSlider.value).ToString(@"hh\:mm\:ss");
             SetStatusText(positionStr + " / " + durationStr);
             progressSliderControl.SetActive(true);
+            syncSliderControl.SetActive(false);
 
             SendCustomEventDelayedSeconds("_UpdateTrackingDragging", 0.1f);
         }
@@ -461,7 +470,7 @@ namespace VideoTXL
         public void _UpdateTracking()
         {
             int playerState = dataProxy.playerState;
-            bool playingState = playerState == PLAYER_STATE_PLAYING || playerState == PLAYER_STATE_PAUSED;
+            bool playingState = _StateIs(playerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED | PLAYER_STATE_SYNC);
 
             if (!playingState || loadActive)
                 return;
@@ -470,14 +479,26 @@ namespace VideoTXL
             {
                 SetStatusText("Streaming...");
                 progressSliderControl.SetActive(false);
+                syncSliderControl.SetActive(false);
             }
             else if (!_draggingProgressSlider)
             {
-                string durationStr = System.TimeSpan.FromSeconds(dataProxy.trackDuration).ToString(@"hh\:mm\:ss");
-                string positionStr = System.TimeSpan.FromSeconds(dataProxy.trackPosition).ToString(@"hh\:mm\:ss");
-                SetStatusText(positionStr + " / " + durationStr);
-                progressSliderControl.SetActive(true);
-                progressSlider.value = Mathf.Clamp01(dataProxy.trackPosition / dataProxy.trackDuration);
+                if (dataProxy.trackTarget - dataProxy.trackPosition > 1)
+                {
+                    SetStatusText("Synchronizing...");
+                    progressSliderControl.SetActive(false);
+                    syncSliderControl.SetActive(true);
+                    syncSlider.value = dataProxy.trackPosition / dataProxy.trackTarget;
+                }
+                else
+                {
+                    string durationStr = System.TimeSpan.FromSeconds(dataProxy.trackDuration).ToString(@"hh\:mm\:ss");
+                    string positionStr = System.TimeSpan.FromSeconds(dataProxy.trackPosition).ToString(@"hh\:mm\:ss");
+                    SetStatusText(positionStr + " / " + durationStr);
+                    progressSliderControl.SetActive(true);
+                    syncSliderControl.SetActive(false);
+                    progressSlider.value = Mathf.Clamp01(dataProxy.trackPosition / dataProxy.trackDuration);
+                }
             }
         }
 
@@ -538,8 +559,7 @@ namespace VideoTXL
 
             int playerState = dataProxy.playerState;
 
-            bool playingState = playerState == PLAYER_STATE_PLAYING || playerState == PLAYER_STATE_PAUSED;
-            if (playingState && !loadActive)
+            if (_StateIs(playerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED | PLAYER_STATE_SYNC) && !loadActive)
             {
                 urlInput.readOnly = true;
                 urlInputControl.SetActive(false);
@@ -548,7 +568,7 @@ namespace VideoTXL
                 loadIcon.color = enableControl ? normalColor : disabledColor;
                 resyncIcon.color = normalColor;
 
-                if (playerState == PLAYER_STATE_PAUSED)
+                if (_StateIs(playerState, PLAYER_STATE_PAUSED))
                     pauseIcon.color = activeColor;
                 else
                     pauseIcon.color = (enableControl && videoPlayer.seekableSource) ? normalColor : disabledColor;
@@ -563,9 +583,10 @@ namespace VideoTXL
                 stopIcon.color = disabledColor;
                 loadIcon.color = disabledColor;
                 progressSliderControl.SetActive(false);
+                syncSliderControl.SetActive(false);
                 urlInputControl.SetActive(true);
 
-                if (playerState == PLAYER_STATE_LOADING)
+                if (_StateIs(playerState, PLAYER_STATE_LOADING))
                 {
                     stopIcon.color = enableControl ? normalColor : disabledColor;
                     loadIcon.color = enableControl ? normalColor : disabledColor;
@@ -576,7 +597,7 @@ namespace VideoTXL
                     urlInput.readOnly = true;
                     SetStatusText("");
                 }
-                else if (playerState == PLAYER_STATE_ERROR)
+                else if (_StateIs(playerState, PLAYER_STATE_ERROR))
                 {
                     stopIcon.color = disabledColor;
                     loadIcon.color = normalColor;
@@ -607,9 +628,9 @@ namespace VideoTXL
                     urlInput.readOnly = !canControl;
                     SetStatusText("");
                 }
-                else if (playerState == PLAYER_STATE_STOPPED || playingState)
+                else if (_StateIs(playerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED | PLAYER_STATE_SYNC | PLAYER_STATE_STOPPED))
                 {
-                    if (playerState == PLAYER_STATE_STOPPED)
+                    if (_StateIs(playerState, PLAYER_STATE_STOPPED))
                     {
                         loadActive = false;
                         pendingFromLoadOverride = false;
@@ -624,7 +645,7 @@ namespace VideoTXL
                         loadIcon.color = activeColor;
                         resyncIcon.color = normalColor;
 
-                        if (playerState == PLAYER_STATE_PAUSED)
+                        if (_StateIs(playerState, PLAYER_STATE_PAUSED))
                             pauseIcon.color = activeColor;
                         else
                             pauseIcon.color = (enableControl && videoPlayer.seekableSource) ? normalColor : disabledColor;
@@ -737,6 +758,7 @@ namespace VideoTXL
         SerializedProperty audio2DControlProperty;
         SerializedProperty urlInputControlProperty;
         SerializedProperty progressSliderControlProperty;
+        SerializedProperty syncSliderControlProperty;
 
         SerializedProperty stopIconProperty;
         SerializedProperty pauseIconProperty;
@@ -760,6 +782,7 @@ namespace VideoTXL
         SerializedProperty volumeSliderProperty;
 
         SerializedProperty progressSliderProperty;
+        SerializedProperty syncSliderProperty;
         SerializedProperty statusTextProperty;
         SerializedProperty urlTextProperty;
         SerializedProperty placeholderTextProperty;
@@ -786,6 +809,7 @@ namespace VideoTXL
             volumeSliderControlProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeSliderControl));
             audio2DControlProperty = serializedObject.FindProperty(nameof(PlayerControls.audio2DControl));
             progressSliderControlProperty = serializedObject.FindProperty(nameof(PlayerControls.progressSliderControl));
+            syncSliderControlProperty = serializedObject.FindProperty(nameof(PlayerControls.syncSliderControl));
             urlInputControlProperty = serializedObject.FindProperty(nameof(PlayerControls.urlInputControl));
 
             stopIconProperty = serializedObject.FindProperty(nameof(PlayerControls.stopIcon));
@@ -813,6 +837,7 @@ namespace VideoTXL
             placeholderTextProperty = serializedObject.FindProperty(nameof(PlayerControls.placeholderText));
             urlTextProperty = serializedObject.FindProperty(nameof(PlayerControls.urlText));
             progressSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.progressSlider));
+            syncSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.syncSlider));
 
             playlistTextProperty = serializedObject.FindProperty(nameof(PlayerControls.playlistText));
 
@@ -847,6 +872,7 @@ namespace VideoTXL
                 EditorGUILayout.PropertyField(audio2DControlProperty);
                 EditorGUILayout.PropertyField(urlInputControlProperty);
                 EditorGUILayout.PropertyField(progressSliderControlProperty);
+                EditorGUILayout.PropertyField(syncSliderControlProperty);
                 EditorGUILayout.PropertyField(stopIconProperty);
                 EditorGUILayout.PropertyField(pauseIconProperty);
                 EditorGUILayout.PropertyField(lockedIconProperty);
@@ -867,6 +893,7 @@ namespace VideoTXL
                 EditorGUILayout.PropertyField(audio2DToggleOffProperty);
                 EditorGUILayout.PropertyField(volumeSliderProperty);
                 EditorGUILayout.PropertyField(progressSliderProperty);
+                EditorGUILayout.PropertyField(syncSliderProperty);
                 EditorGUILayout.PropertyField(statusTextProperty);
                 EditorGUILayout.PropertyField(urlTextProperty);
                 EditorGUILayout.PropertyField(placeholderTextProperty);

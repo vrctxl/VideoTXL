@@ -15,6 +15,8 @@ namespace Texel
         public SyncAudioManager syncAudioManager;
         [Tooltip("A proxy for dispatching video-related events to this object")]
         public VideoPlayerProxy dataProxy;
+        [Tooltip("Mute audio when video source is not actively playing")]
+        public bool muteSourceForInactiveVideo = true;
 
         [Header("Default Options")]
         [Range(0, 1)]
@@ -41,9 +43,19 @@ namespace Texel
         bool hasSync = false;
         bool ovrMasterMute = false;
         bool ovrMasterVolume = false;
+        bool videoMute = false;
+
+        const int PLAYER_STATE_STOPPED = 0x01;
+        const int PLAYER_STATE_LOADING = 0x02;
+        const int PLAYER_STATE_SYNC = 0x04;
+        const int PLAYER_STATE_PLAYING = 0x08;
+        const int PLAYER_STATE_ERROR = 0x10;
+        const int PLAYER_STATE_PAUSED = 0x20;
 
         void Start()
         {
+            if (Utilities.IsValid(dataProxy))
+                dataProxy._RegisterEventHandler(gameObject, "_VideoStateUpdate");
             if (!Utilities.IsValid(audioControls))
                 audioControls = new GameObject[0];
 
@@ -90,6 +102,24 @@ namespace Texel
 
             if (initialized)
                 _UpdateAudioControl(controls);
+        }
+
+        public void _VideoStateUpdate()
+        {
+            if (!muteSourceForInactiveVideo)
+                return;
+
+            switch (dataProxy.playerState)
+            {
+                case PLAYER_STATE_PLAYING:
+                    videoMute = false;
+                    _UpdateAudioSources();
+                    break;
+                default:
+                    videoMute = true;
+                    _UpdateAudioSources();
+                    break;
+            }
         }
 
         public void _SetMasterVolume(float value)
@@ -188,7 +218,7 @@ namespace Texel
 
         bool _MasterMute()
         {
-            return (hasSync && !ovrMasterMute) ? syncAudioManager.syncMasterMute : masterMute;
+            return ((hasSync && !ovrMasterMute) ? syncAudioManager.syncMasterMute : masterMute) || videoMute;
         }
 
         float _MasterVolume()
@@ -198,7 +228,7 @@ namespace Texel
 
         bool _ChannelMute(int channel)
         {
-            return hasSync ? syncAudioManager.syncChannelMutes[channel] : channelMute[channel];
+            return (hasSync ? syncAudioManager.syncChannelMutes[channel] : channelMute[channel]) || videoMute;
         }
 
         float _ChannelVolume(int channel)

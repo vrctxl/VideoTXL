@@ -30,6 +30,7 @@ namespace VideoTXL
         public Material logoMaterial;
         [Tooltip("The screen material to apply when a video is being loaded.  Falls back to Logo Material.")]
         public Material loadingMaterial;
+        public Material syncMaterial;
         [Tooltip("The screen material to apply when an audio-only video is detected.")]
         public Material audioMaterial;
         [Tooltip("The screen material to apply when an error has occurred.  Falls back to Logo Material.")]
@@ -58,6 +59,7 @@ namespace VideoTXL
         public Texture logoTexture;
         [Tooltip("The screen texture to apply when a video is being loaded.  Falls back to Logo Texture.")]
         public Texture loadingTexture;
+        public Texture syncTexture;
         [Tooltip("The screen texture to apply when an audio-only video is detected.")]
         public Texture audioTexture;
         [Tooltip("The screen texture to apply when an error has occurred.  Falls back to Logo Texture.")]
@@ -87,12 +89,14 @@ namespace VideoTXL
         public const int SCREEN_MODE_LOADING = 2;
         public const int SCREEN_MODE_ERROR = 3;
         public const int SCREEN_MODE_AUDIO = 4;
+        public const int SCREEN_MODE_SYNC = 5;
 
-        const int PLAYER_STATE_STOPPED = 0;
-        const int PLAYER_STATE_LOADING = 1;
-        const int PLAYER_STATE_PLAYING = 2;
-        const int PLAYER_STATE_ERROR = 3;
-        const int PLAYER_STATE_PAUSED = 4;
+        const int PLAYER_STATE_STOPPED = 0x01;
+        const int PLAYER_STATE_LOADING = 0x02;
+        const int PLAYER_STATE_SYNC = 0x04;
+        const int PLAYER_STATE_PLAYING = 0x08;
+        const int PLAYER_STATE_ERROR = 0x10;
+        const int PLAYER_STATE_PAUSED = 0x20;
 
         bool _initComplete = false;
         int _screenSource = SCREEN_SOURCE_AVPRO;
@@ -241,6 +245,9 @@ namespace VideoTXL
                 case PLAYER_STATE_LOADING:
                     _UpdateScreenMaterial(SCREEN_MODE_LOADING);
                     break;
+                case PLAYER_STATE_SYNC:
+                    _UpdateScreenMaterial(SCREEN_MODE_SYNC);
+                    break;
                 case PLAYER_STATE_PLAYING:
                     _UpdateScreenMaterial(SCREEN_MODE_NORMAL);
                     break;
@@ -271,6 +278,9 @@ namespace VideoTXL
                     break;
                 case SCREEN_MODE_LOADING:
                     replacementMat = loadingMaterial;
+                    break;
+                case SCREEN_MODE_SYNC:
+                    replacementMat = syncMaterial;
                     break;
                 case SCREEN_MODE_ERROR:
                     if (_lastErrorCode == VideoError.AccessDenied)
@@ -309,6 +319,9 @@ namespace VideoTXL
                     break;
                 case SCREEN_MODE_LOADING:
                     replacementTex = loadingTexture;
+                    break;
+                case SCREEN_MODE_SYNC:
+                    replacementTex = syncTexture;
                     break;
                 case SCREEN_MODE_ERROR:
                     if (_lastErrorCode == VideoError.AccessDenied)
@@ -555,6 +568,7 @@ namespace VideoTXL
         SerializedProperty useMaterialOverrideProperty;
         SerializedProperty logoMaterialProperty;
         SerializedProperty loadingMaterialProperty;
+        SerializedProperty syncMaterialProperty;
         SerializedProperty audioMaterialProperty;
         SerializedProperty errorMaterialProperty;
         SerializedProperty errorInvalidMaterialProperty;
@@ -571,6 +585,7 @@ namespace VideoTXL
         SerializedProperty useTextureOverrideProperty;
         SerializedProperty logoTextureProperty;
         SerializedProperty loadingTextureProperty;
+        SerializedProperty syncTextureProperty;
         SerializedProperty audioTextureProperty;
         SerializedProperty errorTextureProperty;
         SerializedProperty errorInvalidTextureProperty;
@@ -591,6 +606,7 @@ namespace VideoTXL
             useMaterialOverrideProperty = serializedObject.FindProperty(nameof(ScreenManager.useMaterialOverrides));
             logoMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.logoMaterial));
             loadingMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.loadingMaterial));
+            syncMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.syncMaterial));
             audioMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.audioMaterial));
             errorMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.errorMaterial));
             errorInvalidMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.errorInvalidMaterial));
@@ -607,6 +623,7 @@ namespace VideoTXL
             useTextureOverrideProperty = serializedObject.FindProperty(nameof(ScreenManager.useTextureOverrides));
             logoTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.logoTexture));
             loadingTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.loadingTexture));
+            syncTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.syncTexture));
             audioTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.audioTexture));
             errorTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.errorTexture));
             errorInvalidTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.errorInvalidTexture));
@@ -637,6 +654,7 @@ namespace VideoTXL
             {
                 EditorGUILayout.PropertyField(logoMaterialProperty);
                 EditorGUILayout.PropertyField(loadingMaterialProperty);
+                EditorGUILayout.PropertyField(syncMaterialProperty);
                 EditorGUILayout.PropertyField(audioMaterialProperty);
                 EditorGUILayout.PropertyField(errorMaterialProperty);
 
@@ -668,6 +686,7 @@ namespace VideoTXL
                 EditorGUILayout.Space();
                 EditorGUILayout.PropertyField(logoTextureProperty);
                 EditorGUILayout.PropertyField(loadingTextureProperty);
+                EditorGUILayout.PropertyField(syncTextureProperty);
                 EditorGUILayout.PropertyField(audioTextureProperty);
                 EditorGUILayout.PropertyField(errorTextureProperty);
 

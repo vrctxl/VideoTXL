@@ -63,6 +63,9 @@ namespace Texel
 
             this.channelNames = channelNames;
 
+            if (!Utilities.IsValid(audioControls))
+                audioControls = new GameObject[0];
+
             if (Networking.IsOwner(gameObject))
                 _RequestSerialization();
 

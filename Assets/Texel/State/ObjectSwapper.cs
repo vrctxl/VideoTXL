@@ -13,7 +13,7 @@ using UdonSharpEditor;
 namespace Texel
 {
     [AddComponentMenu("Texel/State/Object Swapper")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
     public class ObjectSwapper : UdonSharpBehaviour
     {
         public GameObject[] objectList;

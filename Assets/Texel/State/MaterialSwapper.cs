@@ -13,7 +13,7 @@ using UdonSharpEditor;
 namespace Texel
 {
     [AddComponentMenu("Texel/State/Material Swapper")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
     public class MaterialSwapper : UdonSharpBehaviour
     {
         public MeshRenderer[] meshList;
