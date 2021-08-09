@@ -205,7 +205,7 @@ namespace VideoTXL
             DebugLog("Trigger pause");
             if (_syncLocked && !_CanTakeControl())
                 return;
-            if (!seekableSource || !_StateIs(localPlayerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED))
+            if (!seekableSource || !_StateIs(localPlayerState, PLAYER_STATE_PLAYING))
                 return;
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
@@ -214,10 +214,12 @@ namespace VideoTXL
 
             if (_syncOwnerPaused) {
                 _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _currentPlayer.GetTime();
+                _videoTargetTime = _currentPlayer.GetTime();
                 _currentPlayer.Pause();
-                _UpdatePlayerState(PLAYER_STATE_PAUSED);
             } else
                 _currentPlayer.Play();
+
+            _UpdatePlayerPaused(_syncOwnerPaused);
 
             RequestSerialization();
         }
@@ -276,7 +278,7 @@ namespace VideoTXL
         {
             if (_syncLocked && !_CanTakeControl())
                 return;
-            if (!_StateIs(localPlayerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED | PLAYER_STATE_SYNC))
+            if (!_StateIs(localPlayerState, PLAYER_STATE_PLAYING | PLAYER_STATE_SYNC))
                 return;
             if (!seekableSource)
                 return;
@@ -338,7 +340,7 @@ namespace VideoTXL
 
             // Conditional player stop to try and avoid piling on AVPro at end of track
             // and maybe triggering bad things
-            bool playingState = _StateIs(localPlayerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED | PLAYER_STATE_SYNC);
+            bool playingState = _StateIs(localPlayerState, PLAYER_STATE_PLAYING | PLAYER_STATE_SYNC);
             if (playingState && _currentPlayer.IsPlaying && seekableSource)
             {
                 float duration = _currentPlayer.GetDuration();
@@ -493,20 +495,21 @@ namespace VideoTXL
 
             if (Networking.IsOwner(gameObject))
             {
-                bool paused = _StateIs(localPlayerState, PLAYER_STATE_PAUSED);
-                if (paused)
-                    _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _currentPlayer.GetTime();
-                else
+                //bool paused = _syncOwnerPaused;
+                //if (paused)
+                //    _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _currentPlayer.GetTime();
+                //else
                     _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _videoTargetTime;
 
                 _UpdatePlayerState(PLAYER_STATE_PLAYING);
+                _UpdatePlayerPaused(false);
                 _playStartTime = Time.time;
 
                 _syncOwnerPlaying = true;
                 _syncOwnerPaused = false;
                 RequestSerialization();
 
-                if (!paused)
+                //if (!paused)
                     _currentPlayer.SetTime(_videoTargetTime);
 
                 SyncVideo();
@@ -519,8 +522,7 @@ namespace VideoTXL
                     _currentPlayer.Pause();
                     _waitForSync = true;
 
-                    if (_syncOwnerPaused)
-                        _UpdatePlayerState(PLAYER_STATE_PAUSED);
+                    _UpdatePlayerPaused(_syncOwnerPaused);
                 }
                 else
                 {
@@ -656,19 +658,19 @@ namespace VideoTXL
 
             if (_syncVideoNumber == _loadedVideoNumber)
             {
-                bool playingState = _StateIs(localPlayerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED | PLAYER_STATE_SYNC);
+                bool playingState = _StateIs(localPlayerState, PLAYER_STATE_PLAYING | PLAYER_STATE_SYNC);
                 if (playingState && !_syncOwnerPlaying)
                     SendCustomEventDelayedFrames("_StopVideo", 1);
-                else if (_StateIs(localPlayerState, PLAYER_STATE_PAUSED) && !_syncOwnerPaused)
+                else if (dataProxy.paused && !_syncOwnerPaused)
                 {
                     DebugLog("Unpausing video");
                     _currentPlayer.Play();
-                    _UpdatePlayerState(PLAYER_STATE_PLAYING);
+                    _UpdatePlayerPaused(false);
                 } else if (_StateIs(localPlayerState, PLAYER_STATE_PLAYING) && _syncOwnerPaused)
                 {
                     DebugLog("Pausing video");
                     _currentPlayer.Pause();
-                    _UpdatePlayerState(PLAYER_STATE_PAUSED);
+                    _UpdatePlayerPaused(true);
                 }
 
                 return;
@@ -703,7 +705,7 @@ namespace VideoTXL
             if (_pendingLoadTime > 0 && Time.time > _pendingLoadTime)
                 _StartVideoLoad();
 
-            bool playingState = _StateIs(localPlayerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED | PLAYER_STATE_SYNC);
+            bool playingState = _StateIs(localPlayerState, PLAYER_STATE_PLAYING | PLAYER_STATE_SYNC);
             if (seekableSource && playingState)
             {
                 float position = Mathf.Floor(_currentPlayer.GetTime());
@@ -849,6 +851,22 @@ namespace VideoTXL
         {
             localPlayerState = state;
             dataProxy.playerState = state;
+
+            if (state != PLAYER_STATE_PLAYING)
+                dataProxy.paused = false;
+
+            dataProxy._EmitStateUpdate();
+        }
+
+        void _UpdatePlayerPaused(bool paused)
+        {
+            dataProxy.paused = paused;
+            dataProxy._EmitStateUpdate();
+        }
+
+        void _UpdatePlayerSyncing(bool syncing)
+        {
+            dataProxy.syncing = syncing;
             dataProxy._EmitStateUpdate();
         }
 

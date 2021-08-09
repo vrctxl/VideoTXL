@@ -11,6 +11,10 @@ public class VideoPlayerProxy : UdonSharpBehaviour
     [NonSerialized]
     public int playerState;
     [NonSerialized]
+    public bool paused;
+    [NonSerialized]
+    public bool syncing;
+    [NonSerialized]
     public VideoError lastErrorCode;
     [NonSerialized]
     public bool seekableSource;

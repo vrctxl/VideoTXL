@@ -453,7 +453,7 @@ namespace VideoTXL
         public void _UpdateTrackingDragging()
         {
             int playerState = dataProxy.playerState;
-            bool playingState = _StateIs(playerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED);
+            bool playingState = _StateIs(playerState, PLAYER_STATE_PLAYING);
 
             if (!_draggingProgressSlider || !playingState || loadActive || !dataProxy.seekableSource)
                 return;
@@ -470,7 +470,7 @@ namespace VideoTXL
         public void _UpdateTracking()
         {
             int playerState = dataProxy.playerState;
-            bool playingState = _StateIs(playerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED | PLAYER_STATE_SYNC);
+            bool playingState = _StateIs(playerState, PLAYER_STATE_PLAYING | PLAYER_STATE_SYNC);
 
             if (!playingState || loadActive)
                 return;
@@ -559,7 +559,7 @@ namespace VideoTXL
 
             int playerState = dataProxy.playerState;
 
-            if (_StateIs(playerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED | PLAYER_STATE_SYNC) && !loadActive)
+            if (_StateIs(playerState, PLAYER_STATE_PLAYING | PLAYER_STATE_SYNC) && !loadActive)
             {
                 urlInput.readOnly = true;
                 urlInputControl.SetActive(false);
@@ -568,7 +568,7 @@ namespace VideoTXL
                 loadIcon.color = enableControl ? normalColor : disabledColor;
                 resyncIcon.color = normalColor;
 
-                if (_StateIs(playerState, PLAYER_STATE_PAUSED))
+                if (dataProxy.paused)
                     pauseIcon.color = activeColor;
                 else
                     pauseIcon.color = (enableControl && videoPlayer.seekableSource) ? normalColor : disabledColor;
@@ -628,7 +628,7 @@ namespace VideoTXL
                     urlInput.readOnly = !canControl;
                     SetStatusText("");
                 }
-                else if (_StateIs(playerState, PLAYER_STATE_PLAYING | PLAYER_STATE_PAUSED | PLAYER_STATE_SYNC | PLAYER_STATE_STOPPED))
+                else if (_StateIs(playerState, PLAYER_STATE_PLAYING | PLAYER_STATE_SYNC | PLAYER_STATE_STOPPED))
                 {
                     if (_StateIs(playerState, PLAYER_STATE_STOPPED))
                     {
@@ -645,7 +645,7 @@ namespace VideoTXL
                         loadIcon.color = activeColor;
                         resyncIcon.color = normalColor;
 
-                        if (_StateIs(playerState, PLAYER_STATE_PAUSED))
+                        if (dataProxy.paused)
                             pauseIcon.color = activeColor;
                         else
                             pauseIcon.color = (enableControl && videoPlayer.seekableSource) ? normalColor : disabledColor;
