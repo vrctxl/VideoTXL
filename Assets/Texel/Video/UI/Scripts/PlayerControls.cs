@@ -13,16 +13,15 @@ using UnityEditorInternal;
 using UdonSharpEditor;
 #endif
 
-namespace VideoTXL
+namespace Texel
 {
     [AddComponentMenu("VideoTXL/UI/Player Controls")]
     public class PlayerControls : UdonSharpBehaviour
     {
         public SyncPlayer videoPlayer;
-        public StaticUrlSource staticUrlSource;
-        public Texel.AudioManager audioManager;
+        public AudioManager audioManager;
         public Playlist playlist;
-        public ControlColorProfile colorProfile;
+        //public ControlColorProfile colorProfile;
 
         public VRCUrlInputField urlInput;
 
@@ -739,7 +738,7 @@ namespace VideoTXL
         SerializedProperty videoPlayerProperty;
         SerializedProperty volumeControllerProperty;
         SerializedProperty playlistProperty;
-        SerializedProperty colorProfileProperty;
+        //SerializedProperty colorProfileProperty;
 
         SerializedProperty urlInputProperty;
 
@@ -791,7 +790,7 @@ namespace VideoTXL
             videoPlayerProperty = serializedObject.FindProperty(nameof(PlayerControls.videoPlayer));
             volumeControllerProperty = serializedObject.FindProperty(nameof(PlayerControls.audioManager));
             playlistProperty = serializedObject.FindProperty(nameof(PlayerControls.playlist));
-            colorProfileProperty = serializedObject.FindProperty(nameof(PlayerControls.colorProfile));
+            //colorProfileProperty = serializedObject.FindProperty(nameof(PlayerControls.colorProfile));
 
             urlInputProperty = serializedObject.FindProperty(nameof(PlayerControls.urlInput));
 
@@ -848,8 +847,8 @@ namespace VideoTXL
             EditorGUILayout.PropertyField(volumeControllerProperty);
             EditorGUILayout.PropertyField(playlistProperty);
             EditorGUILayout.Space();
-            EditorGUILayout.PropertyField(colorProfileProperty);
-            EditorGUILayout.Space();
+            //EditorGUILayout.PropertyField(colorProfileProperty);
+            //EditorGUILayout.Space();
 
             _showObjectFoldout = EditorGUILayout.Foldout(_showObjectFoldout, "Internal Object References");
             if (_showObjectFoldout)

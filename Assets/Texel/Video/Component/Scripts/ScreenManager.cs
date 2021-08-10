@@ -4,7 +4,6 @@ using UnityEngine;
 using VRC.SDK3.Components.Video;
 using VRC.SDKBase;
 using VRC.Udon;
-using Texel;
 
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
 using UnityEditor;
@@ -12,7 +11,7 @@ using UnityEditorInternal;
 using UdonSharpEditor;
 #endif
 
-namespace VideoTXL
+namespace Texel
 {
     [AddComponentMenu("Texel/VideoTXL/Screen Manager")]
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]

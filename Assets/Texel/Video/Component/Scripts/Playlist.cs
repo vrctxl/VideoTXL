@@ -6,7 +6,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.Udon;
 
-namespace VideoTXL
+namespace Texel
 {
     [AddComponentMenu("VideoTXL/Component/Playlist")]
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]

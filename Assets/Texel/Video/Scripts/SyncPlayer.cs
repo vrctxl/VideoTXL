@@ -1,6 +1,5 @@
 ﻿
 using System;
-using Texel;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components.Video;
@@ -10,7 +9,7 @@ using VRC.SDKBase;
 using VRC.Udon;
 using VRC.Udon.Common;
 
-namespace VideoTXL
+namespace Texel
 {
     [AddComponentMenu("VideoTXL/Sync Player")]
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
@@ -29,10 +28,6 @@ namespace VideoTXL
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
 
-        //[Tooltip("Optional component to control and synchronize player video screens and materials")]
-        //public ScreenManager screenManager;
-        //[Tooltip("Optional component to control and synchronize player audio sources")]
-        //public VolumeController audioManager;
         //[Tooltip("Optional component to start or stop player based on common trigger events")]
         //public TriggerManager triggerManager;
 

@@ -9,6 +9,7 @@ using VRC.SDK3.Video.Components.AVPro;
 using VRC.SDK3.Video.Components.Base;
 using VRC.SDKBase;
 using VRC.Udon;
+using Texel;
 
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
 using UnityEditor;
@@ -207,8 +208,8 @@ namespace VideoTXL
                 return;
             }
 
-            if (Utilities.IsValid(audioManager))
-                audioManager._VideoStart();
+            //if (Utilities.IsValid(audioManager))
+            //    audioManager._VideoStart();
 
             _currentPlayer.Play();
         }
@@ -222,8 +223,8 @@ namespace VideoTXL
                 Debug.Log("[VideoTXL:ZonedStreamPlayer] Canceling video: trigger not active");
                 _StopVideo();
 
-                if (Utilities.IsValid(audioManager))
-                    audioManager._VideoStop();
+                //if (Utilities.IsValid(audioManager))
+                //    audioManager._VideoStop();
             }
             else
             {
@@ -260,8 +261,8 @@ namespace VideoTXL
             _lastVideoPosition = 0;
             _UpdateScreenMaterial(SCREEN_MODE_LOGO);
 
-            if (Utilities.IsValid(audioManager))
-                audioManager._VideoStop();
+            //if (Utilities.IsValid(audioManager))
+            //    audioManager._VideoStop();
         }
 
         public override void OnVideoError(VideoError videoError)
@@ -279,8 +280,8 @@ namespace VideoTXL
 
             _UpdateScreenMaterial(SCREEN_MODE_ERROR);
 
-            if (Utilities.IsValid(audioManager))
-                audioManager._VideoStop();
+            //if (Utilities.IsValid(audioManager))
+            //    audioManager._VideoStop();
 
             if (retryOnError)
                 _PlayVideoAfter(url, retryTimeout);

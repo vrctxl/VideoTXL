@@ -5,7 +5,7 @@ using VRC.SDK3.Components.Video;
 using VRC.SDKBase;
 using VRC.Udon;
 
-namespace VideoTXL
+namespace Texel
 {
     [AddComponentMenu("Texel/VideoTXL/Video Wrapper")]
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
