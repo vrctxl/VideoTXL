@@ -76,17 +76,10 @@ namespace VideoTXL
         Color activeColor = new Color(0f, 1f, .5f, .7f);
         Color attentionColor = new Color(.9f, 0f, 0f, .5f);
 
-        const int PLAYER_STATE_STOPPED = 0x01;
-        const int PLAYER_STATE_LOADING = 0x02;
-        const int PLAYER_STATE_SYNC = 0x04;
-        const int PLAYER_STATE_PLAYING = 0x08;
-        const int PLAYER_STATE_ERROR = 0x10;
-        const int PLAYER_STATE_PAUSED = 0x20;
-
-        bool _StateIs(int state, int set)
-        {
-            return (state & set) > 0;
-        }
+        const int PLAYER_STATE_STOPPED = 0;
+        const int PLAYER_STATE_LOADING = 1;
+        const int PLAYER_STATE_PLAYING = 2;
+        const int PLAYER_STATE_ERROR = 3;
 
         bool infoPanelOpen = false;
 
@@ -453,9 +446,7 @@ namespace VideoTXL
         public void _UpdateTrackingDragging()
         {
             int playerState = dataProxy.playerState;
-            bool playingState = _StateIs(playerState, PLAYER_STATE_PLAYING);
-
-            if (!_draggingProgressSlider || !playingState || loadActive || !dataProxy.seekableSource)
+            if (!_draggingProgressSlider || playerState != PLAYER_STATE_PLAYING || loadActive || !dataProxy.seekableSource)
                 return;
 
             string durationStr = System.TimeSpan.FromSeconds(dataProxy.trackDuration).ToString(@"hh\:mm\:ss");
@@ -470,9 +461,7 @@ namespace VideoTXL
         public void _UpdateTracking()
         {
             int playerState = dataProxy.playerState;
-            bool playingState = _StateIs(playerState, PLAYER_STATE_PLAYING | PLAYER_STATE_SYNC);
-
-            if (!playingState || loadActive)
+            if (playerState != PLAYER_STATE_PLAYING || loadActive)
                 return;
 
             if (!videoPlayer.seekableSource)
@@ -559,7 +548,7 @@ namespace VideoTXL
 
             int playerState = dataProxy.playerState;
 
-            if (_StateIs(playerState, PLAYER_STATE_PLAYING | PLAYER_STATE_SYNC) && !loadActive)
+            if (playerState == PLAYER_STATE_PLAYING && !loadActive)
             {
                 urlInput.readOnly = true;
                 urlInputControl.SetActive(false);
@@ -586,7 +575,7 @@ namespace VideoTXL
                 syncSliderControl.SetActive(false);
                 urlInputControl.SetActive(true);
 
-                if (_StateIs(playerState, PLAYER_STATE_LOADING))
+                if (playerState == PLAYER_STATE_LOADING)
                 {
                     stopIcon.color = enableControl ? normalColor : disabledColor;
                     loadIcon.color = enableControl ? normalColor : disabledColor;
@@ -597,7 +586,7 @@ namespace VideoTXL
                     urlInput.readOnly = true;
                     SetStatusText("");
                 }
-                else if (_StateIs(playerState, PLAYER_STATE_ERROR))
+                else if (playerState == PLAYER_STATE_ERROR)
                 {
                     stopIcon.color = disabledColor;
                     loadIcon.color = normalColor;
@@ -628,9 +617,9 @@ namespace VideoTXL
                     urlInput.readOnly = !canControl;
                     SetStatusText("");
                 }
-                else if (_StateIs(playerState, PLAYER_STATE_PLAYING | PLAYER_STATE_SYNC | PLAYER_STATE_STOPPED))
+                else if (playerState == PLAYER_STATE_PLAYING || playerState == PLAYER_STATE_STOPPED)
                 {
-                    if (_StateIs(playerState, PLAYER_STATE_STOPPED))
+                    if (playerState == PLAYER_STATE_STOPPED)
                     {
                         loadActive = false;
                         pendingFromLoadOverride = false;

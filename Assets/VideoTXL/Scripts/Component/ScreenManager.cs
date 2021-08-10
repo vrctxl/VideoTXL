@@ -91,12 +91,10 @@ namespace VideoTXL
         public const int SCREEN_MODE_AUDIO = 4;
         public const int SCREEN_MODE_SYNC = 5;
 
-        const int PLAYER_STATE_STOPPED = 0x01;
-        const int PLAYER_STATE_LOADING = 0x02;
-        const int PLAYER_STATE_SYNC = 0x04;
-        const int PLAYER_STATE_PLAYING = 0x08;
-        const int PLAYER_STATE_ERROR = 0x10;
-        const int PLAYER_STATE_PAUSED = 0x20;
+        const int PLAYER_STATE_STOPPED = 0;
+        const int PLAYER_STATE_LOADING = 1;
+        const int PLAYER_STATE_PLAYING = 2;
+        const int PLAYER_STATE_ERROR = 3;
 
         bool _initComplete = false;
         int _screenSource = SCREEN_SOURCE_AVPRO;
@@ -245,11 +243,8 @@ namespace VideoTXL
                 case PLAYER_STATE_LOADING:
                     _UpdateScreenMaterial(SCREEN_MODE_LOADING);
                     break;
-                case PLAYER_STATE_SYNC:
-                    _UpdateScreenMaterial(SCREEN_MODE_SYNC);
-                    break;
                 case PLAYER_STATE_PLAYING:
-                    _UpdateScreenMaterial(SCREEN_MODE_NORMAL);
+                    _UpdateScreenMaterial(dataProxy.syncing ? SCREEN_MODE_SYNC : SCREEN_MODE_NORMAL);
                     break;
                 case PLAYER_STATE_ERROR:
                     _lastErrorCode = dataProxy.lastErrorCode;
