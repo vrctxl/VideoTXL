@@ -1,7 +1,6 @@
 ﻿
 using UdonSharp;
 using UnityEngine;
-using VideoTXL;
 using VRC.SDKBase;
 using VRC.Udon;
 

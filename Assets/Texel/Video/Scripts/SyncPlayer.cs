@@ -54,7 +54,7 @@ namespace Texel
         float retryTimeout = 6;
         float syncFrequency = 5;
         float syncThreshold = 1;
-        float syncLatchUpdateFrequency = 0.1f;
+        float syncLatchUpdateFrequency = 0.2f;
 
         [UdonSynced]
         VRCUrl _syncUrl;
@@ -299,7 +299,7 @@ namespace Texel
             }
 
             _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - time;
-            SyncVideo();
+            SyncVideoImmediate();
             RequestSerialization();
         }
 
@@ -499,7 +499,7 @@ namespace Texel
                 //if (!paused)
                     _currentPlayer.SetTime(_videoTargetTime);
 
-                SyncVideo();
+                SyncVideoImmediate();
             }
             else
             {
@@ -515,8 +515,8 @@ namespace Texel
                 {
                     _UpdatePlayerState(PLAYER_STATE_PLAYING);
                     _playStartTime = Time.time;
-                    
-                    SyncVideo();
+
+                    SyncVideoImmediate();
                 }
             }
         }
@@ -726,7 +726,7 @@ namespace Texel
             _waitForSync = false;
             _currentPlayer.Play();
 
-            SyncVideo();
+            SyncVideoImmediate();
         }
 
         void SyncVideoIfTime()
@@ -736,6 +736,13 @@ namespace Texel
                 _lastSyncTime = Time.realtimeSinceStartup;
                 SyncVideo();
             }
+        }
+
+        void SyncVideoImmediate()
+        {
+            syncTime1 = -100;
+            syncTime2 = -100;
+            SyncVideo();
         }
 
         void SyncVideo()
@@ -751,23 +758,65 @@ namespace Texel
                     _currentPlayer.SetTime(offsetTime);
                     DebugLog($"Sync time (off by {current - offsetTime}s) [net={serverTime}, sync={_syncVideoStartNetworkTime}, cur={current}]");
 
-                    float readbackTime = _currentPlayer.GetTime();
+                    SendCustomEventDelayedSeconds("_SyncReadback", 1);
+
+                    /*float readbackTime = _currentPlayer.GetTime();
                     if (offsetTime - readbackTime > 1)
                     {
+                        if (Time.time - syncTime2 < 30)
+                        {
+                            DebugLog("Excessive sync drift, forcing full resync");
+                            SendCustomEventDelayedFrames("_ForceResync", 1);
+                            return;
+                        }
+
                         DebugLog($"Starting extended synchronization (target={offsetTime}, readback={readbackTime})");
                         syncLatched = true;
                         _UpdatePlayerSyncing(true);
                         SendCustomEventDelayedSeconds("_SyncLatch", syncLatchUpdateFrequency);
-                    }
+                    }*/
                 }
             }
         }
 
+        public void _SyncReadback()
+        {
+            float duration = _currentPlayer.GetDuration();
+            float serverTime = (float)Networking.GetServerTimeInSeconds();
+            float offsetTime = Mathf.Clamp(serverTime - _syncVideoStartNetworkTime, 0f, duration);
+            float readbackTime = _currentPlayer.GetTime();
+
+            if (offsetTime - readbackTime <= syncThreshold)
+                return;
+
+            // If we've had to perform extended sync twice in a short period of time, player probably can't read at 1x, so resync
+            if (Time.time - syncTime2 < 30)
+            {
+                DebugLog("Excessive sync drift, forcing full resync");
+                SendCustomEventDelayedFrames("_ForceResync", 1);
+                return;
+            }
+
+            DebugLog($"Starting extended synchronization (target={offsetTime}, readback={readbackTime})");
+            syncLatched = true;
+            _UpdatePlayerSyncing(true);
+            SendCustomEventDelayedSeconds("_SyncLatch", syncLatchUpdateFrequency);
+        }
+
         bool syncLatched = false;
+        float syncTime1 = 0;
+        float syncTime2 = 0;
+        float syncLatchRate = 0;
 
         public void _SyncLatch()
         {
             syncLatched = false;
+            if (localPlayerState != PLAYER_STATE_PLAYING)
+            {
+                DebugLog("Not playing, canceling synchronization");
+                _UpdatePlayerSyncing(false);
+                return;
+            }
 
             float duration = _currentPlayer.GetDuration();
             float current = _currentPlayer.GetTime();
@@ -777,8 +826,19 @@ namespace Texel
             {
                 _currentPlayer.SetTime(offsetTime);
                 float readbackTime = _currentPlayer.GetTime();
+                float syncLatchProgress = readbackTime - current;
+                syncLatchRate = syncLatchProgress / syncLatchUpdateFrequency;
+
                 if (offsetTime - readbackTime > 1)
                 {
+                    /*if (syncLatchRate < 5)
+                    {
+                        DebugLog($"Excessive slow sync rate: {syncLatchRate} ({current}, {readbackTime}), forcing full resync");
+                        _UpdatePlayerSyncing(false);
+                        SendCustomEventDelayedFrames("_ForceResync", 1);
+                        return;
+                    }*/
+
                     syncLatched = true;
                     SendCustomEventDelayedSeconds("_SyncLatch", syncLatchUpdateFrequency);
                 }
@@ -788,6 +848,8 @@ namespace Texel
             {
                 DebugLog("Synchronized");
                 _UpdatePlayerSyncing(false);
+                syncTime2 = syncTime1;
+                syncTime1 = Time.time;
             }
         }
 
