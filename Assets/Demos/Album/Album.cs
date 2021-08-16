@@ -1,4 +1,5 @@
 ﻿
+using BrokeredUpdates;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -66,7 +67,7 @@ namespace Texel
 
         public void _Reset()
         {
-            DebugLog("Reset");
+            DebugLog($"Reset (held={pickup.IsHeld}, origPos={originalPosition}, origRot={originalRotation})");
             if (pickup.IsHeld)
                 pickup.Drop();
 
@@ -74,7 +75,7 @@ namespace Texel
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             transform.SetPositionAndRotation(originalPosition, originalRotation);
-            sync.SendMasterMove();
+            sync._SendMasterMove();
         }
 
         public void _Display(Transform tf)
@@ -88,7 +89,7 @@ namespace Texel
                 pickup.Drop();
 
             transform.SetPositionAndRotation(tf.position, tf.rotation);
-            sync.SendMasterMove();
+            sync._SendMasterMove();
         }
 
         void DebugLog(string message)

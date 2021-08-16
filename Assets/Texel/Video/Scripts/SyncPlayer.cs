@@ -3,6 +3,7 @@ using System;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components.Video;
+using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
 using VRC.SDK3.Video.Components.Base;
 using VRC.SDKBase;
@@ -50,11 +51,16 @@ namespace Texel
         [Header("Internal Objects")]
         [Tooltip("AVPro video player component")]
         public VRCAVProVideoPlayer avProVideo;
+        [Tooltip("Unity video player component")]
+        public VRCUnityVideoPlayer unityVideo;
 
         float retryTimeout = 6;
         float syncFrequency = 5;
         float syncThreshold = 1;
         float syncLatchUpdateFrequency = 0.2f;
+
+        [UdonSynced]
+        short _syncVideoSource = VIDEO_SOURCE_NONE;
 
         [UdonSynced]
         VRCUrl _syncUrl;
@@ -130,8 +136,9 @@ namespace Texel
         const int SCREEN_MODE_LOADING = 2;
         const int SCREEN_MODE_ERROR = 3;
 
-        const int SCREEN_SOURCE_UNITY = 0;
-        const int SCREEN_SOURCE_AVPRO = 1;
+        const short VIDEO_SOURCE_NONE = 0;
+        const short VIDEO_SOURCE_AVPRO = 1;
+        const short VIDEO_SOURCE_UNITY = 2;
 
         void Start()
         {
@@ -139,10 +146,22 @@ namespace Texel
 
             _hasAccessControl = Utilities.IsValid(accessControl);
 
-            avProVideo.Loop = false;
-            avProVideo.Stop();
-            _currentPlayer = avProVideo;
+            if (Utilities.IsValid(avProVideo))
+            {
+                avProVideo.Loop = false;
+                avProVideo.Stop();
+            }
+            if (Utilities.IsValid(unityVideo))
+            {
+                unityVideo.Loop = false;
+                unityVideo.Stop();
+            }
 
+            //_currentPlayer = avProVideo;
+            //if (Utilities.IsValid(unityVideo))
+            //    _currentPlayer = unityVideo;
+
+            _UpdateVideoSource(VIDEO_SOURCE_AVPRO);
             _UpdatePlayerState(PLAYER_STATE_STOPPED);
 
             if (Networking.IsOwner(gameObject))
@@ -165,7 +184,7 @@ namespace Texel
                     _PlayVideo(defaultUrl);
             }
 
-            SendCustomEventDelayedSeconds("_AVSyncStart", 1);
+            //SendCustomEventDelayedSeconds("_AVSyncStart", 1);
         }
 
         public void _TriggerPlay()
@@ -314,6 +333,14 @@ namespace Texel
             if (!isOwner && !_TakeControl())
                 return;
 
+            string urlStr = url.Get();
+            if (_IsAutoVideoSource(urlStr))
+                _syncVideoSource = VIDEO_SOURCE_UNITY;
+            else
+                _syncVideoSource = VIDEO_SOURCE_AVPRO;
+
+            _UpdateVideoSource(_syncVideoSource);
+
             _syncUrl = url;
             _syncVideoNumber += isOwner ? 1 : 2;
             _loadedVideoNumber = _syncVideoNumber;
@@ -323,7 +350,7 @@ namespace Texel
             _syncVideoStartNetworkTime = float.MaxValue;
             RequestSerialization();
 
-            _videoTargetTime = _ParseTimeFromUrl(url.Get());
+            _videoTargetTime = _ParseTimeFromUrl(urlStr);
             _UpdateLastUrl();
 
             // Conditional player stop to try and avoid piling on AVPro at end of track
@@ -360,6 +387,20 @@ namespace Texel
                 return false;
 
             return true;
+        }
+
+        bool _IsAutoVideoSource(string urlStr)
+        {
+            // Assume youtube is video-based (but it could be a livestream...)
+            if (urlStr.Contains("youtube.com/watch") || urlStr.Contains("youtu.be/"))
+                return true;
+
+            if (urlStr.EndsWith("mp4", StringComparison.CurrentCultureIgnoreCase))
+                return true;
+            if (urlStr.EndsWith("wmv", StringComparison.CurrentCultureIgnoreCase))
+                return true;
+
+            return false;
         }
 
         // Time parsing code adapted from USharpVideo project by Merlin
@@ -417,9 +458,9 @@ namespace Texel
             DebugLog("Start video load " + _syncUrl);
             _UpdatePlayerState(PLAYER_STATE_LOADING);
 
-#if !UNITY_EDITOR
+//#if !UNITY_EDITOR
             _currentPlayer.LoadURL(_syncUrl);
-#endif
+//#endif
         }
 
         public void _StopVideo()
@@ -579,8 +620,18 @@ namespace Texel
         {
             _currentPlayer.Stop();
 
+            string code = "";
+            switch (videoError)
+            {
+                case VideoError.AccessDenied: code = "Access Denied"; break;
+                case VideoError.InvalidURL: code = "Invalid URL"; break;
+                case VideoError.PlayerError: code = "Player Error"; break;
+                case VideoError.RateLimited: code = "Rate Limited"; break;
+                case VideoError.Unknown: code = "Unknown Error"; break;
+            }
+
             DebugLog("Video stream failed: " + _syncUrl);
-            DebugLog("Error code: " + videoError);
+            DebugLog("Error code: " + code);
 
             _UpdatePlayerStateError(videoError);
 
@@ -640,6 +691,7 @@ namespace Texel
 
             DebugLog($"Deserialize: video #{_syncVideoNumber}");
 
+            _UpdateVideoSource(_syncVideoSource);
             _UpdateLockState(_syncLocked);
             _UpdateRepeatMode(_syncRepeatPlaylist);
 
@@ -894,6 +946,42 @@ namespace Texel
                 _StartVideoLoad();
         }
 
+        public void _StopAVPro()
+        {
+            avProVideo.Stop();
+        }
+
+        public void _StopUnity()
+        {
+            unityVideo.Stop();
+        }
+
+        void _UpdateVideoSource(int source)
+        {
+            if (dataProxy.playerSource != source) {
+                switch (dataProxy.playerSource)
+                {
+                    case VIDEO_SOURCE_AVPRO: SendCustomEventDelayedFrames("_StopAVPro", 1); break;
+                    case VIDEO_SOURCE_UNITY: SendCustomEventDelayedFrames("_StopUnity", 1); break;
+                }
+
+                dataProxy.playerSource = source;
+                switch (dataProxy.playerSource)
+                {
+                    case VIDEO_SOURCE_AVPRO:
+                        DebugLog("Switching video source to AVPro");
+                        _currentPlayer = avProVideo;
+                        break;
+                    case VIDEO_SOURCE_UNITY:
+                        DebugLog("Switching video source to Unity");
+                        _currentPlayer = unityVideo;
+                        break;
+                }
+
+                dataProxy._EmitStateUpdate();
+            }
+        }
+
         void _UpdatePlayerState(int state)
         {
             localPlayerState = state;
@@ -969,7 +1057,7 @@ namespace Texel
 
         void DebugLog(string message)
         {
-            if (!debugLogging)
+            if (debugLogging)
                 Debug.Log("[VideoTXL:SyncPlayer] " + message);
             if (Utilities.IsValid(debugLog))
                 debugLog._Write("SyncPlayer", message);

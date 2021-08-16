@@ -9,6 +9,8 @@ using VRC.Udon;
 public class VideoPlayerProxy : UdonSharpBehaviour
 {
     [NonSerialized]
+    public int playerSource;
+    [NonSerialized]
     public int playerState;
     [NonSerialized]
     public bool paused;

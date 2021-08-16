@@ -53,6 +53,9 @@ namespace Texel
         public Material captureMaterial;
         [Tooltip("The name of the property holding the main texture in the capture material")]
         public string captureTextureProperty;
+        [Tooltip("The render texture receiving data from a unity video component")]
+        public RenderTexture captureRT;
+        public MeshRenderer captureRenderer;
 
         [Tooltip("The screen texture to apply when no video is playing or loading.")]
         public Texture logoTexture;
@@ -80,8 +83,9 @@ namespace Texel
         Material[] _originalScreenMaterial;
         Texture[] _originalMaterialTexture;
 
-        public const int SCREEN_SOURCE_UNITY = 0;
+        public const int SCREEN_SOURCE_NONE = 0;
         public const int SCREEN_SOURCE_AVPRO = 1;
+        public const int SCREEN_SOURCE_UNITY = 2;
 
         public const int SCREEN_MODE_NORMAL = 0;
         public const int SCREEN_MODE_LOGO = 1;
@@ -96,7 +100,7 @@ namespace Texel
         const int PLAYER_STATE_ERROR = 3;
 
         bool _initComplete = false;
-        int _screenSource = SCREEN_SOURCE_AVPRO;
+        int _screenSource = SCREEN_SOURCE_UNITY;
         int _screenMode = SCREEN_MODE_NORMAL;
         VideoError _lastErrorCode = 0;
         int _checkFrameCount = 0;
@@ -234,6 +238,8 @@ namespace Texel
 
         public void _VideoStateUpdate()
         {
+            _UpdateScreenSource(dataProxy.playerSource);
+
             switch (dataProxy.playerState)
             {
                 case PLAYER_STATE_STOPPED:
@@ -358,10 +364,10 @@ namespace Texel
             {
                 Material replacementMat = _GetReplacementMaterial(captureValid);
                 
-#if UNITY_EDITOR
-                if (editorMaterial != null)
-                    replacementMat = editorMaterial;
-#endif
+//#if UNITY_EDITOR
+//                if (editorMaterial != null)
+//                    replacementMat = editorMaterial;
+//#endif
                 // Update all screen meshes with correct display material
                 for (int i = 0; i < screenMesh.Length; i++)
                 {
@@ -388,18 +394,23 @@ namespace Texel
             {
                 Texture replacementTex = _GetReplacemenTexture(captureValid);
                 
-#if UNITY_EDITOR
-                if (editorTexture != null)
-                    replacementTex = editorTexture;
-#endif
+//#if UNITY_EDITOR
+//                if (editorTexture != null)
+//                    replacementTex = editorTexture;
+//#endif
                 Texture tex = replacementTex;
                 int avPro = 0;
 
                 if (replacementTex == null)
                 {
-                    tex = captureMaterial.GetTexture(captureTextureProperty);
+
                     if (_screenSource == SCREEN_SOURCE_AVPRO)
+                    {
+                        tex = captureMaterial.GetTexture(captureTextureProperty);
                         avPro = 1;
+                    }
+                    else if (_screenSource == SCREEN_SOURCE_UNITY)
+                        tex = captureRT;
                 }
 
                 // Update all extra screen materials with correct predefined or captured texture
@@ -417,12 +428,12 @@ namespace Texel
                 }
             }
 
-#if !UNITY_EDITOR
+//#if !UNITY_EDITOR
             if (!captureValid)
                 SendCustomEventDelayedFrames("_CheckUpdateScreenMaterial", 1);
             else
                 DebugLog("Capture valid");
-#endif
+//#endif
         }
 
         public void _CheckUpdateScreenMaterial()
@@ -447,10 +458,10 @@ namespace Texel
                         replacementMat = logoMaterial;
                 }
 
-#if UNITY_EDITOR
-                if (editorMaterial != null)
-                    replacementMat = editorMaterial;
-#endif
+//#if UNITY_EDITOR
+//                if (editorMaterial != null)
+//                    replacementMat = editorMaterial;
+//#endif
 
                 for (int i = 0; i < screenMesh.Length; i++)
                 {
@@ -484,19 +495,23 @@ namespace Texel
                         replacementTex = logoTexture;
                 }
 
-#if UNITY_EDITOR
-                if (editorTexture != null)
-                    replacementTex = editorTexture;
-#endif
+//#if UNITY_EDITOR
+//                if (editorTexture != null)
+//                    replacementTex = editorTexture;
+//#endif
 
                 Texture tex = replacementTex;
                 int avPro = 0;
 
                 if (replacementTex == null)
                 {
-                    tex = captureMaterial.GetTexture(captureTextureProperty);
                     if (_screenSource == SCREEN_SOURCE_AVPRO)
+                    {
+                        tex = captureMaterial.GetTexture(captureTextureProperty);
                         avPro = 1;
+                    }
+                    else if (_screenSource == SCREEN_SOURCE_UNITY)
+                        tex = captureRT;
                 }
 
                 for (int i = 0; i < materialUpdateList.Length; i++)
@@ -525,14 +540,18 @@ namespace Texel
 
         bool CaptureValid()
         {
-            if (Utilities.IsValid(captureMaterial) && captureTextureProperty.Length > 0)
+            if (_screenSource == SCREEN_SOURCE_AVPRO && Utilities.IsValid(captureMaterial) && captureTextureProperty.Length > 0)
             {
                 Texture tex = captureMaterial.GetTexture(captureTextureProperty);
                 if (tex == null)
                     return false;
-                else if (tex.width < 16 || tex.height < 16)
+                if (tex.width < 16 || tex.height < 16)
                     return false;
             }
+
+            if (_screenSource == SCREEN_SOURCE_UNITY && Utilities.IsValid(captureRT))
+                return true;
+
             return true;
         }
 
@@ -575,6 +594,8 @@ namespace Texel
 
         SerializedProperty captureMaterialProperty;
         SerializedProperty captureTexturePropertyProperty;
+        SerializedProperty captureRTProperty;
+        SerializedProperty captureRendererProperty;
 
         SerializedProperty useTextureOverrideProperty;
         SerializedProperty logoTextureProperty;
@@ -613,6 +634,8 @@ namespace Texel
 
             captureMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.captureMaterial));
             captureTexturePropertyProperty = serializedObject.FindProperty(nameof(ScreenManager.captureTextureProperty));
+            captureRTProperty = serializedObject.FindProperty(nameof(ScreenManager.captureRT));
+            captureRendererProperty = serializedObject.FindProperty(nameof(ScreenManager.captureRenderer));
 
             useTextureOverrideProperty = serializedObject.FindProperty(nameof(ScreenManager.useTextureOverrides));
             logoTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.logoTexture));
@@ -676,6 +699,8 @@ namespace Texel
                 EditorGUILayout.PropertyField(captureMaterialProperty);
                 if (captureMaterialProperty.objectReferenceValue != null)
                     EditorGUILayout.PropertyField(captureTexturePropertyProperty);
+                EditorGUILayout.PropertyField(captureRTProperty);
+                EditorGUILayout.PropertyField(captureRendererProperty);
 
                 EditorGUILayout.Space();
                 EditorGUILayout.PropertyField(logoTextureProperty);
