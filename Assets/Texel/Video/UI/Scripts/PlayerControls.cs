@@ -57,6 +57,7 @@ namespace Texel
         public Text statusText;
         public Text urlText;
         public Text placeholderText;
+        public Text modeText;
 
         public Text playlistText;
 
@@ -79,6 +80,10 @@ namespace Texel
         const int PLAYER_STATE_LOADING = 1;
         const int PLAYER_STATE_PLAYING = 2;
         const int PLAYER_STATE_ERROR = 3;
+
+        const short VIDEO_SOURCE_NONE = 0;
+        const short VIDEO_SOURCE_AVPRO = 1;
+        const short VIDEO_SOURCE_UNITY = 2;
 
         bool infoPanelOpen = false;
 
@@ -370,6 +375,23 @@ namespace Texel
             videoPlayer._SetTargetTime(targetTime);
         }
 
+        public void _HandleSourceModeClick()
+        {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
+            if (!videoPlayer._CanTakeControl()) {
+                _SetStatusOverride(MakeOwnerMessage(), 3);
+                return;
+            }
+
+            short mode = (short)(dataProxy.playerSourceOverride + 1);
+            if (mode > 2)
+                mode = 0;
+
+            videoPlayer._SetSourceMode(mode);
+        }
+
         public void _ToggleVolumeMute()
         {
             if (inVolumeControllerUpdate)
@@ -658,6 +680,37 @@ namespace Texel
             if (videoPlayer.locked)
                 lockedIcon.color = canControl ? normalColor : attentionColor;
 
+            switch (dataProxy.playerSourceOverride)
+            {
+                case VIDEO_SOURCE_UNITY:
+                    modeText.text = "VIDEO";
+                    break;
+                case VIDEO_SOURCE_AVPRO:
+                    modeText.text = "STREAM";
+                    break;
+                case VIDEO_SOURCE_NONE:
+                default:
+                    if (playerState == PLAYER_STATE_STOPPED)
+                        modeText.text = "AUTO";
+                    else
+                    {
+                        switch (dataProxy.playerSource)
+                        {
+                            case VIDEO_SOURCE_UNITY:
+                                modeText.text = "AUTO VIDEO";
+                                break;
+                            case VIDEO_SOURCE_AVPRO:
+                                modeText.text = "AUTO STREAM";
+                                break;
+                            case VIDEO_SOURCE_NONE:
+                            default:
+                                modeText.text = "AUTO";
+                                break;
+                        }
+                    }
+                    break;
+            }
+
             _UpdatePlaylistInfo();
         }
 
@@ -774,6 +827,7 @@ namespace Texel
         SerializedProperty statusTextProperty;
         SerializedProperty urlTextProperty;
         SerializedProperty placeholderTextProperty;
+        SerializedProperty modeTextProperty;
 
         SerializedProperty playlistTextProperty;
 
@@ -826,6 +880,7 @@ namespace Texel
             urlTextProperty = serializedObject.FindProperty(nameof(PlayerControls.urlText));
             progressSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.progressSlider));
             syncSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.syncSlider));
+            modeTextProperty = serializedObject.FindProperty(nameof(PlayerControls.modeText));
 
             playlistTextProperty = serializedObject.FindProperty(nameof(PlayerControls.playlistText));
 
@@ -885,6 +940,7 @@ namespace Texel
                 EditorGUILayout.PropertyField(statusTextProperty);
                 EditorGUILayout.PropertyField(urlTextProperty);
                 EditorGUILayout.PropertyField(placeholderTextProperty);
+                EditorGUILayout.PropertyField(modeTextProperty);
                 EditorGUILayout.PropertyField(playlistTextProperty);
                 EditorGUILayout.PropertyField(infoPanelProperty);
                 EditorGUILayout.PropertyField(instanceOwnerTextProperty);

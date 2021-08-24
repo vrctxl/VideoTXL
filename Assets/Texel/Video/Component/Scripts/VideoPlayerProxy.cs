@@ -9,7 +9,9 @@ using VRC.Udon;
 public class VideoPlayerProxy : UdonSharpBehaviour
 {
     [NonSerialized]
-    public int playerSource;
+    public short playerSource;
+    [NonSerialized]
+    public short playerSourceOverride;
     [NonSerialized]
     public int playerState;
     [NonSerialized]

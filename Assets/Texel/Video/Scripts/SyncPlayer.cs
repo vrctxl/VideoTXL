@@ -61,6 +61,8 @@ namespace Texel
 
         [UdonSynced]
         short _syncVideoSource = VIDEO_SOURCE_NONE;
+        [UdonSynced]
+        short _syncVideoSourceOverride = VIDEO_SOURCE_NONE;
 
         [UdonSynced]
         VRCUrl _syncUrl;
@@ -161,7 +163,7 @@ namespace Texel
             //if (Utilities.IsValid(unityVideo))
             //    _currentPlayer = unityVideo;
 
-            _UpdateVideoSource(VIDEO_SOURCE_AVPRO);
+            _UpdateVideoSource(VIDEO_SOURCE_AVPRO, _syncVideoSourceOverride);
             _UpdatePlayerState(PLAYER_STATE_STOPPED);
 
             if (Networking.IsOwner(gameObject))
@@ -256,6 +258,17 @@ namespace Texel
             RequestSerialization();
         }
 
+        public void _SetSourceMode(short mode)
+        {
+            if (_syncLocked && !_CanTakeControl())
+                return;
+
+            _syncVideoSourceOverride = mode;
+            _UpdateVideoSource(_syncVideoSource, _syncVideoSourceOverride);
+
+            RequestSerialization();
+        }
+
         public void _Resync()
         {
             _ForceResync();
@@ -334,12 +347,17 @@ namespace Texel
                 return;
 
             string urlStr = url.Get();
-            if (_IsAutoVideoSource(urlStr))
-                _syncVideoSource = VIDEO_SOURCE_UNITY;
-            else
-                _syncVideoSource = VIDEO_SOURCE_AVPRO;
 
-            _UpdateVideoSource(_syncVideoSource);
+            _syncVideoSource = _syncVideoSourceOverride;
+            if (_syncVideoSource == VIDEO_SOURCE_NONE)
+            {
+                if (_IsAutoVideoSource(urlStr))
+                    _syncVideoSource = VIDEO_SOURCE_UNITY;
+                else
+                    _syncVideoSource = VIDEO_SOURCE_AVPRO;
+            }
+
+            _UpdateVideoSource(_syncVideoSource, _syncVideoSourceOverride);
 
             _syncUrl = url;
             _syncVideoNumber += isOwner ? 1 : 2;
@@ -394,6 +412,10 @@ namespace Texel
             // Assume youtube is video-based (but it could be a livestream...)
             if (urlStr.Contains("youtube.com/watch") || urlStr.Contains("youtu.be/"))
                 return true;
+
+            // VRCDN sources are always stream
+            if (urlStr.Contains("vrcdn"))
+                return false;
 
             if (urlStr.EndsWith("mp4", StringComparison.CurrentCultureIgnoreCase))
                 return true;
@@ -691,7 +713,7 @@ namespace Texel
 
             DebugLog($"Deserialize: video #{_syncVideoNumber}");
 
-            _UpdateVideoSource(_syncVideoSource);
+            _UpdateVideoSource(_syncVideoSource, _syncVideoSourceOverride);
             _UpdateLockState(_syncLocked);
             _UpdateRepeatMode(_syncRepeatPlaylist);
 
@@ -956,16 +978,49 @@ namespace Texel
             unityVideo.Stop();
         }
 
-        void _UpdateVideoSource(int source)
+        void _UpdateVideoSource(int source, int sourceOverride)
         {
-            if (dataProxy.playerSource != source) {
-                switch (dataProxy.playerSource)
+            bool change = false;
+            int oldSourceOverride = dataProxy.playerSourceOverride;
+
+            if (oldSourceOverride != sourceOverride)
+            {
+                _StopVideo();
+
+                dataProxy.playerSourceOverride = (short)sourceOverride;
+
+                switch (dataProxy.playerSourceOverride)
                 {
-                    case VIDEO_SOURCE_AVPRO: SendCustomEventDelayedFrames("_StopAVPro", 1); break;
-                    case VIDEO_SOURCE_UNITY: SendCustomEventDelayedFrames("_StopUnity", 1); break;
+                    case VIDEO_SOURCE_AVPRO:
+                        DebugLog("Setting video source override to AVPro");
+                        _currentPlayer = avProVideo;
+                        break;
+                    case VIDEO_SOURCE_UNITY:
+                        DebugLog("Setting video source override to Unity");
+                        _currentPlayer = unityVideo;
+                        break;
+                    case VIDEO_SOURCE_NONE:
+                    default:
+                        DebugLog("Setting video source override to Auto");
+                        _currentPlayer = unityVideo;
+                        break;
                 }
 
-                dataProxy.playerSource = source;
+                change = true;
+            }
+
+            if (dataProxy.playerSource != source) {
+                if (oldSourceOverride == sourceOverride)
+                {
+                    switch (dataProxy.playerSource)
+                    {
+                        case VIDEO_SOURCE_AVPRO: SendCustomEventDelayedFrames("_StopAVPro", 1); break;
+                        case VIDEO_SOURCE_UNITY: SendCustomEventDelayedFrames("_StopUnity", 1); break;
+                    }
+                }
+
+                dataProxy.playerSource = (short)source;
+                
                 switch (dataProxy.playerSource)
                 {
                     case VIDEO_SOURCE_AVPRO:
@@ -978,8 +1033,11 @@ namespace Texel
                         break;
                 }
 
-                dataProxy._EmitStateUpdate();
+                change = true;
             }
+
+            if (change)
+                dataProxy._EmitStateUpdate();
         }
 
         void _UpdatePlayerState(int state)
