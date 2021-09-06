@@ -110,25 +110,29 @@ namespace Texel
                 zoneFadeScale = upperBound;
             else
             {
-                Vector3 location = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position;
-                Vector3 innerPoint = innerZone.ClosestPoint(location);
-                Vector3 dirVector = location - innerPoint;
-                dirVector = Vector3.Normalize(dirVector);
+                VRCPlayerApi player = Networking.LocalPlayer;
+                if (Utilities.IsValid(player))
+                {
+                    Vector3 location = player.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position;
+                    Vector3 innerPoint = innerZone.ClosestPoint(location);
+                    Vector3 dirVector = location - innerPoint;
+                    dirVector = Vector3.Normalize(dirVector);
 
-                float length = outerZone.bounds.size.magnitude;
-                Ray ray = new Ray(location, dirVector);
-                ray.origin = ray.GetPoint(length);
-                ray.direction = -ray.direction;
+                    float length = outerZone.bounds.size.magnitude;
+                    Ray ray = new Ray(location, dirVector);
+                    ray.origin = ray.GetPoint(length);
+                    ray.direction = -ray.direction;
 
-                RaycastHit hit;
-                outerZone.Raycast(ray, out hit, length * 2);
-                Vector3 outerPoint = hit.point;
+                    RaycastHit hit;
+                    outerZone.Raycast(ray, out hit, length * 2);
+                    Vector3 outerPoint = hit.point;
 
-                Vector3 locPoint = _NearestPoint(innerPoint, outerPoint, location);
+                    Vector3 locPoint = _NearestPoint(innerPoint, outerPoint, location);
 
-                float zoneDist = Vector3.Distance(innerPoint, outerPoint);
-                float playerDistOuter = Vector3.Distance(locPoint, outerPoint);
-                zoneFadeScale = Mathf.Lerp(lowerBound, upperBound, playerDistOuter / zoneDist);
+                    float zoneDist = Vector3.Distance(innerPoint, outerPoint);
+                    float playerDistOuter = Vector3.Distance(locPoint, outerPoint);
+                    zoneFadeScale = Mathf.Lerp(lowerBound, upperBound, playerDistOuter / zoneDist);
+                }
             }
 
             if (lastFade != zoneFadeScale)

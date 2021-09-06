@@ -67,9 +67,9 @@ namespace Texel
             SendCustomEventDelayedFrames("_UpdateLayout", 1);
 
             if (Utilities.IsValid(AudioManager))
-                AudioManager._RegisterControls(gameObject);
+                AudioManager._RegisterControls(this);
             if (Utilities.IsValid(staticUrlSource))
-                staticUrlSource._RegisterControls(gameObject);
+                staticUrlSource._RegisterControls(this);
 
             _UpdateColor();
         }

@@ -706,6 +706,11 @@ namespace Texel
             return true;
         }
 
+        //public override bool OnOwnershipRequest(VRCPlayerApi requestingPlayer, VRCPlayerApi requestedOwner)
+        //{
+        //    return base.OnOwnershipRequest(requestingPlayer, requestedOwner);
+        //}
+
         public override void OnDeserialization()
         {
             if (Networking.IsOwner(gameObject))
@@ -821,7 +826,7 @@ namespace Texel
 
         void SyncVideo()
         {
-            if (seekableSource && !syncLatched)
+            if (seekableSource && !syncLatched && !syncReadback)
             {
                 float duration = _currentPlayer.GetDuration();
                 float current = _currentPlayer.GetTime();
@@ -832,6 +837,7 @@ namespace Texel
                     _currentPlayer.SetTime(offsetTime);
                     DebugLog($"Sync time (off by {current - offsetTime}s) [net={serverTime}, sync={_syncVideoStartNetworkTime}, cur={current}]");
 
+                    syncReadback = true;
                     SendCustomEventDelayedSeconds("_SyncReadback", 1);
 
                     /*float readbackTime = _currentPlayer.GetTime();
@@ -855,6 +861,8 @@ namespace Texel
 
         public void _SyncReadback()
         {
+            syncReadback = false;
+
             float duration = _currentPlayer.GetDuration();
             float serverTime = (float)Networking.GetServerTimeInSeconds();
             float offsetTime = Mathf.Clamp(serverTime - _syncVideoStartNetworkTime, 0f, duration);
@@ -878,6 +886,7 @@ namespace Texel
         }
 
         bool syncLatched = false;
+        bool syncReadback = false;
         float syncTime1 = 0;
         float syncTime2 = 0;
         float syncLatchRate = 0;

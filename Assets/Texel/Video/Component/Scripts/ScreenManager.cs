@@ -55,7 +55,6 @@ namespace Texel
         public string captureTextureProperty;
         [Tooltip("The render texture receiving data from a unity video component")]
         public RenderTexture captureRT;
-        public MeshRenderer captureRenderer;
 
         [Tooltip("The screen texture to apply when no video is playing or loading.")]
         public Texture logoTexture;
@@ -108,7 +107,7 @@ namespace Texel
         void Start()
         {
             if (Utilities.IsValid(dataProxy))
-                dataProxy._RegisterEventHandler(gameObject, "_VideoStateUpdate");
+                dataProxy._RegisterEventHandler(this, "_VideoStateUpdate");
 
             _Init();
         }
@@ -595,7 +594,6 @@ namespace Texel
         SerializedProperty captureMaterialProperty;
         SerializedProperty captureTexturePropertyProperty;
         SerializedProperty captureRTProperty;
-        SerializedProperty captureRendererProperty;
 
         SerializedProperty useTextureOverrideProperty;
         SerializedProperty logoTextureProperty;
@@ -635,7 +633,6 @@ namespace Texel
             captureMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.captureMaterial));
             captureTexturePropertyProperty = serializedObject.FindProperty(nameof(ScreenManager.captureTextureProperty));
             captureRTProperty = serializedObject.FindProperty(nameof(ScreenManager.captureRT));
-            captureRendererProperty = serializedObject.FindProperty(nameof(ScreenManager.captureRenderer));
 
             useTextureOverrideProperty = serializedObject.FindProperty(nameof(ScreenManager.useTextureOverrides));
             logoTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.logoTexture));
@@ -700,7 +697,6 @@ namespace Texel
                 if (captureMaterialProperty.objectReferenceValue != null)
                     EditorGUILayout.PropertyField(captureTexturePropertyProperty);
                 EditorGUILayout.PropertyField(captureRTProperty);
-                EditorGUILayout.PropertyField(captureRendererProperty);
 
                 EditorGUILayout.Space();
                 EditorGUILayout.PropertyField(logoTextureProperty);

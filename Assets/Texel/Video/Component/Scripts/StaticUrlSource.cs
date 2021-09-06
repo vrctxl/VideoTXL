@@ -32,7 +32,7 @@ namespace Texel
         public VRCUrl staticUrlAudio;
 
         UdonBehaviour _videoPlayer;
-        GameObject[] _controls;
+        Component[] _controls;
 
         int _selectedResolution = 0;
 
@@ -44,7 +44,7 @@ namespace Texel
         {
             _selectedResolution = defaultResolution;
             if (!Utilities.IsValid(_controls))
-                _controls = new GameObject[0];
+                _controls = new Component[0];
         }
 
         public void _RegisterPlayer(UdonBehaviour player)
@@ -53,21 +53,21 @@ namespace Texel
 
         }
 
-        public void _RegisterControls(GameObject controls)
+        public void _RegisterControls(Component controls)
         {
             if (!Utilities.IsValid(controls))
                 return;
 
             if (!Utilities.IsValid(_controls))
-                _controls = new GameObject[0];
+                _controls = new Component[0];
 
-            foreach (GameObject c in _controls)
+            foreach (Component c in _controls)
             {
                 if (c == controls)
                     return;
             }
 
-            GameObject[] newControls = new GameObject[_controls.Length + 1];
+            Component[] newControls = new Component[_controls.Length + 1];
             for (int i = 0; i < _controls.Length; i++)
                 newControls[i] = _controls[i];
 
@@ -142,11 +142,11 @@ namespace Texel
 
         private void UpdateControls()
         {
-            foreach (var panel in _controls)
+            foreach (Component panel in _controls)
             {
                 if (Utilities.IsValid(panel))
                 {
-                    UdonBehaviour script = (UdonBehaviour)panel.GetComponent(typeof(UdonBehaviour));
+                    UdonBehaviour script = (UdonBehaviour)panel;
                     if (Utilities.IsValid(script))
                         script.SendCustomEvent("_UrlChanged");
                 }

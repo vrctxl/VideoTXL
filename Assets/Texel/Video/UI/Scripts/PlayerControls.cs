@@ -101,14 +101,14 @@ namespace Texel
             _DisableAllVideoControls();
 
             if (Utilities.IsValid(audioManager))
-                audioManager._RegisterControls(gameObject);
+                audioManager._RegisterControls(this);
             if (Utilities.IsValid(videoPlayer) && Utilities.IsValid(videoPlayer.dataProxy)) {
                 dataProxy = videoPlayer.dataProxy;
-                dataProxy._RegisterEventHandler(gameObject, "_VideoStateUpdate");
-                dataProxy._RegisterEventHandler(gameObject, "_VideoLockUpdate");
-                dataProxy._RegisterEventHandler(gameObject, "_VideoTrackingUpdate");
-                dataProxy._RegisterEventHandler(gameObject, "_VideoInfoUpdate");
-                dataProxy._RegisterEventHandler(gameObject, "_VideoPlaylistUpdate");
+                dataProxy._RegisterEventHandler(this, "_VideoStateUpdate");
+                dataProxy._RegisterEventHandler(this, "_VideoLockUpdate");
+                dataProxy._RegisterEventHandler(this, "_VideoTrackingUpdate");
+                dataProxy._RegisterEventHandler(this, "_VideoInfoUpdate");
+                dataProxy._RegisterEventHandler(this, "_VideoPlaylistUpdate");
 
                 unlockedIcon.color = normalColor;
             }

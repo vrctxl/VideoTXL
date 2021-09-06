@@ -37,7 +37,7 @@ namespace Texel
         float[] channelFade;
 
         bool initialized = false;
-        GameObject[] audioControls;
+        Component[] audioControls;
 
         int channelCount = 0;
         bool hasSync = false;
@@ -45,19 +45,17 @@ namespace Texel
         bool ovrMasterVolume = false;
         bool videoMute = false;
 
-        const int PLAYER_STATE_STOPPED = 0x01;
-        const int PLAYER_STATE_LOADING = 0x02;
-        const int PLAYER_STATE_SYNC = 0x04;
-        const int PLAYER_STATE_PLAYING = 0x08;
-        const int PLAYER_STATE_ERROR = 0x10;
-        const int PLAYER_STATE_PAUSED = 0x20;
+        const int PLAYER_STATE_STOPPED = 0;
+        const int PLAYER_STATE_LOADING = 1;
+        const int PLAYER_STATE_PLAYING = 2;
+        const int PLAYER_STATE_ERROR = 3;
 
         void Start()
         {
             if (Utilities.IsValid(dataProxy))
-                dataProxy._RegisterEventHandler(gameObject, "_VideoStateUpdate");
+                dataProxy._RegisterEventHandler(this, "_VideoStateUpdate");
             if (!Utilities.IsValid(audioControls))
-                audioControls = new GameObject[0];
+                audioControls = new Component[0];
 
             channelCount = channelAudio.Length;
             channelFade = new float[channelCount];
@@ -79,21 +77,21 @@ namespace Texel
             _UpdateAll();
         }
 
-        public void _RegisterControls(GameObject controls)
+        public void _RegisterControls(Component controls)
         {
             if (!Utilities.IsValid(controls))
                 return;
 
             if (!Utilities.IsValid(audioControls))
-                audioControls = new GameObject[0];
+                audioControls = new Component[0];
 
-            foreach (GameObject c in audioControls)
+            foreach (Component c in audioControls)
             {
                 if (c == controls)
                     return;
             }
 
-            GameObject[] newControls = new GameObject[audioControls.Length + 1];
+            Component[] newControls = new Component[audioControls.Length + 1];
             for (int i = 0; i < audioControls.Length; i++)
                 newControls[i] = audioControls[i];
 
@@ -196,12 +194,12 @@ namespace Texel
                 _UpdateAudioControl(control);
         }
 
-        void _UpdateAudioControl(GameObject control)
+        void _UpdateAudioControl(Component control)
         {
             if (!Utilities.IsValid(control))
                 return;
 
-            UdonBehaviour script = (UdonBehaviour)control.GetComponent(typeof(UdonBehaviour));
+            UdonBehaviour script = (UdonBehaviour)control;
             if (Utilities.IsValid(script))
                 script.SendCustomEvent("_AudioManagerUpdate");
         }
