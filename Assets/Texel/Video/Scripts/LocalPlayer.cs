@@ -154,7 +154,7 @@ namespace Texel
         public void _TriggerPlay()
         {
             Debug.Log("[VideoTXL:ZonedStreamPlayer] Trigger play");
-            if (playAt > 0 || playingOrLoading)
+            if (playAt > 0 || localPlayerState == PLAYER_STATE_PLAYING || localPlayerState == PLAYER_STATE_LOADING)
                 return;
 
             _PlayVideoAfter(_GetSelectedUrl(), 0);
@@ -187,7 +187,7 @@ namespace Texel
 
         public void _UrlChanged()
         {
-            if (playingOrLoading)
+            if (localPlayerState == PLAYER_STATE_PLAYING || localPlayerState == PLAYER_STATE_LOADING)
                 _Resync();
         }
 
@@ -221,8 +221,6 @@ namespace Texel
             if (urlStr == null || urlStr == "")
                 return;
 
-            playingOrLoading = true;
-
             _UpdatePlayerState(PLAYER_STATE_LOADING);
 
 #if !UNITY_EDITOR
@@ -234,7 +232,7 @@ namespace Texel
         {
             DebugLog("Stop video");
 
-            if (seekableSource)
+            if (seekableSource && resumePosition)
                 _lastVideoPosition = _currentPlayer.GetTime();
 
             _UpdatePlayerState(PLAYER_STATE_STOPPED);

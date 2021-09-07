@@ -17,6 +17,8 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
     public class CompoundZoneTrigger : UdonSharpBehaviour
     {
+        [Tooltip("If enabled, specify event handlers at edit time.  Handlers can still be registered at runtime.")]
+        public bool configureEvents = false;
         [Tooltip("The Udon Behavior to send messages to on enter and leave events")]
         public UdonBehaviour targetBehavior;
         [Tooltip("Whether colliders should only recognize the local player")]
@@ -40,7 +42,9 @@ namespace Texel
         bool hasPlayerLeave = false;
         bool hasTargetVariable = false;
 
-        int colliderCount = 0;
+        [NonSerialized]
+        public int colliderCount = 0;
+
         int triggerActiveCount = 0;
         bool enterLatched;
         bool leaveLatched;
@@ -86,7 +90,19 @@ namespace Texel
             }
         }
 
+        public void _PlayerTriggerReset()
+        {
+            triggerActiveCount = 0;
+            enterLatched = false;
+            leaveLatched = false;
+        }
+
         public override void OnPlayerTriggerEnter(VRCPlayerApi player)
+        {
+            _PlayerTriggerEnter(player);
+        }
+
+        public void _PlayerTriggerEnter(VRCPlayerApi player)
         {
             if (!localPlayerOnly)
             {
@@ -124,6 +140,11 @@ namespace Texel
         }
 
         public override void OnPlayerTriggerExit(VRCPlayerApi player)
+        {
+            _PlayerTriggerExit(player);
+        }
+
+        public void _PlayerTriggerExit(VRCPlayerApi player)
         {
             if (!localPlayerOnly)
             {
@@ -188,6 +209,7 @@ namespace Texel
     [CustomEditor(typeof(CompoundZoneTrigger))]
     internal class ZoneTriggerInspector : Editor
     {
+        SerializedProperty configureEventsProperty;
         SerializedProperty targetBehaviorProperty;
         SerializedProperty localPlayerOnlyProperty;
         SerializedProperty playerEnterEventProperty;
@@ -200,6 +222,7 @@ namespace Texel
 
         private void OnEnable()
         {
+            configureEventsProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.configureEvents));
             targetBehaviorProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.targetBehavior));
             localPlayerOnlyProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.localPlayerOnly));
             playerEnterEventProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.playerEnterEvent));
@@ -216,7 +239,9 @@ namespace Texel
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
 
-            EditorGUILayout.PropertyField(targetBehaviorProperty);
+            EditorGUILayout.PropertyField(configureEventsProperty);
+            if (configureEventsProperty.boolValue)
+                EditorGUILayout.PropertyField(targetBehaviorProperty);
             EditorGUILayout.PropertyField(localPlayerOnlyProperty);
 
             EditorGUILayout.Space();
@@ -228,7 +253,8 @@ namespace Texel
                 if (enterSetModeProperty.intValue == CompoundZoneTrigger.SET_INTERSECT)
                     EditorGUILayout.PropertyField(latchUntilLeaveProperty);
             }
-            EditorGUILayout.PropertyField(playerEnterEventProperty);
+            if (configureEventsProperty.boolValue)
+                EditorGUILayout.PropertyField(playerEnterEventProperty);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Leave Trigger", EditorStyles.boldLabel);
@@ -239,9 +265,11 @@ namespace Texel
                 if (leaveSetModeProperty.intValue == CompoundZoneTrigger.SET_UNION)
                     EditorGUILayout.PropertyField(latchUntilEnterProperty);
             }
-            EditorGUILayout.PropertyField(playerLeaveEventProperty);
+            if (configureEventsProperty.boolValue)
+                EditorGUILayout.PropertyField(playerLeaveEventProperty);
 
-            EditorGUILayout.PropertyField(playerTargetVariableProperty);
+            if (configureEventsProperty.boolValue)
+                EditorGUILayout.PropertyField(playerTargetVariableProperty);
 
             if (serializedObject.hasModifiedProperties)
                 serializedObject.ApplyModifiedProperties();
