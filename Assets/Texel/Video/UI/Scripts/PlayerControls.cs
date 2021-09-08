@@ -45,6 +45,8 @@ namespace Texel
         public Image nextIcon;
         public Image prevIcon;
         public Image playlistIcon;
+        public Image masterIcon;
+        public Image whitelistIcon;
 
         public GameObject muteToggleOn;
         public GameObject muteToggleOff;
@@ -116,6 +118,7 @@ namespace Texel
 #if !UNITY_EDITOR
             instanceMaster = Networking.GetOwner(gameObject).displayName;
             _FindOwners();
+            SendCustomEventDelayedFrames("_RefreshPlayerAccessIcon", 1);
 #endif
         }
 
@@ -761,6 +764,8 @@ namespace Texel
                 instanceMaster = owner.displayName;
             else
                 instanceMaster = "";
+
+            _RefreshPlayerAccessIcon();
         }
 
         void UpdateToggleVisual()
@@ -778,6 +783,27 @@ namespace Texel
                     //audio2DToggleOff.SetActive(!audioManager.audio2D);
                 }
             }
+        }
+
+        public void _RefreshPlayerAccessIcon()
+        {
+            masterIcon.enabled = false;
+            whitelistIcon.enabled = false;
+
+            if (!Utilities.IsValid(videoPlayer.accessControl))
+            {
+                masterIcon.enabled = videoPlayer._IsAdmin();
+                return;
+            }
+
+            VRCPlayerApi player = Networking.LocalPlayer;
+            AccessControl acl = videoPlayer.accessControl;
+            if (acl.allowInstanceOwner && player.isInstanceOwner)
+                masterIcon.enabled = true;
+            else if (acl.allowMaster && player.isMaster)
+                masterIcon.enabled = true;
+            else if (acl.allowWhitelist && acl._LocalWhitelisted())
+                whitelistIcon.enabled = true;
         }
     }
 
@@ -814,6 +840,8 @@ namespace Texel
         SerializedProperty nextIconProperty;
         SerializedProperty prevIconProperty;
         SerializedProperty playlistIconProperty;
+        SerializedProperty masterIconProperty;
+        SerializedProperty whitelistIconProperty;
 
         SerializedProperty muteToggleOnProperty;
         SerializedProperty muteToggleOffProperty;
@@ -867,6 +895,8 @@ namespace Texel
             nextIconProperty = serializedObject.FindProperty(nameof(PlayerControls.nextIcon));
             prevIconProperty = serializedObject.FindProperty(nameof(PlayerControls.prevIcon));
             playlistIconProperty = serializedObject.FindProperty(nameof(PlayerControls.playlistIcon));
+            masterIconProperty = serializedObject.FindProperty(nameof(PlayerControls.masterIcon));
+            whitelistIconProperty = serializedObject.FindProperty(nameof(PlayerControls.whitelistIcon));
 
             muteToggleOnProperty = serializedObject.FindProperty(nameof(PlayerControls.muteToggleOn));
             muteToggleOffProperty = serializedObject.FindProperty(nameof(PlayerControls.muteToggleOff));
@@ -929,6 +959,8 @@ namespace Texel
                 EditorGUILayout.PropertyField(nextIconProperty);
                 EditorGUILayout.PropertyField(prevIconProperty);
                 EditorGUILayout.PropertyField(playlistIconProperty);
+                EditorGUILayout.PropertyField(masterIconProperty);
+                EditorGUILayout.PropertyField(whitelistIconProperty);
                 EditorGUILayout.PropertyField(muteToggleOnProperty);
                 EditorGUILayout.PropertyField(muteToggleOffProperty);
                 EditorGUILayout.PropertyField(audio2DToggleOnProperty);
