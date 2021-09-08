@@ -969,6 +969,9 @@ namespace Texel
                     _StartVideoLoad();
                     _videoTargetTime = startTime;
                 }
+                else
+                    _StartVideoLoad();
+
                 return;
             }
 

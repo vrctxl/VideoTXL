@@ -426,7 +426,7 @@ namespace Texel
             if (!Utilities.IsValid(playlist) || !Utilities.IsValid(videoPlayer))
                 return;
 
-            if (playlist.playlistEnabled)
+            if (!playlist.playlistEnabled)
                 return;
 
             playlist._SetEnabled(true);
