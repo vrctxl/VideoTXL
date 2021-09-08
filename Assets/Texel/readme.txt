@@ -1,7 +1,8 @@
 VideoTXL
 
-A collection of video player prefabs for local or sync video playback.
+A collection of video player and A/V support prefabs for local or sync video playback.
 See project readme on GitHub for more information.
+https://github.com/jaquadro/VideoTXL
 
 MIT License
 
