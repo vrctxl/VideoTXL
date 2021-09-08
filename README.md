@@ -1,18 +1,30 @@
 # VideoTXL
-Prefabs for sync and local video players built from common components.  Local video players can be useful for playing a burned in stream during a live event, or for populating screens in multiple booths in a showcase hall.
+Prefabs for video players and A/V support.  Sync and local-only flavors of the video player are available, with multiple shared plugin components.
+
+## Sync Video Player
+The general purpose video player for worlds.  Supports the following features:
+
+* Optional support for all shared components listed below
+* AVPro and Unity Video backend supported.  Auto-selected by default but can be manually set.
+* Streams or videos
+* Video seeking and current position / duration
+* Video looping
+* Local resync
+* Track queueing (by opening the load URL field, pasting a URL, then closing the field without committing)
+* Locking and access control with whitelist support
+* Static playlists (will eventually be runtime editable)
+* Event system for custom plugins
 
 ## Local Video Player Features
+Local video players can be useful for playing a burned in stream during a live event, or for populating screens in multiple booths in a showcase hall.
+
 * Optional support for all shared components listed below
 * Setup with either AVPro or Unity video player source
 * Streams or videos
 * Loop and resume last position options
+* Supports zone triggers to start or stop playback
 * Supports burned-in URLs at multiple quality levels that can be user-selected at runtime
-
-## Sync Video Player Features (WIP)
-* Optional support for all shared components listed below
-* Primarily AVPro-based
-* Streams or videos
-* Video seeking and current position / duration
+* Event system for custom plugins
 
 ## Shared Components
 ### Screen Manager
@@ -20,19 +32,16 @@ Prefabs for sync and local video players built from common components.  Local vi
   * Can update materials on multiple screen objects
   * Can update textures on multiple materials
   * Auto-detect audio-only sources
+  * Unifies video data from AVPro or Unity Video sources
 ### Audio Manager
-  * Manage volume on multiple audio sources
-  * Supports separate base and overlay audio sources with different volume ratio when using an AVPro vidoe source
+  * Manage volume on one or more audio sources
   * Supports artificially scaling volume between two collision boundaries
-### Trigger Manager
-  * Support playing video on world load
-  * Support playing video when entering or leaving zones
-  * Support playing video with play/stop buttons
+### RT Blank
+  * Blanks a render texture (such as the unity video RT) when video player goes into a stopped state
 ### Local Controls
   * A separate UI providing local-only AV options that can be duplicated in the world any number of times
   * Quickly setup for any of these options:
     * Volume slider
-    * 2D audio toggle
     * Resync button
     * stream quality selection (local player only)
   * All instances can be tied to a color profile for fast customization
