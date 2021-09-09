@@ -65,8 +65,9 @@ namespace Texel
         short _syncVideoSourceOverride = VIDEO_SOURCE_NONE;
 
         [UdonSynced]
-        VRCUrl _syncUrl;
-        VRCUrl _queuedUrl;
+        VRCUrl _syncUrl = VRCUrl.Empty;
+        [UdonSynced]
+        VRCUrl _syncQueuedUrl = VRCUrl.Empty;
 
         [UdonSynced]
         int _syncVideoNumber;
@@ -125,6 +126,8 @@ namespace Texel
         public VRCUrl currentUrl = VRCUrl.Empty;
         [NonSerialized]
         public VRCUrl lastUrl = VRCUrl.Empty;
+        [NonSerialized]
+        public VRCUrl queuedUrl = VRCUrl.Empty;
 
         // Constants
 
@@ -279,9 +282,8 @@ namespace Texel
             if (_syncLocked && !_CanTakeControl())
                 return;
 
+            _syncQueuedUrl = VRCUrl.Empty;
             _PlayVideo(url);
-
-            _queuedUrl = VRCUrl.Empty;
         }
 
         public void _UpdateQueuedUrl(VRCUrl url)
@@ -291,7 +293,8 @@ namespace Texel
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
-            _queuedUrl = url;
+            _syncQueuedUrl = url;
+            _UpdateQueuedUrlData();
         }
 
         public void _SetTargetTime(float time)
@@ -311,15 +314,14 @@ namespace Texel
             if (duration - time < 1)
             {
                 bool hasPlaylist = Utilities.IsValid(playlist) && playlist.playlistEnabled;
-                if (_IsUrlValid(_queuedUrl))
+                if (_IsUrlValid(_syncQueuedUrl))
                 {
                     SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
                     return;
                 }
                 else if (hasPlaylist && playlist._MoveNext())
                 {
-                    _queuedUrl = playlist._GetCurrent();
-                    SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
+                    SendCustomEventDelayedFrames("_PlayPlaylistUrl", 1);
                     return;
                 }
                 else if (!hasPlaylist && _syncRepeatPlaylist)
@@ -370,6 +372,7 @@ namespace Texel
 
             _videoTargetTime = _ParseTimeFromUrl(urlStr);
             _UpdateLastUrl();
+            _UpdateQueuedUrlData();
 
             // Conditional player stop to try and avoid piling on AVPro at end of track
             // and maybe triggering bad things
@@ -391,8 +394,15 @@ namespace Texel
 
         public void _PlayQueuedUrl()
         {
-            _PlayVideo(_queuedUrl);
-            _queuedUrl = VRCUrl.Empty;
+            VRCUrl url = _syncQueuedUrl;
+            _syncQueuedUrl = VRCUrl.Empty;
+            _PlayVideo(url);
+        }
+
+        public void _PlayPlaylistUrl()
+        {
+            _syncQueuedUrl = VRCUrl.Empty;
+            _PlayVideo(playlist._GetCurrent());
         }
 
         bool _IsUrlValid(VRCUrl url)
@@ -603,11 +613,10 @@ namespace Texel
             if (Networking.IsOwner(gameObject))
             {
                 bool hasPlaylist = Utilities.IsValid(playlist) && playlist.playlistEnabled;
-                if (_IsUrlValid(_queuedUrl))
+                if (_IsUrlValid(_syncQueuedUrl))
                     SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
                 else if (hasPlaylist && playlist._MoveNext()) {
-                    _queuedUrl = playlist._GetCurrent();
-                    SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
+                    SendCustomEventDelayedFrames("_PlayPlaylistUrl", 1);
                 }
                 else if (!hasPlaylist && _syncRepeatPlaylist)
                     SendCustomEventDelayedFrames("_LoopVideo", 1);
@@ -721,6 +730,7 @@ namespace Texel
             _UpdateVideoSource(_syncVideoSource, _syncVideoSourceOverride);
             _UpdateLockState(_syncLocked);
             _UpdateRepeatMode(_syncRepeatPlaylist);
+            _UpdateQueuedUrlData();
 
             if (_syncVideoNumber == _loadedVideoNumber)
             {
@@ -1109,6 +1119,16 @@ namespace Texel
             repeatPlaylist = state;
             dataProxy.repeatPlaylist = state;
             dataProxy._EmitPlaylistUpdate();
+        }
+
+        void _UpdateQueuedUrlData()
+        {
+            if (_syncQueuedUrl == queuedUrl)
+                return;
+
+            queuedUrl = _syncQueuedUrl;
+            dataProxy.queuedUrl = queuedUrl;
+            dataProxy._EmitInfoUpdate();
         }
 
         void _UpdateLastUrl()

@@ -37,9 +37,11 @@ namespace Texel
         [NonSerialized]
         public bool repeatPlaylist;
         [NonSerialized]
-        public VRCUrl currentUrl;
+        public VRCUrl currentUrl = VRCUrl.Empty;
         [NonSerialized]
-        public VRCUrl lastUrl;
+        public VRCUrl lastUrl = VRCUrl.Empty;
+        [NonSerialized]
+        public VRCUrl queuedUrl = VRCUrl.Empty;
 
         bool init = false;
         Component[] playerStateHandlers;

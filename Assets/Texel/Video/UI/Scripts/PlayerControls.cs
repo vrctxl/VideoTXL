@@ -60,6 +60,7 @@ namespace Texel
         public Text urlText;
         public Text placeholderText;
         public Text modeText;
+        public Text queuedText;
 
         public Text playlistText;
 
@@ -101,6 +102,9 @@ namespace Texel
         {
             infoIcon.color = normalColor;
             _DisableAllVideoControls();
+
+            queuedText.text = "";
+            playlistText.text = "";
 
             if (Utilities.IsValid(audioManager))
                 audioManager._RegisterControls(this);
@@ -532,6 +536,9 @@ namespace Texel
             currentVideoInput.text = currentUrl;
             lastVideoInput.text = lastUrl;
 
+            string queuedUrl = dataProxy.queuedUrl.Get();
+            queuedText.text = (queuedUrl != "") ? "QUEUED" : "";
+
             VRCPlayerApi owner = Networking.GetOwner(videoPlayer.gameObject);
             if (Utilities.IsValid(owner) && owner.IsValid())
                 playerOwnerText.text = owner.displayName;
@@ -855,6 +862,7 @@ namespace Texel
         SerializedProperty urlTextProperty;
         SerializedProperty placeholderTextProperty;
         SerializedProperty modeTextProperty;
+        SerializedProperty queuedTextProperty;
 
         SerializedProperty playlistTextProperty;
 
@@ -910,6 +918,7 @@ namespace Texel
             progressSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.progressSlider));
             syncSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.syncSlider));
             modeTextProperty = serializedObject.FindProperty(nameof(PlayerControls.modeText));
+            queuedTextProperty = serializedObject.FindProperty(nameof(PlayerControls.queuedText));
 
             playlistTextProperty = serializedObject.FindProperty(nameof(PlayerControls.playlistText));
 
@@ -972,6 +981,7 @@ namespace Texel
                 EditorGUILayout.PropertyField(urlTextProperty);
                 EditorGUILayout.PropertyField(placeholderTextProperty);
                 EditorGUILayout.PropertyField(modeTextProperty);
+                EditorGUILayout.PropertyField(queuedTextProperty);
                 EditorGUILayout.PropertyField(playlistTextProperty);
                 EditorGUILayout.PropertyField(infoPanelProperty);
                 EditorGUILayout.PropertyField(instanceOwnerTextProperty);
