@@ -29,6 +29,9 @@ namespace Texel
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
 
+        [Tooltip("When present and enabled, operate for native Quest")]
+        public GameObject questCheckObject;
+
         //[Tooltip("Optional component to start or stop player based on common trigger events")]
         //public TriggerManager triggerManager;
 
@@ -185,7 +188,7 @@ namespace Texel
             {
                 if (Utilities.IsValid(playlist) && playlist.trackCount > 0)
                     _PlayVideo(playlist._GetCurrent());
-                else             
+                else
                     _PlayVideo(defaultUrl);
             }
 
@@ -224,11 +227,13 @@ namespace Texel
 
             _syncOwnerPaused = !_syncOwnerPaused;
 
-            if (_syncOwnerPaused) {
+            if (_syncOwnerPaused)
+            {
                 _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _currentPlayer.GetTime();
                 _videoTargetTime = _currentPlayer.GetTime();
                 _currentPlayer.Pause();
-            } else
+            }
+            else
                 _currentPlayer.Play();
 
             _UpdatePlayerPaused(_syncOwnerPaused);
@@ -490,9 +495,9 @@ namespace Texel
             DebugLog("Start video load " + _syncUrl);
             _UpdatePlayerState(PLAYER_STATE_LOADING);
 
-//#if !UNITY_EDITOR
+            //#if !UNITY_EDITOR
             _currentPlayer.LoadURL(_syncUrl);
-//#endif
+            //#endif
         }
 
         public void _StopVideo()
@@ -559,7 +564,7 @@ namespace Texel
                 //if (paused)
                 //    _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _currentPlayer.GetTime();
                 //else
-                    _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _videoTargetTime;
+                _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _videoTargetTime;
 
                 _UpdatePlayerState(PLAYER_STATE_PLAYING);
                 _UpdatePlayerPaused(false);
@@ -570,7 +575,7 @@ namespace Texel
                 RequestSerialization();
 
                 //if (!paused)
-                    _currentPlayer.SetTime(_videoTargetTime);
+                _currentPlayer.SetTime(_videoTargetTime);
 
                 SyncVideoImmediate();
             }
@@ -615,7 +620,8 @@ namespace Texel
                 bool hasPlaylist = Utilities.IsValid(playlist) && playlist.playlistEnabled;
                 if (_IsUrlValid(_syncQueuedUrl))
                     SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
-                else if (hasPlaylist && playlist._MoveNext()) {
+                else if (hasPlaylist && playlist._MoveNext())
+                {
                     SendCustomEventDelayedFrames("_PlayPlaylistUrl", 1);
                 }
                 else if (!hasPlaylist && _syncRepeatPlaylist)
@@ -741,7 +747,8 @@ namespace Texel
                     DebugLog("Unpausing video");
                     _currentPlayer.Play();
                     _UpdatePlayerPaused(false);
-                } else if (localPlayerState == PLAYER_STATE_PLAYING && _syncOwnerPaused)
+                }
+                else if (localPlayerState == PLAYER_STATE_PLAYING && _syncOwnerPaused)
                 {
                     DebugLog("Pausing video");
                     _currentPlayer.Pause();
@@ -779,7 +786,7 @@ namespace Texel
                 _PlayVideo(_pendingPlayUrl);
             if (_pendingLoadTime > 0 && Time.time > _pendingLoadTime)
                 _StartVideoLoad();
-            
+
             if (seekableSource && localPlayerState == PLAYER_STATE_PLAYING)
             {
                 float position = Mathf.Floor(_currentPlayer.GetTime());
@@ -1031,7 +1038,8 @@ namespace Texel
                 change = true;
             }
 
-            if (dataProxy.playerSource != source) {
+            if (dataProxy.playerSource != source)
+            {
                 if (oldSourceOverride == sourceOverride)
                 {
                     switch (dataProxy.playerSource)
@@ -1042,7 +1050,7 @@ namespace Texel
                 }
 
                 dataProxy.playerSource = (short)source;
-                
+
                 switch (dataProxy.playerSource)
                 {
                     case VIDEO_SOURCE_AVPRO:
