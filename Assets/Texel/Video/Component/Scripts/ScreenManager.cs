@@ -25,8 +25,14 @@ namespace Texel
 
         [Tooltip("Whether to update material assignments on a set of video screen objects")]
         public bool useMaterialOverrides = false;
+        [Tooltip("Use separate playback materials for Unity and AVPro player modes.  This may be necessary for some shaders that can't be configured with an AVPro flag.")]
+        public bool separatePlaybackMaterials = false;
         [Tooltip("The screen material to apply when video is playing back.  The object's current material is captured as the playback material by default.")]
         public Material playbackMaterial;
+        [Tooltip("The screen material to apply when video is playing back in Unity video mode.  The object's current material is captured as the playback material by default.")]
+        public Material playbackMaterialUnity;
+        [Tooltip("The screen material to apply when video is playing back in AVPro mode.  The object's current material is captured as the playback material by default.")]
+        public Material playbackMaterialAVPro;
         [Tooltip("The screen material to apply when no video is playing or loading.")]
         public Material logoMaterial;
         [Tooltip("The screen material to apply when a video is being loaded.  Falls back to Logo Material.")]
@@ -384,7 +390,7 @@ namespace Texel
 
                     Material newMat = replacementMat;
                     if (newMat == null)
-                        newMat = Utilities.IsValid(playbackMaterial) ? playbackMaterial : _originalScreenMaterial[i];
+                        newMat = _GetPlaybackMaterial(i);
                     if (newMat == null && logoMaterial != null)
                         newMat = logoMaterial;
 
@@ -478,7 +484,7 @@ namespace Texel
 
                     Material newMat = replacementMat;
                     if (newMat == null)
-                        newMat = Utilities.IsValid(playbackMaterial) ? playbackMaterial : _originalScreenMaterial[i];
+                        newMat = _GetPlaybackMaterial(i);
 
                     if (newMat != null)
                     {
@@ -545,6 +551,19 @@ namespace Texel
                 DebugLog("Capture valid");
         }
 
+        Material _GetPlaybackMaterial(int meshIndex)
+        {
+            if (!separatePlaybackMaterials)
+                return Utilities.IsValid(playbackMaterial) ? playbackMaterial : _originalScreenMaterial[meshIndex];
+
+            if (_screenSource == SCREEN_SOURCE_UNITY && Utilities.IsValid(playbackMaterialUnity))
+                return playbackMaterialUnity;
+            if (_screenSource == SCREEN_SOURCE_AVPRO && Utilities.IsValid(playbackMaterialAVPro))
+                return  playbackMaterialAVPro;
+
+            return _originalScreenMaterial[meshIndex];
+        }
+
         bool CaptureValid()
         {
             if (_screenSource == SCREEN_SOURCE_AVPRO && Utilities.IsValid(captureMaterial) && captureTextureProperty.Length > 0)
@@ -586,7 +605,10 @@ namespace Texel
         SerializedProperty debugLogProperty;
 
         SerializedProperty useMaterialOverrideProperty;
+        SerializedProperty separatePlaybackMaterialsProperty;
         SerializedProperty playbackMaterialProperty;
+        SerializedProperty playbackMaterialUnityProperty;
+        SerializedProperty playbackMaterialAVProProperty;
         SerializedProperty logoMaterialProperty;
         SerializedProperty loadingMaterialProperty;
         SerializedProperty syncMaterialProperty;
@@ -626,7 +648,10 @@ namespace Texel
             debugLogProperty = serializedObject.FindProperty(nameof(ScreenManager.debugLog));
 
             useMaterialOverrideProperty = serializedObject.FindProperty(nameof(ScreenManager.useMaterialOverrides));
+            separatePlaybackMaterialsProperty = serializedObject.FindProperty(nameof(ScreenManager.separatePlaybackMaterials));
             playbackMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.playbackMaterial));
+            playbackMaterialUnityProperty = serializedObject.FindProperty(nameof(ScreenManager.playbackMaterialUnity));
+            playbackMaterialAVProProperty = serializedObject.FindProperty(nameof(ScreenManager.playbackMaterialAVPro));
             logoMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.logoMaterial));
             loadingMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.loadingMaterial));
             syncMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.syncMaterial));
@@ -676,7 +701,15 @@ namespace Texel
             EditorGUILayout.PropertyField(useMaterialOverrideProperty);
             if (useMaterialOverrideProperty.boolValue)
             {
-                EditorGUILayout.PropertyField(playbackMaterialProperty);
+                EditorGUILayout.PropertyField(separatePlaybackMaterialsProperty);
+                if (separatePlaybackMaterialsProperty.boolValue)
+                {
+                    EditorGUILayout.PropertyField(playbackMaterialUnityProperty);
+                    EditorGUILayout.PropertyField(playbackMaterialAVProProperty);
+                }
+                else
+                    EditorGUILayout.PropertyField(playbackMaterialProperty);
+
                 EditorGUILayout.PropertyField(logoMaterialProperty);
                 EditorGUILayout.PropertyField(loadingMaterialProperty);
                 EditorGUILayout.PropertyField(syncMaterialProperty);
