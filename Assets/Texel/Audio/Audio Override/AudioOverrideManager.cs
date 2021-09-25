@@ -24,6 +24,12 @@ namespace Texel
             if (Utilities.IsValid(overrideZones))
                 zoneCount = overrideZones.Length;
 
+            for (int i = 0; i < overrideZones.Length; i++)
+            {
+                if (Utilities.IsValid(overrideZones[i]))
+                    overrideZones[i]._Register(this, i);
+            }
+
             SendCustomEventDelayedSeconds("_RebuildLocal", 1f);
         }
 
@@ -31,6 +37,8 @@ namespace Texel
         {
             if (waitForInit)
                 return;
+
+            //Debug.Log($"Player enter zone {zone._ZoneId()}");
 
             if (player.isLocal)
                 _RebuildLocal();
@@ -42,6 +50,8 @@ namespace Texel
         {
             if (waitForInit)
                 return;
+
+            //Debug.Log($"Player leave zone {zone._ZoneId()}");
 
             if (player.isLocal)
                 _RebuildLocal();
@@ -58,6 +68,14 @@ namespace Texel
                 return;
 
             cachedLocalZone = _FindActiveZone(player);
+            //if (!Utilities.IsValid(cachedLocalZone))
+            //    Debug.Log("Player not in zone");
+            //else
+            //    Debug.Log($"Player in zone {cachedLocalZone._ZoneId()}");
+
+            if (!Utilities.IsValid(cachedLocalZone))
+                cachedLocalZone = defaultZone;
+
             _RebuildAll(player, cachedLocalZone);
         }
 
@@ -89,7 +107,7 @@ namespace Texel
             if (zoneCount <= 0)
                 return null;
 
-            for (int i = zoneCount - 1; i >= 0; i--)
+            for (int i = 0; i < overrideZones.Length; i++)
             {
                 AudioOverrideZone zone = overrideZones[i];
                 if (zone.membership._ContainsPlayer(player))

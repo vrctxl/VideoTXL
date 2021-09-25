@@ -15,9 +15,12 @@ namespace Texel
         public CompoundZoneTrigger zone;
 
         public AudioOverrideSettings localZoneSettings;
+        public bool localZoneEnabled = true;
         public AudioOverrideZone[] linkedZones;
         public AudioOverrideSettings[] linkedZoneSettings;
+        public bool[] linkedZoneEnabled;
         public AudioOverrideSettings defaultSettings;
+        public bool defaultEnabled = true;
 
         [NonSerialized]
         public VRCPlayerApi playerArg;
@@ -30,7 +33,7 @@ namespace Texel
         bool hasLocal = false;
         int linkCount = 0;
         bool hasDefault = false;
-        
+
         void Start()
         {
             if (Utilities.IsValid(zone))
@@ -49,6 +52,48 @@ namespace Texel
             manager = overrideManager;
             managedZoneId = zoneId;
             hasManager = Utilities.IsValid(manager);
+        }
+
+        public int _ZoneId()
+        {
+            return managedZoneId;
+        }
+
+        public void _SetLocalActive(bool state)
+        {
+            if (localZoneEnabled != state)
+            {
+                localZoneEnabled = state;
+                if (hasManager)
+                    manager._RebuildLocal();
+            }
+        }
+
+        public void _SetDefaultActive(bool state)
+        {
+            if (defaultEnabled != state)
+            {
+                defaultEnabled = state;
+                if (hasManager)
+                    manager._RebuildLocal();
+            }
+        }
+
+        public void _SetLinkedZoneActive(AudioOverrideZone zone, bool state)
+        {
+            for (int i = 0; i < linkedZones.Length; i++)
+            {
+                if (zone == linkedZones[i])
+                {
+                    if (linkedZoneEnabled[i] != state)
+                    {
+                        linkedZoneEnabled[i] = state;
+                        if (hasManager)
+                            manager._RebuildLocal();
+                    }
+                    break;
+                }
+            }
         }
 
         public void _PlayerEnter()
@@ -77,7 +122,7 @@ namespace Texel
 
         public bool _Apply(VRCPlayerApi player)
         {
-            if (hasLocal && _ContainsPlayer(player))
+            if (hasLocal && localZoneEnabled && _ContainsPlayer(player))
             {
                 localZoneSettings._Apply(player);
                 return true;
@@ -86,14 +131,15 @@ namespace Texel
             for (int i = 0; i < linkCount; i++)
             {
                 AudioOverrideZone zone = linkedZones[i];
-                if (zone._ContainsPlayer(player))
+                bool zoneEnabled = linkedZoneEnabled[i];
+                if (zoneEnabled && zone._ContainsPlayer(player))
                 {
                     linkedZoneSettings[i]._Apply(player);
                     return true;
                 }
             }
 
-            if (hasDefault)
+            if (hasDefault && defaultEnabled)
             {
                 defaultSettings._Apply(player);
                 return true;
