@@ -38,9 +38,7 @@ namespace Texel
         [Tooltip("After sending a leave event, do not send another until enter has been triggered")]
         public bool latchUntilEnter;
 
-        bool hasPlayerEnter = false;
-        bool hasPlayerLeave = false;
-        bool hasTargetVariable = false;
+        int handlerCount = 0;
 
         [NonSerialized]
         public int colliderCount = 0;
@@ -51,33 +49,78 @@ namespace Texel
 
         Collider[] colliders;
 
+        Component[] targetBehaviors;
+        string[] playerEnterEvents;
+        string[] playerLeaveEvents;
+        string[] playerTargetVariables;
+
         public const int SET_NONE = 0;
         public const int SET_UNION = 1;
         public const int SET_INTERSECT = 2;
 
         void Start()
         {
-            _Validate();
+            if (configureEvents)
+                _Register(targetBehavior, playerEnterEvent, playerLeaveEvent, playerTargetVariable);
 
             if (colliderCount == 0)
                 _InitColliders();
         }
 
-        void _Validate()
-        {
-            hasPlayerEnter = Utilities.IsValid(targetBehavior) && playerEnterEvent != null && playerEnterEvent != "";
-            hasPlayerLeave = Utilities.IsValid(targetBehavior) && playerLeaveEvent != null && playerLeaveEvent != "";
-            hasTargetVariable = Utilities.IsValid(targetBehavior) && playerTargetVariable != null && playerTargetVariable != "";
-        }
-
         public void _Register(UdonBehaviour target, string enterEvent, string leaveEvent, string targetVariable)
         {
-            targetBehavior = target;
-            playerEnterEvent = enterEvent;
-            playerLeaveEvent = leaveEvent;
-            playerTargetVariable = targetVariable;
+            if (!Utilities.IsValid(target))
+                return;
 
-            _Validate();
+            if (!Utilities.IsValid(targetBehaviors))
+            {
+                targetBehaviors = new Component[0];
+                playerEnterEvents = new string[0];
+                playerLeaveEvents = new string[0];
+                playerTargetVariables = new string[0];
+            }
+
+            if (enterEvent == "")
+                enterEvent = null;
+            if (leaveEvent == "")
+                leaveEvent = null;
+            if (targetVariable == "")
+                targetVariable = null;
+
+            // For shortcut case
+            if (handlerCount == 0)
+            {
+                targetBehavior = target;
+                playerEnterEvent = enterEvent;
+                playerLeaveEvent = leaveEvent;
+                playerTargetVariable = targetVariable;
+            }
+
+            int count = targetBehaviors.Length + 1;
+            Component[] newTargetBehaviors = new Component[count];
+            string[] newEnterEvents = new string[count];
+            string[] newLeaveEvents = new string[count];
+            string[] newVariables = new string[count];
+
+            for (int i = 0; i < targetBehaviors.Length; i++)
+            {
+                newTargetBehaviors[i] = targetBehaviors[i];
+                newEnterEvents[i] = playerEnterEvents[i];
+                newLeaveEvents[i] = playerLeaveEvents[i];
+                newVariables[i] = playerTargetVariables[i];
+            }
+
+            newTargetBehaviors[count - 1] = target;
+            newEnterEvents[count - 1] = enterEvent;
+            newLeaveEvents[count - 1] = leaveEvent;
+            newVariables[count - 1] = targetVariable;
+
+            targetBehaviors = newTargetBehaviors;
+            playerEnterEvents = newEnterEvents;
+            playerLeaveEvents = newLeaveEvents;
+            playerTargetVariables = newVariables;
+
+            handlerCount += 1;
         }
 
         void _InitColliders()
@@ -127,15 +170,30 @@ namespace Texel
             }
         }
 
-        void _SendPlayerEnter(VRCPlayerApi player)
+        void _SendPlayerEvent(VRCPlayerApi player, UdonBehaviour target, string eventName, string varName)
         {
-            if (!hasPlayerEnter)
+            if (eventName == null)
                 return;
 
-            if (hasTargetVariable)
-                targetBehavior.SetProgramVariable(playerTargetVariable, player);
+            if (varName != null)
+                target.SetProgramVariable(varName, player);
 
-            targetBehavior.SendCustomEvent(playerEnterEvent);
+            target.SendCustomEvent(eventName);
+        }
+
+        void _SendPlayerEnter(VRCPlayerApi player)
+        {
+            if (handlerCount == 1)
+                _SendPlayerEvent(player, targetBehavior, playerEnterEvent, playerTargetVariable);
+            else
+            {
+                for (int i = 0; i < handlerCount; i++)
+                {
+                    UdonBehaviour target = (UdonBehaviour)targetBehaviors[i];
+                    _SendPlayerEvent(player, target, playerEnterEvents[i], playerTargetVariables[i]);
+                }
+            }
+
             leaveLatched = false;
         }
 
@@ -171,13 +229,17 @@ namespace Texel
 
         void _SendPlayerLeave(VRCPlayerApi player)
         {
-            if (!hasPlayerLeave)
-                return;
+            if (handlerCount == 1)
+                _SendPlayerEvent(player, targetBehavior, playerLeaveEvent, playerTargetVariable);
+            else
+            {
+                for (int i = 0; i < handlerCount; i++)
+                {
+                    UdonBehaviour target = (UdonBehaviour)targetBehaviors[i];
+                    _SendPlayerEvent(player, target, playerLeaveEvents[i], playerTargetVariables[i]);
+                }
+            }
 
-            if (hasTargetVariable)
-                targetBehavior.SetProgramVariable(playerTargetVariable, player);
-
-            targetBehavior.SendCustomEvent(playerLeaveEvent);
             enterLatched = false;
         }
 
