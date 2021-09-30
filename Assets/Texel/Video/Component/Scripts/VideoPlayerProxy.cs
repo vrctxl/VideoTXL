@@ -37,6 +37,8 @@ namespace Texel
         [NonSerialized]
         public bool repeatPlaylist;
         [NonSerialized]
+        public bool quest;
+        [NonSerialized]
         public VRCUrl currentUrl = VRCUrl.Empty;
         [NonSerialized]
         public VRCUrl lastUrl = VRCUrl.Empty;

@@ -151,6 +151,7 @@ namespace Texel
         void Start()
         {
             dataProxy._Init();
+            dataProxy.quest = Utilities.IsValid(questCheckObject) && questCheckObject.activeInHierarchy;
 
             _hasAccessControl = Utilities.IsValid(accessControl);
 

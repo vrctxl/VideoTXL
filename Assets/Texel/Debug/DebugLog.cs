@@ -11,11 +11,20 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class DebugLog : UdonSharpBehaviour
     {
+        public string title;
+        public Text titleText;
         public Text debugText;
-        public int lineCount = 28;
+        public int lineCount = 27;
+        public bool timestamp = false;
 
         string[] debugLines;
         int debugIndex = 0;
+
+        private void Start()
+        {
+            if (Utilities.IsValid(titleText))
+                titleText.text = title;
+        }
 
         public void _Write(string component, string message)
         {
@@ -26,7 +35,11 @@ namespace Texel
                     debugLines[i] = "";
             }
 
-            debugLines[debugIndex] = $"[{component}] {message}";
+            string stamp = "";
+            if (timestamp)
+                stamp = string.Format("[{0,9:F3}] ", Time.time);
+
+            debugLines[debugIndex] = $"{stamp}[{component}] {message}";
 
             string buffer = "";
             for (int i = debugIndex + 1; i < debugLines.Length; i++)
@@ -39,7 +52,8 @@ namespace Texel
             if (debugIndex >= debugLines.Length)
                 debugIndex = 0;
 
-            debugText.text = buffer;
+            if (Utilities.IsValid(debugText))
+                debugText.text = buffer;
         }
     }
 }

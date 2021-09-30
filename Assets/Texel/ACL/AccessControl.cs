@@ -17,6 +17,7 @@ namespace Texel
         [Header("Access Options")]
         public bool allowInstanceOwner = true;
         public bool allowMaster = true;
+        public bool restrictMasterIfOwnerPresent = false;
         public bool allowWhitelist = false;
         public bool allowAnyone = false;
 
@@ -36,6 +37,9 @@ namespace Texel
         bool _localPlayerMaster = false;
         bool _localPlayerInstanceOwner = false;
         bool _localCalculatedAccess = false;
+
+        bool _worldHasOwner = false;
+        VRCPlayerApi[] _playerBuffer = new VRCPlayerApi[100];
 
         UdonBehaviour cachedAccessHandler;
         Component[] accessHandlers;
@@ -71,6 +75,35 @@ namespace Texel
                 DebugLog($"Whitelist: {_localPlayerWhitelisted}");
             if (allowAnyone)
                 DebugLog($"Anyone: True");
+
+            _SearchInstanceOwner();
+        }
+
+        public override void OnPlayerJoined(VRCPlayerApi player)
+        {
+            _SearchInstanceOwner();
+        }
+
+        public override void OnPlayerLeft(VRCPlayerApi player)
+        {
+            _SearchInstanceOwner();
+        }
+
+        void _SearchInstanceOwner()
+        {
+            int playerCount = VRCPlayerApi.GetPlayerCount();
+            _playerBuffer = VRCPlayerApi.GetPlayers(_playerBuffer);
+
+            _worldHasOwner = false;
+            for (int i = 0; i < playerCount; i++)
+            {
+                VRCPlayerApi player = _playerBuffer[i];
+                if (Utilities.IsValid(player) && player.IsValid() && player.isInstanceOwner)
+                {
+                    _worldHasOwner = true;
+                    break;
+                }
+            }
         }
 
         public bool _PlayerWhitelisted(VRCPlayerApi player)
@@ -103,7 +136,13 @@ namespace Texel
             if (handlerResult == RESULT_ALLOW)
                 return true;
 
-            return _localCalculatedAccess || (allowMaster && isMaster);
+            if (_localCalculatedAccess)
+                return true;
+
+            if (allowMaster && isMaster)
+                return !restrictMasterIfOwnerPresent || !_worldHasOwner;
+
+            return false;
         }
 
         public bool _LocalHasAccess()
