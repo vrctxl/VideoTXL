@@ -372,10 +372,12 @@ namespace Texel
             _checkFrameCount = 0;
 
             bool captureValid = CaptureValid();
+            bool usingVideoSource = _screenMode == SCREEN_MODE_NORMAL;
 
             if (useMaterialOverrides)
             {
                 Material replacementMat = _GetReplacementMaterial(captureValid);
+                usingVideoSource |= replacementMat == null;
                 
 //#if UNITY_EDITOR
 //                if (editorMaterial != null)
@@ -406,6 +408,7 @@ namespace Texel
             if (useTextureOverrides)
             {
                 Texture replacementTex = _GetReplacemenTexture(captureValid);
+                usingVideoSource |= replacementTex == null;
                 
 //#if UNITY_EDITOR
 //                if (editorTexture != null)
@@ -441,11 +444,14 @@ namespace Texel
                 }
             }
 
-//#if !UNITY_EDITOR
-            if (!captureValid)
-                SendCustomEventDelayedFrames("_CheckUpdateScreenMaterial", 1);
-            else
-                DebugLog("Capture valid");
+            //#if !UNITY_EDITOR
+            if (usingVideoSource)
+            {
+                if (!captureValid)
+                    SendCustomEventDelayedFrames("_CheckUpdateScreenMaterial", 1);
+                else
+                    DebugLog("Capture valid");
+            }
 //#endif
         }
 

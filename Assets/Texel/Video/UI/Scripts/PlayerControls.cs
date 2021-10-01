@@ -101,8 +101,12 @@ namespace Texel
         VRCUrl pendingSubmit;
         bool pendingFromLoadOverride = false;
 
+        VRCPlayerApi[] _playerBuffer = new VRCPlayerApi[100];
+
         void Start()
         {
+            _PopulateMissingReferences();
+
             infoIcon.color = normalColor;
             _DisableAllVideoControls();
 
@@ -158,7 +162,7 @@ namespace Texel
             loadIcon.color = disabledColor;
             resyncIcon.color = disabledColor;
             repeatIcon.color = disabledColor;
-            shuffleIcon.color = disabledColor;
+            //shuffleIcon.color = disabledColor;
             playCurrentIcon.color = disabledColor;
             playLastIcon.color = disabledColor;
             nextIcon.color = disabledColor;
@@ -327,7 +331,7 @@ namespace Texel
                 return;
 
             if (videoPlayer._CanTakeControl())
-                videoPlayer._PlayPlaylistUrl();
+                videoPlayer._ChangeUrl(videoPlayer.lastUrl);
             else
                 _SetStatusOverride(MakeOwnerMessage(), 3);
         }
@@ -361,9 +365,9 @@ namespace Texel
                 return;
             }
 
-            if (videoPlayer.localPlayerState == PLAYER_STATE_ERROR)
-                loadActive = false;
-            else
+            //if (videoPlayer.localPlayerState == PLAYER_STATE_ERROR)
+            //    loadActive = false;
+            //else
                 loadActive = !loadActive;
 
             _UpdateAll();
@@ -381,6 +385,7 @@ namespace Texel
         }
 
         bool _draggingProgressSlider = false;
+        bool _updatingProgressSlider = false;
 
         public void _HandleProgressBeginDrag()
         {
@@ -391,11 +396,12 @@ namespace Texel
         public void _HandleProgressEndDrag()
         {
             _draggingProgressSlider = false;
+            _HandleProgressSliderChanged();
         }
 
         public void _HandleProgressSliderChanged()
         {
-            if (!_draggingProgressSlider)
+            if (_draggingProgressSlider || _updatingProgressSlider)
                 return;
 
             if (float.IsInfinity(dataProxy.trackDuration) || dataProxy.trackDuration <= 0)
@@ -457,10 +463,10 @@ namespace Texel
             if (!Utilities.IsValid(playlist) || !Utilities.IsValid(videoPlayer))
                 return;
 
+            playlist._SetEnabled(true);
             if (!playlist.playlistEnabled)
                 return;
 
-            playlist._SetEnabled(true);
             videoPlayer._ChangeUrl(playlist._GetCurrent());
         }
 
@@ -538,7 +544,10 @@ namespace Texel
                     SetStatusText(positionStr + " / " + durationStr);
                     progressSliderControl.SetActive(true);
                     syncSliderControl.SetActive(false);
+
+                    _updatingProgressSlider = true;
                     progressSlider.value = Mathf.Clamp01(dataProxy.trackPosition / dataProxy.trackDuration);
+                    _updatingProgressSlider = false;
                 }
             }
         }
@@ -612,13 +621,23 @@ namespace Texel
 
             int playerState = dataProxy.playerState;
 
+            if (enableControl && loadActive)
+            {
+                loadIcon.color = activeColor;
+                urlInputControl.SetActive(true);
+                urlInput.readOnly = !canControl;
+                SetPlaceholderText("Enter Video URL...");
+                SetStatusText("");
+            } else
+                loadIcon.color = enableControl ? normalColor : disabledColor;
+
             if (playerState == PLAYER_STATE_PLAYING && !loadActive)
             {
                 urlInput.readOnly = true;
                 urlInputControl.SetActive(false);
 
                 stopIcon.color = enableControl ? normalColor : disabledColor;
-                loadIcon.color = enableControl ? normalColor : disabledColor;
+                //loadIcon.color = enableControl ? normalColor : disabledColor;
                 resyncIcon.color = normalColor;
 
                 if (dataProxy.paused)
@@ -634,7 +653,7 @@ namespace Texel
                 _draggingProgressSlider = false;
 
                 stopIcon.color = disabledColor;
-                loadIcon.color = disabledColor;
+                //loadIcon.color = disabledColor;
                 progressSliderControl.SetActive(false);
                 syncSliderControl.SetActive(false);
                 urlInputControl.SetActive(true);
@@ -642,60 +661,66 @@ namespace Texel
                 if (playerState == PLAYER_STATE_LOADING)
                 {
                     stopIcon.color = enableControl ? normalColor : disabledColor;
-                    loadIcon.color = enableControl ? normalColor : disabledColor;
+                    //loadIcon.color = enableControl ? normalColor : disabledColor;
                     resyncIcon.color = normalColor;
                     pauseIcon.color = disabledColor;
 
-                    SetPlaceholderText("Loading...");
-                    urlInput.readOnly = true;
-                    SetStatusText("");
+                    if (!loadActive)
+                    {
+                        SetPlaceholderText("Loading...");
+                        urlInput.readOnly = true;
+                        SetStatusText("");
+                    }
                 }
                 else if (playerState == PLAYER_STATE_ERROR)
                 {
                     stopIcon.color = disabledColor;
-                    loadIcon.color = normalColor;
+                    //loadIcon.color = normalColor;
                     resyncIcon.color = normalColor;
                     pauseIcon.color = disabledColor;
-                    loadActive = false;
+                    //loadActive = false;
 
-                    switch (videoPlayer.localLastErrorCode)
+                    if (!loadActive)
                     {
-                        case VideoError.RateLimited:
-                            SetPlaceholderText("Rate limited, wait and try again");
-                            break;
-                        case VideoError.PlayerError:
-                            SetPlaceholderText("Video player error");
-                            break;
-                        case VideoError.InvalidURL:
-                            SetPlaceholderText("Invalid URL or source offline");
-                            break;
-                        case VideoError.AccessDenied:
-                            SetPlaceholderText("Video blocked, enable untrusted URLs");
-                            break;
-                        case VideoError.Unknown:
-                        default:
-                            SetPlaceholderText("Failed to load video");
-                            break;
-                    }
+                        switch (videoPlayer.localLastErrorCode)
+                        {
+                            case VideoError.RateLimited:
+                                SetPlaceholderText("Rate limited, wait and try again");
+                                break;
+                            case VideoError.PlayerError:
+                                SetPlaceholderText("Video player error");
+                                break;
+                            case VideoError.InvalidURL:
+                                SetPlaceholderText("Invalid URL or source offline");
+                                break;
+                            case VideoError.AccessDenied:
+                                SetPlaceholderText("Video blocked, enable untrusted URLs");
+                                break;
+                            case VideoError.Unknown:
+                            default:
+                                SetPlaceholderText("Failed to load video");
+                                break;
+                        }
 
-                    urlInput.readOnly = !canControl;
-                    SetStatusText("");
+                        urlInput.readOnly = !canControl;
+                        SetStatusText("");
+                    }
                 }
                 else if (playerState == PLAYER_STATE_PLAYING || playerState == PLAYER_STATE_STOPPED)
                 {
                     if (playerState == PLAYER_STATE_STOPPED)
                     {
-                        loadActive = false;
+                        //loadActive = false;
                         pendingFromLoadOverride = false;
                         stopIcon.color = disabledColor;
-                        loadIcon.color = disabledColor;
+                        //loadIcon.color = disabledColor;
                         resyncIcon.color = disabledColor;
                         pauseIcon.color = disabledColor;
                     }
                     else
                     {
                         stopIcon.color = enableControl ? normalColor : disabledColor;
-                        loadIcon.color = activeColor;
+                        //loadIcon.color = activeColor;
                         resyncIcon.color = normalColor;
 
                         if (dataProxy.paused)
@@ -704,16 +729,19 @@ namespace Texel
                             pauseIcon.color = (enableControl && videoPlayer.seekableSource) ? normalColor : disabledColor;
                     }
 
-                    urlInput.readOnly = !canControl;
-                    if (canControl)
+                    if (!loadActive)
                     {
-                        SetPlaceholderText("Enter Video URL...");
-                        SetStatusText("");
-                    }
-                    else
-                    {
-                        SetPlaceholderText("");
-                        SetStatusText(MakeOwnerMessage());
+                        urlInput.readOnly = !canControl;
+                        if (canControl)
+                        {
+                            SetPlaceholderText("Enter Video URL...");
+                            SetStatusText("");
+                        }
+                        else
+                        {
+                            SetPlaceholderText("");
+                            SetStatusText(MakeOwnerMessage());
+                        }
                     }
                 }
             }
@@ -776,10 +804,9 @@ namespace Texel
         void _FindOwners()
         {
             int playerCount = VRCPlayerApi.GetPlayerCount();
-            VRCPlayerApi[] playerList = new VRCPlayerApi[playerCount];
-            playerList = VRCPlayerApi.GetPlayers(playerList);
+            _playerBuffer = VRCPlayerApi.GetPlayers(_playerBuffer);
 
-            foreach (VRCPlayerApi player in playerList)
+            foreach (VRCPlayerApi player in _playerBuffer)
             {
                 if (!Utilities.IsValid(player) || !player.IsValid())
                     continue;
@@ -798,14 +825,15 @@ namespace Texel
                 return $"Controls locked to master {instanceMaster} and owner {instanceOwner}";
         }
 
+        public override void OnPlayerJoined(VRCPlayerApi player)
+        {
+            _FindOwners();
+            _RefreshPlayerAccessIcon();
+        }
+
         public override void OnPlayerLeft(VRCPlayerApi player)
         {
-            VRCPlayerApi owner = Networking.GetOwner(gameObject);
-            if (Utilities.IsValid(owner) && owner.IsValid())
-                instanceMaster = owner.displayName;
-            else
-                instanceMaster = "";
-
+            _FindOwners();
             _RefreshPlayerAccessIcon();
         }
 
@@ -848,6 +876,126 @@ namespace Texel
                 masterIcon.enabled = true;
             else if (acl.allowWhitelist && acl._LocalWhitelisted())
                 whitelistIcon.enabled = true;
+        }
+
+        void _PopulateMissingReferences()
+        {
+            // Volume
+
+            if (!Utilities.IsValid(volumeSliderControl))
+                volumeSliderControl = _FindGameObject("MainPanel/UpperRow/VolumeGroup/Slider");
+            if (!Utilities.IsValid(volumeSlider))
+                volumeSlider = (Slider)_FindComponent("MainPanel/UpperRow/VolumeGroup/Slider", typeof(Slider));
+            if (!Utilities.IsValid(muteToggleOn))
+                muteToggleOn = _FindGameObject("MainPanel/UpperRow/VolumeGroup/MuteButton/IconMuted");
+            if (!Utilities.IsValid(muteToggleOff))
+                muteToggleOff = _FindGameObject("MainPanel/UpperRow/VolumeGroup/MuteButton/IconVolume");
+
+            // Icons
+
+            if (!Utilities.IsValid(stopIcon))
+                stopIcon = (Image)_FindComponent("MainPanel/UpperRow/ControlGroup/StopButton/IconStop", typeof(Image));
+            if (!Utilities.IsValid(pauseIcon))
+                pauseIcon = (Image)_FindComponent("MainPanel/UpperRow/ControlGroup/PauseButton/IconPause", typeof(Image));
+            if (!Utilities.IsValid(lockedIcon))
+                lockedIcon = (Image)_FindComponent("MainPanel/LowerRow/InputProgress/MasterLockButton/IconLocked", typeof(Image));
+            if (!Utilities.IsValid(unlockedIcon))
+                unlockedIcon = (Image)_FindComponent("MainPanel/LowerRow/InputProgress/MasterLockButton/IconUnlocked", typeof(Image));
+            if (!Utilities.IsValid(loadIcon))
+                loadIcon = (Image)_FindComponent("MainPanel/LowerRow/InputProgress/LoadButton/IconLoad", typeof(Image));
+            if (!Utilities.IsValid(resyncIcon))
+                resyncIcon = (Image)_FindComponent("MainPanel/UpperRow/SyncGroup/ResyncButton/IconResync", typeof(Image));
+            if (!Utilities.IsValid(repeatIcon))
+                repeatIcon = (Image)_FindComponent("MainPanel/UpperRow/ButtonGroup/RepeatButton/IconRepeat", typeof(Image));
+            if (!Utilities.IsValid(playlistIcon))
+                playlistIcon = (Image)_FindComponent("MainPanel/UpperRow/ButtonGroup/PlaylistButton/IconPlaylist", typeof(Image));
+            if (!Utilities.IsValid(infoIcon))
+                infoIcon = (Image)_FindComponent("MainPanel/UpperRow/ButtonGroup/InfoButton/IconInfo", typeof(Image));
+            if (!Utilities.IsValid(nextIcon))
+                nextIcon = (Image)_FindComponent("MainPanel/UpperRow/ControlGroup/NextButton/IconNext", typeof(Image));
+            if (!Utilities.IsValid(prevIcon))
+                prevIcon = (Image)_FindComponent("MainPanel/UpperRow/ControlGroup/PrevButton/IconPrev", typeof(Image));
+            if (!Utilities.IsValid(masterIcon))
+                masterIcon = (Image)_FindComponent("MainPanel/LowerRow/InputProgress/PlayerAccess/IconMaster", typeof(Image));
+            if (!Utilities.IsValid(whitelistIcon))
+                whitelistIcon = (Image)_FindComponent("MainPanel/LowerRow/InputProgress/PlayerAccess/IconWhitelist", typeof(Image));
+
+            // Super Bar
+
+            if (!Utilities.IsValid(progressSliderControl))
+                progressSliderControl = _FindGameObject("MainPanel/LowerRow/InputProgress/TrackingSlider");
+            if (!Utilities.IsValid(progressSlider))
+                progressSlider = (Slider)_FindComponent("MainPanel/LowerRow/InputProgress/TrackingSlider", typeof(Slider));
+            if (!Utilities.IsValid(syncSliderControl))
+                syncSliderControl = _FindGameObject("MainPanel/LowerRow/InputProgress/SyncSlider");
+            if (!Utilities.IsValid(syncSlider))
+                syncSlider = (Slider)_FindComponent("MainPanel/LowerRow/InputProgress/SyncSlider", typeof(Slider));
+            if (!Utilities.IsValid(urlInputControl))
+                urlInputControl = _FindGameObject("MainPanel/LowerRow/InputProgress/InputField");
+            if (!Utilities.IsValid(urlInput))
+                urlInput = (VRCUrlInputField)_FindComponent("MainPanel/LowerRow/InputProgress/InputField", typeof(VRCUrlInputField));
+            if (!Utilities.IsValid(urlText))
+                urlText = (Text)_FindComponent("MainPanel/LowerRow/InputProgress/InputField/TextMask/Text", typeof(Text));
+            if (!Utilities.IsValid(statusText))
+                statusText = (Text)_FindComponent("MainPanel/LowerRow/InputProgress/StatusText", typeof(Text));
+            if (!Utilities.IsValid(placeholderText))
+                placeholderText = (Text)_FindComponent("MainPanel/LowerRow/InputProgress/InputField/TextMask/Placeholder", typeof(Text));
+            if (!Utilities.IsValid(modeText))
+                modeText = (Text)_FindComponent("MainPanel/LowerRow/InputProgress/SourceMode", typeof(Text));
+            if (!Utilities.IsValid(queuedText))
+                queuedText = (Text)_FindComponent("MainPanel/LowerRow/InputProgress/QueuedText", typeof(Text));
+            if (!Utilities.IsValid(playlistText))
+                playlistText = (Text)_FindComponent("MainPanel/LowerRow/InputProgress/PlaylistText", typeof(Text));
+
+            // Info Panel 
+
+            if (!Utilities.IsValid(infoPanel))
+                infoPanel = _FindGameObject("InfoPanel");
+            if (!Utilities.IsValid(instanceOwnerText))
+                instanceOwnerText = (Text)_FindComponent("InfoPanel/Fields/InstanceOwner/InstanceOwnerName", typeof(Text));
+            if (!Utilities.IsValid(masterText))
+                masterText = (Text)_FindComponent("InfoPanel/Fields/Master/MasterName", typeof(Text));
+            if (!Utilities.IsValid(playerOwnerText))
+                playerOwnerText = (Text)_FindComponent("InfoPanel/Fields/PlayerOwner/PlayerOwnerName", typeof(Text));
+            if (!Utilities.IsValid(videoOwnerText))
+                videoOwnerText = (Text)_FindComponent("InfoPanel/Fields/VideoOwner/VideoOwnerName", typeof(Text));
+            if (!Utilities.IsValid(currentVideoInput))
+                currentVideoInput = (InputField)_FindComponent("InfoPanel/Fields/CurrentVideo/InputField", typeof(InputField));
+            if (!Utilities.IsValid(currentVideoText))
+                currentVideoText = (Text)_FindComponent("InfoPanel/Fields/CurrentVideo/InputField/TextMask/Text", typeof(Text));
+            if (!Utilities.IsValid(playCurrentIcon))
+                playCurrentIcon = (Image)_FindComponent("InfoPanel/Fields/CurrentVideo/InputField/PlayButton/IconPlay", typeof(Image));
+            if (!Utilities.IsValid(lastVideoInput))
+                lastVideoInput = (InputField)_FindComponent("InfoPanel/Fields/LastVideo/InputField", typeof(InputField));
+            if (!Utilities.IsValid(lastVideoText))
+                lastVideoText = (Text)_FindComponent("InfoPanel/Fields/LastVideo/InputField/TextMask/Text", typeof(Text));
+            if (!Utilities.IsValid(playLastIcon))
+                playLastIcon = (Image)_FindComponent("InfoPanel/Fields/LastVideo/InputField/PlayButton/IconPlay", typeof(Image));
+
+        }
+
+        GameObject _FindGameObject (string path)
+        {
+            if (Utilities.IsValid(videoPlayer) && Utilities.IsValid(videoPlayer.debugLog))
+                videoPlayer.debugLog._Write("PlayerControls", $"Missing UI Game Object {path}");
+
+            Transform t = transform.Find(path);
+            if (!Utilities.IsValid(t))
+                return null;
+
+            return t.gameObject;
+        }
+
+        Component _FindComponent (string path, System.Type type)
+        {
+            if (Utilities.IsValid(videoPlayer) && Utilities.IsValid(videoPlayer.debugLog))
+                videoPlayer.debugLog._Write("PlayerControls", $"Missing UI Component {path}:{type}");
+
+            Transform t = transform.Find(path);
+            if (!Utilities.IsValid(t))
+                return null;
+
+            return t.GetComponent(type);
         }
     }
 

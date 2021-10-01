@@ -51,6 +51,16 @@ namespace Texel
         [Tooltip("Whether to keep playing the same URL if an error occurs")]
         public bool retryOnError = true;
 
+        [Header("Sync Options")]
+        [Tooltip("How often to check if video playback has fallen out of sync")]
+        public float syncFrequency = 5;
+
+        [Tooltip("How far video playback must have fallen out of sync to perform a correction")]
+        public float syncThreshold = 1;
+
+        [Tooltip("Experimental.  Video playback will periodically resync audio and video.  May cause stuttering or temporary playback failure.")]
+        public bool autoInternalAVSync = false;
+
         [Header("Internal Objects")]
         [Tooltip("AVPro video player component")]
         public VRCAVProVideoPlayer avProVideo;
@@ -58,8 +68,6 @@ namespace Texel
         public VRCUnityVideoPlayer unityVideo;
 
         float retryTimeout = 6;
-        float syncFrequency = 5;
-        float syncThreshold = 1;
         float syncLatchUpdateFrequency = 0.2f;
 
         [UdonSynced]
@@ -159,11 +167,13 @@ namespace Texel
             {
                 avProVideo.Loop = false;
                 avProVideo.Stop();
+                avProVideo.EnableAutomaticResync = false;
             }
             if (Utilities.IsValid(unityVideo))
             {
                 unityVideo.Loop = false;
                 unityVideo.Stop();
+                unityVideo.EnableAutomaticResync = false;
             }
 
             //_currentPlayer = avProVideo;
@@ -193,7 +203,8 @@ namespace Texel
                     _PlayVideo(defaultUrl);
             }
 
-            //SendCustomEventDelayedSeconds("_AVSyncStart", 1);
+            if (autoInternalAVSync)
+                SendCustomEventDelayedSeconds("_AVSyncStart", 1);
         }
 
         public void _TriggerPlay()
@@ -232,10 +243,10 @@ namespace Texel
             {
                 _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _currentPlayer.GetTime();
                 _videoTargetTime = _currentPlayer.GetTime();
-                _currentPlayer.Pause();
+                _VideoPause();
             }
             else
-                _currentPlayer.Play();
+                _VideoPlay();
 
             _UpdatePlayerPaused(_syncOwnerPaused);
 
@@ -305,6 +316,7 @@ namespace Texel
 
         public void _SetTargetTime(float time)
         {
+            DebugLog($"Set target time: {time:N3}");
             if (_syncLocked && !_CanTakeControl())
                 return;
             if (localPlayerState != PLAYER_STATE_PLAYING)
@@ -387,7 +399,7 @@ namespace Texel
                 float duration = _currentPlayer.GetDuration();
                 float remaining = duration - _currentPlayer.GetTime();
                 if (remaining > 2)
-                    _currentPlayer.Stop();
+                    _VideoStop();
             }
 
             _StartVideoLoad();
@@ -493,11 +505,10 @@ namespace Texel
             if (_syncUrl == null || _syncUrl.Get() == "")
                 return;
 
-            DebugLog("Start video load " + _syncUrl);
             _UpdatePlayerState(PLAYER_STATE_LOADING);
 
             //#if !UNITY_EDITOR
-            _currentPlayer.LoadURL(_syncUrl);
+            _VideoLoadURL(_syncUrl);
             //#endif
         }
 
@@ -509,8 +520,8 @@ namespace Texel
                 _lastVideoPosition = _currentPlayer.GetTime();
 
             _UpdatePlayerState(PLAYER_STATE_STOPPED);
-
-            _currentPlayer.Stop();
+            
+            _VideoStop();
             _videoTargetTime = 0;
             _pendingPlayTime = 0;
             _pendingLoadTime = 0;
@@ -526,7 +537,7 @@ namespace Texel
             }
         }
 
-        public override void OnVideoReady()
+        public void _OnVideoReady()
         {
             float position = _currentPlayer.GetTime();
             float duration = _currentPlayer.GetDuration();
@@ -544,20 +555,20 @@ namespace Texel
             //   TODO: Streamline by always doing this in update instead?
 
             if (Networking.IsOwner(gameObject))
-                _currentPlayer.Play();
+                _VideoPlay();
             else
             {
                 // TODO: Stream bypass owner
                 if (_syncOwnerPlaying)
-                    _currentPlayer.Play();
+                    _VideoPlay();
                 else
                     _waitForSync = true;
             }
         }
 
-        public override void OnVideoStart()
+        public void _OnVideoStart()
         {
-            DebugLog("Video start");
+            //DebugLog("Video start");
 
             if (Networking.IsOwner(gameObject))
             {
@@ -576,7 +587,7 @@ namespace Texel
                 RequestSerialization();
 
                 //if (!paused)
-                _currentPlayer.SetTime(_videoTargetTime);
+                _VideoSetTime(_videoTargetTime);
 
                 SyncVideoImmediate();
             }
@@ -585,7 +596,7 @@ namespace Texel
                 if (!_syncOwnerPlaying || _syncOwnerPaused)
                 {
                     // TODO: Owner bypass
-                    _currentPlayer.Pause();
+                    _VideoPause();
                     _waitForSync = true;
 
                     _UpdatePlayerPaused(_syncOwnerPaused);
@@ -600,7 +611,7 @@ namespace Texel
             }
         }
 
-        public override void OnVideoEnd()
+        public void _OnVideoEnd()
         {
             if (!seekableSource && Time.time - _playStartTime < 1)
             {
@@ -613,7 +624,7 @@ namespace Texel
 
             _UpdatePlayerState(PLAYER_STATE_STOPPED);
 
-            DebugLog("Video end");
+            //DebugLog("Video end");
             _lastVideoPosition = 0;
 
             if (Networking.IsOwner(gameObject))
@@ -637,7 +648,7 @@ namespace Texel
         }
 
         // AVPro sends loop event but does not auto-loop, and setting time sometimes deadlocks player *sigh*
-        public override void OnVideoLoop()
+        public void _OnVideoLoop()
         {
             /*
             float current = _currentPlayer.GetTime();
@@ -654,9 +665,9 @@ namespace Texel
             */
         }
 
-        public override void OnVideoError(VideoError videoError)
+        public void _OnVideoError(VideoError videoError)
         {
-            _currentPlayer.Stop();
+            _VideoStop();
 
             string code = "";
             switch (videoError)
@@ -745,14 +756,12 @@ namespace Texel
                     SendCustomEventDelayedFrames("_StopVideo", 1);
                 else if (dataProxy.paused && !_syncOwnerPaused)
                 {
-                    DebugLog("Unpausing video");
-                    _currentPlayer.Play();
+                    _VideoPlay();
                     _UpdatePlayerPaused(false);
                 }
                 else if (localPlayerState == PLAYER_STATE_PLAYING && _syncOwnerPaused)
                 {
-                    DebugLog("Pausing video");
-                    _currentPlayer.Pause();
+                    _VideoPause();
                     _UpdatePlayerPaused(true);
                 }
 
@@ -795,8 +804,8 @@ namespace Texel
                 {
                     previousTrackPosition = position;
                     float target = position;
-                    if (syncLatched)
-                        target = GetTargetTime();
+                    //if (syncLatched)
+                    //    target = GetTargetTime();
 
                     _UpdateTracking(position, target, _currentPlayer.GetDuration());
                 }
@@ -821,7 +830,7 @@ namespace Texel
             _UpdatePlayerState(PLAYER_STATE_PLAYING);
 
             _waitForSync = false;
-            _currentPlayer.Play();
+            _VideoPlay();
 
             SyncVideoImmediate();
         }
@@ -837,12 +846,62 @@ namespace Texel
 
         void SyncVideoImmediate()
         {
-            syncTime1 = -100;
-            syncTime2 = -100;
+            //syncTime1 = -100;
+            //syncTime2 = -100;
+            _ResetSyncState();
             SyncVideo();
         }
 
+        float previousCurrent = 0;
+        float previousTarget = 0;
+
+        void _ResetSyncState()
+        {
+            previousCurrent = -1;
+            previousTarget = -1;
+            _lastSyncTime = Time.realtimeSinceStartup;
+        }
+
         void SyncVideo()
+        {
+            if (!seekableSource)
+                return;
+
+            float duration = _currentPlayer.GetDuration();
+            float current = _currentPlayer.GetTime();
+            float serverTime = (float)Networking.GetServerTimeInSeconds(); // local sync offset
+            float offsetTime = Mathf.Clamp(serverTime - _syncVideoStartNetworkTime, 0f, duration);
+
+            // If we're almost at the end, don't sync to avoid possible contention with AVPro
+            if (duration - current < 2)
+                return;
+
+            // Don't need to sync if we're within threshold
+            float offset = current - offsetTime;
+            if (Mathf.Abs(offset) < syncThreshold)
+                return;
+
+            DebugLog($"Sync video (off by {offset:N3}s) to {offsetTime:N3}");
+
+            // Did we get into a situation where the player can't track?
+            if (current == previousCurrent)
+            {
+                if (offsetTime - previousTarget > syncFrequency * .8f)
+                {
+                    DebugLog("Video did not advance during previous sync, forcing reload");
+                    previousTarget = 0;
+
+                    _ForceResync();
+                    return;
+                }
+            } else
+                previousTarget = offsetTime;
+
+            previousCurrent = current;
+            _VideoSetTime(offsetTime);
+        }
+
+        /*void SyncVideo()
         {
             if (seekableSource && !syncLatched && !syncReadback)
             {
@@ -872,7 +931,7 @@ namespace Texel
                         syncLatched = true;
                         _UpdatePlayerSyncing(true);
                         SendCustomEventDelayedSeconds("_SyncLatch", syncLatchUpdateFrequency);
-                    }*/
+                    }/
                 }
             }
         }
@@ -938,7 +997,7 @@ namespace Texel
                         _UpdatePlayerSyncing(false);
                         SendCustomEventDelayedFrames("_ForceResync", 1);
                         return;
-                    }*/
+                    }/
 
                     syncLatched = true;
                     SendCustomEventDelayedSeconds("_SyncLatch", syncLatchUpdateFrequency);
@@ -952,17 +1011,33 @@ namespace Texel
                 syncTime2 = syncTime1;
                 syncTime1 = Time.time;
             }
-        }
+        }*/
 
         public void _AVSyncStart()
         {
-            _currentPlayer.EnableAutomaticResync = true;
-            SendCustomEventDelayedSeconds("_AVSyncEnd", 1);
+            if (_currentPlayer == avProVideo)
+            {
+                DebugLogAs("AVPro", "Auto AV Sync");
+                avProVideo.EnableAutomaticResync = true;
+                SendCustomEventDelayedSeconds("_AVSyncEndAVPro", 1);
+            } else if (_currentPlayer == unityVideo)
+            {
+                DebugLogAs("UnityVideo", "Auto AV Sync");
+                unityVideo.EnableAutomaticResync = true;
+                SendCustomEventDelayedSeconds("_AVSyncEndUnity", 1);
+            } else
+                SendCustomEventDelayedSeconds("_AVSyncStart", 30);
         }
 
-        public void _AVSyncEnd()
+        public void _AVSyncEndAVPro()
         {
-            _currentPlayer.EnableAutomaticResync = false;
+            avProVideo.EnableAutomaticResync = false;
+            SendCustomEventDelayedSeconds("_AVSyncStart", 30);
+        }
+
+        public void _AVSyncEndUnity()
+        {
+            unityVideo.EnableAutomaticResync = false;
             SendCustomEventDelayedSeconds("_AVSyncStart", 30);
         }
 
@@ -982,7 +1057,7 @@ namespace Texel
                 {
                     float startTime = _videoTargetTime;
                     if (_currentPlayer.IsPlaying)
-                        startTime = _currentPlayer.GetTime();
+                        startTime = Mathf.Max(_currentPlayer.GetTime(), GetTargetTime());
 
                     _StartVideoLoad();
                     _videoTargetTime = startTime;
@@ -993,18 +1068,50 @@ namespace Texel
                 return;
             }
 
-            _currentPlayer.Stop();
+            _VideoStop();
             if (_syncOwnerPlaying)
                 _StartVideoLoad();
         }
 
+        void _VideoPlay()
+        {
+            DebugLogVideo("Play");
+            _currentPlayer.Play();
+        }
+
+        void _VideoStop()
+        {
+            DebugLogVideo("Stop");
+            _currentPlayer.Stop();
+        }
+
+        void _VideoPause()
+        {
+            DebugLogVideo("Pause");
+            _currentPlayer.Pause();
+        }
+
+        void _VideoLoadURL(VRCUrl url)
+        {
+            DebugLogVideo($"Load URL: {url}");
+            _currentPlayer.LoadURL(url);
+        }
+
+        void _VideoSetTime(float time)
+        {
+            DebugLogVideo($"Set time: {time}");
+            _currentPlayer.SetTime(time);
+        }
+
         public void _StopAVPro()
         {
+            DebugLogAs("AVPro", "Stop");
             avProVideo.Stop();
         }
 
         public void _StopUnity()
         {
+            DebugLogAs("UnityVideo", "Stop");
             unityVideo.Stop();
         }
 
@@ -1160,6 +1267,19 @@ namespace Texel
                 Debug.Log("[VideoTXL:SyncPlayer] " + message);
             if (Utilities.IsValid(debugLog))
                 debugLog._Write("SyncPlayer", message);
+        }
+
+        void DebugLogVideo(string message)
+        {
+            DebugLogAs(_currentPlayer == avProVideo ? "AVPro" : "UnityVideo", message);
+        }
+
+        void DebugLogAs(string comp, string message)
+        {
+            if (debugLogging)
+                Debug.Log($"[VideoTXL:{comp}] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write(comp, message);
         }
     }
 }

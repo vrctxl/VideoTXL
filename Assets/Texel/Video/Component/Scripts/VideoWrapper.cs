@@ -12,40 +12,56 @@ namespace Texel
     public class VideoWrapper : UdonSharpBehaviour
     {
         public SyncPlayer syncPlayer;
+        public string sourceName = "";
 
         public override void OnVideoReady()
         {
-            syncPlayer.OnVideoReady();
+            _DebugLog("Video ready");
+            syncPlayer._OnVideoReady();
         }
 
         public override void OnVideoStart()
         {
-            syncPlayer.OnVideoStart();
+            _DebugLog("Video start");
+            syncPlayer._OnVideoStart();
         }
 
         public override void OnVideoEnd()
         {
-            syncPlayer.OnVideoEnd();
+            _DebugLog("Video end");
+            syncPlayer._OnVideoEnd();
         }
 
         public override void OnVideoError(VideoError videoError)
         {
-            syncPlayer.OnVideoError(videoError);
+            _DebugLog($"Video error: {videoError}");
+            syncPlayer._OnVideoError(videoError);
         }
 
         public override void OnVideoLoop()
         {
-            syncPlayer.OnVideoLoop();
+            _DebugLog("Video loop");
+            syncPlayer._OnVideoLoop();
         }
 
         public override void OnVideoPause()
         {
+            _DebugLog("Video pause");
             //syncPlayer.OnVideoPause();
         }
 
         public override void OnVideoPlay()
         {
+            _DebugLog("Video play");
             //syncPlayer.OnVideoPlay();
+        }
+
+        void _DebugLog(string message)
+        {
+            if (syncPlayer.debugLogging)
+                Debug.Log($"[VideoTXL:{sourceName}] " + message);
+            if (Utilities.IsValid(syncPlayer.debugLog))
+                syncPlayer.debugLog._Write(sourceName, message);
         }
     }
 }
