@@ -59,11 +59,8 @@ namespace Texel
 
         float retryTimeout = 6;
 
-        bool _rtsptSource = false;
-
         // Realtime state
 
-        short videoSource = VIDEO_SOURCE_NONE;
         short videoSourceOverride = VIDEO_SOURCE_NONE;
 
         [NonSerialized]
@@ -105,7 +102,6 @@ namespace Texel
         float playAt = 0;
         float playStartTime = 0;
         //float trackDuration = 0;
-        bool playingOrLoading = false;
 
         void Start()
         {

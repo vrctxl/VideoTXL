@@ -10,7 +10,7 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
     public class ColliderRender : UdonSharpBehaviour
     {
-        public Collider collider;
+        public new Collider collider;
 
         public MeshRenderer boxRender;
         public MeshRenderer sphereRender;

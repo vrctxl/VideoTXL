@@ -68,7 +68,7 @@ namespace Texel
         public VRCUnityVideoPlayer unityVideo;
 
         float retryTimeout = 6;
-        float syncLatchUpdateFrequency = 0.2f;
+        //float syncLatchUpdateFrequency = 0.2f;
 
         [UdonSynced]
         short _syncVideoSource = VIDEO_SOURCE_NONE;
