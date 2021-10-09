@@ -55,5 +55,10 @@ namespace Texel
             if (Utilities.IsValid(debugText))
                 debugText.text = buffer;
         }
+
+        public void _WriteError(string component, string message)
+        {
+            _Write(component, $"<color=#FF0000>{message}</color>");
+        }
     }
 }
