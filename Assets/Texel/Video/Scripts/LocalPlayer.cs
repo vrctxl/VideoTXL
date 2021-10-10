@@ -303,6 +303,9 @@ namespace Texel
 
         public override void OnVideoError(VideoError videoError)
         {
+            if (localPlayerState == PLAYER_STATE_STOPPED)
+                return;
+
             _currentPlayer.Stop();
 
             string code = "";

@@ -665,6 +665,9 @@ namespace Texel
 
         public void _OnVideoError(VideoError videoError)
         {
+            if (localPlayerState == PLAYER_STATE_STOPPED)
+                return;
+
             _VideoStop();
 
             string code = "";
@@ -1080,7 +1083,8 @@ namespace Texel
         void _VideoStop()
         {
             DebugLogVideo("Stop");
-            _currentPlayer.Stop();
+            if (Utilities.IsValid(_currentPlayer))
+                _currentPlayer.Stop();
         }
 
         void _VideoPause()

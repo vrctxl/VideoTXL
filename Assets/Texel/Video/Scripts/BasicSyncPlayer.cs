@@ -36,8 +36,8 @@ namespace Texel
         float syncThreshold = 1;
 
         [UdonSynced]
-        VRCUrl _syncUrl;
-        VRCUrl _queuedUrl;
+        VRCUrl _syncUrl = VRCUrl.Empty;
+        VRCUrl _queuedUrl = VRCUrl.Empty;
 
         [UdonSynced]
         int _syncVideoNumber;
@@ -57,6 +57,7 @@ namespace Texel
         [NonSerialized]
         public VideoError localLastErrorCode;
 
+        bool _init = false;
         BaseVRCVideoPlayer _currentPlayer;
 
         float _lastVideoPosition = 0;
@@ -94,6 +95,8 @@ namespace Texel
             avProVideo.Stop();
 
             _currentPlayer = avProVideo;
+
+            _init = true;
 
             if (Networking.IsOwner(gameObject))
             {
@@ -313,6 +316,9 @@ namespace Texel
 
         public override void OnVideoReady()
         {
+            if (!_init)
+                return;
+
             float duration = _currentPlayer.GetDuration();
             DebugLog("Video ready, duration: " + duration + ", position: " + _currentPlayer.GetTime());
 
@@ -339,6 +345,9 @@ namespace Texel
 
         public override void OnVideoStart()
         {
+            if (!_init)
+                return;
+
             DebugLog("Video start");
 
             if (Networking.IsOwner(gameObject))
@@ -372,6 +381,9 @@ namespace Texel
 
         public override void OnVideoEnd()
         {
+            if (!_init)
+                return;
+
             if (!seekableSource && Time.time - _playStartTime < 1)
             {
                 Debug.Log("Video end encountered at start of stream, ignoring");
@@ -401,6 +413,9 @@ namespace Texel
 
         public override void OnVideoError(VideoError videoError)
         {
+            if (!_init || localPlayerState == PLAYER_STATE_STOPPED)
+                return;
+
             _currentPlayer.Stop();
 
             DebugLog("Video stream failed: " + _syncUrl);
