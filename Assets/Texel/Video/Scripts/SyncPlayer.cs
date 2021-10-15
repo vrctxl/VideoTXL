@@ -14,13 +14,14 @@ namespace Texel
 {
     [AddComponentMenu("VideoTXL/Sync Player")]
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+    [DefaultExecutionOrder(-1)]
     public class SyncPlayer : UdonSharpBehaviour
     {
         [Tooltip("A proxy for dispatching video-related events to other listening behaviors, such as a screen manager")]
         public VideoPlayerProxy dataProxy;
 
         [Header("Optional Components")]
-        [Tooltip("Pre-populated playlist to iterate through.  Overrides default URL option")]
+        [Tooltip("Pre-populated playlist to iterate through.  If default URL is set, the playlist will be disabled by default, otherwise it will auto-play.")]
         public Playlist playlist;
 
         [Tooltip("Control access to player controls based on player type or whitelist")]
@@ -196,9 +197,17 @@ namespace Texel
             if (Networking.IsOwner(gameObject))
             {
                 if (Utilities.IsValid(playlist) && playlist.trackCount > 0)
-                    _PlayVideo(playlist._GetCurrent());
+                {
+                    if (_IsUrlValid(defaultUrl))
+                    {
+                        playlist._SetEnabled(false);
+                        _PlayVideoAfter(defaultUrl, 3);
+                    }
+                    else
+                        _PlayVideoAfter(playlist._GetCurrent(), 3);
+                }
                 else
-                    _PlayVideo(defaultUrl);
+                    _PlayVideoAfter(defaultUrl, 3);
             }
 
             if (autoInternalAVSync)
@@ -355,6 +364,11 @@ namespace Texel
 
         void _PlayVideo(VRCUrl url)
         {
+            _PlayVideoAfter(url, 0);
+        }
+
+        void _PlayVideoAfter(VRCUrl url, float delay)
+        {
             _pendingPlayTime = 0;
             if (!_IsUrlValid(url))
                 return;
@@ -400,7 +414,7 @@ namespace Texel
                     _VideoStop();
             }
 
-            _StartVideoLoad();
+            _StartVideoLoadDelay(delay);
         }
 
         public void _LoopVideo()
@@ -418,7 +432,8 @@ namespace Texel
         public void _PlayPlaylistUrl()
         {
             _syncQueuedUrl = VRCUrl.Empty;
-            _PlayVideo(playlist._GetCurrent());
+            if (Utilities.IsValid(playlist))
+                _PlayVideo(playlist._GetCurrent());
         }
 
         bool _IsUrlValid(VRCUrl url)
