@@ -28,8 +28,11 @@ namespace Texel
         [Range(0, 1)]
         public float lowerBound = 0;
 
+        [Header("Performance")]
         [Tooltip("Interval in seconds that player position is checked for correct fade within the zones")]
         public float updateRate = 0.25f;
+        [Tooltip("Force re-checking zone membership on player enter events.  May be needed in certain instances where you map can lose enter or leave events (such as stations within the zones).  You can save some performance by calling _RecalculateNextEvent yourself as needed.")]
+        public bool forceColliderCheck = true;
 
         [Header("Debug")]
         [Tooltip("Log debug statements to a world object")]
@@ -42,6 +45,8 @@ namespace Texel
 
         bool hasAudioSource = false;
         bool hasAudioManager = false;
+        bool forceRecalc = false;
+        bool pendingRecalc = false;
 
         int triggerCount = 0;
         float zoneFadeScale;
@@ -50,6 +55,7 @@ namespace Texel
         {
             hasAudioSource = Utilities.IsValid(audioSource);
 
+            _UpdateFade();
             _InitInterpolateZoneFadeLoop();
         }
 
@@ -61,6 +67,8 @@ namespace Texel
             audioManager = manager;
             audioChannel = channel;
             hasAudioManager = true;
+
+            _UpdateFade();
         }
 
         public override void OnPlayerTriggerEnter(VRCPlayerApi player)
@@ -68,9 +76,17 @@ namespace Texel
             if (!player.isLocal)
                 return;
 
+            if ((forceColliderCheck || pendingRecalc) && triggerCount >= 1 && !forceRecalc)
+            {
+                _Recalculate();
+                return;
+            }
+
             triggerCount += 1;
             DebugLog($"Trigger enter (count={triggerCount})");
         }
+
+        
 
         public override void OnPlayerTriggerExit(VRCPlayerApi player)
         {
@@ -79,6 +95,36 @@ namespace Texel
 
             triggerCount -= 1;
             DebugLog($"Trigger exit (count={triggerCount})");
+        }
+
+        public void _Recalculate()
+        {
+            DebugLog("Recalculate");
+            if (forceRecalc)
+                return;
+
+            innerZone.enabled = false;
+            outerZone.enabled = false;
+
+            innerZone.enabled = true;
+            outerZone.enabled = true;
+
+            triggerCount = 0;
+            forceRecalc = true;
+            pendingRecalc = false;
+
+            SendCustomEventDelayedFrames("_FinishRecalc", 2);
+        }
+
+        public void _RecalculateNextEvent()
+        {
+            DebugLog("RecalculateNextEvent");
+            pendingRecalc = true;
+        }
+
+        public void _FinishRecalc()
+        {
+            forceRecalc = false;
         }
 
         void _InitInterpolateZoneFadeLoop()
@@ -103,6 +149,9 @@ namespace Texel
 
         void _InterpolateZoneFade()
         {
+            if (forceRecalc)
+                return;
+
             float lastFade = zoneFadeScale;
             if (triggerCount == 0)
                 zoneFadeScale = lowerBound;

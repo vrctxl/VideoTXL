@@ -878,6 +878,15 @@ namespace Texel
 
         void _PopulateMissingReferences()
         {
+            if (!Utilities.IsValid(videoPlayer))
+            {
+                videoPlayer = transform.parent.GetComponent<SyncPlayer>();
+                if (Utilities.IsValid(videoPlayer))
+                    videoPlayer.debugLog._Write("PlayerControls", $"Missing syncplayer reference, found one on parent");
+                else
+                    Debug.LogError("Missing syncplayer reference, also could not find one on parent!");
+            }
+
             // Volume
 
             if (!Utilities.IsValid(volumeSliderControl))

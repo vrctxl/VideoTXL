@@ -726,6 +726,9 @@ namespace Texel
                 return accessControl._LocalHasAccess();
 
             VRCPlayerApi player = Networking.LocalPlayer;
+            if (!Utilities.IsValid(player))
+                return false;
+
             return player.isMaster || player.isInstanceOwner;
         }
 
@@ -735,6 +738,9 @@ namespace Texel
                 return !_syncLocked || accessControl._LocalHasAccess();
 
             VRCPlayerApi player = Networking.LocalPlayer;
+            if (!Utilities.IsValid(player))
+                return false;
+
             return player.isMaster || player.isInstanceOwner || !_syncLocked;
         }
 
