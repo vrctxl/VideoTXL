@@ -464,6 +464,8 @@ namespace Texel
             if (!videoPlayer.playlist.playlistEnabled)
                 return;
 
+            if (videoPlayer.playlist.holdOnReady)
+                videoPlayer._HoldNextVideo();
             videoPlayer._ChangeUrl(videoPlayer.playlist._GetCurrent());
         }
 
@@ -473,7 +475,11 @@ namespace Texel
                 return;
 
             if (videoPlayer.playlist._MoveNext())
+            {
+                if (videoPlayer.playlist.holdOnReady)
+                    videoPlayer._HoldNextVideo();
                 videoPlayer._ChangeUrl(videoPlayer.playlist._GetCurrent());
+            }
         }
 
         public void _HandlePlaylistPrev()
@@ -482,7 +488,11 @@ namespace Texel
                 return;
 
             if (videoPlayer.playlist._MovePrev())
+            {
+                if (videoPlayer.playlist.holdOnReady)
+                    videoPlayer._HoldNextVideo();
                 videoPlayer._ChangeUrl(videoPlayer.playlist._GetCurrent());
+            }
         }
 
         void _SetStatusOverride(string msg, float timeout)
@@ -665,7 +675,7 @@ namespace Texel
 
                     if (!loadActive)
                     {
-                        SetPlaceholderText("Loading...");
+                        SetPlaceholderText(dataProxy.heldReady ? "Ready" : "Loading...");
                         urlInput.readOnly = true;
                         SetStatusText("");
                     }

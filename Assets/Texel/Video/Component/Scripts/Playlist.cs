@@ -18,7 +18,10 @@ namespace Texel
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
 
+        [Tooltip("Shuffle track order on load")]
         public bool shuffle;
+        [Tooltip("Hold videos in ready state until released by an external input")]
+        public bool holdOnReady = false;
 
         public VRCUrl[] playlist;
 

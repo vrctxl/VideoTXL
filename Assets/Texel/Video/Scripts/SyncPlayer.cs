@@ -111,6 +111,8 @@ namespace Texel
         float _videoTargetTime = 0;
 
         bool _waitForSync;
+        bool _holdReadyState = false;
+        bool _heldVideoReady = false;
         float _lastSyncTime;
         float _playStartTime = 0;
 
@@ -204,7 +206,7 @@ namespace Texel
                         _PlayVideoAfter(defaultUrl, 3);
                     }
                     else
-                        _PlayVideoAfter(playlist._GetCurrent(), 3);
+                        SendCustomEventDelayedFrames("_PlayPlaylistUrl", 3);
                 }
                 else
                     _PlayVideoAfter(defaultUrl, 3);
@@ -308,6 +310,20 @@ namespace Texel
 
             _syncQueuedUrl = VRCUrl.Empty;
             _PlayVideo(url);
+        }
+
+        public void _HoldNextVideo()
+        {
+            DebugLog("Holding next video");
+            _UpdatePlayerHold(true, _heldVideoReady);
+        }
+
+        public void _ReleaseHold()
+        {
+            if (_heldVideoReady && Networking.IsOwner(gameObject))
+                _VideoPlay();
+
+            _UpdatePlayerHold(false, false);
         }
 
         public void _UpdateQueuedUrl(VRCUrl url)
@@ -433,7 +449,11 @@ namespace Texel
         {
             _syncQueuedUrl = VRCUrl.Empty;
             if (Utilities.IsValid(playlist))
+            {
+                if (playlist.holdOnReady && Networking.IsOwner(gameObject))
+                    _HoldNextVideo();
                 _PlayVideo(playlist._GetCurrent());
+            }
         }
 
         bool _IsUrlValid(VRCUrl url)
@@ -568,7 +588,12 @@ namespace Texel
             //   TODO: Streamline by always doing this in update instead?
 
             if (Networking.IsOwner(gameObject))
-                _VideoPlay();
+            {
+                if (!_holdReadyState)
+                    _VideoPlay();
+                else
+                    _UpdatePlayerHold(true, true);
+            }
             else
             {
                 // TODO: Stream bypass owner
@@ -1230,6 +1255,15 @@ namespace Texel
         void _UpdatePlayerSyncing(bool syncing)
         {
             dataProxy.syncing = syncing;
+            dataProxy._EmitStateUpdate();
+        }
+
+        void _UpdatePlayerHold(bool holding, bool ready)
+        {
+            _holdReadyState = holding;
+            _heldVideoReady = ready;
+
+            dataProxy.heldReady = _heldVideoReady;
             dataProxy._EmitStateUpdate();
         }
 
