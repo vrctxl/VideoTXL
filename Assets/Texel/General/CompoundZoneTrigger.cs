@@ -121,6 +121,8 @@ namespace Texel
             playerTargetVariables = newVariables;
 
             handlerCount += 1;
+
+            //Debug.Log($"Registered handler {handlerCount} ({target}, {enterEvent}, {leaveEvent})");
         }
 
         void _InitColliders()
@@ -168,6 +170,9 @@ namespace Texel
                     _SendPlayerEnter(player);
                 enterLatched = true;
             }
+
+            if (triggerActiveCount > colliderCount)
+                triggerActiveCount = colliderCount;
         }
 
         void _SendPlayerEvent(VRCPlayerApi player, UdonBehaviour target, string eventName, string varName)
@@ -225,6 +230,9 @@ namespace Texel
             triggerActiveCount -= 1;
             if (leaveSetMode == SET_UNION && triggerActiveCount == 0)
                 _SendPlayerLeave(player);
+
+            if (triggerActiveCount < 0)
+                triggerActiveCount = 0;
         }
 
         void _SendPlayerLeave(VRCPlayerApi player)
