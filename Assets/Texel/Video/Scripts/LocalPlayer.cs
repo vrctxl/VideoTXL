@@ -101,6 +101,7 @@ namespace Texel
         VRCUrl playAtUrl;
         float playAt = 0;
         float playStartTime = 0;
+        bool paused = false;
         //float trackDuration = 0;
 
         void Start()
@@ -132,11 +133,13 @@ namespace Texel
             {
                 avProVideo.Loop = false;
                 avProVideo.Stop();
+                avProVideo.EnableAutomaticResync = false;
             }
             if (Utilities.IsValid(unityVideo))
             {
                 unityVideo.Loop = loop;
                 unityVideo.Stop();
+                unityVideo.EnableAutomaticResync = false;
             }
 
             if (Utilities.IsValid(avProVideo))
@@ -159,6 +162,11 @@ namespace Texel
         public void _TriggerStop()
         {
             _StopVideo();
+        }
+
+        public void _TriggerPause()
+        {
+            _PauseVideo();
         }
 
         public void _PlaybackZoneEnter()
@@ -219,9 +227,9 @@ namespace Texel
 
             _UpdatePlayerState(PLAYER_STATE_LOADING);
 
-#if !UNITY_EDITOR
+            //#if !UNITY_EDITOR
             _currentPlayer.LoadURL(url);
-#endif
+            //#endif
         }
 
         void _StopVideo()
@@ -230,15 +238,45 @@ namespace Texel
 
             if (seekableSource && resumePosition)
                 _lastVideoPosition = _currentPlayer.GetTime();
+            else
+                _lastVideoPosition = 0;
 
             _UpdatePlayerState(PLAYER_STATE_STOPPED);
 
             _currentPlayer.Stop();
 
             playAt = 0;
+            seekableSource = false;
+            paused = false;
         }
 
-        public override void OnVideoReady()
+        void _PauseVideo()
+        {
+            DebugLog("Pause video");
+
+            if (localPlayerState != PLAYER_STATE_PLAYING)
+                return;
+
+            if (paused)
+            {
+                _currentPlayer.Play();
+                if (seekableSource)
+                {
+                    DebugLog($"Set time to {_lastVideoPosition}");
+                    _currentPlayer.SetTime(_lastVideoPosition);
+                }
+            }
+            else
+            {
+                if (seekableSource)
+                    _lastVideoPosition = _currentPlayer.GetTime();
+                _currentPlayer.Pause();
+            }
+
+            paused = !paused;
+        }
+
+        public void _OnVideoReady()
         {
             float position = _currentPlayer.GetTime();
             float duration = _currentPlayer.GetDuration();
@@ -259,7 +297,7 @@ namespace Texel
             _currentPlayer.Play();
         }
 
-        public override void OnVideoStart()
+        public void _OnVideoStart()
         {
             DebugLog("Video start");
 
@@ -281,7 +319,7 @@ namespace Texel
             }
         }
 
-        public override void OnVideoEnd()
+        public void _OnVideoEnd()
         {
             if (!seekableSource && Time.time - playStartTime < 1)
             {
@@ -293,6 +331,7 @@ namespace Texel
 
             seekableSource = false;
             dataProxy.seekableSource = false;
+            paused = false;
 
             _UpdatePlayerState(PLAYER_STATE_STOPPED);
 
@@ -301,7 +340,12 @@ namespace Texel
             // TODO: Loop for AVPro
         }
 
-        public override void OnVideoError(VideoError videoError)
+        public void _OnVideoLoop()
+        {
+
+        }
+
+        public void _OnVideoError(VideoError videoError)
         {
             if (localPlayerState == PLAYER_STATE_STOPPED)
                 return;
