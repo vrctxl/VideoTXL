@@ -216,6 +216,34 @@ namespace Texel
                 SendCustomEventDelayedSeconds("_AVSyncStart", 1);
         }
 
+        public void _SetPlaylist(Playlist list)
+        {
+            if (Utilities.IsValid(list))
+                DebugLog($"Set playlist {list.gameObject.name}");
+            else
+                DebugLog("Remove playlist");
+
+            playlist = list;
+
+            if (Networking.IsOwner(gameObject))
+            {
+                if (!Utilities.IsValid(playlist))
+                {
+                    dataProxy._EmitPlaylistUpdate();
+                    return;
+                }
+
+                DebugLog("Setting up playlist as owner");
+                playlist._SetEnabled(true);
+                playlist._MoveFirst();
+
+                dataProxy._EmitPlaylistUpdate();
+
+                if (playlist.holdOnReady)
+                    _PlayPlaylistUrl();
+            }
+        }
+
         public void _TriggerPlay()
         {
             DebugLog("Trigger play");
@@ -553,7 +581,7 @@ namespace Texel
                 _lastVideoPosition = _currentPlayer.GetTime();
 
             _UpdatePlayerState(PLAYER_STATE_STOPPED);
-            
+
             _VideoStop();
             _videoTargetTime = 0;
             _pendingPlayTime = 0;
@@ -671,9 +699,7 @@ namespace Texel
                 if (_IsUrlValid(_syncQueuedUrl))
                     SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
                 else if (hasPlaylist && playlist._MoveNext())
-                {
                     SendCustomEventDelayedFrames("_PlayPlaylistUrl", 1);
-                }
                 else if (!hasPlaylist && _syncRepeatPlaylist)
                     SendCustomEventDelayedFrames("_LoopVideo", 1);
                 else
@@ -941,7 +967,8 @@ namespace Texel
                     _ForceResync();
                     return;
                 }
-            } else
+            }
+            else
                 previousTarget = offsetTime;
 
             previousCurrent = current;
@@ -1067,12 +1094,14 @@ namespace Texel
                 DebugLogAs("AVPro", "Auto AV Sync");
                 avProVideo.EnableAutomaticResync = true;
                 SendCustomEventDelayedSeconds("_AVSyncEndAVPro", 1);
-            } else if (_currentPlayer == unityVideo)
+            }
+            else if (_currentPlayer == unityVideo)
             {
                 DebugLogAs("UnityVideo", "Auto AV Sync");
                 unityVideo.EnableAutomaticResync = true;
                 SendCustomEventDelayedSeconds("_AVSyncEndUnity", 1);
-            } else
+            }
+            else
                 SendCustomEventDelayedSeconds("_AVSyncStart", 30);
         }
 
