@@ -37,6 +37,12 @@ namespace Texel
         public bool latchUntilLeave;
         [Tooltip("After sending a leave event, do not send another until enter has been triggered")]
         public bool latchUntilEnter;
+        [Tooltip("Force re-checking zone membership on player enter events.  May be needed in certain instances where you map can lose enter or leave events (such as stations within the zones).  You can save some performance by calling _RecalculateNextEvent yourself as needed.")]
+        public bool forceColliderCheck = false;
+        [Tooltip("Log debug statements to a world object")]
+        public DebugLog debugLog;
+        [Tooltip("Write debug statements to VRChat log")]
+        public bool vrcLog;
 
         int handlerCount = 0;
 
@@ -46,6 +52,8 @@ namespace Texel
         int triggerActiveCount = 0;
         bool enterLatched;
         bool leaveLatched;
+        bool forceRecalc = false;
+        bool pendingRecalc = false;
 
         Collider[] colliders;
 
@@ -53,6 +61,7 @@ namespace Texel
         string[] playerEnterEvents;
         string[] playerLeaveEvents;
         string[] playerTargetVariables;
+
 
         public const int SET_NONE = 0;
         public const int SET_UNION = 1;
@@ -122,7 +131,7 @@ namespace Texel
 
             handlerCount += 1;
 
-            //Debug.Log($"Registered handler {handlerCount} ({target}, {enterEvent}, {leaveEvent})");
+            DebugLog($"Registered handler {handlerCount} ({target}, {enterEvent}, {leaveEvent})");
         }
 
         void _InitColliders()
@@ -156,6 +165,12 @@ namespace Texel
             }
             if (!player.isLocal)
                 return;
+
+            if ((forceColliderCheck || pendingRecalc) && triggerActiveCount >= 1 && !forceRecalc)
+            {
+                _Recalculate();
+                return;
+            }
 
             if (enterSetMode == SET_NONE)
                 _SendPlayerEnter(player);
@@ -251,6 +266,40 @@ namespace Texel
             enterLatched = false;
         }
 
+        public void _Recalculate()
+        {
+            DebugLog("Recalculate");
+            if (forceRecalc)
+                return;
+
+            colliders = GetComponents<Collider>();
+            foreach (var col in colliders)
+            {
+                if (Utilities.IsValid(col) && col.enabled)
+                {
+                    col.enabled = false;
+                    col.enabled = true;
+                }
+            }
+
+            triggerActiveCount = 0;
+            forceRecalc = true;
+            pendingRecalc = false;
+
+            SendCustomEventDelayedFrames("_FinishRecalc", 2);
+        }
+
+        public void _RecalculateNextEvent()
+        {
+            DebugLog("RecalculateNextEvent");
+            pendingRecalc = true;
+        }
+
+        public void _FinishRecalc()
+        {
+            forceRecalc = false;
+        }
+
         public bool _LocalPlayerInZone()
         {
             if (!localPlayerOnly)
@@ -273,6 +322,14 @@ namespace Texel
         {
             Debug.Log("Leave");
         }
+
+        void DebugLog(string message)
+        {
+            if (vrcLog)
+                Debug.Log("[Texel:CompZoneTrigger] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write("CompZoneTrigger", message);
+        }
     }
 
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
@@ -289,6 +346,9 @@ namespace Texel
         SerializedProperty leaveSetModeProperty;
         SerializedProperty latchUntilEnterProperty;
         SerializedProperty latchUntilLeaveProperty;
+        SerializedProperty forceColliderCheckProperty;
+        SerializedProperty debugLogProperty;
+        SerializedProperty vrcLogProperty;
 
         private void OnEnable()
         {
@@ -302,6 +362,9 @@ namespace Texel
             leaveSetModeProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.leaveSetMode));
             latchUntilEnterProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.latchUntilEnter));
             latchUntilLeaveProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.latchUntilLeave));
+            forceColliderCheckProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.forceColliderCheck));
+            debugLogProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.debugLog));
+            vrcLogProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.vrcLog));
         }
 
         public override void OnInspectorGUI()
@@ -340,6 +403,15 @@ namespace Texel
 
             if (configureEventsProperty.boolValue)
                 EditorGUILayout.PropertyField(playerTargetVariableProperty);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Extra", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(forceColliderCheckProperty);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(debugLogProperty);
+            EditorGUILayout.PropertyField(vrcLogProperty);
 
             if (serializedObject.hasModifiedProperties)
                 serializedObject.ApplyModifiedProperties();
