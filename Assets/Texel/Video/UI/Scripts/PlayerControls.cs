@@ -553,7 +553,7 @@ namespace Texel
                     syncSliderControl.SetActive(false);
 
                     _updatingProgressSlider = true;
-                    progressSlider.value = Mathf.Clamp01(dataProxy.trackPosition / dataProxy.trackDuration);
+                    progressSlider.value = (dataProxy.trackDuration <= 0) ? 0f : Mathf.Clamp01(dataProxy.trackPosition / dataProxy.trackDuration);
                     _updatingProgressSlider = false;
                 }
             }
