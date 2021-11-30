@@ -20,7 +20,7 @@ namespace Texel
         public UdonBehaviour videoPlayer;
         public StaticUrlSource staticUrlSource;
         public AudioManager AudioManager;
-        public ControlColorProfile colorProfile;
+        //public ControlColorProfile colorProfile;
 
         public bool autoLayout = true;
         public bool enableResync = true;
@@ -49,19 +49,6 @@ namespace Texel
         public GameObject audio2DToggleOff;
         public Slider volumeSlider;
 
-        public Image[] backgroundImgs;
-        public Image[] backgroundMsgBarImgs;
-        public Image[] buttonImgs;
-        public Image[] buttonSelectedImgs;
-        public Text[] brightTexts;
-        public Text[] dimTexts;
-        public Image[] brightImgs;
-        public Image[] dimImgs;
-        public Image[] redImgs;
-        public Image[] sliderBrightImgs;
-        public Image[] sliderDimImgs;
-        public Image[] sliderGrabImgs;
-
         void Start()
         {
             SendCustomEventDelayedFrames("_UpdateLayout", 1);
@@ -70,39 +57,6 @@ namespace Texel
                 AudioManager._RegisterControls(this);
             if (Utilities.IsValid(staticUrlSource))
                 staticUrlSource._RegisterControls(this);
-
-            _UpdateColor();
-        }
-
-        public void _UpdateColor()
-        {
-            if (!Utilities.IsValid(colorProfile))
-                return;
-
-            foreach (Image image in backgroundImgs)
-                if (image != null) image.color = colorProfile.backgroundColor;
-            foreach (Image image in backgroundMsgBarImgs)
-                if (image != null) image.color = colorProfile.backgroundMsgBarColor;
-            foreach (Image image in buttonImgs)
-                if (image != null) image.color = colorProfile.buttonColor;
-            foreach (Image image in buttonSelectedImgs)
-                if (image != null) image.color = colorProfile.buttonSelectedColor;
-            foreach (Text text in brightTexts)
-                if (text != null) text.color = colorProfile.brightLabelColor;
-            foreach (Text text in dimTexts)
-                if (text != null) text.color = colorProfile.dimLabelColor;
-            foreach (Image image in brightImgs)
-                if (image != null) image.color = colorProfile.brightLabelColor;
-            foreach (Image image in dimImgs)
-                if (image != null) image.color = colorProfile.dimLabelColor;
-            foreach (Image image in redImgs)
-                if (image != null) image.color = colorProfile.redLabelColor;
-            foreach (Image image in sliderBrightImgs)
-                if (image != null) image.color = colorProfile.brightSliderColor;
-            foreach (Image image in sliderDimImgs)
-                if (image != null) image.color = colorProfile.dimSliderColor;
-            foreach (Image image in sliderGrabImgs)
-                if (image != null) image.color = colorProfile.sliderGrabColor;
         }
 
         public void _UpdateLayout()
@@ -262,12 +216,11 @@ namespace Texel
     internal class LocalControlsInspector : Editor
     {
         static bool _showObjectFoldout;
-        static bool _showColorFoldout;
 
         SerializedProperty videoPlayerProperty;
         SerializedProperty staticUrlSourceProperty;
         SerializedProperty volumeControllerProperty;
-        SerializedProperty colorProfileProperty;
+        //SerializedProperty colorProfileProperty;
 
         SerializedProperty autoLayoutProperty;
         SerializedProperty enableResyncProprety;
@@ -295,25 +248,12 @@ namespace Texel
         SerializedProperty audio2DToggleOffProperty;
         SerializedProperty volumeSliderProperty;
 
-        SerializedProperty backgroundImgsProperty;
-        SerializedProperty backgroundMsgBarImgsProperty;
-        SerializedProperty buttonImgsProperty;
-        SerializedProperty buttonSelectedImgsProperty;
-        SerializedProperty brightTextsProperty;
-        SerializedProperty dimTextsProperty;
-        SerializedProperty brightImgsProperty;
-        SerializedProperty dimImgsProperty;
-        SerializedProperty redImgsProperty;
-        SerializedProperty sliderBrightImgsProperty;
-        SerializedProperty sliderDimImgsProperty;
-        SerializedProperty sliderGrabImgsProperty;
-
         private void OnEnable()
         {
             videoPlayerProperty = serializedObject.FindProperty(nameof(LocalControls.videoPlayer));
             staticUrlSourceProperty = serializedObject.FindProperty(nameof(LocalControls.staticUrlSource));
             volumeControllerProperty = serializedObject.FindProperty(nameof(LocalControls.AudioManager));
-            colorProfileProperty = serializedObject.FindProperty(nameof(LocalControls.colorProfile));
+            //colorProfileProperty = serializedObject.FindProperty(nameof(LocalControls.colorProfile));
 
             autoLayoutProperty = serializedObject.FindProperty(nameof(LocalControls.autoLayout));
             enableResyncProprety = serializedObject.FindProperty(nameof(LocalControls.enableResync));
@@ -340,19 +280,6 @@ namespace Texel
             audio2DToggleOnProperty = serializedObject.FindProperty(nameof(LocalControls.audio2DToggleOn));
             audio2DToggleOffProperty = serializedObject.FindProperty(nameof(LocalControls.audio2DToggleOff));
             volumeSliderProperty = serializedObject.FindProperty(nameof(LocalControls.volumeSlider));
-
-            backgroundImgsProperty = serializedObject.FindProperty(nameof(LocalControls.backgroundImgs));
-            backgroundMsgBarImgsProperty = serializedObject.FindProperty(nameof(LocalControls.backgroundMsgBarImgs));
-            buttonImgsProperty = serializedObject.FindProperty(nameof(LocalControls.buttonImgs));
-            buttonSelectedImgsProperty = serializedObject.FindProperty(nameof(LocalControls.buttonSelectedImgs));
-            brightTextsProperty = serializedObject.FindProperty(nameof(LocalControls.brightTexts));
-            dimTextsProperty = serializedObject.FindProperty(nameof(LocalControls.dimTexts));
-            brightImgsProperty = serializedObject.FindProperty(nameof(LocalControls.brightImgs));
-            dimImgsProperty = serializedObject.FindProperty(nameof(LocalControls.dimImgs));
-            redImgsProperty = serializedObject.FindProperty(nameof(LocalControls.redImgs));
-            sliderBrightImgsProperty = serializedObject.FindProperty(nameof(LocalControls.sliderBrightImgs));
-            sliderDimImgsProperty = serializedObject.FindProperty(nameof(LocalControls.sliderDimImgs));
-            sliderGrabImgsProperty = serializedObject.FindProperty(nameof(LocalControls.sliderGrabImgs));
         }
 
         public override void OnInspectorGUI()
@@ -364,7 +291,7 @@ namespace Texel
             EditorGUILayout.PropertyField(staticUrlSourceProperty);
             EditorGUILayout.PropertyField(volumeControllerProperty);
             EditorGUILayout.Space();
-            EditorGUILayout.PropertyField(colorProfileProperty);
+            //EditorGUILayout.PropertyField(colorProfileProperty);
             EditorGUILayout.PropertyField(autoLayoutProperty);
             if (autoLayoutProperty.boolValue)
             {
@@ -409,31 +336,11 @@ namespace Texel
             }
             EditorGUILayout.Space();
 
-            _showColorFoldout = EditorGUILayout.Foldout(_showColorFoldout, "Color Profile Object References");
-            if (_showColorFoldout)
-            {
-                EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(backgroundImgsProperty, true);
-                EditorGUILayout.PropertyField(backgroundMsgBarImgsProperty, true);
-                EditorGUILayout.PropertyField(buttonImgsProperty, true);
-                EditorGUILayout.PropertyField(buttonSelectedImgsProperty, true);
-                EditorGUILayout.PropertyField(brightTextsProperty, true);
-                EditorGUILayout.PropertyField(dimTextsProperty, true);
-                EditorGUILayout.PropertyField(brightImgsProperty, true);
-                EditorGUILayout.PropertyField(dimImgsProperty, true);
-                EditorGUILayout.PropertyField(redImgsProperty, true);
-                EditorGUILayout.PropertyField(sliderBrightImgsProperty, true);
-                EditorGUILayout.PropertyField(sliderDimImgsProperty, true);
-                EditorGUILayout.PropertyField(sliderGrabImgsProperty, true);
-                EditorGUI.indentLevel--;
-            }
-
             if (serializedObject.hasModifiedProperties)
             {
                 serializedObject.ApplyModifiedProperties();
                 LocalControls lc = (LocalControls)target;
                 lc._UpdateLayout();
-                lc._UpdateColor();
             }
         }
     }

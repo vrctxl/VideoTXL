@@ -20,7 +20,7 @@ namespace Texel
     {
         public SyncPlayer videoPlayer;
         public AudioManager audioManager;
-        //public ControlColorProfile colorProfile;
+        public ControlColorProfile colorProfile;
 
         public VRCUrlInputField urlInput;
 
@@ -104,6 +104,14 @@ namespace Texel
         void Start()
         {
             _PopulateMissingReferences();
+
+            if (Utilities.IsValid(colorProfile))
+            {
+                normalColor = colorProfile.normalColor;
+                disabledColor = colorProfile.disabledColor;
+                activeColor = colorProfile.activeColor;
+                attentionColor = colorProfile.attentionColor;
+            }
 
             infoIcon.color = normalColor;
             _DisableAllVideoControls();
@@ -1027,7 +1035,7 @@ namespace Texel
 
         SerializedProperty videoPlayerProperty;
         SerializedProperty volumeControllerProperty;
-        //SerializedProperty colorProfileProperty;
+        SerializedProperty colorProfileProperty;
 
         SerializedProperty urlInputProperty;
 
@@ -1080,11 +1088,107 @@ namespace Texel
         SerializedProperty currentVideoTextProperty;
         SerializedProperty lastVideoTextProperty;
 
+        string[] backgroundImagePaths = new string[] {
+            "MainPanel/Background",
+            "InfoPanel/Background"
+        };
+        string[] backgroundTitleImagePaths = new string[]
+        {
+            "InfoPanel/VersionInfo",
+        };
+        string[] sliderBgImagePaths = new string[] {
+            "MainPanel/UpperRow/VolumeGroup/Background",
+            "MainPanel/LowerRow/InputProgress/Background",
+            "InfoPanel/Fields/CurrentVideo/InputField",
+            "InfoPanel/Fields/LastVideo/InputField",
+        };
+        string[] volumeFillBgPaths = new string[] {
+            "MainPanel/UpperRow/VolumeGroup/Slider/Fill Area/Fill",
+        };
+        string[] volumeHandleBgPaths = new string[] {
+            "MainPanel/UpperRow/VolumeGroup/Slider/Handle Slide Area/Handle",
+        };
+        string[] trackerFillBgPaths = new string[] {
+            "MainPanel/LowerRow/InputProgress/TrackingSlider/Fill Area/Fill",
+            "MainPanel/LowerRow/InputProgress/SyncSlider/Fill Area/Fill",
+        };
+        string[] trackerHandleBgPaths = new string[] {
+            "MainPanel/LowerRow/InputProgress/TrackingSlider/Handle Slide Area/Handle",
+        };
+        string[] buttonBgImagePaths = new string[] {
+            "MainPanel/UpperRow/VolumeGroup/MuteButton",
+            "MainPanel/UpperRow/SyncGroup/ResyncButton",
+            "MainPanel/UpperRow/ControlGroup/PrevButton",
+            "MainPanel/UpperRow/ControlGroup/PauseButton",
+            "MainPanel/UpperRow/ControlGroup/StopButton",
+            "MainPanel/UpperRow/ControlGroup/NextButton",
+            "MainPanel/UpperRow/ButtonGroup/RepeatButton",
+            "MainPanel/UpperRow/ButtonGroup/PlaylistButton",
+            "MainPanel/UpperRow/ButtonGroup/InfoButton",
+            "MainPanel/LowerRow/InputProgress/LoadButton",
+            "MainPanel/LowerRow/InputProgress/MasterLockButton",
+            "InfoPanel/Fields/CurrentVideo/InputField/PlayButton",
+            "InfoPanel/Fields/LastVideo/InputField/PlayButton",
+        };
+        string[] buttonIconImagePaths = new string[]
+        {
+            "MainPanel/UpperRow/VolumeGroup/MuteButton/IconMuted",
+            "MainPanel/UpperRow/VolumeGroup/MuteButton/IconVolume",
+            "MainPanel/UpperRow/SyncGroup/ResyncButton/IconResync",
+            "MainPanel/UpperRow/ControlGroup/PrevButton/IconPrev",
+            "MainPanel/UpperRow/ControlGroup/PauseButton/IconPause",
+            "MainPanel/UpperRow/ControlGroup/StopButton/IconStop",
+            "MainPanel/UpperRow/ControlGroup/NextButton/IconNext",
+            "MainPanel/UpperRow/ButtonGroup/RepeatButton/IconRepeat",
+            "MainPanel/UpperRow/ButtonGroup/PlaylistButton/IconPlaylist",
+            "MainPanel/UpperRow/ButtonGroup/InfoButton/IconInfo",
+            "MainPanel/LowerRow/InputProgress/LoadButton/IconLoad",
+            "MainPanel/LowerRow/InputProgress/MasterLockButton/IconLocked",
+            "MainPanel/LowerRow/InputProgress/MasterLockButton/IconUnlocked",
+            "InfoPanel/Fields/CurrentVideo/InputField/PlayButton/IconPlay",
+            "InfoPanel/Fields/LastVideo/InputField/PlayButton/IconPlay",
+        };
+        string[] generalTextPaths = new string[]
+        {
+            "InfoPanel/VersionInfo/Text",
+            "InfoPanel/Fields/InstanceOwner",
+            "InfoPanel/Fields/InstanceOwner/InstanceOwnerName",
+            "InfoPanel/Fields/Master",
+            "InfoPanel/Fields/Master/MasterName",
+            "InfoPanel/Fields/PlayerOwner",
+            "InfoPanel/Fields/PlayerOwner/PlayerOwnerName",
+            "InfoPanel/Fields/VideoOwner",
+            "InfoPanel/Fields/VideoOwner/VideoOwnerName",
+            "InfoPanel/Fields/CurrentVideo",
+            "InfoPanel/Fields/LastVideo",
+        };
+        string[] mainTextPaths = new string[]
+        {
+            "MainPanel/LowerRow/InputProgress/StatusText",
+            "MainPanel/LowerRow/InputProgress/InputField/TextMask/Text",
+            "MainPanel/LowerRow/InputProgress/InputField/TextMask/Placeholder",
+            "InfoPanel/Fields/CurrentVideo/InputField/TextMask/Text",
+            "InfoPanel/Fields/CurrentVideo/InputField/TextMask/Placeholder",
+            "InfoPanel/Fields/LastVideo/InputField/TextMask/Text",
+            "InfoPanel/Fields/LastVideo/InputField/TextMask/Placeholder",
+        };
+        string[] subTextPaths = new string[]
+        {
+            "MainPanel/LowerRow/InputProgress/QueuedText",
+            "MainPanel/LowerRow/InputProgress/PlaylistText",
+            "MainPanel/LowerRow/InputProgress/SourceMode",
+        };
+        string[] subTextIconPaths = new string[]
+        {
+            "MainPanel/LowerRow/InputProgress/PlayerAccess/IconMaster",
+            "MainPanel/LowerRow/InputProgress/PlayerAccess/IconWhitelist",
+        };
+
         private void OnEnable()
         {
             videoPlayerProperty = serializedObject.FindProperty(nameof(PlayerControls.videoPlayer));
             volumeControllerProperty = serializedObject.FindProperty(nameof(PlayerControls.audioManager));
-            //colorProfileProperty = serializedObject.FindProperty(nameof(PlayerControls.colorProfile));
+            colorProfileProperty = serializedObject.FindProperty(nameof(PlayerControls.colorProfile));
 
             urlInputProperty = serializedObject.FindProperty(nameof(PlayerControls.urlInput));
 
@@ -1146,8 +1250,11 @@ namespace Texel
             EditorGUILayout.PropertyField(videoPlayerProperty);
             EditorGUILayout.PropertyField(volumeControllerProperty);
             EditorGUILayout.Space();
-            //EditorGUILayout.PropertyField(colorProfileProperty);
-            //EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(colorProfileProperty);
+            if (GUILayout.Button("Apply Color Profile"))
+                UpdateColors();
+
+            EditorGUILayout.Space();
 
             _showObjectFoldout = EditorGUILayout.Foldout(_showObjectFoldout, "Internal Object References");
             if (_showObjectFoldout)
@@ -1204,6 +1311,69 @@ namespace Texel
 
             if (serializedObject.hasModifiedProperties)
                 serializedObject.ApplyModifiedProperties();
+        }
+
+        void UpdateColors()
+        {
+            PlayerControls pc = (PlayerControls)serializedObject.targetObject;
+            if (pc == null)
+            {
+                Debug.LogWarning("Could not find gameobject");
+                return;
+            }
+
+            if (pc.colorProfile == null)
+            {
+                Debug.LogWarning("No control color profile set");
+                return;
+            }
+
+            GameObject root = pc.gameObject;
+            UpdateImages(root, backgroundImagePaths, pc.colorProfile.backgroundColor);
+            UpdateImages(root, backgroundTitleImagePaths, pc.colorProfile.backgroundTitleColor);
+            UpdateImages(root, buttonBgImagePaths, pc.colorProfile.buttonBackgroundColor);
+            UpdateImages(root, sliderBgImagePaths, pc.colorProfile.sliderBackgroundColor);
+            UpdateImages(root, volumeFillBgPaths, pc.colorProfile.volumeFillColor);
+            UpdateImages(root, volumeHandleBgPaths, pc.colorProfile.volumeHandleColor);
+            UpdateImages(root, trackerFillBgPaths, pc.colorProfile.trackerFillColor);
+            UpdateImages(root, trackerHandleBgPaths, pc.colorProfile.trackerHandleColor);
+            UpdateImages(root, buttonIconImagePaths, pc.colorProfile.normalColor);
+            UpdateImages(root, subTextIconPaths, pc.colorProfile.subTextColor);
+            UpdateTexts(root, generalTextPaths, pc.colorProfile.generalTextColor);
+            UpdateTexts(root, mainTextPaths, pc.colorProfile.mainTextColor);
+            UpdateTexts(root, subTextPaths, pc.colorProfile.subTextColor);
+        }
+
+        void UpdateImages(GameObject root, string[] paths, Color color)
+        {
+            foreach (string path in paths)
+            {
+                Transform t = root.transform.Find(path);
+                if (t == null)
+                    continue;
+
+                Image image = t.GetComponent<Image>();
+                if (image == null)
+                    continue;
+
+                image.color = color;
+            }
+        }
+
+        void UpdateTexts(GameObject root, string[] paths, Color color)
+        {
+            foreach (string path in paths)
+            {
+                Transform t = root.transform.Find(path);
+                if (t == null)
+                    continue;
+
+                Text text = t.GetComponent<Text>();
+                if (text == null)
+                    continue;
+
+                text.color = color;
+            }
         }
     }
 #endif
