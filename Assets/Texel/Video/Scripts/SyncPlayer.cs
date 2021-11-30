@@ -24,6 +24,9 @@ namespace Texel
         [Tooltip("Pre-populated playlist to iterate through.  If default URL is set, the playlist will be disabled by default, otherwise it will auto-play.")]
         public Playlist playlist;
 
+        [Tooltip("Set of input URLs to remap to alternate URLs on a per-platform basis")]
+        public UrlRemapper urlRemapper;
+
         [Tooltip("Control access to player controls based on player type or whitelist")]
         public AccessControl accessControl;
 
@@ -159,12 +162,18 @@ namespace Texel
         const short VIDEO_SOURCE_AVPRO = 1;
         const short VIDEO_SOURCE_UNITY = 2;
 
+        const int GAME_MODE_PC = 0;
+        const int GAME_MODE_QUEST = 1;
+
         void Start()
         {
             dataProxy._Init();
             dataProxy.quest = Utilities.IsValid(questCheckObject) && questCheckObject.activeInHierarchy;
 
             _hasAccessControl = Utilities.IsValid(accessControl);
+
+            if (Utilities.IsValid(urlRemapper))
+                urlRemapper._SetGameMode(dataProxy.quest ? GAME_MODE_QUEST : GAME_MODE_PC);
 
             if (Utilities.IsValid(avProVideo))
             {
@@ -569,7 +578,15 @@ namespace Texel
             _UpdatePlayerState(PLAYER_STATE_LOADING);
 
             //#if !UNITY_EDITOR
-            _VideoLoadURL(_syncUrl);
+            VRCUrl url = _syncUrl;
+            if (Utilities.IsValid(urlRemapper))
+            {
+                url = urlRemapper._Remap(url);
+                if (Utilities.IsValid(url) && _syncUrl.Get() != url.Get())
+                    DebugLog("Remapped URL");
+            }
+
+            _VideoLoadURL(url);
             //#endif
         }
 

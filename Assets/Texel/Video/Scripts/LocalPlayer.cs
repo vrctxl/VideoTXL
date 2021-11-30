@@ -26,8 +26,14 @@ namespace Texel
         public VideoPlayerProxy dataProxy;
 
         [Header("Optional Components")]
+        [Tooltip("Set of input URLs to remap to alternate URLs on a per-platform basis")]
+        public UrlRemapper urlRemapper;
+
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
+
+        [Tooltip("When present and enabled, operate for native Quest")]
+        public GameObject questCheckObject;
 
         [Header("Playback")]
         [Tooltip("Optional trigger zone the player must be in to sustain playback.  Disables playing audio on world load.")]
@@ -88,6 +94,9 @@ namespace Texel
         const int SOURCE_TYPE_URL = 0;
         const int SOURCE_TYPE_STATIC = 1;
 
+        const int GAME_MODE_PC = 0;
+        const int GAME_MODE_QUEST = 1;
+
         bool _hasSustainZone = false;
         bool _inSustainZone = false;
         bool _triggerZoneSame = false;
@@ -106,6 +115,11 @@ namespace Texel
 
         void Start()
         {
+            bool isQuest = Utilities.IsValid(questCheckObject) && questCheckObject.activeInHierarchy;
+
+            if (Utilities.IsValid(urlRemapper))
+                urlRemapper._SetGameMode(isQuest ? GAME_MODE_QUEST : GAME_MODE_PC);
+
             _hasSustainZone = Utilities.IsValid(playbackZone);
             if (_hasSustainZone)
             {
@@ -228,7 +242,15 @@ namespace Texel
             _UpdatePlayerState(PLAYER_STATE_LOADING);
 
             //#if !UNITY_EDITOR
-            _currentPlayer.LoadURL(url);
+            VRCUrl resolvedUrl = url;
+            if (Utilities.IsValid(urlRemapper))
+            {
+                resolvedUrl = urlRemapper._Remap(url);
+                if (Utilities.IsValid(resolvedUrl) && resolvedUrl.Get() != url.Get())
+                    DebugLog("Remapped URL");
+            }
+
+            _currentPlayer.LoadURL(resolvedUrl);
             //#endif
         }
 
@@ -489,7 +511,6 @@ namespace Texel
         }
 
         // Debug
-
         void DebugLog(string message)
         {
             if (debugLogging)
