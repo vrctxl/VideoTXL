@@ -22,6 +22,9 @@ namespace Texel
         public AudioOverrideSettings defaultSettings;
         public bool defaultEnabled = true;
 
+        public DebugLog debugLog;
+        public bool vrcLogging = false;
+
         [NonSerialized]
         public VRCPlayerApi playerArg;
 
@@ -34,6 +37,10 @@ namespace Texel
         int linkCount = 0;
         bool hasDefault = false;
 
+        int[] playerOverrides;
+        int maxOverrideIndex = -1;
+        AudioOverrideSettings[] playerOverrideSettings;
+
         void Start()
         {
             if (Utilities.IsValid(zone))
@@ -45,6 +52,9 @@ namespace Texel
             hasMembership = Utilities.IsValid(membership);
             hasLocal = Utilities.IsValid(localZoneSettings);
             hasDefault = Utilities.IsValid(defaultSettings);
+
+            playerOverrides = new int[100];
+            playerOverrideSettings = new AudioOverrideSettings[100];
         }
 
         public void _Register(AudioOverrideManager overrideManager, int zoneId)
@@ -122,6 +132,13 @@ namespace Texel
 
         public bool _Apply(VRCPlayerApi player)
         {
+            AudioOverrideSettings overrideSettings = _GetPlayerOverride(player);
+            if (Utilities.IsValid(overrideSettings))
+            {
+                overrideSettings._Apply(player);
+                return true;
+            }
+
             if (hasLocal && localZoneEnabled && _ContainsPlayer(player))
             {
                 localZoneSettings._Apply(player);
@@ -146,6 +163,81 @@ namespace Texel
             }
 
             return false;
+        }
+
+        public void _AddPlayerOverride(VRCPlayerApi player, AudioOverrideSettings settings)
+        {
+            if (!Utilities.IsValid(player))
+                return;
+
+            DebugLog($"Add player {player.displayName} to zone {managedZoneId} override");
+
+            if (!player.IsValid())
+            {
+                _RemovePlayerOverride(player);
+                return;
+            }
+
+            int id = player.playerId;
+            for (int i = 0; i <= maxOverrideIndex; i++)
+            {
+                if (playerOverrides[i] == id)
+                    return;
+            }
+
+            maxOverrideIndex += 1;
+            playerOverrides[maxOverrideIndex] = id;
+            playerOverrideSettings[maxOverrideIndex] = settings;
+
+            if (hasManager)
+                manager._RebuildLocal();
+        }
+
+        public void _RemovePlayerOverride(VRCPlayerApi player)
+        {
+            if (!Utilities.IsValid(player))
+                return;
+
+            DebugLog($"Remove player {player.displayName} from zone {managedZoneId} override");
+
+            int id = player.playerId;
+            for (int i = 0; i <= maxOverrideIndex; i++)
+            {
+                if (playerOverrides[i] == id)
+                {
+                    playerOverrides[i] = playerOverrides[maxOverrideIndex];
+                    playerOverrideSettings[i] = playerOverrideSettings[maxOverrideIndex];
+                    maxOverrideIndex -= 1;
+
+                    if (hasManager)
+                        manager._RebuildLocal();
+
+                    return;
+                }
+            }
+        }
+
+        public AudioOverrideSettings _GetPlayerOverride(VRCPlayerApi player)
+        {
+            if (!Utilities.IsValid(player))
+                return null;
+
+            int id = player.playerId;
+            for (int i = 0; i <= maxOverrideIndex; i++)
+            {
+                if (playerOverrides[i] == id)
+                    return playerOverrideSettings[i];
+            }
+
+            return null;
+        }
+
+        void DebugLog(string message)
+        {
+            if (vrcLogging)
+                Debug.Log("[Texel:AudioOverride] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write("AudioOverride", message);
         }
     }
 }

@@ -30,6 +30,9 @@ namespace Texel
                     overrideZones[i]._Register(this, i);
             }
 
+            if (Utilities.IsValid(defaultZone))
+                defaultZone._Register(this, -1);
+
             SendCustomEventDelayedSeconds("_RebuildLocal", 1f);
         }
 

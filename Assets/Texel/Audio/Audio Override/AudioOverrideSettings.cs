@@ -20,12 +20,14 @@ namespace Texel
         public float voiceGain = 15;
         public float voiceNear = 0;
         public float voiceFar = 25;
+        public float voiceVolumetric = 0;
         public bool voiceLowpass = true;
 
         public bool applyAvatar = true;
         public float avatarGain = 10;
         public float avatarNear = 0;
         public float avatarFar = 40;
+        public float avatarVolumetric = 0;
 
         public DebugLog debugLog;
         public bool vrcLogging = false;
@@ -39,6 +41,7 @@ namespace Texel
                 player.SetVoiceGain(voiceGain);
                 player.SetVoiceDistanceNear(voiceNear);
                 player.SetVoiceDistanceFar(voiceFar);
+                player.SetVoiceVolumetricRadius(voiceVolumetric);
                 player.SetVoiceLowpass(voiceLowpass);
             }
 
@@ -48,6 +51,7 @@ namespace Texel
                 player.SetAvatarAudioGain(avatarGain);
                 player.SetAvatarAudioNearRadius(avatarNear);
                 player.SetAvatarAudioFarRadius(avatarFar);
+                player.SetAvatarAudioVolumetricRadius(avatarVolumetric);
             }
         }
 
@@ -68,12 +72,14 @@ namespace Texel
         SerializedProperty voiceGainProperty;
         SerializedProperty voiceNearProperty;
         SerializedProperty voiceFarProperty;
+        SerializedProperty voiceVolumetricProperty;
         SerializedProperty voiceLowpassProperty;
 
         SerializedProperty applyAvatarProperty;
         SerializedProperty avatarGainProperty;
         SerializedProperty avatarNearProperty;
         SerializedProperty avatarFarProperty;
+        SerializedProperty avatarVolumetricProperty;
 
         SerializedProperty debugLogProperty;
         SerializedProperty vrcLoggingProperty;
@@ -85,11 +91,13 @@ namespace Texel
             voiceGainProperty = serializedObject.FindProperty(nameof(AudioOverrideSettings.voiceGain));
             voiceNearProperty = serializedObject.FindProperty(nameof(AudioOverrideSettings.voiceNear));
             voiceFarProperty = serializedObject.FindProperty(nameof(AudioOverrideSettings.voiceFar));
+            voiceVolumetricProperty = serializedObject.FindProperty(nameof(AudioOverrideSettings.voiceVolumetric));
             voiceLowpassProperty = serializedObject.FindProperty(nameof(AudioOverrideSettings.voiceLowpass));
             applyAvatarProperty = serializedObject.FindProperty(nameof(AudioOverrideSettings.applyAvatar));
             avatarGainProperty = serializedObject.FindProperty(nameof(AudioOverrideSettings.avatarGain));
             avatarNearProperty = serializedObject.FindProperty(nameof(AudioOverrideSettings.avatarNear));
             avatarFarProperty = serializedObject.FindProperty(nameof(AudioOverrideSettings.avatarFar));
+            avatarVolumetricProperty = serializedObject.FindProperty(nameof(AudioOverrideSettings.avatarVolumetric));
             debugLogProperty = serializedObject.FindProperty(nameof(AudioOverrideSettings.debugLog));
             vrcLoggingProperty = serializedObject.FindProperty(nameof(AudioOverrideSettings.vrcLogging));
         }
@@ -106,6 +114,7 @@ namespace Texel
                 EditorGUILayout.PropertyField(voiceGainProperty);
                 EditorGUILayout.PropertyField(voiceNearProperty);
                 EditorGUILayout.PropertyField(voiceFarProperty);
+                EditorGUILayout.PropertyField(voiceVolumetricProperty);
                 EditorGUILayout.PropertyField(voiceLowpassProperty);
             }
 
@@ -117,6 +126,7 @@ namespace Texel
                 EditorGUILayout.PropertyField(avatarGainProperty);
                 EditorGUILayout.PropertyField(avatarNearProperty);
                 EditorGUILayout.PropertyField(avatarFarProperty);
+                EditorGUILayout.PropertyField(avatarVolumetricProperty);
             }
 
             EditorGUILayout.Space();
