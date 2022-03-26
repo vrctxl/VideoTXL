@@ -25,6 +25,7 @@ namespace Texel
         void Start()
         {
             acl._RegsiterAccessHandler(this, "_CheckAccess", "playerArg", "checkResult");
+            videoPlayer.dataProxy._RegisterEventHandler(this, "_VideoLockUpdate");
         }
 
         public void _CheckAccess()
@@ -33,6 +34,11 @@ namespace Texel
                 checkResult = RESULT_ALLOW;
             else
                 checkResult = RESULT_PASS;
+        }
+
+        public void _VideoLockUpdate()
+        {
+            acl._Validate();
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿
+using System;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -8,6 +9,7 @@ namespace Texel
 {
     [AddComponentMenu("Texel/Access Control")]
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+    [DefaultExecutionOrder(-1)]
     public class AccessControl : UdonSharpBehaviour
     {
         [Header("Optional Components")]
@@ -22,6 +24,8 @@ namespace Texel
         public bool allowAnyone = false;
 
         [Header("Default Options")]
+        [Tooltip("Whether ACL is enforced.  When not enforced, access is always given.")]
+        public bool enforce = true;
         [Tooltip("Write out debug info to VRChat log")]
         public bool debugLogging = false;
 
@@ -43,9 +47,14 @@ namespace Texel
 
         UdonBehaviour cachedAccessHandler;
         Component[] accessHandlers;
+        int accessHandlerCount = 0;
         string[] accessHandlerEvents;
         string[] accessHandlerParams;
         string[] accessHandlerResults;
+
+        Component[] validateHandlers;
+        int validateHandlerCount = 0;
+        string[] validateHandlerEvents;
 
         void Start()
         {
@@ -82,11 +91,13 @@ namespace Texel
         public override void OnPlayerJoined(VRCPlayerApi player)
         {
             _SearchInstanceOwner();
+            _CallValidateHandlers();
         }
 
         public override void OnPlayerLeft(VRCPlayerApi player)
         {
             _SearchInstanceOwner();
+            _CallValidateHandlers();
         }
 
         void _SearchInstanceOwner()
@@ -104,6 +115,12 @@ namespace Texel
                     break;
                 }
             }
+        }
+
+        public void _Enforce(bool state)
+        {
+            enforce = state;
+            _CallValidateHandlers();
         }
 
         public bool _PlayerWhitelisted(VRCPlayerApi player)
@@ -128,6 +145,9 @@ namespace Texel
 
         public bool _HasAccess(VRCPlayerApi player)
         {
+            if (!enforce)
+                return true;
+
             bool isMaster = Utilities.IsValid(player) ? player.isMaster : false;
 
             int handlerResult = _CheckAccessHandlerAccess(player);
@@ -156,41 +176,52 @@ namespace Texel
 
         public void _RegsiterAccessHandler(Component handler, string eventName, string playerParamVar, string resultVar)
         {
-            if (!Utilities.IsValid(accessHandlers))
-                accessHandlers = new Component[0];
+            if (!Utilities.IsValid(handler))
+                return;
 
-            foreach (Component c in accessHandlers)
+            for (int i = 0; i < accessHandlerCount; i++)
             {
-                if (c == handler)
+                if (accessHandlers[i] == handler)
                     return;
             }
 
-            int count = accessHandlers.Length;
-            Component[] newHandlers = new Component[count + 1];
-            string[] newEvents = new string[count + 1];
-            string[] newParams = new string[count + 1];
-            string[] newReturns = new string[count + 1];
-            for (int i = 0; i < count; i++)
-            {
-                newHandlers[i] = accessHandlers[i];
-                newEvents[i] = accessHandlerEvents[i];
-                newParams[i] = accessHandlerParams[i];
-                newReturns[i] = accessHandlerResults[i];
-            }
-
-            newHandlers[count] = handler;
-            newEvents[count] = eventName;
-            newParams[count] = playerParamVar;
-            newReturns[count] = resultVar;
+            accessHandlers = (Component[])_AddElement(accessHandlers, handler, typeof(Component));
+            accessHandlerEvents = (string[])_AddElement(accessHandlerEvents, eventName, typeof(string));
+            accessHandlerParams = (string[])_AddElement(accessHandlerParams, playerParamVar, typeof(string));
+            accessHandlerResults = (string[])_AddElement(accessHandlerResults, resultVar, typeof(string));
 
             DebugLog($"Registered access handler {eventName}");
 
-            accessHandlers = newHandlers;
-            accessHandlerEvents = newEvents;
-            accessHandlerParams = newParams;
-            accessHandlerResults = newReturns;
-
             cachedAccessHandler = (UdonBehaviour)handler;
+
+            accessHandlerCount += 1;
+        }
+
+        // Validate handlers are called when access controller thinks permissions may have changed.  Can be caused by
+        // change in master/owner, whitelist, or request from external source
+
+        public void _RegisterValidateHandler(Component handler, string eventName)
+        {
+            if (!Utilities.IsValid(handler))
+                return;
+
+            for (int i = 0; i < validateHandlerCount; i++)
+            {
+                if (validateHandlers[i] == handler)
+                    return;
+            }
+
+            validateHandlers = (Component[])_AddElement(validateHandlers, handler, typeof(Component));
+            validateHandlerEvents = (string[])_AddElement(validateHandlerEvents, eventName, typeof(string));
+
+            DebugLog($"Registered validate handler {eventName}");
+
+            validateHandlerCount += 1;
+        }
+
+        public void _Validate()
+        {
+            _CallValidateHandlers();
         }
 
         int _CheckAccessHandlerAccess(VRCPlayerApi player)
@@ -225,6 +256,36 @@ namespace Texel
             }
 
             return RESULT_PASS;
+        }
+
+        void _CallValidateHandlers()
+        {
+            for (int i = 0; i < validateHandlerCount; i++)
+            {
+                UdonBehaviour script = (UdonBehaviour)validateHandlers[i];
+                if (!Utilities.IsValid(script))
+                    continue;
+
+                script.SendCustomEvent(validateHandlerEvents[i]);
+            }
+        }
+
+        Array _AddElement(Array arr, object elem, Type type)
+        {
+            Array newArr;
+            int count = 0;
+
+            if (Utilities.IsValid(arr))
+            {
+                count = arr.Length;
+                newArr = Array.CreateInstance(type, count + 1);
+                Array.Copy(arr, newArr, count);
+            }
+            else
+                newArr = Array.CreateInstance(type, 1);
+
+            newArr.SetValue(elem, count);
+            return newArr;
         }
 
         void DebugLog(string message)
