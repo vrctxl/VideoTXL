@@ -24,6 +24,7 @@ namespace Texel
         public bool holdOnReady = false;
 
         public VRCUrl[] playlist;
+        public string[] trackNames;
 
         [UdonSynced]
         bool syncEnabled;
@@ -56,10 +57,22 @@ namespace Texel
 
             DebugLog("Common initialization");
             trackCount = playlist.Length;
+
+            if (!Utilities.IsValid(trackNames) || trackNames.Length != playlist.Length)
+            {
+                Array newArr = Array.CreateInstance(typeof(string), playlist.Length);
+                if (Utilities.IsValid(trackNames))
+                    Array.Copy(trackNames, newArr, Math.Min(trackNames.Length, trackCount));
+
+                trackNames = (string[])newArr;
+            }
+
             for (int i = 0; i < trackCount; i++)
             {
                 if (!Utilities.IsValid(playlist[i]))
                     playlist[i] = VRCUrl.Empty;
+                if (!Utilities.IsValid(trackNames[i]))
+                    trackNames[i] = $"Track {i + 1}";
             }
 
             syncShuffle = shuffle;
@@ -163,6 +176,36 @@ namespace Texel
                 end = false;
 
             DebugLog($"Move previous track {syncCurrentIndex}");
+
+            RequestSerialization();
+            _UpdateLocal();
+
+            return true;
+        }
+
+        public bool _MoveTo(int index)
+        {
+            if (!syncPlayer._TakeControl())
+                return false;
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            if (index < 0 || index >= trackCount)
+                return false;
+
+            if (syncCurrentIndex == index)
+            {
+                if (syncEnabled)
+                    return false;
+            }
+
+            syncEnabled = true;
+            syncCurrentIndex = (byte)index;
+
+            if (end)
+                end = false;
+
+            DebugLog($"Move track to {syncCurrentIndex}");
 
             RequestSerialization();
             _UpdateLocal();
