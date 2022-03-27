@@ -16,10 +16,13 @@ namespace Texel
         public Text selectedText;
         public Text unselectedText;
         public Text urlText;
+        public Image tracker;
+        public Image trackerFill;
 
         string title;
         string url;
         bool selected;
+        float trackProgress;
 
         public void _Select()
         {
@@ -37,6 +40,14 @@ namespace Texel
                     selectedText.gameObject.SetActive(selected);
                 if (Utilities.IsValid(unselectedText))
                     unselectedText.gameObject.SetActive(!selected);
+
+                if (Utilities.IsValid(tracker))
+                    tracker.gameObject.SetActive(selected);
+                if (Utilities.IsValid(trackerFill))
+                {
+                    trackerFill.gameObject.SetActive(selected);
+                    trackerFill.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 0);
+                }
             }
         }
 
@@ -63,6 +74,21 @@ namespace Texel
 
                 if (Utilities.IsValid(urlText))
                     urlText.text = url;
+            }
+        }
+
+        public float TrackProgress
+        {
+            get { return trackProgress; }
+            set
+            {
+                trackProgress = value;
+
+                if (Utilities.IsValid(tracker) && Utilities.IsValid(trackerFill))
+                {
+                    float w = tracker.rectTransform.rect.width;
+                    trackerFill.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, w * trackProgress);
+                }
             }
         }
     }

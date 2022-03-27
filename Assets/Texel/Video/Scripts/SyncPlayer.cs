@@ -430,13 +430,13 @@ namespace Texel
             float duration = _currentPlayer.GetDuration();
             if (duration - time < 1)
             {
-                bool hasPlaylist = Utilities.IsValid(playlist) && playlist.playlistEnabled;
+                bool hasPlaylist = Utilities.IsValid(playlist) && playlist.PlaylistEnabled;
                 if (_IsUrlValid(_syncQueuedUrl))
                 {
                     SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
                     return;
                 }
-                else if (hasPlaylist && playlist._MoveNext())
+                else if (hasPlaylist && playlist.autoAdvance && playlist._MoveNext())
                 {
                     SendCustomEventDelayedFrames("_PlayPlaylistUrl", 1);
                     return;
@@ -751,10 +751,10 @@ namespace Texel
 
             if (Networking.IsOwner(gameObject))
             {
-                bool hasPlaylist = Utilities.IsValid(playlist) && playlist.playlistEnabled;
+                bool hasPlaylist = Utilities.IsValid(playlist) && playlist.PlaylistEnabled;
                 if (_IsUrlValid(_syncQueuedUrl))
                     SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
-                else if (hasPlaylist && playlist._MoveNext())
+                else if (hasPlaylist && playlist.autoAdvance && playlist._MoveNext())
                     SendCustomEventDelayedFrames("_PlayPlaylistUrl", 1);
                 else if (!hasPlaylist && _syncRepeatPlaylist)
                     SendCustomEventDelayedFrames("_LoopVideo", 1);

@@ -469,7 +469,7 @@ namespace Texel
                 return;
 
             videoPlayer.playlist._SetEnabled(true);
-            if (!videoPlayer.playlist.playlistEnabled)
+            if (!videoPlayer.playlist.PlaylistEnabled)
                 return;
 
             if (videoPlayer.playlist.holdOnReady)
@@ -615,11 +615,11 @@ namespace Texel
 
             if (Utilities.IsValid(playlist) && playlist.trackCount > 0)
             {
-                nextIcon.color = (enableControl && playlist.playlistEnabled && playlist._HasNextTrack()) ? normalColor : disabledColor;
-                prevIcon.color = (enableControl && playlist.playlistEnabled && playlist._HasPrevTrack()) ? normalColor : disabledColor;
+                nextIcon.color = (enableControl && playlist.PlaylistEnabled && playlist._HasNextTrack()) ? normalColor : disabledColor;
+                prevIcon.color = (enableControl && playlist.PlaylistEnabled && playlist._HasPrevTrack()) ? normalColor : disabledColor;
                 playlistIcon.color = enableControl ? normalColor : disabledColor;
 
-                playlistText.text = playlist.playlistEnabled ? $"TRACK: {playlist.currentIndex + 1} / {playlist.trackCount}" : "";
+                playlistText.text = playlist.PlaylistEnabled ? $"TRACK: {playlist.CurrentIndex + 1} / {playlist.trackCount}" : "";
             }
             else
             {
