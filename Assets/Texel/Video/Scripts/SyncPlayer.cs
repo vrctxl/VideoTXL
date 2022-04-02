@@ -33,9 +33,6 @@ namespace Texel
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
 
-        [Tooltip("When present and enabled, operate for native Quest")]
-        public GameObject questCheckObject;
-
         [Tooltip("Optional trigger zone the player must be in to sustain playback.  Disables playing audio on world load.")]
         [HideInInspector]
         public CompoundZoneTrigger playbackZone;
@@ -175,7 +172,10 @@ namespace Texel
         void Start()
         {
             dataProxy._Init();
-            dataProxy.quest = Utilities.IsValid(questCheckObject) && questCheckObject.activeInHierarchy;
+
+#if UNITY_ANDROID
+            dataProxy.quest = true;
+#endif
 
             _hasAccessControl = Utilities.IsValid(accessControl);
             _hasSustainZone = Utilities.IsValid(playbackZone);

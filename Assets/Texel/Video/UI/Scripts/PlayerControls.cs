@@ -137,8 +137,7 @@ namespace Texel
                 }
             }
 
-            bool questCheck = Utilities.IsValid(videoPlayer.questCheckObject) && videoPlayer.questCheckObject.activeInHierarchy;
-            if (questCheck)
+            if (dataProxy.quest)
             {
                 currentVideoText.enabled = true;
                 lastVideoText.enabled = true;
@@ -578,8 +577,7 @@ namespace Texel
             playCurrentIcon.color = (enableControl && currentUrl != "") ? normalColor : disabledColor;
             playLastIcon.color = (enableControl && lastUrl != "") ? normalColor : disabledColor;
 
-            bool questCheck = Utilities.IsValid(videoPlayer.questCheckObject) && videoPlayer.questCheckObject.activeInHierarchy;
-            if (questCheck)
+            if (dataProxy.quest)
             {
                 currentVideoText.text = currentUrl;
                 lastVideoText.text = lastUrl;
