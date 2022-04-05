@@ -15,24 +15,49 @@ namespace Texel
 
         public bool showTrackNames = true;
 
+        public ScrollRect scrollRect;
         public GameObject layoutGroup;
+        public Text titleText;
 
         VideoPlayerProxy dataProxy;
         PlaylistData data;
         PlaylistUIEntry[] entries;
+        RectTransform[] entriesRT;
 
         void Start()
         {
             entries = new PlaylistUIEntry[0];
 
+            if (Utilities.IsValid(playlist))
+                _InitFromPlaylist(playlist);
+        }
+
+        public void _InitFromPlayer(SyncPlayer player)
+        {
+            if (!Utilities.IsValid(player) || !Utilities.IsValid(player.playlist))
+                return;
+
+            _InitFromPlaylist(player.playlist);
+        }
+
+        public void _InitFromPlaylist(Playlist playlist)
+        {
+            if (Utilities.IsValid(playlist))
+            {
+                this.playlist = playlist;
+
+                playlist._RegisterListChange(this, "_OnListChange");
+                playlist._RegisterTrackChange(this, "_OnTrackChange");
+                playlist._RegisterOptionChange(this, "_OnOptionChange");
+
+                if (Utilities.IsValid(playlist.syncPlayer))
+                {
+                    dataProxy = playlist.syncPlayer.dataProxy;
+                    dataProxy._RegisterEventHandler(this, "_VideoTrackingUpdate");
+                }
+            }
+
             SendCustomEventDelayedFrames("_InitUI", 1);
-
-            playlist._RegisterListChange(this, "_OnListChange");
-            playlist._RegisterTrackChange(this, "_OnTrackChange");
-            playlist._RegisterOptionChange(this, "_OnOptionChange");
-
-            dataProxy = playlist.syncPlayer.dataProxy;
-            dataProxy._RegisterEventHandler(this, "_VideoTrackingUpdate");
         }
 
         public void _InitUI()
@@ -53,13 +78,44 @@ namespace Texel
                 return;
 
             entry.Selected = true;
+
+            Canvas.ForceUpdateCanvases();
+            ScrollReposition(entriesRT[track]);
+        }
+
+        void ScrollReposition(RectTransform target)
+        {
+            RectTransform contentPanel = (RectTransform)layoutGroup.transform.parent.gameObject.GetComponent(typeof(RectTransform));
+
+            float scrollHeight = ((RectTransform)scrollRect.GetComponent(typeof(RectTransform))).rect.height;
+            var targetHeight = target.rect.height;
+
+            Vector2 contentPos = scrollRect.transform.InverseTransformPoint(contentPanel.position);
+            Vector2 targetPos = scrollRect.transform.InverseTransformPoint(target.position);
+
+            if (targetPos.y + (targetHeight / 2) > scrollHeight / 2)
+                contentPanel.anchoredPosition = new Vector2(contentPanel.anchoredPosition.x, contentPos.y - targetPos.y - (targetHeight / 2));
+            if (targetPos.y - (targetHeight / 2) < -scrollHeight / 2)
+                contentPanel.anchoredPosition = new Vector2(contentPanel.anchoredPosition.x, contentPos.y - targetPos.y + (targetHeight / 2) - scrollHeight);
         }
 
         public void _OnListChange()
         {
             _ClearList();
 
+            if (!Utilities.IsValid(playlist))
+                return;
+
             data = playlist.playlistData;
+
+            if (Utilities.IsValid(titleText))
+            {
+                if (!Utilities.IsValid(data))
+                    titleText.text = "";
+                else
+                    titleText.text = data.name;
+            }
+
             _BuildList();
         }
 
@@ -126,6 +182,7 @@ namespace Texel
                 return;
 
             entries = new PlaylistUIEntry[data.playlist.Length];
+            entriesRT = new RectTransform[data.playlist.Length];
 
             for (int i = 0; i < data.playlist.Length; i++)
             {
@@ -152,6 +209,7 @@ namespace Texel
                 rt.localPosition = Vector3.zero;
 
                 entries[i] = script;
+                entriesRT[i] = rt;
             }
         }
     }

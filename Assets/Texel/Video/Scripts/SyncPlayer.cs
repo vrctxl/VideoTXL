@@ -208,6 +208,9 @@ namespace Texel
             _UpdateVideoSource(VIDEO_SOURCE_AVPRO, _syncVideoSourceOverride);
             _UpdatePlayerState(PLAYER_STATE_STOPPED);
 
+            if (Utilities.IsValid(playlist))
+                playlist._RegisterListChange(this, "_OnPlaylistListChange");
+
             if (Networking.IsOwner(gameObject))
             {
                 _syncLocked = defaultLocked;
@@ -264,30 +267,17 @@ namespace Texel
             _StopVideo();
         }
 
-        public void _SetPlaylist(Playlist list)
+        public void _OnPlaylistListChange()
         {
-            if (Utilities.IsValid(list))
-                DebugLog($"Set playlist {list.gameObject.name}");
-            else
-                DebugLog("Remove playlist");
-
-            playlist = list;
+            DebugLog("Playlist track list changed");
+            dataProxy._EmitPlaylistUpdate();
 
             if (Networking.IsOwner(gameObject))
             {
                 if (!Utilities.IsValid(playlist))
-                {
-                    dataProxy._EmitPlaylistUpdate();
                     return;
-                }
 
-                DebugLog("Setting up playlist as owner");
-                playlist._SetEnabled(true);
-                playlist._MoveFirst();
-
-                dataProxy._EmitPlaylistUpdate();
-
-                if (playlist.holdOnReady)
+                if (playlist.PlaylistEnabled && playlist.holdOnReady)
                     _PlayPlaylistUrl();
             }
         }
@@ -524,10 +514,14 @@ namespace Texel
         public void _PlayPlaylistUrl()
         {
             _syncQueuedUrl = VRCUrl.Empty;
-            if (Utilities.IsValid(playlist))
+            if (Utilities.IsValid(playlist) && Utilities.IsValid(playlist.playlistData))
             {
+                if (!playlist.PlaylistEnabled)
+                    playlist._SetEnabled(true);
+
                 if (playlist.holdOnReady && Networking.IsOwner(gameObject))
                     _HoldNextVideo();
+
                 _PlayVideo(playlist._GetCurrent());
             }
         }

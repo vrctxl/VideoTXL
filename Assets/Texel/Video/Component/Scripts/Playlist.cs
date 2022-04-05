@@ -149,14 +149,14 @@ namespace Texel
         {
             playlistData = data;
 
-            if (!Utilities.IsValid(data))
+            if (!Utilities.IsValid(data) || !Utilities.IsValid(data.playlist))
             {
                 playlist = new VRCUrl[0];
                 trackNames = new string[0];
             } else
             {
                 playlist = data.playlist;
-                trackNames = data.trackNames;
+                trackNames = data.trackNames ?? new string[playlist.Length];
             }
 
             trackCount = playlist.Length;

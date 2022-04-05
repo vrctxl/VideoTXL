@@ -6,6 +6,7 @@ using VRC.SDKBase;
 using VRC.Udon;
 using VRC.SDK3.Components;
 using VRC.SDK3.Components.Video;
+using System.Collections.Generic;
 
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
 using UnityEditor;
@@ -72,6 +73,8 @@ namespace Texel
         public InputField lastVideoInput;
         public Text currentVideoText;
         public Text lastVideoText;
+
+        public GameObject playlistPanel;
 
         VideoPlayerProxy dataProxy;
 
@@ -146,6 +149,13 @@ namespace Texel
             {
                 currentVideoInput.enabled = true;
                 lastVideoInput.enabled = true;
+            }
+
+            if (Utilities.IsValid(playlistPanel))
+            {
+                PlaylistUI pui = (PlaylistUI)playlistPanel.GetComponent(typeof(UdonBehaviour));
+                if (Utilities.IsValid(pui))
+                    pui._InitFromPlayer(videoPlayer);
             }
 
 #if !UNITY_EDITOR
@@ -467,12 +477,22 @@ namespace Texel
             if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.playlist))
                 return;
 
+            // Toggle panel if present
+            if (Utilities.IsValid(playlistPanel))
+            {
+                playlistPanel.SetActive(!playlistPanel.activeSelf);
+                playlistIcon.color = playlistPanel.activeSelf ? activeColor : normalColor;
+                return;
+            }
+
+            // If no panel, legacy behavior of re-enabling playlist at current track
             videoPlayer.playlist._SetEnabled(true);
             if (!videoPlayer.playlist.PlaylistEnabled)
                 return;
 
             if (videoPlayer.playlist.holdOnReady)
                 videoPlayer._HoldNextVideo();
+
             videoPlayer._ChangeUrl(videoPlayer.playlist._GetCurrent());
         }
 
@@ -626,6 +646,9 @@ namespace Texel
                 playlistIcon.color = disabledColor;
                 playlistText.text = "";
             }
+
+            if (Utilities.IsValid(playlist) && Utilities.IsValid(playlistPanel))
+                playlistIcon.color = playlistPanel.activeSelf ? activeColor : normalColor;
         }
 
         public void _UpdateAll()
@@ -1086,6 +1109,8 @@ namespace Texel
         SerializedProperty currentVideoTextProperty;
         SerializedProperty lastVideoTextProperty;
 
+        SerializedProperty playlistPanelProperty;
+
         string[] backgroundImagePaths = new string[] {
             "MainPanel/Background",
             "InfoPanel/Background"
@@ -1238,6 +1263,8 @@ namespace Texel
             lastVideoInputProperty = serializedObject.FindProperty(nameof(PlayerControls.lastVideoInput));
             currentVideoTextProperty = serializedObject.FindProperty(nameof(PlayerControls.currentVideoText));
             lastVideoTextProperty = serializedObject.FindProperty(nameof(PlayerControls.lastVideoText));
+
+            playlistPanelProperty = serializedObject.FindProperty(nameof(PlayerControls.playlistPanel));
         }
 
         public override void OnInspectorGUI()
@@ -1303,6 +1330,7 @@ namespace Texel
                 EditorGUILayout.PropertyField(lastVideoInputProperty);
                 EditorGUILayout.PropertyField(currentVideoTextProperty);
                 EditorGUILayout.PropertyField(lastVideoTextProperty);
+                EditorGUILayout.PropertyField(playlistPanelProperty);
                 EditorGUI.indentLevel--;
             }
             EditorGUILayout.Space();
@@ -1327,6 +1355,24 @@ namespace Texel
             }
 
             GameObject root = pc.gameObject;
+
+            List<Object> pendingUpdate = new List<Object>();
+            CollectObjects<Image>(pendingUpdate, root, backgroundImagePaths);
+            CollectObjects<Image>(pendingUpdate, root, backgroundTitleImagePaths);
+            CollectObjects<Image>(pendingUpdate, root, buttonBgImagePaths);
+            CollectObjects<Image>(pendingUpdate, root, sliderBgImagePaths);
+            CollectObjects<Image>(pendingUpdate, root, volumeFillBgPaths);
+            CollectObjects<Image>(pendingUpdate, root, volumeHandleBgPaths);
+            CollectObjects<Image>(pendingUpdate, root, trackerFillBgPaths);
+            CollectObjects<Image>(pendingUpdate, root, trackerHandleBgPaths);
+            CollectObjects<Image>(pendingUpdate, root, buttonIconImagePaths);
+            CollectObjects<Image>(pendingUpdate, root, subTextIconPaths);
+            CollectObjects<Text>(pendingUpdate, root, generalTextPaths);
+            CollectObjects<Text>(pendingUpdate, root, mainTextPaths);
+            CollectObjects<Text>(pendingUpdate, root, subTextPaths);
+
+            Undo.RecordObjects(pendingUpdate.ToArray(), "Update colors");
+            
             UpdateImages(root, backgroundImagePaths, pc.colorProfile.backgroundColor);
             UpdateImages(root, backgroundTitleImagePaths, pc.colorProfile.backgroundTitleColor);
             UpdateImages(root, buttonBgImagePaths, pc.colorProfile.buttonBackgroundColor);
@@ -1340,6 +1386,25 @@ namespace Texel
             UpdateTexts(root, generalTextPaths, pc.colorProfile.generalTextColor);
             UpdateTexts(root, mainTextPaths, pc.colorProfile.mainTextColor);
             UpdateTexts(root, subTextPaths, pc.colorProfile.subTextColor);
+
+            foreach (Object obj in pendingUpdate)
+                PrefabUtility.RecordPrefabInstancePropertyModifications(obj);
+        }
+
+        void CollectObjects<T> (List<Object> list, GameObject root, string[] paths) where T : Object
+        {
+            foreach (string path in paths)
+            {
+                Transform t = root.transform.Find(path);
+                if (t == null)
+                    continue;
+
+                T component = t.GetComponent<T>();
+                if (component == null)
+                    continue;
+
+                list.Add(component);
+            }
         }
 
         void UpdateImages(GameObject root, string[] paths, Color color)
