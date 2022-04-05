@@ -27,6 +27,8 @@ namespace Texel
         [NonSerialized]
         public VideoError lastErrorCode;
         [NonSerialized]
+        public bool streamFallback;
+        [NonSerialized]
         public bool seekableSource;
         [NonSerialized]
         public float trackDuration;

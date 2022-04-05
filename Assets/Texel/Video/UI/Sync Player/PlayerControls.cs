@@ -739,6 +739,9 @@ namespace Texel
                                 break;
                         }
 
+                        if (dataProxy.streamFallback)
+                            SetPlaceholderText("Retrying as stream source");
+
                         urlInput.readOnly = !canControl;
                         SetStatusText("");
                     }

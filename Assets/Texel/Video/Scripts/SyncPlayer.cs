@@ -799,10 +799,26 @@ namespace Texel
             DebugLog("Video stream failed: " + _syncUrl);
             DebugLog("Error code: " + code);
 
+            // Try to fall back to AVPro if auto video failed (the youtube livestream problem)
+            bool shouldFallback = videoError == VideoError.PlayerError && _syncVideoSourceOverride == VIDEO_SOURCE_NONE && _syncVideoSource == VIDEO_SOURCE_UNITY;
+
             _UpdatePlayerStateError(videoError);
+            if (shouldFallback)
+                _SetStreamFallback();
 
             if (Networking.IsOwner(gameObject))
             {
+                if (shouldFallback)
+                {
+                    DebugLog("Retrying URL in stream mode");
+
+                    _UpdateVideoSource(VIDEO_SOURCE_AVPRO, _syncVideoSourceOverride);
+                    RequestSerialization();
+
+                    _StartVideoLoadDelay(retryTimeout);
+                    return;
+                }
+
                 if (retryOnError)
                 {
                     _StartVideoLoadDelay(retryTimeout);
@@ -1335,6 +1351,7 @@ namespace Texel
         {
             localPlayerState = state;
             dataProxy.playerState = state;
+            dataProxy.streamFallback = false;
 
             if (state != PLAYER_STATE_PLAYING)
             {
@@ -1372,6 +1389,12 @@ namespace Texel
             localLastErrorCode = error;
             dataProxy.playerState = PLAYER_STATE_ERROR;
             dataProxy.lastErrorCode = error;
+            dataProxy._EmitStateUpdate();
+        }
+
+        void _SetStreamFallback()
+        {
+            dataProxy.streamFallback = true;
             dataProxy._EmitStateUpdate();
         }
 
