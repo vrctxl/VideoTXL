@@ -1,4 +1,5 @@
 ﻿
+using System;
 using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
@@ -28,6 +29,10 @@ namespace Texel
 
         int selectedLang = 0;
 
+        Component[] handlers;
+        int handlerCount = 0;
+        string[] handlerEvents;
+
         void Start()
         {
             textIndexes = new int[textKeys.Length];
@@ -49,6 +54,15 @@ namespace Texel
             _SelectLang(0);
         }
 
+        public int SelectedLang
+        {
+            get { return selectedLang; }
+            set
+            {
+                _SelectLang(value);
+            }
+        }
+
         public void _SelectLang(int id)
         {
             if (id < 0 || id >= translationTable.languages.Length)
@@ -59,6 +73,8 @@ namespace Texel
             _ApplyTextTranslations();
             _ApplyPickupTranslations();
             _ApplyBehaviorTranslations();
+
+            _UpdateHandlers();
         }
 
         public void _SelectLang0()
@@ -152,6 +168,50 @@ namespace Texel
                 string value = translationTable._GetValue(selectedLang, index);
                 target.InteractionText = value;
             }
+        }
+
+        public void _Regsiter(Component handler, string eventName)
+        {
+            if (!Utilities.IsValid(handler) || !Utilities.IsValid(eventName))
+                return;
+
+            for (int i = 0; i < handlerCount; i++)
+            {
+                if (handlers[i] == handler)
+                    return;
+            }
+
+            handlers = (Component[])_AddElement(handlers, handler, typeof(Component));
+            handlerEvents = (string[])_AddElement(handlerEvents, eventName, typeof(string));
+
+            handlerCount += 1;
+        }
+
+        void _UpdateHandlers()
+        {
+            for (int i = 0; i < handlerCount; i++)
+            {
+                UdonBehaviour script = (UdonBehaviour)handlers[i];
+                script.SendCustomEvent(handlerEvents[i]);
+            }
+        }
+
+        Array _AddElement(Array arr, object elem, Type type)
+        {
+            Array newArr;
+            int count = 0;
+
+            if (Utilities.IsValid(arr))
+            {
+                count = arr.Length;
+                newArr = Array.CreateInstance(type, count + 1);
+                Array.Copy(arr, newArr, count);
+            }
+            else
+                newArr = Array.CreateInstance(type, 1);
+
+            newArr.SetValue(elem, count);
+            return newArr;
         }
     }
 }
