@@ -128,6 +128,16 @@ namespace Texel
             _UpdateAll();
         }
 
+        public void _SetMasterMuted()
+        {
+            _SetMasterMute(true);
+        }
+
+        public void _SetMasterUnmuted()
+        {
+            _SetMasterMute(false);
+        }
+
         public void _SetMasterMute(bool state)
         {
             ovrMasterMute = true;
