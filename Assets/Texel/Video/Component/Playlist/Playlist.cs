@@ -358,6 +358,24 @@ namespace Texel
             return playlist[index];
         }
 
+        public VRCUrl _GetTrackURL(int index)
+        {
+            if (index < 0 || index >= trackCount)
+                return VRCUrl.Empty;
+
+            index = syncTrackerOrder[index];
+            return playlist[index];
+        }
+
+        public string _GetTrackName(int index)
+        {
+            if (index < 0 || index >= trackCount)
+                return "";
+
+            index = syncTrackerOrder[index];
+            return trackNames[index];
+        }
+
         public void _SetEnabled(bool state)
         {
             if (!syncPlayer._TakeControl())
@@ -388,7 +406,10 @@ namespace Texel
 
             ShuffleEnabled = state;
             if (syncShuffle)
+            {
                 _Shuffle();
+                _UpdateHandlers(LIST_CHANGE_EVENT);
+            }
 
             RequestSerialization();
         }

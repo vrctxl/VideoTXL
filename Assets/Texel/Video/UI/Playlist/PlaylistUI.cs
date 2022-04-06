@@ -149,7 +149,7 @@ namespace Texel
             {
                 playlist._SetEnabled(true);
                 SyncPlayer videoPlayer = playlist.syncPlayer;
-                if (videoPlayer.playlist.holdOnReady)
+                if (playlist.holdOnReady)
                     videoPlayer._HoldNextVideo();
                 videoPlayer._ChangeUrl(playlist._GetCurrent());
             }
@@ -192,8 +192,20 @@ namespace Texel
                 script.playlistUI = this;
                 script.track = i;
 
-                string url = data.playlist[i].ToString();
-                string title = data.trackNames[i];
+                string url = "";
+                string title = "";
+
+                if (Utilities.IsValid(playlist))
+                {
+                    url = playlist._GetTrackURL(i).ToString();
+                    title = playlist._GetTrackName(i);
+                }
+                else
+                {
+                    url = data.playlist[i].ToString();
+                    title = data.trackNames[i];
+                }
+
                 if (!showTrackNames)
                     title = url;
 
