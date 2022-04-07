@@ -32,9 +32,6 @@ namespace Texel
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
 
-        [Tooltip("When present and enabled, operate for native Quest")]
-        public GameObject questCheckObject;
-
         [Header("Playback")]
         [Tooltip("Optional trigger zone the player must be in to sustain playback.  Disables playing audio on world load.")]
         public CompoundZoneTrigger playbackZone;
@@ -115,10 +112,14 @@ namespace Texel
 
         void Start()
         {
-            bool isQuest = Utilities.IsValid(questCheckObject) && questCheckObject.activeInHierarchy;
+            dataProxy._Init();
+
+#if UNITY_ANDROID
+            dataProxy.quest = true;
+#endif
 
             if (Utilities.IsValid(urlRemapper))
-                urlRemapper._SetGameMode(isQuest ? GAME_MODE_QUEST : GAME_MODE_PC);
+                urlRemapper._SetGameMode(dataProxy.quest ? GAME_MODE_QUEST : GAME_MODE_PC);
 
             _hasSustainZone = Utilities.IsValid(playbackZone);
             if (_hasSustainZone)
