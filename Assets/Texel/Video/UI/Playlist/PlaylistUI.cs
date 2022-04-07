@@ -83,6 +83,15 @@ namespace Texel
             ScrollReposition(entriesRT[track]);
         }
 
+        public void _ScrollToCurrentTrack()
+        {
+            int track = playlist.CurrentIndex;
+            if (track < 0 || track >= entries.Length)
+                return;
+
+            ScrollReposition(entriesRT[track]);
+        }
+
         void ScrollReposition(RectTransform target)
         {
             RectTransform contentPanel = (RectTransform)layoutGroup.transform.parent.gameObject.GetComponent(typeof(RectTransform));
@@ -117,6 +126,7 @@ namespace Texel
             }
 
             _BuildList();
+            _OnTrackChange();
         }
 
         public void _OnOptionChange()

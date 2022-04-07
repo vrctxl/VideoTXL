@@ -1,4 +1,4 @@
-VideoTXL
+Texel Prefabs (VideoTXL, Audio Zones, utility scripts and prefabs)
 
 A collection of video player and A/V support prefabs for local or sync video playback.
 See project readme on GitHub for more information.

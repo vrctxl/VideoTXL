@@ -482,6 +482,9 @@ namespace Texel
             {
                 playlistPanel.SetActive(!playlistPanel.activeSelf);
                 playlistIcon.color = playlistPanel.activeSelf ? activeColor : normalColor;
+
+                SendCustomEventDelayedFrames("_ScrollPlaylistCurrent", 10);
+
                 return;
             }
 
@@ -494,6 +497,13 @@ namespace Texel
                 videoPlayer._HoldNextVideo();
 
             videoPlayer._ChangeUrl(videoPlayer.playlist._GetCurrent());
+        }
+
+        public void _ScrollPlaylistCurrent()
+        {
+            PlaylistUI pui = (PlaylistUI)playlistPanel.GetComponent(typeof(UdonBehaviour));
+            if (Utilities.IsValid(pui))
+                pui._ScrollToCurrentTrack();
         }
 
         public void _HandlePlaylistNext()
