@@ -106,6 +106,9 @@ namespace Texel
 
         void Start()
         {
+            if (Utilities.IsValid(videoPlayer))
+                videoPlayer._EnsureInit();
+
             _PopulateMissingReferences();
 
             if (Utilities.IsValid(colorProfile))
@@ -144,6 +147,13 @@ namespace Texel
             {
                 currentVideoText.enabled = true;
                 lastVideoText.enabled = true;
+
+                if (Utilities.IsValid(currentVideoInput))
+                    currentVideoInput.enabled = false;
+                if (Utilities.IsValid(lastVideoInput))
+                    lastVideoInput.enabled = false;
+                if (Utilities.IsValid(urlInput))
+                    urlInput.enabled = false;
             }
             else
             {

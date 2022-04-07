@@ -129,6 +129,8 @@ namespace Texel
         bool _inSustainZone = false;
         bool _initDeserialize = false;
 
+        bool init = false;
+
         // Realtime state
 
         [NonSerialized]
@@ -171,11 +173,31 @@ namespace Texel
 
         void Start()
         {
+            _EnsureInit();
+        }
+
+        public void _EnsureInit()
+        {
+            if (init)
+                return;
+
+            init = true;
+
+            _Init();
+        }
+
+        void _Init()
+        {
             dataProxy._Init();
 
 #if UNITY_ANDROID
             dataProxy.quest = true;
 #endif
+
+            if (dataProxy.quest)
+                DebugLog("Detected Quest platform");
+            else if (Utilities.IsValid(Networking.LocalPlayer))
+                DebugLog("Detected " + (Networking.LocalPlayer.IsUserInVR() ? "PC VR" : "PC Desktop") + " Platform");
 
             _hasAccessControl = Utilities.IsValid(accessControl);
             _hasSustainZone = Utilities.IsValid(playbackZone);
