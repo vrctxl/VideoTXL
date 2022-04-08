@@ -63,6 +63,11 @@ namespace Texel
             if (questFallbackTypeProperty.intValue == PlaylistData.FALLBACK_CUSTOM)
                 EditorGUILayout.PropertyField(questCustomPrefixProperty);
 
+            if (questPlaylistProperty.arraySize != playlistProperty.arraySize)
+                questPlaylistProperty.arraySize = playlistProperty.arraySize;
+            if (trackNamesProperty.arraySize != playlistProperty.arraySize)
+                trackNamesProperty.arraySize = playlistProperty.arraySize;
+
             EditorGUILayout.Space();
 
             trackList.DoLayoutList();
