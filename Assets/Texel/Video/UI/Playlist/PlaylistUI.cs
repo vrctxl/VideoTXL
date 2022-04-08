@@ -161,7 +161,7 @@ namespace Texel
                 SyncPlayer videoPlayer = playlist.syncPlayer;
                 if (playlist.holdOnReady)
                     videoPlayer._HoldNextVideo();
-                videoPlayer._ChangeUrl(playlist._GetCurrent());
+                videoPlayer._ChangeUrlQuestFallback(playlist._GetCurrent(), playlist._GetCurrentQuest());
             }
         }
 

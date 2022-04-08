@@ -84,6 +84,8 @@ namespace Texel
         VRCUrl _syncUrl = VRCUrl.Empty;
         [UdonSynced]
         VRCUrl _syncQueuedUrl = VRCUrl.Empty;
+        [UdonSynced]
+        VRCUrl _syncQuestUrl = VRCUrl.Empty;
 
         [UdonSynced]
         int _syncVideoNumber;
@@ -400,6 +402,15 @@ namespace Texel
             _PlayVideo(url);
         }
 
+        public void _ChangeUrlQuestFallback(VRCUrl url, VRCUrl questUrl)
+        {
+            if (_syncLocked && !_CanTakeControl())
+                return;
+
+            _syncQueuedUrl = VRCUrl.Empty;
+            _PlayVideoFallback(url, questUrl);
+        }
+
         public void _HoldNextVideo()
         {
             DebugLog("Holding next video");
@@ -471,7 +482,17 @@ namespace Texel
             _PlayVideoAfter(url, 0);
         }
 
+        void _PlayVideoFallback(VRCUrl url, VRCUrl questUrl)
+        {
+            _PlayVideoAfterFallback(url, questUrl, 0);
+        }
+
         void _PlayVideoAfter(VRCUrl url, float delay)
+        {
+            _PlayVideoAfterFallback(url, VRCUrl.Empty, delay);
+        }
+
+        void _PlayVideoAfterFallback(VRCUrl url, VRCUrl questUrl, float delay)
         {
             _pendingPlayTime = 0;
             if (!_IsUrlValid(url))
@@ -496,6 +517,7 @@ namespace Texel
             _UpdateVideoSource(_syncVideoSource, _syncVideoSourceOverride);
 
             _syncUrl = url;
+            _syncQuestUrl = questUrl;
             _syncVideoNumber += isOwner ? 1 : 2;
             _loadedVideoNumber = _syncVideoNumber;
             _syncOwnerPlaying = false;
@@ -544,7 +566,7 @@ namespace Texel
                 if (playlist.holdOnReady && Networking.IsOwner(gameObject))
                     _HoldNextVideo();
 
-                _PlayVideo(playlist._GetCurrent());
+                _PlayVideoFallback(playlist._GetCurrent(), playlist._GetCurrentQuest());
             }
         }
 
@@ -627,6 +649,7 @@ namespace Texel
         void _StartVideoLoad()
         {
             _pendingLoadTime = 0;
+
             if (_syncUrl == null || _syncUrl.Get() == "")
                 return;
 
@@ -634,7 +657,12 @@ namespace Texel
 
             //#if !UNITY_EDITOR
             VRCUrl url = _syncUrl;
-            if (Utilities.IsValid(urlRemapper))
+            if (dataProxy.quest && _syncQuestUrl != null && _syncQuestUrl != VRCUrl.Empty)
+            {
+                url = _syncQuestUrl;
+                DebugLog("Loading Quest URL variant");
+            }
+            else if (Utilities.IsValid(urlRemapper))
             {
                 url = urlRemapper._Remap(url);
                 if (Utilities.IsValid(url) && _syncUrl.Get() != url.Get())

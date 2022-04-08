@@ -32,6 +32,7 @@ namespace Texel
         public PlaylistData playlistData;
 
         VRCUrl[] playlist;
+        VRCUrl[] questPlaylist;
         string[] trackNames;
 
         [UdonSynced, FieldChangeCallback("PlaylistEnabled")]
@@ -152,10 +153,12 @@ namespace Texel
             if (!Utilities.IsValid(data) || !Utilities.IsValid(data.playlist))
             {
                 playlist = new VRCUrl[0];
+                questPlaylist = new VRCUrl[0];
                 trackNames = new string[0];
             } else
             {
                 playlist = data.playlist;
+                questPlaylist = data.questPlaylist;
                 trackNames = data.trackNames ?? new string[playlist.Length];
             }
 
@@ -165,6 +168,8 @@ namespace Texel
             {
                 if (!Utilities.IsValid(playlist[i]))
                     playlist[i] = VRCUrl.Empty;
+                if (!Utilities.IsValid(questPlaylist[i]))
+                    questPlaylist[i] = VRCUrl.Empty;
                 if (!Utilities.IsValid(trackNames[i]))
                     trackNames[i] = $"Track {i + 1}";
             }
@@ -358,6 +363,15 @@ namespace Texel
             return playlist[index];
         }
 
+        public VRCUrl _GetCurrentQuest()
+        {
+            if (end || !syncEnabled)
+                return VRCUrl.Empty;
+
+            int index = syncTrackerOrder[CurrentIndex];
+            return questPlaylist[index];
+        }
+
         public VRCUrl _GetTrackURL(int index)
         {
             if (index < 0 || index >= trackCount)
@@ -365,6 +379,15 @@ namespace Texel
 
             index = syncTrackerOrder[index];
             return playlist[index];
+        }
+
+        public VRCUrl _GetTrackQuestURL(int index)
+        {
+            if (index < 0 || index >= trackCount)
+                return VRCUrl.Empty;
+
+            index = syncTrackerOrder[index];
+            return questPlaylist[index];
         }
 
         public string _GetTrackName(int index)

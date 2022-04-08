@@ -525,7 +525,7 @@ namespace Texel
             {
                 if (videoPlayer.playlist.holdOnReady)
                     videoPlayer._HoldNextVideo();
-                videoPlayer._ChangeUrl(videoPlayer.playlist._GetCurrent());
+                videoPlayer._ChangeUrlQuestFallback(videoPlayer.playlist._GetCurrent(), videoPlayer.playlist._GetCurrentQuest());
             }
         }
 
@@ -538,7 +538,7 @@ namespace Texel
             {
                 if (videoPlayer.playlist.holdOnReady)
                     videoPlayer._HoldNextVideo();
-                videoPlayer._ChangeUrl(videoPlayer.playlist._GetCurrent());
+                videoPlayer._ChangeUrlQuestFallback(videoPlayer.playlist._GetCurrent(), videoPlayer.playlist._GetCurrentQuest());
             }
         }
 
