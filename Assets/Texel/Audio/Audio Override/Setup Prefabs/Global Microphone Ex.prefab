@@ -19,7 +19,7 @@ MonoBehaviour:
   SynchronizePosition: 0
   AllowCollisionOwnershipTransfer: 0
   Reliable: 1
-  _syncMethod: 0
+  _syncMethod: 3
   serializedProgramAsset: {fileID: 11400000, guid: 2ad5cca6014e2bd4cbf48845edf69548,
     type: 2}
   programSource: {fileID: 11400000, guid: b1d87ae5edc5c074484bb966874c98fc, type: 2}
@@ -120,7 +120,7 @@ MonoBehaviour:
   SynchronizePosition: 0
   AllowCollisionOwnershipTransfer: 0
   Reliable: 0
-  _syncMethod: 2
+  _syncMethod: 1
   serializedProgramAsset: {fileID: 11400000, guid: 52a13fb2ac47fe046a32ad419d0ec0c9,
     type: 2}
   programSource: {fileID: 11400000, guid: 190ac5de1198e0f4ca8f2c388e302b97, type: 2}
@@ -327,7 +327,7 @@ MonoBehaviour:
   SynchronizePosition: 0
   AllowCollisionOwnershipTransfer: 0
   Reliable: 0
-  _syncMethod: 0
+  _syncMethod: 1
   serializedProgramAsset: {fileID: 11400000, guid: 42d071057954d5249b7c0bfc1f081068,
     type: 2}
   programSource: {fileID: 11400000, guid: 2e9235b66e363964fac0aab08e2acf4a, type: 2}
@@ -419,7 +419,7 @@ MonoBehaviour:
   SynchronizePosition: 0
   AllowCollisionOwnershipTransfer: 0
   Reliable: 0
-  _syncMethod: 0
+  _syncMethod: 1
   serializedProgramAsset: {fileID: 11400000, guid: 4eb18ef8b7f12694db52cf7440132e28,
     type: 2}
   programSource: {fileID: 11400000, guid: 40c189d8fd540494fbe012b82ec18eed, type: 2}
@@ -738,7 +738,7 @@ MonoBehaviour:
   SynchronizePosition: 0
   AllowCollisionOwnershipTransfer: 0
   Reliable: 0
-  _syncMethod: 0
+  _syncMethod: 1
   serializedProgramAsset: {fileID: 11400000, guid: 4eb18ef8b7f12694db52cf7440132e28,
     type: 2}
   programSource: {fileID: 11400000, guid: 40c189d8fd540494fbe012b82ec18eed, type: 2}
@@ -767,7 +767,7 @@ MonoBehaviour:
   SynchronizePosition: 0
   AllowCollisionOwnershipTransfer: 0
   Reliable: 0
-  _syncMethod: 0
+  _syncMethod: 1
   serializedProgramAsset: {fileID: 11400000, guid: f5eba609d3feed743828c1436fcab67b,
     type: 2}
   programSource: {fileID: 11400000, guid: 05a95d053eb5ae345935fb8b2441f352, type: 2}
@@ -793,7 +793,7 @@ MonoBehaviour:
   SynchronizePosition: 0
   AllowCollisionOwnershipTransfer: 0
   Reliable: 0
-  _syncMethod: 0
+  _syncMethod: 1
   serializedProgramAsset: {fileID: 11400000, guid: f24a31ce99a92054bbbc7d39424ebbff,
     type: 2}
   programSource: {fileID: 11400000, guid: 76c1ffa95bc4cc14e9b51b5345f90c04, type: 2}
@@ -983,7 +983,7 @@ MonoBehaviour:
   SynchronizePosition: 0
   AllowCollisionOwnershipTransfer: 0
   Reliable: 0
-  _syncMethod: 0
+  _syncMethod: 1
   serializedProgramAsset: {fileID: 11400000, guid: 4eb18ef8b7f12694db52cf7440132e28,
     type: 2}
   programSource: {fileID: 11400000, guid: 40c189d8fd540494fbe012b82ec18eed, type: 2}
@@ -1012,7 +1012,7 @@ MonoBehaviour:
   SynchronizePosition: 0
   AllowCollisionOwnershipTransfer: 0
   Reliable: 0
-  _syncMethod: 0
+  _syncMethod: 1
   serializedProgramAsset: {fileID: 11400000, guid: f5eba609d3feed743828c1436fcab67b,
     type: 2}
   programSource: {fileID: 11400000, guid: 05a95d053eb5ae345935fb8b2441f352, type: 2}
@@ -1038,7 +1038,7 @@ MonoBehaviour:
   SynchronizePosition: 0
   AllowCollisionOwnershipTransfer: 0
   Reliable: 0
-  _syncMethod: 0
+  _syncMethod: 1
   serializedProgramAsset: {fileID: 11400000, guid: f24a31ce99a92054bbbc7d39424ebbff,
     type: 2}
   programSource: {fileID: 11400000, guid: 76c1ffa95bc4cc14e9b51b5345f90c04, type: 2}
@@ -1241,7 +1241,7 @@ MonoBehaviour:
   SynchronizePosition: 0
   AllowCollisionOwnershipTransfer: 0
   Reliable: 1
-  _syncMethod: 0
+  _syncMethod: 3
   serializedProgramAsset: {fileID: 11400000, guid: 40ecd8a4e3148964493e0e03bd0ebeb6,
     type: 2}
   programSource: {fileID: 11400000, guid: 16eccc4375766d6499ab7162ec85122a, type: 2}
@@ -1616,6 +1616,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: Default Profile
       objectReference: {fileID: 0}
+    - target: {fileID: 5988981876711335305, guid: 85ef0a670ab24d74384c4546f3a19c3c,
+        type: 3}
+      propertyPath: _syncMethod
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 85ef0a670ab24d74384c4546f3a19c3c, type: 3}
 --- !u!4 &8628686683988958482 stripped
@@ -1907,6 +1912,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7910502579175953792, guid: d533b0afa878b23439e7267cbc845330,
+        type: 3}
+      propertyPath: _syncMethod
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8960206309372626150, guid: d533b0afa878b23439e7267cbc845330,
         type: 3}
