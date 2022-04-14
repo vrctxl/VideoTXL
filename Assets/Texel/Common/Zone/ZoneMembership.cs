@@ -11,23 +11,71 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
     public class ZoneMembership : UdonSharpBehaviour
     {
+        [Tooltip("Optional zone that the membership list will hook into for player enter/leave events")]
+        public CompoundZoneTrigger zone;
+        [Tooltip("Update membership in response to world join and leave events")]
+        public bool worldEvents = false;
+
         [NonSerialized]
         public VRCPlayerApi playerEventArg;
 
         int[] players = new int[100];
         int maxIndex = -1;
+        bool init = false;
 
-        int handlerCount = 0;
-        Component[] targetBehaviors;
-        string[] eventNames;
-        string[] arrayReturns;
+        //int handlerCount = 0;
+        //Component[] targetBehaviors;
+        //string[] eventNames;
+        //string[] arrayReturns;
+
+        int[] handlerCount;
+        Component[][] handlers;
+        string[][] handlerEvents;
+        string[][] handlerArg1;
+        string[][] handlerArg2;
+
+        const int eventCount = 4;
+        const int PLAYER_ADD_EVENT = 0;
+        const int PLAYER_REMOVE_EVENT = 1;
+        const int MEMBERSHIP_CHANGE_EVENT = 2;
+        const int ARRAY_UPDATE_EVENT = 3;
 
         void Start()
         {
-
+            _EnsureInit();
         }
 
-        public void _RegisterArrayUpdateHandler(UdonBehaviour target, string eventName, string arrayReturn)
+        public void _EnsureInit()
+        {
+            if (init)
+                return;
+
+            init = true;
+
+            _Init();
+        }
+
+        void _Init()
+        {
+            handlerCount = new int[eventCount];
+            handlers = new Component[eventCount][];
+            handlerEvents = new string[eventCount][];
+            handlerArg1 = new string[eventCount][];
+            handlerArg2 = new string[eventCount][];
+
+            for (int i = 0; i < eventCount; i++)
+            {
+                handlers[i] = new Component[0];
+                handlerEvents[i] = new string[0];
+                handlerArg1[i] = new string[0];
+                handlerArg2[i] = new string[0];
+            }
+
+            if (Utilities.IsValid(zone))
+                zone._Register((UdonBehaviour)(Component)this, "_PlayerTriggerEnter", "_PlayerTriggerExit", "playerEventArg");
+        }
+
+        /* public void _RegisterArrayUpdateHandler(UdonBehaviour target, string eventName, string arrayReturn)
         {
             if (!Utilities.IsValid(target) || eventName == "" || arrayReturn == "")
                 return;
@@ -37,6 +85,18 @@ namespace Texel
             arrayReturns = (string[])_AddElement(arrayReturns, arrayReturn, typeof(string));
 
             handlerCount += 1;
+        } */
+
+        public override void OnPlayerJoined(VRCPlayerApi player)
+        {
+            if (worldEvents)
+                _AddPlayer(player);
+        }
+
+        public override void OnPlayerLeft(VRCPlayerApi player)
+        {
+            if (worldEvents)
+                _RemovePlayer(player);
         }
 
         public void _PlayerTriggerEnter()
@@ -70,6 +130,9 @@ namespace Texel
             maxIndex += 1;
             players[maxIndex] = id;
 
+            _UpdateHandlersPlayer(PLAYER_ADD_EVENT, player);
+            _UpdateHandlers(MEMBERSHIP_CHANGE_EVENT);
+
             return maxIndex;
         }
 
@@ -86,7 +149,13 @@ namespace Texel
                     players[i] = players[maxIndex];
                     maxIndex -= 1;
 
-                    for (int j = 0; j < handlerCount; j++)
+                    _UpdateHandlersPlayer(PLAYER_REMOVE_EVENT, player);
+                    _UpdateHandlers(MEMBERSHIP_CHANGE_EVENT);
+
+                    if (i != maxIndex)
+                        _UpdateHandlersArrayChange(ARRAY_UPDATE_EVENT, maxIndex, i);
+
+                    /* for (int j = 0; j < handlerCount; j++)
                     {
                         UdonBehaviour target = (UdonBehaviour)targetBehaviors[j];
                         target.SendCustomEvent(eventNames[j]);
@@ -94,7 +163,7 @@ namespace Texel
 
                         if (Utilities.IsValid(arr) && arr.Length > maxIndex)
                             arr.SetValue(arr.GetValue(maxIndex), i);
-                    }
+                    } */
 
                     return;
                 }
@@ -136,6 +205,83 @@ namespace Texel
         public bool _ContainsPlayer(VRCPlayerApi player)
         {
             return _GetPlayerIndex(player) > -1;
+        }
+
+        public void _RegisterAddPlayer(Component handler, string eventName, string playerArg)
+        {
+            _Register(PLAYER_ADD_EVENT, handler, eventName, new string[] { playerArg });
+        }
+
+        public void _RegisterRemovePlayer(Component handler, string eventName, string playerArg)
+        {
+            _Register(PLAYER_REMOVE_EVENT, handler, eventName, new string[] { playerArg });
+        }
+
+        public void _RegisterMembershipChange(Component handler, string eventName)
+        {
+            _Register(MEMBERSHIP_CHANGE_EVENT, handler, eventName, null);
+        }
+
+        public void _RegisterArrayUpdate(Component handler, string eventName, string oldIndexArg, string newIndexArg)
+        {
+            _Register(ARRAY_UPDATE_EVENT, handler, eventName, new string[] { oldIndexArg, newIndexArg });
+        }
+
+        void _Register(int eventIndex, Component handler, string eventName, string[] args)
+        {
+            if (!Utilities.IsValid(handler) || !Utilities.IsValid(eventName))
+                return;
+
+            _EnsureInit();
+
+            for (int i = 0; i < handlerCount[eventIndex]; i++)
+            {
+                if (handlers[eventIndex][i] == handler)
+                    return;
+            }
+
+            handlers[eventIndex] = (Component[])_AddElement(handlers[eventIndex], handler, typeof(Component));
+            handlerEvents[eventIndex] = (string[])_AddElement(handlerEvents[eventIndex], eventName, typeof(string));
+
+            if (Utilities.IsValid(args) && args.Length >= 1)
+                handlerArg1[eventIndex] = (string[])_AddElement(handlerArg1[eventIndex], args[0], typeof(string));
+            if (Utilities.IsValid(args) && args.Length >= 2)
+                handlerArg1[eventIndex] = (string[])_AddElement(handlerArg1[eventIndex], args[1], typeof(string));
+
+            handlerCount[eventIndex] += 1;
+        }
+
+        void _UpdateHandlers(int eventIndex)
+        {
+            for (int i = 0; i < handlerCount[eventIndex]; i++)
+            {
+                UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
+                script.SendCustomEvent(handlerEvents[eventIndex][i]);
+            }
+        }
+
+        void _UpdateHandlersPlayer(int eventIndex, VRCPlayerApi player)
+        {
+            for (int i = 0; i < handlerCount[eventIndex]; i++)
+            {
+                UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
+                if (Utilities.IsValid(handlerArg1[eventIndex]))
+                    script.SetProgramVariable(handlerArg1[eventIndex][i], player);
+                script.SendCustomEvent(handlerEvents[eventIndex][i]);
+            }
+        }
+
+        void _UpdateHandlersArrayChange(int eventIndex, int oldIndex, int newIndex)
+        {
+            for (int j = 0; j < handlerCount[eventIndex]; j++)
+            {
+                UdonBehaviour target = (UdonBehaviour)handlers[eventIndex][j];
+                if (Utilities.IsValid(handlerArg1[eventIndex]))
+                    target.SetProgramVariable(handlerArg1[eventIndex][j], oldIndex);
+                if (Utilities.IsValid(handlerArg2[eventIndex]))
+                    target.SetProgramVariable(handlerArg1[eventIndex][j], newIndex);
+                target.SendCustomEvent(handlerEvents[eventIndex][j]);
+            }
         }
 
         Array _AddElement(Array arr, object elem, Type type)

@@ -37,6 +37,8 @@ namespace Texel
         [HideInInspector]
         public CompoundZoneTrigger playbackZone;
 
+        public ZoneMembership playbackZoneMembership;
+
         //[Tooltip("Optional component to start or stop player based on common trigger events")]
         //public TriggerManager triggerManager;
 
@@ -73,6 +75,7 @@ namespace Texel
         public VRCUnityVideoPlayer unityVideo;
 
         float retryTimeout = 6;
+        float loadWaitTime = 2;
         //float syncLatchUpdateFrequency = 0.2f;
 
         [UdonSynced]
@@ -101,6 +104,9 @@ namespace Texel
         float _syncVideoStartNetworkTime;
 
         [UdonSynced]
+        float _syncVideoExpectedEndTime;
+
+        [UdonSynced]
         bool _syncLocked = true;
 
         [UdonSynced]
@@ -110,6 +116,8 @@ namespace Texel
         public int localPlayerState = PLAYER_STATE_STOPPED;
         [NonSerialized]
         public VideoError localLastErrorCode;
+        [NonSerialized]
+        public VRCPlayerApi playerArg;
 
         BaseVRCVideoPlayer _currentPlayer;
 
@@ -123,8 +131,6 @@ namespace Texel
         float _playStartTime = 0;
 
         float _pendingLoadTime = 0;
-        float _pendingPlayTime = 0;
-        VRCUrl _pendingPlayUrl;
 
         bool _hasAccessControl = false;
         bool _hasSustainZone = false;
@@ -202,11 +208,14 @@ namespace Texel
                 DebugLog("Detected " + (Networking.LocalPlayer.IsUserInVR() ? "PC VR" : "PC Desktop") + " Platform");
 
             _hasAccessControl = Utilities.IsValid(accessControl);
-            _hasSustainZone = Utilities.IsValid(playbackZone);
+            _hasSustainZone = Utilities.IsValid(playbackZoneMembership);
             if (_hasSustainZone)
             {
-                _inSustainZone = playbackZone._LocalPlayerInZone();
-                playbackZone._Register((UdonBehaviour)(Component)this, "_PlaybackZoneEnter", "_PlaybackZoneExit", null);
+                if (Utilities.IsValid(Networking.LocalPlayer))
+                    _inSustainZone = playbackZoneMembership._ContainsPlayer(Networking.LocalPlayer);
+                playbackZoneMembership._RegisterAddPlayer(this, "_PlaybackZoneEnter", "playerArg");
+                playbackZoneMembership._RegisterRemovePlayer(this, "_PlaybackZoneExit", "playerArg");
+                //playbackZone._Register((UdonBehaviour)(Component)this, "_PlaybackZoneEnter", "_PlaybackZoneExit", null);
             }
             else
                 _inSustainZone = true;
@@ -281,14 +290,54 @@ namespace Texel
 
         public void _PlaybackZoneEnter()
         {
-            _inSustainZone = true;
-            _StartVideoLoad();
+            if (playerArg == Networking.LocalPlayer)
+            {
+                _inSustainZone = true;
+
+                VRCPlayerApi currentOwner = Networking.GetOwner(gameObject);
+                if (!playbackZoneMembership._ContainsPlayer(currentOwner))
+                    Networking.SetOwner(playerArg, gameObject);
+
+                if (_syncVideoExpectedEndTime > 0)
+                {
+                    float serverTime = (float)Networking.GetServerTimeInSeconds();
+
+                    // If time hasn't reached theoretical end of track, set starting time to where it would have been
+                    // if there were still viewers in the playback zone
+                    if (serverTime < _syncVideoExpectedEndTime)
+                    {
+                        _videoTargetTime = serverTime - _syncVideoStartNetworkTime;
+                        _StartVideoLoad();
+                        return;
+                    }
+
+                    // Otherwise play next available track or stop, depending on queue/settings
+                    _ConditionalPlayNext();
+                    return;
+                }
+
+                _StartVideoLoad();
+            }
         }
 
         public void _PlaybackZoneExit()
         {
-            _inSustainZone = false;
-            _StopVideo();
+            if (playerArg == Networking.LocalPlayer)
+            {
+                _inSustainZone = false;
+
+                if (Networking.IsOwner(gameObject))
+                {
+                    if (playbackZoneMembership._PlayerCount() > 0)
+                    {
+                        VRCPlayerApi nextPlayer = playbackZoneMembership._GetPlayer(0);
+                        if (Utilities.IsValid(nextPlayer) && nextPlayer.IsValid())
+                            Networking.SetOwner(nextPlayer, gameObject);
+                    }
+                }
+
+                _VideoStop();
+            }
         }
 
         public void _OnPlaylistListChange()
@@ -341,6 +390,7 @@ namespace Texel
             if (_syncOwnerPaused)
             {
                 _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _currentPlayer.GetTime();
+                _syncVideoExpectedEndTime = _syncVideoStartNetworkTime + dataProxy.trackDuration;
                 _videoTargetTime = _currentPlayer.GetTime();
                 _VideoPause();
             }
@@ -473,6 +523,8 @@ namespace Texel
             }
 
             _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - time;
+            _syncVideoExpectedEndTime = _syncVideoStartNetworkTime + duration;
+
             SyncVideoImmediate();
             RequestSerialization();
         }
@@ -494,7 +546,6 @@ namespace Texel
 
         void _PlayVideoAfterFallback(VRCUrl url, VRCUrl questUrl, float delay)
         {
-            _pendingPlayTime = 0;
             if (!_IsUrlValid(url))
                 return;
 
@@ -524,6 +575,7 @@ namespace Texel
             _syncOwnerPaused = false;
 
             _syncVideoStartNetworkTime = float.MaxValue;
+            _syncVideoExpectedEndTime = 0;
             RequestSerialization();
 
             _videoTargetTime = _ParseTimeFromUrl(urlStr);
@@ -652,6 +704,8 @@ namespace Texel
 
             if (_syncUrl == null || _syncUrl.Get() == "")
                 return;
+            if (localPlayerState == PLAYER_STATE_LOADING)
+                return;
 
             _UpdatePlayerState(PLAYER_STATE_LOADING);
 
@@ -684,13 +738,13 @@ namespace Texel
 
             _VideoStop();
             _videoTargetTime = 0;
-            _pendingPlayTime = 0;
             _pendingLoadTime = 0;
             _playStartTime = 0;
 
             if (Networking.IsOwner(gameObject))
             {
                 _syncVideoStartNetworkTime = 0;
+                _syncVideoExpectedEndTime = 0;
                 _syncOwnerPlaying = false;
                 _syncOwnerPaused = false;
                 _syncUrl = VRCUrl.Empty;
@@ -743,6 +797,10 @@ namespace Texel
                 //    _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _currentPlayer.GetTime();
                 //else
                 _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _videoTargetTime;
+                if (dataProxy.seekableSource)
+                    _syncVideoExpectedEndTime = _syncVideoStartNetworkTime + dataProxy.trackDuration;
+                else
+                    _syncVideoExpectedEndTime = 0;
 
                 _UpdatePlayerState(PLAYER_STATE_PLAYING);
                 _UpdatePlayerPaused(false);
@@ -793,6 +851,11 @@ namespace Texel
             //DebugLog("Video end");
             _lastVideoPosition = 0;
 
+            _ConditionalPlayNext();
+        }
+
+        void _ConditionalPlayNext()
+        {
             if (Networking.IsOwner(gameObject))
             {
                 bool hasPlaylist = Utilities.IsValid(playlist) && playlist.PlaylistEnabled;
@@ -805,6 +868,7 @@ namespace Texel
                 else
                 {
                     _syncVideoStartNetworkTime = 0;
+                    _syncVideoExpectedEndTime = 0;
                     _syncOwnerPlaying = false;
                     RequestSerialization();
                 }
@@ -876,6 +940,7 @@ namespace Texel
                 else
                 {
                     _syncVideoStartNetworkTime = 0;
+                    _syncVideoExpectedEndTime = 0;
                     _videoTargetTime = 0;
                     _syncOwnerPlaying = false;
                     RequestSerialization();
@@ -1001,8 +1066,6 @@ namespace Texel
             bool isOwner = Networking.IsOwner(gameObject);
             float time = Time.time;
 
-            if (_pendingPlayTime > 0 && time > _pendingPlayTime)
-                _PlayVideo(_pendingPlayUrl);
             if (_pendingLoadTime > 0 && Time.time > _pendingLoadTime)
                 _StartVideoLoad();
 
@@ -1021,7 +1084,10 @@ namespace Texel
             }
 
             if (seekableSource && _syncOwnerPaused)
+            {
                 _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _currentPlayer.GetTime();
+                _syncVideoExpectedEndTime = _syncVideoStartNetworkTime + dataProxy.trackDuration;
+            }
 
 
             // Video is playing: periodically sync with owner
