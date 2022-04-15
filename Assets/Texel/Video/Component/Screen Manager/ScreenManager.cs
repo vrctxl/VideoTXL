@@ -570,13 +570,14 @@ namespace Texel
             return _originalScreenMaterial[meshIndex];
         }
 
-        bool CaptureValid()
+        public bool CaptureValid()
         {
             if (_screenSource == SCREEN_SOURCE_AVPRO && Utilities.IsValid(captureMaterial) && captureTextureProperty.Length > 0)
             {
                 Texture tex = captureMaterial.GetTexture(captureTextureProperty);
                 if (tex == null)
                     return false;
+                Debug.Log($"Res {tex.width} x {tex.height}");
                 if (tex.width < 16 || tex.height < 16)
                     return false;
             }

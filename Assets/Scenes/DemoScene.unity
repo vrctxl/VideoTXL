@@ -608,6 +608,84 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 1292545829801682190}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &27781136
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 27781137}
+  - component: {fileID: 27781139}
+  - component: {fileID: 27781138}
+  m_Layer: 5
+  m_Name: Text
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &27781137
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 27781136}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 286731203}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &27781138
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 27781136}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.9, g: 0.9, b: 0.9, a: 1}
+  m_RaycastTarget: 1
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_FontData:
+    m_Font: {fileID: 12800000, guid: e3027d149d2f75647b130d9ed7f7014c, type: 3}
+    m_FontSize: 12
+    m_FontStyle: 0
+    m_BestFit: 0
+    m_MinSize: 0
+    m_MaxSize: 115
+    m_Alignment: 6
+    m_AlignByGeometry: 0
+    m_RichText: 0
+    m_HorizontalOverflow: 1
+    m_VerticalOverflow: 0
+    m_LineSpacing: 1
+  m_Text: 
+--- !u!222 &27781139
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 27781136}
+  m_CullTransparentMesh: 0
 --- !u!224 &29507661 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1292545829797602627, guid: 224a1c1b28e821d45bd470eb9205dfd7,
@@ -632,6 +710,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &43451218
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 43451219}
+  m_Layer: 0
+  m_Name: Extra UI
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &43451219
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 43451218}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children:
+  - {fileID: 349463037}
+  m_Father: {fileID: 979380671}
+  m_RootOrder: 2
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &52190429
 GameObject:
   m_ObjectHideFlags: 0
@@ -1174,6 +1283,159 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 442660579}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &82815402
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 82815403}
+  - component: {fileID: 82815405}
+  - component: {fileID: 82815404}
+  m_Layer: 5
+  m_Name: Background
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &82815403
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 82815402}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 1088859591}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &82815404
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 82815402}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
+  m_RaycastTarget: 1
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: -964247387593509554, guid: ba1d53f153b56ac4ca4eaa6ba39a8ee4,
+    type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &82815405
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 82815402}
+  m_CullTransparentMesh: 0
+--- !u!1 &86161725
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 86161726}
+  - component: {fileID: 86161728}
+  - component: {fileID: 86161727}
+  m_Layer: 5
+  m_Name: Text
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &86161726
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 86161725}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 692328288}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &86161727
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 86161725}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.9, g: 0.9, b: 0.9, a: 1}
+  m_RaycastTarget: 1
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_FontData:
+    m_Font: {fileID: 12800000, guid: e3027d149d2f75647b130d9ed7f7014c, type: 3}
+    m_FontSize: 12
+    m_FontStyle: 0
+    m_BestFit: 0
+    m_MinSize: 0
+    m_MaxSize: 115
+    m_Alignment: 6
+    m_AlignByGeometry: 0
+    m_RichText: 0
+    m_HorizontalOverflow: 1
+    m_VerticalOverflow: 0
+    m_LineSpacing: 1
+  m_Text: 
+--- !u!222 &86161728
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 86161725}
+  m_CullTransparentMesh: 0
 --- !u!1 &88254729
 GameObject:
   m_ObjectHideFlags: 0
@@ -3618,6 +3880,96 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 523141436}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &286731202
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 286731203}
+  - component: {fileID: 286731206}
+  - component: {fileID: 286731205}
+  - component: {fileID: 286731204}
+  m_Layer: 0
+  m_Name: TextMaskVal
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &286731203
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 286731202}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children:
+  - {fileID: 27781137}
+  m_Father: {fileID: 2021378730}
+  m_RootOrder: 2
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.3, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: -10, y: -10}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &286731204
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 286731202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 0
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: -964247387593509554, guid: ba1d53f153b56ac4ca4eaa6ba39a8ee4,
+    type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &286731205
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 286731202}
+  m_CullTransparentMesh: 0
+--- !u!114 &286731206
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 286731202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31a19414c41e5ae4aae2af33fee712f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_ShowMaskGraphic: 0
 --- !u!1 &290560722 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1292545830100053123, guid: 224a1c1b28e821d45bd470eb9205dfd7,
@@ -4445,6 +4797,175 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 337441115}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &337517374
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 43451219}
+    m_Modifications:
+    - target: {fileID: 8269847550242241059, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847550838307966, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847550838307966, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551311467543, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551311467543, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551311467543, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551311467543, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551311467543, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551311467543, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_RootOrder
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.2048
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.2048
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.2048
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 5.893
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.216
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 1.269
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029457, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: serializedPublicVariablesBytesString
+      value: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABgYAAAAAAAAAAi8CAAAAAWEAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAVQBuAGkAdAB5AEUAbgBnAGkAbgBlAC4ARwBhAG0AZQBPAGIAagBlAGMAdAAsACAAVQBuAGkAdAB5AEUAbgBnAGkAbgBlAC4AQwBvAHIAZQBNAG8AZAB1AGwAZQBdAF0ALAAgAFYAUgBDAC4AVQBkAG8AbgAuAEMAbwBtAG0AbwBuAAIAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAAQsAAABsAGEAeQBvAHUAdABHAHIAbwB1AHAAJwEEAAAAdAB5AHAAZQABLgAAAFUAbgBpAHQAeQBFAG4AZwBpAG4AZQAuAEcAYQBtAGUATwBiAGoAZQBjAHQALAAgAFUAbgBpAHQAeQBFAG4AZwBpAG4AZQAuAEMAbwByAGUATQBvAGQAdQBsAGUACwEFAAAAVgBhAGwAdQBlAAAAAAAHBQIwAgAAAAMAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAARUAAABwAGwAYQB5AGwAaQBzAHQARQBuAHQAcgB5AFQAZQBtAHAAbABhAHQAZQAnAQQAAAB0AHkAcABlAAEuAAAAVQBuAGkAdAB5AEUAbgBnAGkAbgBlAC4ARwBhAG0AZQBPAGIAagBlAGMAdAAsACAAVQBuAGkAdAB5AEUAbgBnAGkAbgBlAC4AQwBvAHIAZQBNAG8AZAB1AGwAZQALAQUAAABWAGEAbAB1AGUAAQAAAAcFAi8DAAAAAUsAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAUwB5AHMAdABlAG0ALgBCAG8AbwBsAGUAYQBuACwAIABtAHMAYwBvAHIAbABpAGIAXQBdACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAEAAAABgIAAAAAAAAAJwEEAAAAdAB5AHAAZQABFwAAAFMAeQBzAHQAZQBtAC4AUwB0AHIAaQBuAGcALAAgAG0AcwBjAG8AcgBsAGkAYgAnAQoAAABTAHkAbQBiAG8AbABOAGEAbQBlAAEOAAAAcwBoAG8AdwBUAHIAYQBjAGsATgBhAG0AZQBzACcBBAAAAHQAeQBwAGUAARgAAABTAHkAcwB0AGUAbQAuAEIAbwBvAGwAZQBhAG4ALAAgAG0AcwBjAG8AcgBsAGkAYgArAQUAAABWAGEAbAB1AGUAAQcFAi8EAAAAAVwAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAVQBuAGkAdAB5AEUAbgBnAGkAbgBlAC4AVQBJAC4AUwBjAHIAbwBsAGwAUgBlAGMAdAAsACAAVQBuAGkAdAB5AEUAbgBnAGkAbgBlAC4AVQBJAF0AXQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ABQAAAAYCAAAAAAAAACcBBAAAAHQAeQBwAGUAARcAAABTAHkAcwB0AGUAbQAuAFMAdAByAGkAbgBnACwAIABtAHMAYwBvAHIAbABpAGIAJwEKAAAAUwB5AG0AYgBvAGwATgBhAG0AZQABCgAAAHMAYwByAG8AbABsAFIAZQBjAHQAJwEEAAAAdAB5AHAAZQABKQAAAFUAbgBpAHQAeQBFAG4AZwBpAG4AZQAuAFUASQAuAFMAYwByAG8AbABsAFIAZQBjAHQALAAgAFUAbgBpAHQAeQBFAG4AZwBpAG4AZQAuAFUASQALAQUAAABWAGEAbAB1AGUAAgAAAAcFAi8FAAAAAVYAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAVQBuAGkAdAB5AEUAbgBnAGkAbgBlAC4AVQBJAC4AVABlAHgAdAAsACAAVQBuAGkAdAB5AEUAbgBnAGkAbgBlAC4AVQBJAF0AXQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ABgAAAAYCAAAAAAAAACcBBAAAAHQAeQBwAGUAARcAAABTAHkAcwB0AGUAbQAuAFMAdAByAGkAbgBnACwAIABtAHMAYwBvAHIAbABpAGIAJwEKAAAAUwB5AG0AYgBvAGwATgBhAG0AZQABCQAAAHQAaQB0AGwAZQBUAGUAeAB0ACcBBAAAAHQAeQBwAGUAASMAAABVAG4AaQB0AHkARQBuAGcAaQBuAGUALgBVAEkALgBUAGUAeAB0ACwAIABVAG4AaQB0AHkARQBuAGcAaQBuAGUALgBVAEkACwEFAAAAVgBhAGwAdQBlAAMAAAAHBQIvBgAAAAFTAAAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQBgADEAWwBbAFYAUgBDAC4AVQBkAG8AbgAuAFUAZABvAG4AQgBlAGgAYQB2AGkAbwB1AHIALAAgAFYAUgBDAC4AVQBkAG8AbgBdAF0ALAAgAFYAUgBDAC4AVQBkAG8AbgAuAEMAbwBtAG0AbwBuAAcAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAAQgAAABwAGwAYQB5AGwAaQBzAHQAJwEEAAAAdAB5AHAAZQABIAAAAFYAUgBDAC4AVQBkAG8AbgAuAFUAZABvAG4AQgBlAGgAYQB2AGkAbwB1AHIALAAgAFYAUgBDAC4AVQBkAG8AbgALAQUAAABWAGEAbAB1AGUABAAAAAcFBwUHBQ==
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029457, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.size
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8269847551497029457, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.data[4]
+      value: 
+      objectReference: {fileID: 1577669954}
+    - target: {fileID: 8269847551497029458, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_Name
+      value: PlaylistUI
+      objectReference: {fileID: 0}
+    - target: {fileID: 8450783405742881397, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8450783405742881397, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8450783405742881397, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8450783405742881397, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8450783405742881397, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+        type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0c4300505aec5164e8e5c4397ab4b73f, type: 3}
 --- !u!1 &338673346 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8269847551311467537, guid: 0c4300505aec5164e8e5c4397ab4b73f,
@@ -4456,6 +4977,12 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 1292545829797602627, guid: 224a1c1b28e821d45bd470eb9205dfd7,
     type: 3}
   m_PrefabInstance: {fileID: 1945111140}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &349463037 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+    type: 3}
+  m_PrefabInstance: {fileID: 337517374}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &351447244 stripped
 GameObject:
@@ -7642,6 +8169,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 185400403698674986, guid: 83edc9334750fc74ba98c3c623cb6551,
         type: 3}
+      propertyPath: aspectRatio
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 185400403698674986, guid: 83edc9334750fc74ba98c3c623cb6551,
+        type: 3}
       propertyPath: EnableAutomaticResync
       value: 1
       objectReference: {fileID: 0}
@@ -9812,6 +10344,106 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 1872106074}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &600765951
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 600765952}
+  - component: {fileID: 600765955}
+  - component: {fileID: 600765954}
+  - component: {fileID: 600765953}
+  m_Layer: 5
+  m_Name: Panel (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &600765952
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 600765951}
+  m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 0, y: 0, z: -9.134}
+  m_LocalScale: {x: 0.003, y: 0.003, z: 0.003}
+  m_Children:
+  - {fileID: 1088859591}
+  - {fileID: 2021378730}
+  m_Father: {fileID: 4371433952357283611}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: -90, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 7.554, y: 1.8529998}
+  m_SizeDelta: {x: 600, y: 400}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &600765953
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 600765951}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_IgnoreReversedGraphics: 1
+  m_BlockingObjects: 0
+  m_BlockingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &600765954
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 600765951}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_UiScaleMode: 0
+  m_ReferencePixelsPerUnit: 100
+  m_ScaleFactor: 1
+  m_ReferenceResolution: {x: 800, y: 600}
+  m_ScreenMatchMode: 0
+  m_MatchWidthOrHeight: 0
+  m_PhysicalUnit: 3
+  m_FallbackScreenDPI: 96
+  m_DefaultSpriteDPI: 96
+  m_DynamicPixelsPerUnit: 4
+--- !u!223 &600765955
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 600765951}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_RenderMode: 2
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 1
+  m_OverrideSorting: 0
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_AdditionalShaderChannelsFlag: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 0
+  m_TargetDisplay: 0
 --- !u!1 &602867622
 GameObject:
   m_ObjectHideFlags: 0
@@ -11003,6 +11635,96 @@ Transform:
   m_Father: {fileID: 88254730}
   m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &692328287
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 692328288}
+  - component: {fileID: 692328291}
+  - component: {fileID: 692328290}
+  - component: {fileID: 692328289}
+  m_Layer: 0
+  m_Name: TextMaskKey
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &692328288
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 692328287}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children:
+  - {fileID: 86161726}
+  m_Father: {fileID: 2021378730}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0.3, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: -10, y: -10}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &692328289
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 692328287}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 0
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: -964247387593509554, guid: ba1d53f153b56ac4ca4eaa6ba39a8ee4,
+    type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &692328290
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 692328287}
+  m_CullTransparentMesh: 0
+--- !u!114 &692328291
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 692328287}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31a19414c41e5ae4aae2af33fee712f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_ShowMaskGraphic: 0
 --- !u!1 &714642767
 GameObject:
   m_ObjectHideFlags: 0
@@ -13411,6 +14133,84 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 523141436}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &903165898
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 903165899}
+  - component: {fileID: 903165901}
+  - component: {fileID: 903165900}
+  m_Layer: 5
+  m_Name: Text
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &903165899
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 903165898}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 1088859591}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: -10, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &903165900
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 903165898}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.8962264, g: 0.8962264, b: 0.8962264, a: 1}
+  m_RaycastTarget: 1
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_FontData:
+    m_Font: {fileID: 12800000, guid: e3027d149d2f75647b130d9ed7f7014c, type: 3}
+    m_FontSize: 13
+    m_FontStyle: 0
+    m_BestFit: 0
+    m_MinSize: 1
+    m_MaxSize: 40
+    m_Alignment: 3
+    m_AlignByGeometry: 0
+    m_RichText: 1
+    m_HorizontalOverflow: 0
+    m_VerticalOverflow: 0
+    m_LineSpacing: 1
+  m_Text: Debug Window
+--- !u!222 &903165901
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 903165898}
+  m_CullTransparentMesh: 0
 --- !u!1 &903911467 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6469543239677047259, guid: 83edc9334750fc74ba98c3c623cb6551,
@@ -14747,6 +15547,9 @@ Transform:
   m_Children:
   - {fileID: 1497648957}
   - {fileID: 227784700}
+  - {fileID: 43451219}
+  - {fileID: 1298754738}
+  - {fileID: 4371433952357283611}
   m_Father: {fileID: 1480700343}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -15824,7 +16627,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 1178323961}
-  m_RootOrder: 5
+  m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1035834245
 MonoBehaviour:
@@ -16244,6 +17047,43 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!1 &1088859590
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1088859591}
+  m_Layer: 5
+  m_Name: Header
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1088859591
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1088859590}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children:
+  - {fileID: 82815403}
+  - {fileID: 903165899}
+  m_Father: {fileID: 600765952}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 25}
+  m_Pivot: {x: 0.5, y: 1}
 --- !u!1 &1090942824
 GameObject:
   m_ObjectHideFlags: 0
@@ -20032,6 +20872,108 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 223183587}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1298754737
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 979380671}
+    m_Modifications:
+    - target: {fileID: 2061116281562315597, guid: 1ac75656e384b784585721b4a65133ad,
+        type: 3}
+      propertyPath: m_Name
+      value: DebugLog
+      objectReference: {fileID: 0}
+    - target: {fileID: 7034262316162451323, guid: 1ac75656e384b784585721b4a65133ad,
+        type: 3}
+      propertyPath: m_RootOrder
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 7034262316162451323, guid: 1ac75656e384b784585721b4a65133ad,
+        type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.5954692
+      objectReference: {fileID: 0}
+    - target: {fileID: 7034262316162451323, guid: 1ac75656e384b784585721b4a65133ad,
+        type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.5954692
+      objectReference: {fileID: 0}
+    - target: {fileID: 7034262316162451323, guid: 1ac75656e384b784585721b4a65133ad,
+        type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.5954692
+      objectReference: {fileID: 0}
+    - target: {fileID: 7034262316162451323, guid: 1ac75656e384b784585721b4a65133ad,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 6.8296
+      objectReference: {fileID: 0}
+    - target: {fileID: 7034262316162451323, guid: 1ac75656e384b784585721b4a65133ad,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.116
+      objectReference: {fileID: 0}
+    - target: {fileID: 7034262316162451323, guid: 1ac75656e384b784585721b4a65133ad,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 7.1874
+      objectReference: {fileID: 0}
+    - target: {fileID: 7034262316162451323, guid: 1ac75656e384b784585721b4a65133ad,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 7034262316162451323, guid: 1ac75656e384b784585721b4a65133ad,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7034262316162451323, guid: 1ac75656e384b784585721b4a65133ad,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 7034262316162451323, guid: 1ac75656e384b784585721b4a65133ad,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7034262316162451323, guid: 1ac75656e384b784585721b4a65133ad,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7034262316162451323, guid: 1ac75656e384b784585721b4a65133ad,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 7034262316162451323, guid: 1ac75656e384b784585721b4a65133ad,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 1ac75656e384b784585721b4a65133ad, type: 3}
+--- !u!4 &1298754738 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7034262316162451323, guid: 1ac75656e384b784585721b4a65133ad,
+    type: 3}
+  m_PrefabInstance: {fileID: 1298754737}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1298754739 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8928183312737897097, guid: 1ac75656e384b784585721b4a65133ad,
+    type: 3}
+  m_PrefabInstance: {fileID: 1298754737}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45115577ef41a5b4ca741ed302693907, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &1301231465
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -20931,13 +21873,13 @@ PrefabInstance:
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.size
-      value: 30
+      value: 32
       objectReference: {fileID: 0}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: 8daeef7906b79b84596db75fe1d0896d, type: 2}
+      objectReference: {fileID: 2100000, guid: 51fd67e1cb8077d45bb1d5f36612a67f, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[1]
@@ -20947,154 +21889,154 @@ PrefabInstance:
         type: 3}
       propertyPath: DynamicMaterials.Array.data[2]
       value: 
-      objectReference: {fileID: 2100000, guid: 51fd67e1cb8077d45bb1d5f36612a67f, type: 2}
+      objectReference: {fileID: 2100000, guid: 5cddd8364b763364b85d208e91e0b622, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[3]
       value: 
-      objectReference: {fileID: 2100000, guid: 5cddd8364b763364b85d208e91e0b622, type: 2}
+      objectReference: {fileID: 2100000, guid: c19a1164f485f95419b1599aee198068, type: 3}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[4]
       value: 
-      objectReference: {fileID: 2100000, guid: c19a1164f485f95419b1599aee198068, type: 3}
+      objectReference: {fileID: 2100000, guid: fcf56e821b59be149af8ed701c00c78d, type: 3}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[5]
       value: 
-      objectReference: {fileID: 2100000, guid: fcf56e821b59be149af8ed701c00c78d, type: 3}
+      objectReference: {fileID: 2100002, guid: fcf56e821b59be149af8ed701c00c78d, type: 3}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[6]
       value: 
-      objectReference: {fileID: 2100002, guid: fcf56e821b59be149af8ed701c00c78d, type: 3}
+      objectReference: {fileID: 2100004, guid: fcf56e821b59be149af8ed701c00c78d, type: 3}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[7]
       value: 
-      objectReference: {fileID: 2100004, guid: fcf56e821b59be149af8ed701c00c78d, type: 3}
+      objectReference: {fileID: 2100006, guid: fcf56e821b59be149af8ed701c00c78d, type: 3}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[8]
       value: 
-      objectReference: {fileID: 2100006, guid: fcf56e821b59be149af8ed701c00c78d, type: 3}
+      objectReference: {fileID: 2100008, guid: fcf56e821b59be149af8ed701c00c78d, type: 3}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[9]
       value: 
-      objectReference: {fileID: 2100008, guid: fcf56e821b59be149af8ed701c00c78d, type: 3}
+      objectReference: {fileID: 2100000, guid: cd06e95d5120c8944abb734b203ad02b, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[10]
       value: 
-      objectReference: {fileID: 2100000, guid: cd06e95d5120c8944abb734b203ad02b, type: 2}
+      objectReference: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[11]
       value: 
-      objectReference: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+      objectReference: {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[12]
       value: 
-      objectReference: {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+      objectReference: {fileID: 2100000, guid: 70f78e299025864418fc1ca23dbcb6f1, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[13]
       value: 
-      objectReference: {fileID: 2100000, guid: 70f78e299025864418fc1ca23dbcb6f1, type: 2}
+      objectReference: {fileID: 2100000, guid: b394e8c10a764334a952855c5c2cf094, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[14]
       value: 
-      objectReference: {fileID: 2100000, guid: b394e8c10a764334a952855c5c2cf094, type: 2}
+      objectReference: {fileID: 2100000, guid: cae347e8d91f4484296ed8a2c4195efb, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[15]
       value: 
-      objectReference: {fileID: 2100000, guid: cae347e8d91f4484296ed8a2c4195efb, type: 2}
+      objectReference: {fileID: 2100000, guid: ceacd0769ecd52f429455d8b1861fef2, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[16]
       value: 
-      objectReference: {fileID: 2100000, guid: ceacd0769ecd52f429455d8b1861fef2, type: 2}
+      objectReference: {fileID: 2100000, guid: 59b12dce844ae66469385784016422d0, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[17]
       value: 
-      objectReference: {fileID: 2100000, guid: 59b12dce844ae66469385784016422d0, type: 2}
-    - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
-        type: 3}
-      propertyPath: DynamicMaterials.Array.data[18]
-      value: 
       objectReference: {fileID: 2100000, guid: 9e0f385c82d1c4f43b7c6eee8058aad0, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
-      propertyPath: DynamicMaterials.Array.data[19]
+      propertyPath: DynamicMaterials.Array.data[18]
       value: 
       objectReference: {fileID: 3464659426953427489, guid: 6b44d2f7d9202214ebfb03d67bade5c3,
         type: 3}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
-      propertyPath: DynamicMaterials.Array.data[20]
+      propertyPath: DynamicMaterials.Array.data[19]
       value: 
       objectReference: {fileID: 3390273390655298670, guid: 6b44d2f7d9202214ebfb03d67bade5c3,
         type: 3}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
+      propertyPath: DynamicMaterials.Array.data[20]
+      value: 
+      objectReference: {fileID: 2100000, guid: cc28b6415b7871440a004deb80792acc, type: 2}
+    - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
+        type: 3}
       propertyPath: DynamicMaterials.Array.data[21]
       value: 
-      objectReference: {fileID: 2100000, guid: faafad2a424f91940af1f593e6bfd264, type: 2}
+      objectReference: {fileID: 2100000, guid: 9a23b450dad2ac34b8716b2549a6306c, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[22]
       value: 
-      objectReference: {fileID: 2100000, guid: 506fce954639f9546ab0098d1687f064, type: 2}
+      objectReference: {fileID: 2100000, guid: faafad2a424f91940af1f593e6bfd264, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[23]
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 2100000, guid: 506fce954639f9546ab0098d1687f064, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[24]
       value: 
-      objectReference: {fileID: 2100000, guid: 14ea45963d7ab0d42851761ccf66f4c0, type: 2}
+      objectReference: {fileID: 0}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[25]
       value: 
-      objectReference: {fileID: 2100000, guid: 4f23cf34ceebac047a9f67c067b35c11, type: 2}
+      objectReference: {fileID: 2100000, guid: 14ea45963d7ab0d42851761ccf66f4c0, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[26]
       value: 
-      objectReference: {fileID: 2100000, guid: c890bc5d060ed0f4982c113fda136dbf, type: 2}
+      objectReference: {fileID: 2100000, guid: 4f23cf34ceebac047a9f67c067b35c11, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[27]
       value: 
-      objectReference: {fileID: 2100000, guid: 8ce9a43f1b985574a8f1695aca54998b, type: 2}
+      objectReference: {fileID: 2100000, guid: c890bc5d060ed0f4982c113fda136dbf, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[28]
       value: 
-      objectReference: {fileID: 2100000, guid: f2ef879b04823a140b71707fb54ed1fc, type: 2}
+      objectReference: {fileID: 2100000, guid: 8daeef7906b79b84596db75fe1d0896d, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[29]
       value: 
-      objectReference: {fileID: 2100000, guid: a1dcc385f994ad14d83904cf38a57f12, type: 2}
+      objectReference: {fileID: 2100000, guid: 8ce9a43f1b985574a8f1695aca54998b, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[30]
       value: 
-      objectReference: {fileID: 2100000, guid: 33a25e25e7fe05b4f957481cfd39967e, type: 3}
+      objectReference: {fileID: 2100000, guid: f2ef879b04823a140b71707fb54ed1fc, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[31]
       value: 
-      objectReference: {fileID: 2100002, guid: 33a25e25e7fe05b4f957481cfd39967e, type: 3}
+      objectReference: {fileID: 2100000, guid: a1dcc385f994ad14d83904cf38a57f12, type: 2}
     - target: {fileID: 6759095419728963412, guid: 8894fa7e4588a5c4fab98453e558847d,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[32]
@@ -21831,6 +22773,41 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 227784700}
     m_Modifications:
+    - target: {fileID: 7744128098258312335, guid: 7aa5d66e9b7d2604fa8415825a70001f,
+        type: 3}
+      propertyPath: serializedPublicVariablesBytesString
+      value: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABgIAAAAAAAAAAi8CAAAAAVMAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AVQBkAG8AbgBCAGUAaABhAHYAaQBvAHUAcgAsACAAVgBSAEMALgBVAGQAbwBuAF0AXQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAgAAAAYCAAAAAAAAACcBBAAAAHQAeQBwAGUAARcAAABTAHkAcwB0AGUAbQAuAFMAdAByAGkAbgBnACwAIABtAHMAYwBvAHIAbABpAGIAJwEKAAAAUwB5AG0AYgBvAGwATgBhAG0AZQABBAAAAHoAbwBuAGUAJwEEAAAAdAB5AHAAZQABIAAAAFYAUgBDAC4AVQBkAG8AbgAuAFUAZABvAG4AQgBlAGgAYQB2AGkAbwB1AHIALAAgAFYAUgBDAC4AVQBkAG8AbgALAQUAAABWAGEAbAB1AGUAAAAAAAcFAi8DAAAAAUsAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAUwB5AHMAdABlAG0ALgBCAG8AbwBsAGUAYQBuACwAIABtAHMAYwBvAHIAbABpAGIAXQBdACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgADAAAABgIAAAAAAAAAJwEEAAAAdAB5AHAAZQABFwAAAFMAeQBzAHQAZQBtAC4AUwB0AHIAaQBuAGcALAAgAG0AcwBjAG8AcgBsAGkAYgAnAQoAAABTAHkAbQBiAG8AbABOAGEAbQBlAAELAAAAdwBvAHIAbABkAEUAdgBlAG4AdABzACcBBAAAAHQAeQBwAGUAARgAAABTAHkAcwB0AGUAbQAuAEIAbwBvAGwAZQBhAG4ALAAgAG0AcwBjAG8AcgBsAGkAYgArAQUAAABWAGEAbAB1AGUAAAcFBwUHBQ==
+      objectReference: {fileID: 0}
+    - target: {fileID: 7744128098258312337, guid: 7aa5d66e9b7d2604fa8415825a70001f,
+        type: 3}
+      propertyPath: m_Size.x
+      value: 7.1357317
+      objectReference: {fileID: 0}
+    - target: {fileID: 7744128098258312337, guid: 7aa5d66e9b7d2604fa8415825a70001f,
+        type: 3}
+      propertyPath: m_Size.y
+      value: 4.6110334
+      objectReference: {fileID: 0}
+    - target: {fileID: 7744128098258312337, guid: 7aa5d66e9b7d2604fa8415825a70001f,
+        type: 3}
+      propertyPath: m_Size.z
+      value: 4.1978345
+      objectReference: {fileID: 0}
+    - target: {fileID: 7744128098258312337, guid: 7aa5d66e9b7d2604fa8415825a70001f,
+        type: 3}
+      propertyPath: m_Center.x
+      value: -5.5443
+      objectReference: {fileID: 0}
+    - target: {fileID: 7744128098258312337, guid: 7aa5d66e9b7d2604fa8415825a70001f,
+        type: 3}
+      propertyPath: m_Center.y
+      value: 2.0208106
+      objectReference: {fileID: 0}
+    - target: {fileID: 7744128098258312337, guid: 7aa5d66e9b7d2604fa8415825a70001f,
+        type: 3}
+      propertyPath: m_Center.z
+      value: 1.5793959
+      objectReference: {fileID: 0}
     - target: {fileID: 7744128098258312338, guid: 7aa5d66e9b7d2604fa8415825a70001f,
         type: 3}
       propertyPath: m_RootOrder
@@ -21839,17 +22816,17 @@ PrefabInstance:
     - target: {fileID: 7744128098258312338, guid: 7aa5d66e9b7d2604fa8415825a70001f,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: -7.776107
+      value: 3.17
       objectReference: {fileID: 0}
     - target: {fileID: 7744128098258312338, guid: 7aa5d66e9b7d2604fa8415825a70001f,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 28.856333
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7744128098258312338, guid: 7aa5d66e9b7d2604fa8415825a70001f,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 33.442497
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7744128098258312338, guid: 7aa5d66e9b7d2604fa8415825a70001f,
         type: 3}
@@ -22358,16 +23335,41 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 979380671}
     m_Modifications:
+    - target: {fileID: 185400403698674986, guid: 83edc9334750fc74ba98c3c623cb6551,
+        type: 3}
+      propertyPath: aspectRatio
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 185400403698674986, guid: 83edc9334750fc74ba98c3c623cb6551,
+        type: 3}
+      propertyPath: targetTexture
+      value: 
+      objectReference: {fileID: 8400000, guid: b8631728ff4176347bd710efd3be3f00, type: 2}
+    - target: {fileID: 206541592822476098, guid: 83edc9334750fc74ba98c3c623cb6551,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: cc28b6415b7871440a004deb80792acc, type: 2}
     - target: {fileID: 295752245539458864, guid: 83edc9334750fc74ba98c3c623cb6551,
         type: 3}
       propertyPath: _syncMethod
       value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 295752245539458864, guid: 83edc9334750fc74ba98c3c623cb6551,
+        type: 3}
+      propertyPath: serializedPublicVariablesBytesString
+      value: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABgsAAAAAAAAAAi8CAAAAAUoAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAUwB5AHMAdABlAG0ALgBTAGkAbgBnAGwAZQAsACAAbQBzAGMAbwByAGwAaQBiAF0AXQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAgAAAAYCAAAAAAAAACcBBAAAAHQAeQBwAGUAARcAAABTAHkAcwB0AGUAbQAuAFMAdAByAGkAbgBnACwAIABtAHMAYwBvAHIAbABpAGIAJwEKAAAAUwB5AG0AYgBvAGwATgBhAG0AZQABCwAAAGkAbgBwAHUAdABWAG8AbAB1AG0AZQAnAQQA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
       objectReference: {fileID: 0}
     - target: {fileID: 1736576800762263983, guid: 83edc9334750fc74ba98c3c623cb6551,
         type: 3}
       propertyPath: serializedPublicVariablesBytesString
       value: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABgUAAAAAAAAAAi8CAAAAAWEAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAVQBuAGkAdAB5AEUAbgBnAGkAbgBlAC4ARwBhAG0AZQBPAGIAagBlAGMAdAAsACAAVQBuAGkAdAB5AEUAbgBnAGkAbgBlAC4AQwBvAHIAZQBNAG8AZAB1AGwAZQBdAF0ALAAgAFYAUgBDAC4AVQBkAG8AbgAuAEMAbwBtAG0AbwBuAAIAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBt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
       objectReference: {fileID: 0}
+    - target: {fileID: 3059263434418586680, guid: 83edc9334750fc74ba98c3c623cb6551,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 9a23b450dad2ac34b8716b2549a6306c, type: 2}
     - target: {fileID: 3068230506175242373, guid: 83edc9334750fc74ba98c3c623cb6551,
         type: 3}
       propertyPath: _syncMethod
@@ -22471,12 +23473,12 @@ PrefabInstance:
     - target: {fileID: 5204020252942062118, guid: 83edc9334750fc74ba98c3c623cb6551,
         type: 3}
       propertyPath: serializedPublicVariablesBytesString
-      value: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABg0AAAAAAAAAAi8CAAAAAW0AAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAVgBSAEMALgBTAEQASwAzAC4AVgBpAGQAZQBvAC4AQwBvAG0AcABvAG4AZQBuAHQAcwAuAEIAYQBzAGUALgBCAGEAcwBlAFYAUgBDAFYAaQBkAGUAbwBQAGwAYQB5AGUAcgAsACAAVgBSAEMAUwBEAEsAMwBdAF0ALAAgAFYAUgBDAC4AVQBkAG8AbgAuAEMAbwBtAG0AbwBuAAIAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBz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
+      value: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABg8AAAAAAAAAAi8CAAAAAW0AAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAVgBSAEMALgBTAEQASwAzAC4AVgBpAGQAZQBvAC4AQwBvAG0AcABvAG4AZQBuAHQAcwAuAEIAYQBzAGUALgBCAGEAcwBlAFYAUgBDAFYAaQBkAGUAbwBQAGwAYQB5AGUAcgAsACAAVgBSAEMAUwBEAEsAMwBdAF0ALAAgAFYAUgBDAC4AVQBkAG8AbgAuAEMAbwBtAG0AbwBuAAIAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBz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
       objectReference: {fileID: 0}
     - target: {fileID: 5204020252942062118, guid: 83edc9334750fc74ba98c3c623cb6551,
         type: 3}
       propertyPath: publicVariablesUnityEngineObjects.Array.size
-      value: 5
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 5204020252942062118, guid: 83edc9334750fc74ba98c3c623cb6551,
         type: 3}
@@ -22488,6 +23490,16 @@ PrefabInstance:
       propertyPath: publicVariablesUnityEngineObjects.Array.data[4]
       value: 
       objectReference: {fileID: 1466684096}
+    - target: {fileID: 5204020252942062118, guid: 83edc9334750fc74ba98c3c623cb6551,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.data[5]
+      value: 
+      objectReference: {fileID: 1298754739}
+    - target: {fileID: 5204020252942062118, guid: 83edc9334750fc74ba98c3c623cb6551,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.data[6]
+      value: 
+      objectReference: {fileID: 4732792946873223982}
     - target: {fileID: 5204020253919133967, guid: 83edc9334750fc74ba98c3c623cb6551,
         type: 3}
       propertyPath: _syncMethod
@@ -22620,9 +23632,39 @@ PrefabInstance:
       objectReference: {fileID: 1497648958}
     - target: {fileID: 6554332177915834760, guid: 83edc9334750fc74ba98c3c623cb6551,
         type: 3}
-      propertyPath: serializedPublicVariablesBytesString
-      value: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABh0AAAAAAAAAAi8CAAAAAUsAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAUwB5AHMAdABlAG0ALgBCAG8AbwBsAGUAYQBuACwAIABtAHMAYwBvAHIAbABpAGIAXQBdACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgACAAAABgIAAAAAAAAAJwEEAAAAdAB5AHAAZQABFwAAAFMAeQBzAHQAZQBtAC4AUwB0AHIAaQBuAGcALAAgAG0AcwBjAG8AcgBsAGkAYgAnAQoAAABTAHkAbQBiAG8AbABOAGEAbQBlAAEUAAAAdQBzAGUATQBhAHQAZQByAGkAYQBsAE8A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
+      propertyPath: _syncMethod
+      value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 6554332177915834760, guid: 83edc9334750fc74ba98c3c623cb6551,
+        type: 3}
+      propertyPath: serializedPublicVariablesBytesString
+      value: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABiIAAAAAAAAAAi8CAAAAAUsAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAUwB5AHMAdABlAG0ALgBCAG8AbwBsAGUAYQBuACwAIABtAHMAYwBvAHIAbABpAGIAXQBdACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgACAAAABgIAAAAAAAAAJwEEAAAAdAB5AHAAZQABFwAAAFMAeQBzAHQAZQBtAC4AUwB0AHIAaQBuAGcALAAgAG0AcwBjAG8AcgBsAGkAYgAnAQoAAABTAHkAbQBiAG8AbABOAGEAbQBlAAEUAAAAdQBzAGUATQBhAHQAZQByAGkAYQBsAE8A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
+      objectReference: {fileID: 0}
+    - target: {fileID: 6554332177915834760, guid: 83edc9334750fc74ba98c3c623cb6551,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.size
+      value: 22
+      objectReference: {fileID: 0}
+    - target: {fileID: 6554332177915834760, guid: 83edc9334750fc74ba98c3c623cb6551,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.data[9]
+      value: 
+      objectReference: {fileID: 2100000, guid: cc28b6415b7871440a004deb80792acc, type: 2}
+    - target: {fileID: 6554332177915834760, guid: 83edc9334750fc74ba98c3c623cb6551,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.data[18]
+      value: 
+      objectReference: {fileID: 2100000, guid: 9a23b450dad2ac34b8716b2549a6306c, type: 2}
+    - target: {fileID: 6554332177915834760, guid: 83edc9334750fc74ba98c3c623cb6551,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.data[20]
+      value: 
+      objectReference: {fileID: 8400000, guid: b8631728ff4176347bd710efd3be3f00, type: 2}
+    - target: {fileID: 6554332177915834760, guid: 83edc9334750fc74ba98c3c623cb6551,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.data[21]
+      value: 
+      objectReference: {fileID: 1298754739}
     - target: {fileID: 7628058011097603186, guid: 83edc9334750fc74ba98c3c623cb6551,
         type: 3}
       propertyPath: m_AnchorMax.y
@@ -23758,6 +24800,81 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -10, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &1538237098
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1538237099}
+  - component: {fileID: 1538237101}
+  - component: {fileID: 1538237100}
+  m_Layer: 5
+  m_Name: Background
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1538237099
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1538237098}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 2021378730}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1538237100
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1538237098}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0, g: 0, b: 0, a: 1}
+  m_RaycastTarget: 1
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: -964247387593509554, guid: ba1d53f153b56ac4ca4eaa6ba39a8ee4,
+    type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1538237101
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1538237098}
+  m_CullTransparentMesh: 0
 --- !u!1 &1545367106
 GameObject:
   m_ObjectHideFlags: 0
@@ -24177,6 +25294,16 @@ PrefabInstance:
       propertyPath: m_Name
       value: Playlist
       objectReference: {fileID: 0}
+    - target: {fileID: 3840951564816652135, guid: 01cb54cd8aedeca49aa9544140cd8ecf,
+        type: 3}
+      propertyPath: _syncMethod
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3840951564816652135, guid: 01cb54cd8aedeca49aa9544140cd8ecf,
+        type: 3}
+      propertyPath: serializedPublicVariablesBytesString
+      value: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABgYAAAAAAAAAAi8CAAAAAUoAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiAF0AXQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAgAAAAYCAAAAAAAAACcBBAAAAHQAeQBwAGUAARcAAABTAHkAcwB0AGUAbQAuAFMAdAByAGkAbgBnACwAIABtAHMAYwBvAHIAbABpAGIAJwEKAAAAUwB5AG0AYgBvAGwATgBhAG0AZQABDAAAAHAAbABhAHkAbABpAHMAdABOAGEAbQBlACcB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bwBtAG0AbwBuAAoAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAAREAAABxAHUAZQBzAHQARgBhAGwAbABiAGEAYwBrAFQAeQBwAGUAJwEEAAAAdAB5AHAAZQABFgAAAFMAeQBzAHQAZQBtAC4ASQBuAHQAMwAyACwAIABtAHMAYwBvAHIAbABpAGIAFwEFAAAAVgBhAGwAdQBlAAEAAAAHBQIwAgAAAAsAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAAREAAABxAHUAZQBzAHQAQwB1AHMAdABvAG0AUAByAGUAZgBpAHgAJwEEAAAAdAB5AHAAZQABFwAAAFMAeQBzAHQAZQBtAC4AUwB0AHIAaQBuAGcALAAgAG0AcwBjAG8AcgBsAGkAYgAnAQUAAABWAGEAbAB1AGUAAQAAAAAHBQIwAwAAAAwAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAAQ0AAABxAHUAZQBzAHQAUABsAGEAeQBsAGkAcwB0ACcBBAAAAHQAeQBwAGUAASAAAABWAFIAQwAuAFMARABLAEIAYQBzAGUALgBWAFIAQwBVAHIAbABbAF0ALAAgAFYAUgBDAFMARABLAEIAYQBzAGUAAQEFAAAAVgBhAGwAdQBlADAEAAAADQAAAAYDAAAAAAAAAAIwBQAAAA4AAAAnAQMAAAB1AHIAbAABQwAAAGgAdAB0AHAAcwA6AC8ALwB0AC0AbgBlAC4AeAAwAC4AdABvAC8APwB1AHIAbAA9AGgAdAB0AHAAcwA6AC8ALwB3AHcAdwAuAHkAbwB1AHQAdQBiAGUALgBjAG8AbQAvAHcAYQB0AGMAaAA/AHYAPQBHAGoAWQB5AFIASwBIAGkAUQBTAFEABQIwBQAAAA8AAAAnAQMAAAB1AHIAbAABYAAAAGgAdAB0AHAAcwA6AC8ALwB0AC0AbgBlAC4AeAAwAC4AdABvAC8APwB1AHIAbAA9AGgAdAB0AHAAcwA6AC8ALwBzAG8AdQBuAGQAYwBsAG8AdQBkAC4AYwBvAG0ALwBkAGEAcgBlAGwAdABhAHIAdABzAC8AbABlAGcAZQBuAGQAcwAtAGMAbwBtAGUALQB0AG8AZwBlAHQAaABlAHIALQBmAHUAcgBhAGwAaQB0AHkALQBsAGUAZwBlAG4AZABzAAUCMAUAAAAQAAAAJwEDAAAAdQByAGwAAUMAAABoAHQAdABwAHMAOgAvAC8AdAAtAG4AZQAuAHgAMAAuAHQAbwAvAD8AdQByAGwAPQBoAHQAdABwAHMAOgAvAC8AdwB3AHcALgB5AG8AdQB0AHUAYgBlAC4AYwBvAG0ALwB3AGEAdABjAGgAPwB2AD0AUwBLAHQATQB5ADQASQBjADQATAA0AAUHBQcFBwUHBQ==
+      objectReference: {fileID: 0}
     - target: {fileID: 7722984534771762438, guid: 01cb54cd8aedeca49aa9544140cd8ecf,
         type: 3}
       propertyPath: m_RootOrder
@@ -24235,18 +25362,23 @@ PrefabInstance:
     - target: {fileID: 8023394037439517565, guid: 01cb54cd8aedeca49aa9544140cd8ecf,
         type: 3}
       propertyPath: serializedPublicVariablesBytesString
-      value: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABgUAAAAAAAAAAi8CAAAAAVMAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AVQBkAG8AbgBCAGUAaABhAHYAaQBvAHUAcgAsACAAVgBSAEMALgBVAGQAbwBuAF0AXQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAgAAAAYCAAAAAAAAACcBBAAAAHQAeQBwAGUAARcAAABTAHkAcwB0AGUAbQAuAFMAdAByAGkAbgBnACwAIABtAHMAYwBvAHIAbABpAGIAJwEKAAAAUwB5AG0AYgBvAGwATgBhAG0AZQABDAAAAHAAbABhAHkAbABpAHMAdABEAGEAdABhACcBBAAAAHQAeQBwAGUAASAAAABWAFIAQwAuAFUAZABvAG4ALgBVAGQAbwBuAEIAZQBoAGEAdgBpAG8AdQByACwAIABWAFIAQwAuAFUAZABvAG4ACwEFAAAAVgBhAGwAdQBlAAAAAAAHBQIvAwAAAAFLAAAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQBgADEAWwBbAFMAeQBzAHQAZQBtAC4AQgBvAG8AbABlAGEAbgAsACAAbQBzAGMAbwByAGwAaQBiAF0AXQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAwAAAAYCAAAAAAAAACcBBAAAAHQAeQBwAGUAARcAAABTAHkAcwB0AGUAbQAuAFMAdAByAGkAbgBnACwAIABtAHMAYwBvAHIAbABpAGIAJwEKAAAAUwB5AG0AYgBvAGwATgBhAG0AZQABBwAAAHMAaAB1AGYAZgBsAGUAJwEEAAAAdAB5AHAAZQABGAAAAFMAeQBzAHQAZQBtAC4AQgBvAG8AbABlAGEAbgAsACAAbQBzAGMAbwByAGwAaQBiACsBBQAAAFYAYQBsAHUAZQAABwUCMAMAAAAEAAAABgIAAAAAAAAAJwEEAAAAdAB5AHAAZQABFwAAAFMAeQBzAHQAZQBtAC4AUwB0AHIAaQBuAGcALAAgAG0AcwBjAG8AcgBsAGkAYgAnAQoAAABTAHkAbQBiAG8AbABOAGEAbQBlAAELAAAAYQB1AHQAbwBBAGQAdgBhAG4AYwBlACcBBAAAAHQAeQBwAGUAARgAAABTAHkAcwB0AGUAbQAuAEIAbwBvAGwAZQBhAG4ALAAgAG0AcwBjAG8AcgBsAGkAYgArAQUAAABWAGEAbAB1AGUAAQcFAjADAAAABQAAAAYCAAAAAAAAACcBBAAAAHQAeQBwAGUAARcAAABTAHkAcwB0AGUAbQAuAFMAdAByAGkAbgBnACwAIABtAHMAYwBvAHIAbABpAGIAJwEKAAAAUwB5AG0AYgBvAGwATgBhAG0AZQABCwAAAGgAbwBsAGQATwBuAFIAZQBhAGQAeQAnAQQAAAB0AHkAcABlAAEYAAAAUwB5AHMAdABlAG0ALgBCAG8AbwBsAGUAYQBuACwAIABtAHMAYwBvAHIAbABpAGIAKwEFAAAAVgBhAGwAdQBlAAAHBQIwAgAAAAYAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAAQoAAABzAHkAbgBjAFAAbABhAHkAZQByACcBBAAAAHQAeQBwAGUAASAAAABWAFIAQwAuAFUAZABvAG4ALgBVAGQAbwBuAEIAZQBoAGEAdgBpAG8AdQByACwAIABWAFIAQwAuAFUAZABvAG4ACwEFAAAAVgBhAGwAdQBlAAEAAAAHBQcFBwU=
+      value: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABgYAAAAAAAAAAi8CAAAAAVMAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AVQBkAG8AbgBCAGUAaABhAHYAaQBvAHUAcgAsACAAVgBSAEMALgBVAGQAbwBuAF0AXQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAgAAAAYCAAAAAAAAACcBBAAAAHQAeQBwAGUAARcAAABTAHkAcwB0AGUAbQAuAFMAdAByAGkAbgBnACwAIABtAHMAYwBvAHIAbABpAGIAJwEKAAAAUwB5AG0AYgBvAGwATgBhAG0AZQABDAAAAHAAbABhAHkAbABpAHMAdABEAGEAdABhACcBBAAAAHQAeQBwAGUAASAAAABWAFIAQwAuAFUAZABvAG4ALgBVAGQAbwBuAEIAZQBoAGEAdgBpAG8AdQByACwAIABWAFIAQwAuAFUAZABvAG4ACwEFAAAAVgBhAGwAdQBlAAAAAAAHBQIvAwAAAAFLAAAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQBgADEAWwBbAFMAeQBzAHQAZQBtAC4AQgBvAG8AbABlAGEAbgAsACAAbQBzAGMAbwByAGwAaQBiAF0AXQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAwAAAAYCAAAAAAAAACcBBAAAAHQAeQBwAGUAARcAAABTAHkAcwB0AGUAbQAuAFMAdAByAGkAbgBnACwAIABtAHMAYwBvAHIAbABpAGIAJwEKAAAAUwB5AG0AYgBvAGwATgBhAG0AZQABBwAAAHMAaAB1AGYAZgBsAGUAJwEEAAAAdAB5AHAAZQABGAAAAFMAeQBzAHQAZQBtAC4AQgBvAG8AbABlAGEAbgAsACAAbQBzAGMAbwByAGwAaQBiACsBBQAAAFYAYQBsAHUAZQAABwUCMAMAAAAEAAAABgIAAAAAAAAAJwEEAAAAdAB5AHAAZQABFwAAAFMAeQBzAHQAZQBtAC4AUwB0AHIAaQBuAGcALAAgAG0AcwBjAG8AcgBsAGkAYgAnAQoAAABTAHkAbQBiAG8AbABOAGEAbQBlAAELAAAAYQB1AHQAbwBBAGQAdgBhAG4AYwBlACcBBAAAAHQAeQBwAGUAARgAAABTAHkAcwB0AGUAbQAuAEIAbwBvAGwAZQBhAG4ALAAgAG0AcwBjAG8AcgBsAGkAYgArAQUAAABWAGEAbAB1AGUAAQcFAjADAAAABQAAAAYCAAAAAAAAACcBBAAAAHQAeQBwAGUAARcAAABTAHkAcwB0AGUAbQAuAFMAdAByAGkAbgBnACwAIABtAHMAYwBvAHIAbABpAGIAJwEKAAAAUwB5AG0AYgBvAGwATgBhAG0AZQABCwAAAGgAbwBsAGQATwBuAFIAZQBhAGQAeQAnAQQAAAB0AHkAcABlAAEYAAAAUwB5AHMAdABlAG0ALgBCAG8AbwBsAGUAYQBuACwAIABtAHMAYwBvAHIAbABpAGIAKwEFAAAAVgBhAGwAdQBlAAAHBQIwAgAAAAYAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAAQoAAABzAHkAbgBjAFAAbABhAHkAZQByACcBBAAAAHQAeQBwAGUAASAAAABWAFIAQwAuAFUAZABvAG4ALgBVAGQAbwBuAEIAZQBoAGEAdgBpAG8AdQByACwAIABWAFIAQwAuAFUAZABvAG4ACwEFAAAAVgBhAGwAdQBlAAEAAAAHBQIwAgAAAAcAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAAQgAAABkAGUAYgB1AGcATABvAGcAJwEEAAAAdAB5AHAAZQABIAAAAFYAUgBDAC4AVQBkAG8AbgAuAFUAZABvAG4AQgBlAGgAYQB2AGkAbwB1AHIALAAgAFYAUgBDAC4AVQBkAG8AbgALAQUAAABWAGEAbAB1AGUAAgAAAAcFBwUHBQ==
       objectReference: {fileID: 0}
     - target: {fileID: 8023394037439517565, guid: 01cb54cd8aedeca49aa9544140cd8ecf,
         type: 3}
       propertyPath: publicVariablesUnityEngineObjects.Array.size
-      value: 2
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 8023394037439517565, guid: 01cb54cd8aedeca49aa9544140cd8ecf,
         type: 3}
       propertyPath: publicVariablesUnityEngineObjects.Array.data[1]
       value: 
       objectReference: {fileID: 1497648956}
+    - target: {fileID: 8023394037439517565, guid: 01cb54cd8aedeca49aa9544140cd8ecf,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.data[2]
+      value: 
+      objectReference: {fileID: 1298754739}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 01cb54cd8aedeca49aa9544140cd8ecf, type: 3}
 --- !u!4 &1577669953 stripped
@@ -32936,6 +34068,44 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 204d34e234e4b4644b5a5f0ebb04d3b7, type: 3}
+--- !u!1 &2021378729
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2021378730}
+  m_Layer: 5
+  m_Name: Body
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &2021378730
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2021378729}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children:
+  - {fileID: 1538237099}
+  - {fileID: 692328288}
+  - {fileID: 286731203}
+  m_Father: {fileID: 600765952}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: -12.5}
+  m_SizeDelta: {x: 0, y: -25}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1001 &2028032816
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -34421,6 +35591,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2126682919}
   m_CullTransparentMesh: 0
+--- !u!114 &2131762592 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7061957329682411916, guid: 75166db9199a4ab459a1a269ada987ba,
+    type: 3}
+  m_PrefabInstance: {fileID: 7061957331612838956}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &2132649205
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -35979,6 +37161,18 @@ MonoBehaviour:
   publicVariablesUnityEngineObjects:
   - {fileID: 523141438}
   publicVariablesSerializationDataFormat: 0
+--- !u!114 &1956821231072125838 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8730538267549667234, guid: 75166db9199a4ab459a1a269ada987ba,
+    type: 3}
+  m_PrefabInstance: {fileID: 7061957331612838956}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &2713745585235473505
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -36454,6 +37648,12 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 89fe58bd9a2f5c240b10c836e11bb5ac, type: 3}
+--- !u!4 &4371433952357283611 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6821661243702106935, guid: 75166db9199a4ab459a1a269ada987ba,
+    type: 3}
+  m_PrefabInstance: {fileID: 7061957331612838956}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &4405392600175549847
 GameObject:
   m_ObjectHideFlags: 0
@@ -36995,6 +38195,18 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 73c3857879213ac4fb7e2f785aa20847, type: 3}
+--- !u!114 &4732792946873223982 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2571378206412498690, guid: 75166db9199a4ab459a1a269ada987ba,
+    type: 3}
+  m_PrefabInstance: {fileID: 7061957331612838956}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45115577ef41a5b4ca741ed302693907, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &4891033141214884753
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -37436,7 +38648,7 @@ PrefabInstance:
     - target: {fileID: 3373505429792297916, guid: 83edc9334750fc74ba98c3c623cb6551,
         type: 3}
       propertyPath: m_RootOrder
-      value: 6
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 3373505429792297919, guid: 83edc9334750fc74ba98c3c623cb6551,
         type: 3}
@@ -38167,7 +39379,7 @@ PrefabInstance:
     - target: {fileID: 1048841045846446304, guid: fb89eac75acc7e5499ec349e7e46452d,
         type: 3}
       propertyPath: _syncMethod
-      value: 3
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1048841045846446304, guid: fb89eac75acc7e5499ec349e7e46452d,
         type: 3}
@@ -38203,7 +39415,7 @@ PrefabInstance:
     - target: {fileID: 1048841045976639276, guid: fb89eac75acc7e5499ec349e7e46452d,
         type: 3}
       propertyPath: _syncMethod
-      value: 3
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1048841045976639276, guid: fb89eac75acc7e5499ec349e7e46452d,
         type: 3}
@@ -38239,7 +39451,7 @@ PrefabInstance:
     - target: {fileID: 1048841046099454157, guid: fb89eac75acc7e5499ec349e7e46452d,
         type: 3}
       propertyPath: _syncMethod
-      value: 3
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1048841046099454157, guid: fb89eac75acc7e5499ec349e7e46452d,
         type: 3}
@@ -38275,7 +39487,7 @@ PrefabInstance:
     - target: {fileID: 1048841046252694288, guid: fb89eac75acc7e5499ec349e7e46452d,
         type: 3}
       propertyPath: _syncMethod
-      value: 3
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1048841046252694288, guid: fb89eac75acc7e5499ec349e7e46452d,
         type: 3}
@@ -38311,7 +39523,7 @@ PrefabInstance:
     - target: {fileID: 1048841046482598866, guid: fb89eac75acc7e5499ec349e7e46452d,
         type: 3}
       propertyPath: _syncMethod
-      value: 3
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1048841046482598866, guid: fb89eac75acc7e5499ec349e7e46452d,
         type: 3}
@@ -38544,7 +39756,7 @@ PrefabInstance:
     - target: {fileID: 6307334397687587792, guid: fb89eac75acc7e5499ec349e7e46452d,
         type: 3}
       propertyPath: _syncMethod
-      value: 3
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 6307334397687587792, guid: fb89eac75acc7e5499ec349e7e46452d,
         type: 3}
@@ -39054,6 +40266,115 @@ RectTransform:
     type: 3}
   m_PrefabInstance: {fileID: 5656884976990643671}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &7061957331612838956
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 979380671}
+    m_Modifications:
+    - target: {fileID: 2571378206412498689, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: m_Name
+      value: DebugState
+      objectReference: {fileID: 0}
+    - target: {fileID: 2571378206412498690, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: _syncMethod
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2571378206412498690, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: serializedPublicVariablesBytesString
+      value: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABgUAAAAAAAAAAi8CAAAAAUoAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiAF0AXQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAgAAAAYCAAAAAAAAACcBBAAAAHQAeQBwAGUAARcAAABTAHkAcwB0AGUAbQAuAFMAdAByAGkAbgBnACwAIABtAHMAYwBvAHIAbABpAGIAJwEKAAAAUwB5AG0AYgBvAGwATgBhAG0AZQABBQAAAHQAaQB0AGwAZQAnAQQAAAB0AHkAcABlAAEX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
+      objectReference: {fileID: 0}
+    - target: {fileID: 2571378206412498690, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.size
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 2571378206412498690, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.data[1]
+      value: 
+      objectReference: {fileID: 903165900}
+    - target: {fileID: 2571378206412498690, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.data[2]
+      value: 
+      objectReference: {fileID: 1956821231072125838}
+    - target: {fileID: 2571378206412498690, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.data[3]
+      value: 
+      objectReference: {fileID: 86161727}
+    - target: {fileID: 2571378206412498690, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.data[4]
+      value: 
+      objectReference: {fileID: 2131762592}
+    - target: {fileID: 2571378206412498690, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: publicVariablesUnityEngineObjects.Array.data[5]
+      value: 
+      objectReference: {fileID: 27781138}
+    - target: {fileID: 6821661243702106935, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: m_RootOrder
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6821661243702106935, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 6.8296
+      objectReference: {fileID: 0}
+    - target: {fileID: 6821661243702106935, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.849
+      objectReference: {fileID: 0}
+    - target: {fileID: 6821661243702106935, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 7.1874
+      objectReference: {fileID: 0}
+    - target: {fileID: 6821661243702106935, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 6821661243702106935, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6821661243702106935, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 6821661243702106935, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6821661243702106935, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6821661243702106935, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 6821661243702106935, guid: 75166db9199a4ab459a1a269ada987ba,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 75166db9199a4ab459a1a269ada987ba, type: 3}
 --- !u!114 &7236165836742628302
 MonoBehaviour:
   m_ObjectHideFlags: 0

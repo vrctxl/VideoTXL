@@ -33,6 +33,8 @@ namespace Texel
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
 
+        public DebugState debugState;
+
         [Tooltip("Optional trigger zone the player must be in to sustain playback.  Disables playing audio on world load.")]
         [HideInInspector]
         public CompoundZoneTrigger playbackZone;
@@ -206,6 +208,9 @@ namespace Texel
                 DebugLog("Detected Quest platform");
             else if (Utilities.IsValid(Networking.LocalPlayer))
                 DebugLog("Detected " + (Networking.LocalPlayer.IsUserInVR() ? "PC VR" : "PC Desktop") + " Platform");
+
+            if (Utilities.IsValid(debugState))
+                debugState._Regsiter(this, "_UpdateDebugState", "SyncPlayer");
 
             _hasAccessControl = Utilities.IsValid(accessControl);
             _hasSustainZone = Utilities.IsValid(playbackZoneMembership);
@@ -1581,6 +1586,39 @@ namespace Texel
                 Debug.Log($"[VideoTXL:{comp}] " + message);
             if (Utilities.IsValid(debugLog))
                 debugLog._Write(comp, message);
+        }
+
+        public void _UpdateDebugState()
+        {
+            debugState._SetValue("owner", Networking.GetOwner(gameObject).displayName);
+            debugState._SetValue("syncVideoSource", _syncVideoSource.ToString());
+            debugState._SetValue("syncVideoSourceOverride", _syncVideoSourceOverride.ToString());
+            debugState._SetValue("syncUrl", _syncUrl.ToString());
+            debugState._SetValue("syncQuestUrl", _syncQuestUrl.ToString());
+            debugState._SetValue("syncQueuedUrl", _syncQueuedUrl.ToString());
+            debugState._SetValue("syncVideoNumber", _syncVideoNumber.ToString());
+            debugState._SetValue("loadedVideoNumber", _loadedVideoNumber.ToString());
+            debugState._SetValue("syncOwnerPlaying", _syncOwnerPlaying.ToString());
+            debugState._SetValue("syncOwnerPaused", _syncOwnerPaused.ToString());
+            debugState._SetValue("syncVideoStartNetworkTime", _syncVideoStartNetworkTime.ToString());
+            debugState._SetValue("syncVideoExpectedEndTime", _syncVideoExpectedEndTime.ToString());
+            debugState._SetValue("syncLocked", _syncLocked.ToString());
+            debugState._SetValue("localPlayerState", localPlayerState.ToString());
+            debugState._SetValue("lastErrorCode", localLastErrorCode.ToString());
+            debugState._SetValue("lastVideoPosition", _lastVideoPosition.ToString());
+            debugState._SetValue("videoTargetTime", _videoTargetTime.ToString());
+            debugState._SetValue("waitForSync", _waitForSync.ToString());
+            debugState._SetValue("holdReadyState", _holdReadyState.ToString());
+            debugState._SetValue("heldVideoReady", _heldVideoReady.ToString());
+            debugState._SetValue("lastSyncTime", _lastSyncTime.ToString());
+            debugState._SetValue("playStartTime", _playStartTime.ToString());
+            debugState._SetValue("pendingLoadTime", _pendingLoadTime.ToString());
+            debugState._SetValue("seekableSource", seekableSource.ToString());
+            debugState._SetValue("trackDuration", trackDuration.ToString());
+            debugState._SetValue("trackPosition", trackPosition.ToString());
+            debugState._SetValue("hasAccessControl", _hasAccessControl.ToString());
+            debugState._SetValue("hasSustainZone", _hasSustainZone.ToString());
+            debugState._SetValue("inSustainZone", _inSustainZone.ToString());
         }
     }
 }
