@@ -263,7 +263,7 @@ namespace Texel
 
             if (Networking.IsOwner(gameObject))
             {
-                if (Utilities.IsValid(playlist) && playlist.trackCount > 0)
+                if (Utilities.IsValid(playlist) && playlist.trackCount > 0 && playlist.autoAdvance)
                 {
                     if (_IsUrlValid(defaultUrl))
                     {
@@ -342,6 +342,7 @@ namespace Texel
                 }
 
                 _VideoStop();
+                _UpdatePlayerState(PLAYER_STATE_STOPPED);
             }
         }
 
@@ -749,7 +750,7 @@ namespace Texel
             if (Networking.IsOwner(gameObject))
             {
                 _syncVideoStartNetworkTime = 0;
-                _syncVideoExpectedEndTime = 0;
+                //_syncVideoExpectedEndTime = 0;
                 _syncOwnerPlaying = false;
                 _syncOwnerPaused = false;
                 _syncUrl = VRCUrl.Empty;
@@ -872,8 +873,16 @@ namespace Texel
                     SendCustomEventDelayedFrames("_LoopVideo", 1);
                 else
                 {
+                    if (hasPlaylist && playlist.catalogueMode)
+                    {
+                        playlist._MoveTo(-1);
+                        dataProxy._EmitPlaylistUpdate();
+                    }
+
+                    _syncUrl = VRCUrl.Empty;
+                    _syncQuestUrl = VRCUrl.Empty;
                     _syncVideoStartNetworkTime = 0;
-                    _syncVideoExpectedEndTime = 0;
+                    //_syncVideoExpectedEndTime = 0;
                     _syncOwnerPlaying = false;
                     RequestSerialization();
                 }
@@ -945,7 +954,7 @@ namespace Texel
                 else
                 {
                     _syncVideoStartNetworkTime = 0;
-                    _syncVideoExpectedEndTime = 0;
+                    //_syncVideoExpectedEndTime = 0;
                     _videoTargetTime = 0;
                     _syncOwnerPlaying = false;
                     RequestSerialization();

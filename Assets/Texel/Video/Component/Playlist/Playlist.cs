@@ -25,6 +25,8 @@ namespace Texel
         public bool autoAdvance = true;
         [Tooltip("Hold videos in ready state until released by an external input")]
         public bool holdOnReady = false;
+        [Tooltip("Treat tracks as independent, unlinked entities.  Disables normal playlist controls.")]
+        public bool catalogueMode = false;
 
         [Tooltip("Optional catalogue to sync load playlist data from")]
         public PlaylistCatalogue catalogue;
@@ -38,7 +40,7 @@ namespace Texel
         [UdonSynced, FieldChangeCallback("PlaylistEnabled")]
         bool syncEnabled;
         [UdonSynced, FieldChangeCallback("CurrentIndex")]
-        byte syncCurrentIndex;
+        short syncCurrentIndex = -1;
         [UdonSynced]
         byte[] syncTrackerOrder;
         [UdonSynced, FieldChangeCallback("ShuffleEnabled")]
@@ -46,7 +48,6 @@ namespace Texel
         [UdonSynced, FieldChangeCallback("CatalogueIndex")]
         int syncCatalogueIndex = -1;
 
-        bool end = false;
         bool init = false;
 
         [NonSerialized]
@@ -174,7 +175,7 @@ namespace Texel
                     trackNames[i] = $"Track {i + 1}";
             }
 
-            CurrentIndex = 0;
+            CurrentIndex = (short)((autoAdvance && !catalogueMode) ? 0 : -1);
 
             syncTrackerOrder = new byte[playlist.Length];
             if (syncShuffle)
@@ -207,13 +208,16 @@ namespace Texel
             }
         }
 
-        public byte CurrentIndex
+        public short CurrentIndex
         {
             get { return syncCurrentIndex; }
             set
             {
-                syncCurrentIndex = value;
-                _UpdateHandlers(TRACK_CHANGE_EVENT);
+                if (syncCurrentIndex != value)
+                {
+                    syncCurrentIndex = value;
+                    _UpdateHandlers(TRACK_CHANGE_EVENT);
+                }
             }
         }
 
@@ -253,11 +257,15 @@ namespace Texel
 
         public bool _HasNextTrack()
         {
+            if (catalogueMode)
+                return false;
             return CurrentIndex < trackCount - 1 || syncPlayer.repeatPlaylist;
         }
 
         public bool _HasPrevTrack()
         {
+            if (catalogueMode)
+                return false;
             return CurrentIndex > 0 || syncPlayer.repeatPlaylist;
         }
 
@@ -284,21 +292,21 @@ namespace Texel
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
-            if (CurrentIndex < playlist.Length - 1)
+            if (!catalogueMode && CurrentIndex < playlist.Length - 1)
                 CurrentIndex += 1;
-            else if (syncPlayer.repeatPlaylist)
+            else if (!catalogueMode && syncPlayer.repeatPlaylist)
                 CurrentIndex = 0;
             else
-            {
-                end = true;
-                return false;
-            }
-
-            DebugLog($"Move next track {CurrentIndex}");
+                CurrentIndex = (short)-1;
 
             RequestSerialization();
 
-            return true;
+            if (CurrentIndex >= 0)
+                DebugLog($"Move next track {CurrentIndex}");
+            else
+                DebugLog($"Playlist completed");
+
+            return CurrentIndex >= 0;
         }
 
         public bool _MovePrev()
@@ -308,21 +316,21 @@ namespace Texel
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
-            if (CurrentIndex > 0)
+            if (!catalogueMode && CurrentIndex >= 0)
                 CurrentIndex -= 1;
-            else if (syncPlayer.repeatPlaylist)
-                CurrentIndex = (byte)(playlist.Length - 1);
+            else if (!catalogueMode && syncPlayer.repeatPlaylist)
+                CurrentIndex = (short)(playlist.Length - 1);
             else
-                return false;
+                CurrentIndex = (short)-1;
 
-            if (end)
-                end = false;
-
-            DebugLog($"Move previous track {CurrentIndex}");
+            if (CurrentIndex >= 0)
+                DebugLog($"Move previous track {CurrentIndex}");
+            else
+                DebugLog($"Playlist reset");
 
             RequestSerialization();
 
-            return true;
+            return CurrentIndex >= 0;
         }
 
         public bool _MoveTo(int index)
@@ -332,7 +340,7 @@ namespace Texel
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
-            if (index < 0 || index >= trackCount)
+            if (index < -1 || index >= trackCount)
                 return false;
 
             if (CurrentIndex == index)
@@ -342,21 +350,21 @@ namespace Texel
             }
 
             syncEnabled = true;
-            CurrentIndex = (byte)index;
+            CurrentIndex = (short)index;
 
-            if (end)
-                end = false;
-
-            DebugLog($"Move track to {CurrentIndex}");
+            if (CurrentIndex >= 0)
+                DebugLog($"Move track to {CurrentIndex}");
+            else
+                DebugLog($"Playlist reset");
 
             RequestSerialization();
 
-            return true;
+            return CurrentIndex >= 0;
         }
 
         public VRCUrl _GetCurrent()
         {
-            if (end || !syncEnabled)
+            if (CurrentIndex < 0 || !syncEnabled)
                 return VRCUrl.Empty;
 
             int index = syncTrackerOrder[CurrentIndex];
@@ -365,7 +373,7 @@ namespace Texel
 
         public VRCUrl _GetCurrentQuest()
         {
-            if (end || !syncEnabled)
+            if (CurrentIndex < 0 || !syncEnabled)
                 return VRCUrl.Empty;
 
             int index = syncTrackerOrder[CurrentIndex];

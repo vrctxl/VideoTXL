@@ -657,7 +657,13 @@ namespace Texel
                 prevIcon.color = (enableControl && playlist.PlaylistEnabled && playlist._HasPrevTrack()) ? normalColor : disabledColor;
                 playlistIcon.color = enableControl ? normalColor : disabledColor;
 
-                playlistText.text = playlist.PlaylistEnabled ? $"TRACK: {playlist.CurrentIndex + 1} / {playlist.trackCount}" : "";
+                bool playlistActive = playlist.PlaylistEnabled && playlist.CurrentIndex >= 0 && playlist.trackCount > 0;
+                if (!playlistActive)
+                    playlistText.text = "";
+                else if (playlist.catalogueMode)
+                    playlistText.text = $"TRACK: {playlist.CurrentIndex + 1}";
+                else
+                    playlistText.text = $"TRACK: {playlist.CurrentIndex + 1} / {playlist.trackCount}";
             }
             else
             {

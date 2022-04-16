@@ -122,7 +122,7 @@ namespace Texel
                 if (!Utilities.IsValid(data))
                     titleText.text = "";
                 else
-                    titleText.text = data.name;
+                    titleText.text = data.playlistName;
             }
 
             _BuildList();
