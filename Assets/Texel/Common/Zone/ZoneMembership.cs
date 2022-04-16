@@ -11,8 +11,10 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
     public class ZoneMembership : UdonSharpBehaviour
     {
-        [Tooltip("Optional zone that the membership list will hook into for player enter/leave events")]
+        [Tooltip("Optional zone that the membership list will hook into for player leave events")]
         public CompoundZoneTrigger zone;
+        [Tooltip("Optional zone that the membership list will hook into for player enter events")]
+        public CompoundZoneTrigger triggerZone;
         [Tooltip("Update membership in response to world join and leave events")]
         public bool worldEvents = false;
 
@@ -72,7 +74,15 @@ namespace Texel
             }
 
             if (Utilities.IsValid(zone))
-                zone._Register((UdonBehaviour)(Component)this, "_PlayerTriggerEnter", "_PlayerTriggerExit", "playerEventArg");
+            {
+                if (!Utilities.IsValid(triggerZone) || zone == triggerZone)
+                    zone._Register((UdonBehaviour)(Component)this, "_PlayerTriggerEnter", "_PlayerTriggerExit", "playerEventArg");
+                else
+                {
+                    zone._Register((UdonBehaviour)(Component)this, null, "_PlayerTriggerExit", "playerEventArg");
+                    triggerZone._Register((UdonBehaviour)(Component)this, "_PlayerTriggerEnter", null, "playerEventArg");
+                }
+            }
         }
 
         /* public void _RegisterArrayUpdateHandler(UdonBehaviour target, string eventName, string arrayReturn)
@@ -87,11 +97,11 @@ namespace Texel
             handlerCount += 1;
         } */
 
-        public override void OnPlayerJoined(VRCPlayerApi player)
+        /* public override void OnPlayerJoined(VRCPlayerApi player)
         {
             if (worldEvents)
                 _AddPlayer(player);
-        }
+        } */
 
         public override void OnPlayerLeft(VRCPlayerApi player)
         {
