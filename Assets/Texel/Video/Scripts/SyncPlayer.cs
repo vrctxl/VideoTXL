@@ -131,6 +131,7 @@ namespace Texel
         bool _heldVideoReady = false;
         float _lastSyncTime;
         float _playStartTime = 0;
+        bool _overrideLock = false;
 
         float _pendingLoadTime = 0;
 
@@ -317,8 +318,11 @@ namespace Texel
                     }
 
                     // Otherwise play next available track or stop, depending on queue/settings
-                    _ConditionalPlayNext();
-                    return;
+                    if (Networking.IsOwner(playerArg, gameObject))
+                    {
+                        _ConditionalPlayNext();
+                        return;
+                    }
                 }
 
                 _StartVideoLoad();
@@ -603,19 +607,27 @@ namespace Texel
 
         public void _LoopVideo()
         {
+            _overrideLock = true;
             _PlayVideo(_syncUrl);
+            _overrideLock = false;
         }
 
         public void _PlayQueuedUrl()
         {
+            _overrideLock = true;
+
             VRCUrl url = _syncQueuedUrl;
             _syncQueuedUrl = VRCUrl.Empty;
             _PlayVideo(url);
+
+            _overrideLock = false;
         }
 
         public void _PlayPlaylistUrl()
         {
+            _overrideLock = true;
             _syncQueuedUrl = VRCUrl.Empty;
+
             if (Utilities.IsValid(playlist) && Utilities.IsValid(playlist.playlistData))
             {
                 if (!playlist.PlaylistEnabled)
@@ -626,6 +638,8 @@ namespace Texel
 
                 _PlayVideoFallback(playlist._GetCurrent(), playlist._GetCurrentQuest());
             }
+
+            _overrideLock = false;
         }
 
         bool _IsUrlValid(VRCUrl url)
@@ -864,6 +878,8 @@ namespace Texel
         {
             if (Networking.IsOwner(gameObject))
             {
+                _overrideLock = true;
+
                 bool hasPlaylist = Utilities.IsValid(playlist) && playlist.PlaylistEnabled;
                 if (_IsUrlValid(_syncQueuedUrl))
                     SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
@@ -886,6 +902,8 @@ namespace Texel
                     _syncOwnerPlaying = false;
                     RequestSerialization();
                 }
+
+                _overrideLock = false;
             }
         }
 
@@ -980,6 +998,8 @@ namespace Texel
 
         public bool _CanTakeControl()
         {
+            if (_overrideLock)
+                return true;
             if (_hasAccessControl)
                 return !_syncLocked || accessControl._LocalHasAccess();
 
@@ -1612,6 +1632,7 @@ namespace Texel
             debugState._SetValue("syncVideoStartNetworkTime", _syncVideoStartNetworkTime.ToString());
             debugState._SetValue("syncVideoExpectedEndTime", _syncVideoExpectedEndTime.ToString());
             debugState._SetValue("syncLocked", _syncLocked.ToString());
+            debugState._SetValue("overrideLock", _overrideLock.ToString());
             debugState._SetValue("localPlayerState", localPlayerState.ToString());
             debugState._SetValue("lastErrorCode", localLastErrorCode.ToString());
             debugState._SetValue("lastVideoPosition", _lastVideoPosition.ToString());

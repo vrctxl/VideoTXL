@@ -49,6 +49,10 @@ namespace Texel.Video.Internal
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void SetupURLResolveCallback()
         {
+            // If another script has hooked StartResolveURLCoroutine (like the original USharp shim), defer to it
+            if (VRCUnityVideoPlayer.StartResolveURLCoroutine != null)
+                return;
+
             string[] splitPath = Application.persistentDataPath.Split('/', '\\');
             _youtubeDLPath = string.Join("\\", splitPath.Take(splitPath.Length - 2)) + "\\VRChat\\VRChat\\Tools\\yt-dlp.exe";
 
