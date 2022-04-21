@@ -156,11 +156,17 @@ namespace Texel
                 playlist = new VRCUrl[0];
                 questPlaylist = new VRCUrl[0];
                 trackNames = new string[0];
-            } else
+            }
+            else
             {
                 playlist = data.playlist;
                 questPlaylist = data.questPlaylist;
-                trackNames = data.trackNames ?? new string[playlist.Length];
+                if (!Utilities.IsValid(questPlaylist) || questPlaylist.Length != playlist.Length)
+                    questPlaylist = new VRCUrl[data.playlist.Length];
+
+                trackNames = data.trackNames;
+                if (!Utilities.IsValid(trackNames) || trackNames.Length != playlist.Length)
+                    trackNames = new string[playlist.Length];
             }
 
             trackCount = playlist.Length;
