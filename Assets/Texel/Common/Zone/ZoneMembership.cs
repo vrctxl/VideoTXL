@@ -146,10 +146,10 @@ namespace Texel
             return maxIndex;
         }
 
-        public void _RemovePlayer(VRCPlayerApi player)
+        public bool _RemovePlayer(VRCPlayerApi player)
         {
             if (!Utilities.IsValid(player))
-                return;
+                return false;
 
             int id = player.playerId;
             for (int i = 0; i <= maxIndex; i++)
@@ -175,9 +175,11 @@ namespace Texel
                             arr.SetValue(arr.GetValue(maxIndex), i);
                     } */
 
-                    return;
+                    return true;
                 }
             }
+
+            return false;
         }
 
         public int _PlayerCount()

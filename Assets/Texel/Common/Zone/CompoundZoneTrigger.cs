@@ -56,6 +56,7 @@ namespace Texel
         bool pendingRecalc = false;
 
         Collider[] colliders;
+        Collider[] validColliders;
 
         Component[] targetBehaviors;
         string[] playerEnterEvents;
@@ -142,6 +143,35 @@ namespace Texel
                 if (Utilities.IsValid(col) && col.enabled)
                     colliderCount += 1;
             }
+
+            validColliders = new Collider[colliderCount];
+            int i = 0;
+            foreach (var col in colliders)
+            {
+                if (Utilities.IsValid(col) && col.enabled)
+                {
+                    validColliders[i] = col;
+                    i++;
+                }
+            }
+        }
+
+        public void _EnableZone()
+        {
+            foreach (var col in validColliders)
+                col.enabled = true;
+        }
+
+        public void _DisableZone()
+        {
+            foreach (var col in validColliders)
+                col.enabled = false;
+
+            int count = triggerActiveCount;
+            for (int i = 0; i < count; i++)
+                _PlayerTriggerExit(Networking.LocalPlayer);
+
+            _PlayerTriggerReset();
         }
 
         public void _PlayerTriggerReset()
