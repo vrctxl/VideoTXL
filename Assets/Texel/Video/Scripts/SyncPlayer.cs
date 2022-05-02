@@ -414,12 +414,17 @@ namespace Texel
 
         public void _TriggerLock()
         {
+            _SetLock(!_syncLocked);
+        }
+
+        public void _SetLock(bool state)
+        {
             if (!_IsAdmin())
                 return;
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
-            _syncLocked = !_syncLocked;
+            _syncLocked = state;
             _UpdateLockState(_syncLocked);
             RequestSerialization();
         }
@@ -731,7 +736,7 @@ namespace Texel
 
             //#if !UNITY_EDITOR
             VRCUrl url = _syncUrl;
-            if (dataProxy.quest && _syncQuestUrl != null && _syncQuestUrl != VRCUrl.Empty)
+            if (dataProxy.quest && _syncQuestUrl != null && _syncQuestUrl != VRCUrl.Empty && _syncQuestUrl.Get().Trim() != "")
             {
                 url = _syncQuestUrl;
                 DebugLog("Loading Quest URL variant");
