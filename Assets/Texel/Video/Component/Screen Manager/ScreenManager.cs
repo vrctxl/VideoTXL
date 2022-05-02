@@ -57,6 +57,8 @@ namespace Texel
 
         [Tooltip("Whether to update textures properties on a set of shared material objects")]
         public bool useTextureOverrides = false;
+        public MeshRenderer videoCaptureRenderer;
+        public MeshRenderer streamCaptureRenderer;
         [Tooltip("The material capturing the video or stream source")]
         public Material captureMaterial;
         [Tooltip("The name of the property holding the main texture in the capture material")]
@@ -94,6 +96,7 @@ namespace Texel
         public const int SCREEN_SOURCE_AVPRO = 1;
         public const int SCREEN_SOURCE_UNITY = 2;
 
+        public const int SCREEN_MODE_UNINITIALIZED = -1;
         public const int SCREEN_MODE_NORMAL = 0;
         public const int SCREEN_MODE_LOGO = 1;
         public const int SCREEN_MODE_LOADING = 2;
@@ -108,9 +111,10 @@ namespace Texel
 
         bool _initComplete = false;
         int _screenSource = SCREEN_SOURCE_UNITY;
-        int _screenMode = SCREEN_MODE_NORMAL;
+        int _screenMode = SCREEN_MODE_UNINITIALIZED;
         VideoError _lastErrorCode = 0;
         int _checkFrameCount = 0;
+        MaterialPropertyBlock block;
 
         bool texOverrideValidAVPro = false;
         bool texOverrideValidUnity = false;
@@ -127,6 +131,8 @@ namespace Texel
         {
             if (_initComplete)
                 return;
+
+            block = new MaterialPropertyBlock();
 
 #if COMPILER_UDONSHARP
             _InitMaterialOverrides();
@@ -189,8 +195,10 @@ namespace Texel
                 return;
             }
 
-            texOverrideValidAVPro = Utilities.IsValid(captureMaterial) && Utilities.IsValid(captureTextureProperty) && captureTextureProperty != "";
-            texOverrideValidUnity = Utilities.IsValid(captureRT);
+            texOverrideValidAVPro = Utilities.IsValid(streamCaptureRenderer) && Utilities.IsValid(captureTextureProperty) && captureTextureProperty != "";
+
+            texOverrideValidUnity = Utilities.IsValid(videoCaptureRenderer) && Utilities.IsValid(captureTextureProperty) && captureTextureProperty != "";
+            texOverrideValidUnity |= Utilities.IsValid(captureRT);
 
             if (!texOverrideValidAVPro && !texOverrideValidUnity)
             {
@@ -368,10 +376,14 @@ namespace Texel
             if (!_initComplete)
                 _Init();
 
+            if (_screenMode == screenMode)
+                return;
+
             _screenMode = screenMode;
             _checkFrameCount = 0;
 
-            bool captureValid = CaptureValid();
+            Texture captureTex = CaptureValid();
+            bool captureValid = Utilities.IsValid(captureTex);
             bool usingVideoSource = _screenMode == SCREEN_MODE_NORMAL;
 
             if (useMaterialOverrides)
@@ -422,11 +434,11 @@ namespace Texel
 
                     if (_screenSource == SCREEN_SOURCE_AVPRO && texOverrideValidAVPro)
                     {
-                        tex = captureMaterial.GetTexture(captureTextureProperty);
+                        tex = captureTex;
                         avPro = 1;
                     }
                     else if (_screenSource == SCREEN_SOURCE_UNITY && texOverrideValidUnity)
-                        tex = captureRT;
+                        tex = captureTex;
                 }
 
                 // Update all extra screen materials with correct predefined or captured texture
@@ -462,7 +474,8 @@ namespace Texel
             if (_screenMode != SCREEN_MODE_NORMAL)
                 return;
 
-            bool captureValid = CaptureValid();
+            Texture captureTex = CaptureValid();
+            bool captureValid = Utilities.IsValid(captureTex);
 
             if (useMaterialOverrides)
             {
@@ -526,11 +539,11 @@ namespace Texel
                 {
                     if (_screenSource == SCREEN_SOURCE_AVPRO && texOverrideValidAVPro)
                     {
-                        tex = captureMaterial.GetTexture(captureTextureProperty);
+                        tex = captureTex;
                         avPro = 1;
                     }
                     else if (_screenSource == SCREEN_SOURCE_UNITY && texOverrideValidUnity)
-                        tex = captureRT;
+                        tex = captureTex;
                 }
 
                 for (int i = 0; i < materialUpdateList.Length; i++)
@@ -570,22 +583,41 @@ namespace Texel
             return _originalScreenMaterial[meshIndex];
         }
 
-        public bool CaptureValid()
+        public Texture CaptureValid()
         {
-            if (_screenSource == SCREEN_SOURCE_AVPRO && Utilities.IsValid(captureMaterial) && captureTextureProperty.Length > 0)
+            if (_screenSource == SCREEN_SOURCE_AVPRO && Utilities.IsValid(streamCaptureRenderer))
             {
-                Texture tex = captureMaterial.GetTexture(captureTextureProperty);
+                Material mat = streamCaptureRenderer.sharedMaterial;
+                if (mat == null)
+                    return null;
+
+                Texture tex = mat.GetTexture("_MainTex");
                 if (tex == null)
-                    return false;
-                Debug.Log($"Res {tex.width} x {tex.height}");
+                    return null;
                 if (tex.width < 16 || tex.height < 16)
-                    return false;
+                    return null;
+
+                DebugLog($"Resolution {tex.width} x {tex.height}");
+                return tex;
+            }
+
+            if (_screenSource == SCREEN_SOURCE_UNITY && Utilities.IsValid(videoCaptureRenderer))
+            {
+                videoCaptureRenderer.GetPropertyBlock(block);
+                Texture tex = block.GetTexture("_MainTex");
+                if (tex == null)
+                    return null;
+                if (tex.width < 16 || tex.height < 16)
+                    return null;
+
+                DebugLog($"Resolution {tex.width} x {tex.height}");
+                return tex;
             }
 
             if (_screenSource == SCREEN_SOURCE_UNITY && Utilities.IsValid(captureRT))
-                return true;
+                return captureRT;
 
-            return true;
+            return null;
         }
 
         void DebugLog(string message)
@@ -629,6 +661,8 @@ namespace Texel
         SerializedProperty screenMeshListProperty;
         SerializedProperty screenMatIndexListProperty;
 
+        SerializedProperty videoCaptureRendererProperty;
+        SerializedProperty streamCaptureRendererProperty;
         SerializedProperty captureMaterialProperty;
         SerializedProperty captureTexturePropertyProperty;
         SerializedProperty captureRTProperty;
@@ -672,6 +706,8 @@ namespace Texel
             screenMeshListProperty = serializedObject.FindProperty(nameof(ScreenManager.screenMesh));
             screenMatIndexListProperty = serializedObject.FindProperty(nameof(ScreenManager.screenMaterialIndex));
 
+            videoCaptureRendererProperty = serializedObject.FindProperty(nameof(ScreenManager.videoCaptureRenderer));
+            streamCaptureRendererProperty = serializedObject.FindProperty(nameof(ScreenManager.streamCaptureRenderer));
             captureMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.captureMaterial));
             captureTexturePropertyProperty = serializedObject.FindProperty(nameof(ScreenManager.captureTextureProperty));
             captureRTProperty = serializedObject.FindProperty(nameof(ScreenManager.captureRT));
@@ -744,10 +780,12 @@ namespace Texel
             EditorGUILayout.PropertyField(useTextureOverrideProperty);
             if (useTextureOverrideProperty.boolValue)
             {
-                EditorGUILayout.PropertyField(captureMaterialProperty);
-                if (captureMaterialProperty.objectReferenceValue != null)
-                    EditorGUILayout.PropertyField(captureTexturePropertyProperty);
-                EditorGUILayout.PropertyField(captureRTProperty);
+                EditorGUILayout.PropertyField(videoCaptureRendererProperty);
+                EditorGUILayout.PropertyField(streamCaptureRendererProperty);
+                //EditorGUILayout.PropertyField(captureMaterialProperty);
+                //if (captureMaterialProperty.objectReferenceValue != null || videoCaptureRendererProperty.objectReferenceValue != null)
+                //    EditorGUILayout.PropertyField(captureTexturePropertyProperty);
+                //EditorGUILayout.PropertyField(captureRTProperty);
 
                 EditorGUILayout.Space();
                 EditorGUILayout.PropertyField(logoTextureProperty);
