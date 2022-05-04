@@ -20,6 +20,9 @@ namespace Texel
         [Tooltip("Optional default URL to play on world load")]
         public VRCUrl defaultUrl;
 
+        [Tooltip("Optional playlist to initialize player with.  If default URL is set, it will play before the playlist takes over.")]
+        public VRCUrl[] defaultPlaylist;
+
         [Tooltip("Whether player controls are locked to master and instance owner by default")]
         public bool defaultLocked = false;
 
@@ -40,8 +43,14 @@ namespace Texel
         VRCUrl _queuedUrl = VRCUrl.Empty;
 
         [UdonSynced]
+        VRCUrl[] _syncPlaylist;
+
+        [UdonSynced]
         int _syncVideoNumber;
         int _loadedVideoNumber;
+
+        [UdonSynced]
+        int _syncPlaylistIndex = -2;
 
         [UdonSynced, NonSerialized]
         public bool _syncOwnerPlaying;
@@ -98,8 +107,15 @@ namespace Texel
 
             _init = true;
 
+            _syncPlaylist = new VRCUrl[defaultPlaylist.Length];
+            for (int i = 0; i < defaultPlaylist.Length; i++)
+                _syncPlaylist[i] = defaultPlaylist[i];
+
             if (Networking.IsOwner(gameObject))
             {
+                if (defaultPlaylist.Length > 0)
+                    _syncPlaylistIndex = -1;
+
                 _syncLocked = defaultLocked;
                 locked = _syncLocked;
                 RequestSerialization();
@@ -150,6 +166,8 @@ namespace Texel
             if (_syncLocked && !_CanTakeControl())
                 return;
 
+            _syncPlaylistIndex = -2;
+
             _PlayVideo(url);
 
             _queuedUrl = VRCUrl.Empty;
@@ -163,6 +181,22 @@ namespace Texel
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             _queuedUrl = url;
+        }
+
+        public void _AddPlaylistUrl(VRCUrl url)
+        {
+            if (_syncLocked && !_CanTakeControl())
+                return;
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+            if (!Utilities.IsValid(url) || url.ToString() == "")
+                return;
+
+            if (_syncPlaylistIndex == -2)
+                _syncPlaylistIndex = -1;
+
+            _syncPlaylist = (VRCUrl[])_AddElement(_syncPlaylist, url, typeof(VRCUrl));
+            RequestSerialization();
         }
 
         public void _SetTargetTime(float time)
@@ -216,6 +250,27 @@ namespace Texel
         {
             _PlayVideo(_queuedUrl);
             _queuedUrl = VRCUrl.Empty;
+        }
+
+        public void _PlayNext()
+        {
+            int length = _syncPlaylist.Length;
+            if (_syncPlaylistIndex >= -1 && length > 0)
+            {
+                for (int i = 0; i < length; i++)
+                {
+                    int index = (_syncPlaylistIndex + i + 1) % length;
+                    VRCUrl url = _syncPlaylist[i];
+                    if (Utilities.IsValid(url) && url.ToString() != "")
+                    {
+                        _syncPlaylistIndex = index;
+                        RequestSerialization();
+
+                        _PlayVideo(url);
+                        return;
+                    }
+                }
+            }
         }
 
         bool _IsUrlValid(VRCUrl url)
@@ -400,6 +455,8 @@ namespace Texel
             {
                 if (_IsUrlValid(_queuedUrl))
                     SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
+                else if (_syncPlaylistIndex >= -1 && _syncPlaylist.Length > 0)
+                    SendCustomEventDelayedFrames("_PlayNext", 1);
                 else if (loop)
                     SendCustomEventDelayedFrames("_LoopVideo", 1);
                 else
@@ -571,6 +628,24 @@ namespace Texel
             _currentPlayer.Stop();
             if (_syncOwnerPlaying)
                 _StartVideoLoad();
+        }
+
+        Array _AddElement(Array arr, object elem, Type type)
+        {
+            Array newArr;
+            int count = 0;
+
+            if (Utilities.IsValid(arr))
+            {
+                count = arr.Length;
+                newArr = Array.CreateInstance(type, count + 1);
+                Array.Copy(arr, newArr, count);
+            }
+            else
+                newArr = Array.CreateInstance(type, 1);
+
+            newArr.SetValue(elem, count);
+            return newArr;
         }
 
         // Debug
