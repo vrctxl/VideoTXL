@@ -37,8 +37,6 @@ public class TextureRefresh : UdonSharpBehaviour
             tex = block.GetTexture(sourceTexProp);
             if (!Utilities.IsValid(tex))
                 tex = defaultTexture;
-
-            Debug.Log(tex);
         } else
         {
             Material mat = source.sharedMaterial;

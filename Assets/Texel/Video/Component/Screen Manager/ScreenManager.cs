@@ -89,6 +89,12 @@ namespace Texel
         public string[] materialTexPropertyList;
         public string[] materialAVPropertyList;
 
+        public MeshRenderer[] propMeshList;
+        public int[] propMaterialOverrideList;
+        public int[] propMaterialIndexList;
+        public string[] propMainTexList;
+        public string[] propAVProList;
+
         Material[] _originalScreenMaterial;
         Texture[] _originalMaterialTexture;
 
@@ -454,6 +460,28 @@ namespace Texel
                     if (avProProp != null && avProProp.Length > 0)
                         mat.SetInt(avProProp, avPro);
                 }
+
+                for (int i = 0; i < propMeshList.Length; i++)
+                {
+                    MeshRenderer renderer = propMeshList[i];
+                    string texName = propMainTexList[i];
+                    if (renderer == null || name == null || name.Length == 0)
+                        continue;
+
+                    bool useMatIndex = propMaterialOverrideList[i] == 1;
+                    if (useMatIndex)
+                        renderer.GetPropertyBlock(block, propMaterialIndexList[i]);
+                    else
+                        renderer.GetPropertyBlock(block);
+
+                    block.SetTexture(texName, tex);
+
+                    string avProProp = propAVProList[i];
+                    if (avProProp != null && avProProp.Length > 0)
+                        block.SetInt(avProProp, avPro);
+
+                    renderer.SetPropertyBlock(block);
+                }
             }
 
             //#if !UNITY_EDITOR
@@ -558,6 +586,28 @@ namespace Texel
                     if (avProProp != null && avProProp.Length > 0)
                         mat.SetInt(avProProp, avPro);
                 }
+
+                for (int i = 0; i < propMeshList.Length; i++)
+                {
+                    MeshRenderer renderer = propMeshList[i];
+                    string texName = propMainTexList[i];
+                    if (renderer == null || name == null || name.Length == 0)
+                        continue;
+
+                    bool useMatIndex = propMaterialOverrideList[i] == 1;
+                    if (useMatIndex)
+                        renderer.GetPropertyBlock(block, propMaterialIndexList[i]);
+                    else
+                        renderer.GetPropertyBlock(block);
+
+                    block.SetTexture(texName, tex);
+
+                    string avProProp = propAVProList[i];
+                    if (avProProp != null && avProProp.Length > 0)
+                        block.SetInt(avProProp, avPro);
+
+                    renderer.SetPropertyBlock(block);
+                }
             }
 
             if (!captureValid)
@@ -638,6 +688,8 @@ namespace Texel
         static bool[] _showScreenFoldout = new bool[0];
         static bool _showMaterialListFoldout;
         static bool[] _showMaterialFoldout = new bool[0];
+        static bool _showPropListFoldout;
+        static bool[] _showPropFoldout = new bool[0];
 
         SerializedProperty dataProxyProperty;
 
@@ -681,6 +733,12 @@ namespace Texel
         SerializedProperty materialUpdateListProperty;
         SerializedProperty materialTexPropertyListProperty;
         SerializedProperty materialAVPropertyListProperty;
+
+        SerializedProperty propRenderListProperty;
+        SerializedProperty propMaterialOverrideListProperty;
+        SerializedProperty propMaterialIndexListProperty;
+        SerializedProperty propMainTexListProperty;
+        SerializedProperty propAVProListProperty;
 
         private void OnEnable()
         {
@@ -726,6 +784,12 @@ namespace Texel
             materialUpdateListProperty = serializedObject.FindProperty(nameof(ScreenManager.materialUpdateList));
             materialTexPropertyListProperty = serializedObject.FindProperty(nameof(ScreenManager.materialTexPropertyList));
             materialAVPropertyListProperty = serializedObject.FindProperty(nameof(ScreenManager.materialAVPropertyList));
+
+            propRenderListProperty = serializedObject.FindProperty(nameof(ScreenManager.propMeshList));
+            propMaterialOverrideListProperty = serializedObject.FindProperty(nameof(ScreenManager.propMaterialOverrideList));
+            propMaterialIndexListProperty = serializedObject.FindProperty(nameof(ScreenManager.propMaterialIndexList));
+            propMainTexListProperty = serializedObject.FindProperty(nameof(ScreenManager.propMainTexList));
+            propAVProListProperty = serializedObject.FindProperty(nameof(ScreenManager.propAVProList));
         }
 
         public override void OnInspectorGUI()
@@ -808,6 +872,8 @@ namespace Texel
 
                 EditorGUILayout.Space();
                 MaterialFoldout();
+                EditorGUILayout.Space();
+                PropBlockFoldout();
             }
 
             serializedObject.ApplyModifiedProperties();
@@ -815,11 +881,12 @@ namespace Texel
 
         private void ScreenFoldout()
         {
-            _showScreenListFoldout = EditorGUILayout.Foldout(_showScreenListFoldout, "Video Screen Objects");
+            int count = screenMeshListProperty.arraySize;
+            _showScreenListFoldout = EditorGUILayout.Foldout(_showScreenListFoldout, $"Video Screen Objects ({count})");
             if (_showScreenListFoldout)
             {
                 EditorGUI.indentLevel++;
-                int newCount = Mathf.Max(0, EditorGUILayout.DelayedIntField("Size", screenMeshListProperty.arraySize));
+                int newCount = Mathf.Max(0, EditorGUILayout.DelayedIntField("Size", count));
                 if (newCount != screenMeshListProperty.arraySize)
                     screenMeshListProperty.arraySize = newCount;
                 if (newCount != screenMatIndexListProperty.arraySize)
@@ -830,12 +897,16 @@ namespace Texel
 
                 for (int i = 0; i < screenMeshListProperty.arraySize; i++)
                 {
-                    _showScreenFoldout[i] = EditorGUILayout.Foldout(_showScreenFoldout[i], "Screen " + i);
+                    SerializedProperty mesh = screenMeshListProperty.GetArrayElementAtIndex(i);
+                    string name = "none";
+                    if (mesh != null && mesh.objectReferenceValue != null)
+                        name = ((MeshRenderer)mesh.objectReferenceValue).name;
+
+                    _showScreenFoldout[i] = EditorGUILayout.Foldout(_showScreenFoldout[i], $"Screen {i} ({name})");
                     if (_showScreenFoldout[i])
                     {
                         EditorGUI.indentLevel++;
 
-                        SerializedProperty mesh = screenMeshListProperty.GetArrayElementAtIndex(i);
                         SerializedProperty matIndex = screenMatIndexListProperty.GetArrayElementAtIndex(i);
 
                         EditorGUILayout.PropertyField(mesh, new GUIContent("Mesh Renderer"));
@@ -850,11 +921,12 @@ namespace Texel
 
         private void MaterialFoldout()
         {
-            _showMaterialListFoldout = EditorGUILayout.Foldout(_showMaterialListFoldout, "Video Screen Materials");
+            int count = materialUpdateListProperty.arraySize;
+            _showMaterialListFoldout = EditorGUILayout.Foldout(_showMaterialListFoldout, $"Video Screen Materials ({count})");
             if (_showMaterialListFoldout)
             {
                 EditorGUI.indentLevel++;
-                int newCount = Mathf.Max(0, EditorGUILayout.DelayedIntField("Size", materialUpdateListProperty.arraySize));
+                int newCount = Mathf.Max(0, EditorGUILayout.DelayedIntField("Size", count));
                 if (newCount != materialUpdateListProperty.arraySize)
                     materialUpdateListProperty.arraySize = newCount;
                 if (newCount != materialTexPropertyListProperty.arraySize)
@@ -867,18 +939,78 @@ namespace Texel
 
                 for (int i = 0; i < materialUpdateListProperty.arraySize; i++)
                 {
-                    _showMaterialFoldout[i] = EditorGUILayout.Foldout(_showMaterialFoldout[i], "Material " + i);
+                    SerializedProperty matUpdate = materialUpdateListProperty.GetArrayElementAtIndex(i);
+                    string name = "none";
+                    if (matUpdate != null && matUpdate.objectReferenceValue != null)
+                        name = ((Material)matUpdate.objectReferenceValue).name;
+                    
+                    _showMaterialFoldout[i] = EditorGUILayout.Foldout(_showMaterialFoldout[i], $"Material {i} ({name})");
                     if (_showMaterialFoldout[i])
                     {
                         EditorGUI.indentLevel++;
 
-                        SerializedProperty matUpdate = materialUpdateListProperty.GetArrayElementAtIndex(i);
                         SerializedProperty matTexProperty = materialTexPropertyListProperty.GetArrayElementAtIndex(i);
                         SerializedProperty matAVProperty = materialAVPropertyListProperty.GetArrayElementAtIndex(i);
 
                         EditorGUILayout.PropertyField(matUpdate, new GUIContent("Material"));
                         EditorGUILayout.PropertyField(matTexProperty, new GUIContent("Texture Property"));
                         EditorGUILayout.PropertyField(matAVProperty, new GUIContent("AVPro Check Property"));
+
+                        EditorGUI.indentLevel--;
+                    }
+                }
+                EditorGUI.indentLevel--;
+            }
+        }
+
+        private void PropBlockFoldout()
+        {
+            int count = propRenderListProperty.arraySize;
+            _showPropListFoldout = EditorGUILayout.Foldout(_showPropListFoldout, $"Material Property Block Overrides ({count})");
+            if (_showPropListFoldout)
+            {
+                EditorGUI.indentLevel++;
+                int newCount = Mathf.Max(0, EditorGUILayout.DelayedIntField("Size", count));
+                if (newCount != propRenderListProperty.arraySize)
+                    propRenderListProperty.arraySize = newCount;
+                if (newCount != propMaterialOverrideListProperty.arraySize)
+                    propMaterialOverrideListProperty.arraySize = newCount;
+                if (newCount != propMaterialIndexListProperty.arraySize)
+                    propMaterialIndexListProperty.arraySize = newCount;
+                if (newCount != propMainTexListProperty.arraySize)
+                    propMainTexListProperty.arraySize = newCount;
+                if (newCount != propAVProListProperty.arraySize)
+                    propAVProListProperty.arraySize = newCount;
+
+                if (_showPropFoldout.Length != propRenderListProperty.arraySize)
+                    _showPropFoldout = new bool[propRenderListProperty.arraySize];
+
+                for (int i = 0; i < propRenderListProperty.arraySize; i++)
+                {
+                    SerializedProperty mesh = propRenderListProperty.GetArrayElementAtIndex(i);
+                    string name = "none";
+                    if (mesh != null && mesh.objectReferenceValue != null)
+                        name = ((MeshRenderer)mesh.objectReferenceValue).name;
+
+                    _showPropFoldout[i] = EditorGUILayout.Foldout(_showPropFoldout[i], $"Material Override {i} ({name})");
+                    if (_showPropFoldout[i])
+                    {
+                        EditorGUI.indentLevel++;
+
+                        SerializedProperty useMatOverride = propMaterialOverrideListProperty.GetArrayElementAtIndex(i);
+                        SerializedProperty matIndex = propMaterialIndexListProperty.GetArrayElementAtIndex(i);
+                        SerializedProperty mainTexProperty = propMainTexListProperty.GetArrayElementAtIndex(i);
+                        SerializedProperty AVProProperty = propAVProListProperty.GetArrayElementAtIndex(i);
+
+                        EditorGUILayout.PropertyField(mesh, new GUIContent("Renderer"));
+
+                        GUIContent desc = new GUIContent("Override Mode", "Whether to override a property on the renderer or one of its specific materials");
+                        useMatOverride.intValue = EditorGUILayout.Popup(desc, useMatOverride.intValue, new string[] { "Renderer", "Material" });
+                        if (useMatOverride.intValue == 1)
+                            EditorGUILayout.PropertyField(matIndex, new GUIContent("Material Index"));
+
+                        EditorGUILayout.PropertyField(mainTexProperty, new GUIContent("Texture Property"));
+                        EditorGUILayout.PropertyField(AVProProperty, new GUIContent("AVPro Check Property"));
 
                         EditorGUI.indentLevel--;
                     }
