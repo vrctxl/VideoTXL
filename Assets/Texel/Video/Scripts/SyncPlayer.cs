@@ -84,6 +84,8 @@ namespace Texel
         short _syncVideoSource = VIDEO_SOURCE_NONE;
         [UdonSynced]
         short _syncVideoSourceOverride = VIDEO_SOURCE_NONE;
+        [UdonSynced]
+        short _syncScreenFit = SCREEN_FIT;
 
         [UdonSynced]
         VRCUrl _syncUrl = VRCUrl.Empty;
@@ -181,6 +183,11 @@ namespace Texel
 
         const int GAME_MODE_PC = 0;
         const int GAME_MODE_QUEST = 1;
+
+        const short SCREEN_FIT = 0;
+        const short SCREEN_FIT_HEIGHT = 1;
+        const short SCREEN_FIT_WIDTH = 2;
+        const short SCREEN_STRETCH = 3;
 
         void Start()
         {
@@ -449,6 +456,17 @@ namespace Texel
 
             _syncVideoSourceOverride = mode;
             _UpdateVideoSource(_syncVideoSource, _syncVideoSourceOverride);
+
+            RequestSerialization();
+        }
+
+        public void _SetScreenFit(short mode)
+        {
+            if (_syncLocked && !_CanTakeControl())
+                return;
+
+            _syncScreenFit = mode;
+            _UpdateScreenFit(_syncScreenFit);
 
             RequestSerialization();
         }
@@ -1044,6 +1062,7 @@ namespace Texel
             _initDeserialize = true;
 
             _UpdateVideoSource(_syncVideoSource, _syncVideoSourceOverride);
+            _UpdateScreenFit(_syncScreenFit);
             _UpdateLockState(_syncLocked);
             _UpdateRepeatMode(_syncRepeatPlaylist);
             _UpdateQueuedUrlData();
@@ -1436,6 +1455,16 @@ namespace Texel
             {
                 DebugLogAs("UnityVideo", "Stop");
                 unityVideo.Stop();
+            }
+        }
+
+        void _UpdateScreenFit(short mode)
+        {
+            if (mode != dataProxy.screenFit)
+            {
+                DebugLog($"Setting screen fit to {mode}");
+                dataProxy.screenFit = mode;
+                dataProxy._EmitStateUpdate();
             }
         }
 

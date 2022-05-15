@@ -17,8 +17,10 @@ namespace Texel
         static bool[] _showScreenFoldout = new bool[0];
         static bool _showMaterialListFoldout;
         static bool[] _showMaterialFoldout = new bool[0];
+        static bool[] _showMaterialOverrideFoldout = new bool[0];
         static bool _showPropListFoldout;
         static bool[] _showPropFoldout = new bool[0];
+        static bool[] _showPropOverrideFoldout = new bool[0];
 
         SerializedProperty dataProxyProperty;
 
@@ -39,7 +41,6 @@ namespace Texel
         SerializedProperty errorRateLimitedMaterialProperty;
         SerializedProperty editorMaterialProperty;
 
-        SerializedProperty[] objMaterialProps;
         SerializedProperty screenMeshListProperty;
         SerializedProperty screenMatIndexListProperty;
 
@@ -60,17 +61,20 @@ namespace Texel
         SerializedProperty errorRateLimitedTextureProperty;
         SerializedProperty editorTextureProperty;
 
-        SerializedProperty[] sharedMaterialProps;
         SerializedProperty materialUpdateListProperty;
+        SerializedProperty materialPropertyListProperty;
         SerializedProperty materialTexPropertyListProperty;
         SerializedProperty materialAVPropertyListProperty;
 
-        SerializedProperty[] propertyBlockProps;
         SerializedProperty propRenderListProperty;
         SerializedProperty propMaterialOverrideListProperty;
         SerializedProperty propMaterialIndexListProperty;
+        SerializedProperty propPropertyListProperty;
         SerializedProperty propMainTexListProperty;
         SerializedProperty propAVProListProperty;
+        //SerializedProperty propInvertListProperty;
+        //SerializedProperty propGammaListProperty;
+        //SerializedProperty propFitListProperty;
 
         private void OnEnable()
         {
@@ -95,9 +99,6 @@ namespace Texel
 
             screenMeshListProperty = serializedObject.FindProperty(nameof(ScreenManager.screenMesh));
             screenMatIndexListProperty = serializedObject.FindProperty(nameof(ScreenManager.screenMaterialIndex));
-            objMaterialProps = new SerializedProperty[] { 
-                screenMeshListProperty, screenMatIndexListProperty 
-            };
 
             videoCaptureRendererProperty = serializedObject.FindProperty(nameof(ScreenManager.videoCaptureRenderer));
             streamCaptureRendererProperty = serializedObject.FindProperty(nameof(ScreenManager.streamCaptureRenderer));
@@ -119,19 +120,17 @@ namespace Texel
             materialUpdateListProperty = serializedObject.FindProperty(nameof(ScreenManager.materialUpdateList));
             materialTexPropertyListProperty = serializedObject.FindProperty(nameof(ScreenManager.materialTexPropertyList));
             materialAVPropertyListProperty = serializedObject.FindProperty(nameof(ScreenManager.materialAVPropertyList));
-            sharedMaterialProps = new SerializedProperty[] { 
-                materialUpdateListProperty, materialTexPropertyListProperty, materialAVPropertyListProperty
-            };
+            materialPropertyListProperty = serializedObject.FindProperty(nameof(ScreenManager.materialPropertyList));
 
             propRenderListProperty = serializedObject.FindProperty(nameof(ScreenManager.propMeshList));
             propMaterialOverrideListProperty = serializedObject.FindProperty(nameof(ScreenManager.propMaterialOverrideList));
             propMaterialIndexListProperty = serializedObject.FindProperty(nameof(ScreenManager.propMaterialIndexList));
+            propPropertyListProperty = serializedObject.FindProperty(nameof(ScreenManager.propPropertyList));
             propMainTexListProperty = serializedObject.FindProperty(nameof(ScreenManager.propMainTexList));
             propAVProListProperty = serializedObject.FindProperty(nameof(ScreenManager.propAVProList));
-            propertyBlockProps = new SerializedProperty[] { 
-                propRenderListProperty, propMaterialOverrideListProperty, propMaterialIndexListProperty,
-                propMainTexListProperty, propAVProListProperty
-            };
+            //propInvertListProperty = serializedObject.FindProperty(nameof(ScreenManager.propInvertList));
+            //propGammaListProperty = serializedObject.FindProperty(nameof(ScreenManager.propGammaList));
+            //propFitListProperty = serializedObject.FindProperty(nameof(ScreenManager.propFitList));
         }
 
         public override void OnInspectorGUI()
@@ -239,6 +238,7 @@ namespace Texel
                     {
                         EditorGUI.indentLevel++;
 
+                        SerializedProperty mesh = screenMeshListProperty.GetArrayElementAtIndex(i);
                         SerializedProperty matIndex = screenMatIndexListProperty.GetArrayElementAtIndex(i);
 
                         EditorGUILayout.PropertyField(mesh, new GUIContent("Mesh Renderer"));
@@ -259,7 +259,10 @@ namespace Texel
             {
                 EditorGUI.indentLevel++;
                 _showMaterialFoldout = EditorTools.MultiArraySize(serializedObject, _showMaterialFoldout,
-                    materialUpdateListProperty, materialTexPropertyListProperty, materialAVPropertyListProperty);
+                    materialUpdateListProperty, materialPropertyListProperty, materialTexPropertyListProperty, materialAVPropertyListProperty);
+
+                if (_showMaterialFoldout.Length != _showMaterialOverrideFoldout.Length)
+                    _showMaterialOverrideFoldout = new bool[_showMaterialFoldout.Length];
 
                 for (int i = 0; i < materialUpdateListProperty.arraySize; i++)
                 {
@@ -269,12 +272,22 @@ namespace Texel
                     {
                         EditorGUI.indentLevel++;
 
+                        SerializedProperty matUpdate = materialUpdateListProperty.GetArrayElementAtIndex(i);
+                        SerializedProperty matProperties = materialPropertyListProperty.GetArrayElementAtIndex(i);
                         SerializedProperty matTexProperty = materialTexPropertyListProperty.GetArrayElementAtIndex(i);
                         SerializedProperty matAVProperty = materialAVPropertyListProperty.GetArrayElementAtIndex(i);
 
                         EditorGUILayout.PropertyField(matUpdate, new GUIContent("Material"));
-                        EditorGUILayout.PropertyField(matTexProperty, new GUIContent("Texture Property"));
-                        EditorGUILayout.PropertyField(matAVProperty, new GUIContent("AVPro Check Property"));
+                        EditorGUILayout.PropertyField(matProperties, new GUIContent("Property Map"));
+
+                        _showMaterialOverrideFoldout[i] = EditorGUILayout.Foldout(_showMaterialOverrideFoldout[i], "Property Map Overrides");
+                        if (_showMaterialOverrideFoldout[i])
+                        {
+                            EditorGUI.indentLevel++;
+                            EditorGUILayout.PropertyField(matTexProperty, new GUIContent("Texture Property"));
+                            EditorGUILayout.PropertyField(matAVProperty, new GUIContent("AVPro Check Property"));
+                            EditorGUI.indentLevel--;
+                        }
 
                         EditorGUI.indentLevel--;
                     }
@@ -291,8 +304,11 @@ namespace Texel
             {
                 EditorGUI.indentLevel++;
                 _showPropFoldout = EditorTools.MultiArraySize(serializedObject, _showPropFoldout,
-                    propRenderListProperty, propMaterialOverrideListProperty, propMaterialIndexListProperty,
+                    propRenderListProperty, propMaterialOverrideListProperty, propMaterialIndexListProperty, propPropertyListProperty,
                     propMainTexListProperty, propAVProListProperty);
+
+                if (_showPropFoldout.Length != _showPropOverrideFoldout.Length)
+                    _showPropOverrideFoldout = new bool[_showPropFoldout.Length];
 
                 for (int i = 0; i < propRenderListProperty.arraySize; i++)
                 {
@@ -302,10 +318,15 @@ namespace Texel
                     {
                         EditorGUI.indentLevel++;
 
+                        SerializedProperty mesh = propRenderListProperty.GetArrayElementAtIndex(i);
                         SerializedProperty useMatOverride = propMaterialOverrideListProperty.GetArrayElementAtIndex(i);
                         SerializedProperty matIndex = propMaterialIndexListProperty.GetArrayElementAtIndex(i);
+                        SerializedProperty matProperties = propPropertyListProperty.GetArrayElementAtIndex(i);
                         SerializedProperty mainTexProperty = propMainTexListProperty.GetArrayElementAtIndex(i);
                         SerializedProperty AVProProperty = propAVProListProperty.GetArrayElementAtIndex(i);
+                        //SerializedProperty invertProperty = propInvertListProperty.GetArrayElementAtIndex(i);
+                        //SerializedProperty gammaProperty = propGammaListProperty.GetArrayElementAtIndex(i);
+                        //SerializedProperty fitProperty = propFitListProperty.GetArrayElementAtIndex(i);
 
                         EditorGUILayout.PropertyField(mesh, new GUIContent("Renderer"));
 
@@ -314,8 +335,19 @@ namespace Texel
                         if (useMatOverride.intValue == 1)
                             EditorGUILayout.PropertyField(matIndex, new GUIContent("Material Index"));
 
-                        EditorGUILayout.PropertyField(mainTexProperty, new GUIContent("Texture Property"));
-                        EditorGUILayout.PropertyField(AVProProperty, new GUIContent("AVPro Check Property"));
+                        EditorGUILayout.PropertyField(matProperties, new GUIContent("Property Map"));
+
+                        _showPropOverrideFoldout[i] = EditorGUILayout.Foldout(_showPropOverrideFoldout[i], "Property Map Overrides");
+                        if (_showPropOverrideFoldout[i])
+                        {
+                            EditorGUI.indentLevel++;
+                            EditorGUILayout.PropertyField(mainTexProperty, new GUIContent("Texture Property", "The name of the shader property holding the main screen texture"));
+                            EditorGUILayout.PropertyField(AVProProperty, new GUIContent("AVPro Check Property", "Optional.  The name of the shader property that indicates the source is AVPro-based.  AVPro sources should have gamma applied for all platforms and flip the image on the Y axis on PC/VR."));
+                            //EditorGUILayout.PropertyField(invertProperty, new GUIContent("Invert Y Property", "Optional.  The name of the shader property that indicates the screen should be flipped on the Y axis"));
+                            //EditorGUILayout.PropertyField(gammaProperty, new GUIContent("Apply Gamma Property", "Optional.  The name of the shader property that indicates gamma correction should be applied to the image"));
+                            //EditorGUILayout.PropertyField(fitProperty, new GUIContent("Screen Fit Property", "Optional.  The name of the shader property that sets the screen fit enum value (0=fit, 1=fit-h, 2=fit-w, 3=stretch)"));
+                            EditorGUI.indentLevel--;
+                        }
 
                         EditorGUI.indentLevel--;
                     }

@@ -17,6 +17,8 @@ namespace Texel
         [NonSerialized]
         public short playerSourceOverride;
         [NonSerialized]
+        public short screenFit;
+        [NonSerialized]
         public int playerState;
         [NonSerialized]
         public bool paused;

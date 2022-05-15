@@ -8,9 +8,10 @@ Shader "VideoTXL/RealtimeEmissiveGamma" {
 		_MarginTex("Margin (RGB)", 2D) = "black" {}
 		_Emission("Emission Scale", Float) = 1
 		_AspectRatio("Aspect Ratio", Float) = 1.777777
-		[Toggle(APPLY_GAMMA)] _ApplyGamma("Apply Gamma", Float) = 0
-		[Toggle(_)] _IsAVProInput("Is AV Pro Input", Int) = 0
-		[Toggle(_)] _InvertAVPro("Invert AVPro", Int) = 0
+		[Enum(Fit,0,Fit Height,1,Fit Width,2,Stretch,3)] _FitMode("Fit Mode", Int) = 0
+		[Toggle] _ApplyGammaAVPro("Apply Gamma", Int) = 0
+		[Toggle] _IsAVProInput("Is AV Pro Input", Int) = 0
+		[Toggle] _InvertAVPro("Invert AVPro", Int) = 0
 	}
 
 	SubShader{
@@ -24,7 +25,7 @@ Shader "VideoTXL/RealtimeEmissiveGamma" {
 		// Use shader model 3.0 target, to get nicer looking lighting
 		#pragma target 3.0
 		#pragma shader_feature _EMISSION
-		#pragma multi_compile APPLY_GAMMA_OFF APPLY_GAMMA
+		#pragma multi_compile_local APPLY_GAMMA_OFF APPLY_GAMMA
 
 		fixed _Emission;
 		sampler2D _MainTex;
@@ -38,8 +39,11 @@ Shader "VideoTXL/RealtimeEmissiveGamma" {
 		};
 
 		float _AspectRatio;
+		float _SourceAspectRatio;
+		int _FitMode;
 		int _IsAVProInput;
 		int _InvertAVPro;
+		int _ApplyGammaAVPro;
 
 		// Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
 		// See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
@@ -55,13 +59,13 @@ Shader "VideoTXL/RealtimeEmissiveGamma" {
 				float2 uv = float2(IN.uv_MainTex.x, IN.uv_MainTex.y);
 				float visibility = 1;
 
-				if (abs(curAspectRatio - _AspectRatio) > .001) {
+				if (abs(curAspectRatio - _AspectRatio) > .001 && _FitMode != 3) {
 					float2 normRes = float2(res.x / _AspectRatio, res.y);
 					float2 correction;
 
-					if (normRes.x > normRes.y)
+					if (_FitMode == 2 || (_FitMode == 0 && normRes.x > normRes.y))
 						correction = float2(1, normRes.y / normRes.x);
-					else
+					else if (_FitMode == 1 || (_FitMode == 0 && normRes.x < normRes.y))
 						correction = float2(normRes.x / normRes.y, 1);
 
 					uv = ((uv - 0.5) / correction) + 0.5;
@@ -78,22 +82,20 @@ Shader "VideoTXL/RealtimeEmissiveGamma" {
 				//float2 newUV = float2(IN.uv_MainTex.x, IN.uv_MainTex.y);
 				fixed4 margin = fixed4(0, 0, 0, 0);
 
-				if (_IsAVProInput) {
-					if (_InvertAVPro)
-						uv.y = 1 - uv.y;
-					
-					float2 muv = TRANSFORM_TEX(float2(IN.uv_MainTex.x, IN.uv_MainTex.y), _MarginTex);
-					margin = tex2D(_MarginTex, muv) * _Emission * (1 - visibility);
+				if (_IsAVProInput && _InvertAVPro) {
+					uv.y = 1 - uv.y;
 				}
+
+				float2 muv = TRANSFORM_TEX(float2(IN.uv_MainTex.x, IN.uv_MainTex.y), _MarginTex);
+				margin = tex2D(_MarginTex, muv) * _Emission * (1 - visibility);
 
 				fixed4 e = tex2D(_MainTex, uv);
 				o.Albedo = fixed4(0,0,0,0);
 				o.Alpha = e.a;
 
-			#if APPLY_GAMMA
-				if (_IsAVProInput)
+				if (_IsAVProInput && _ApplyGammaAVPro)
 					e.rgb = pow(e.rgb,2.2);
-			#endif
+
 				o.Emission = e * _Emission * visibility + margin;
 				o.Metallic = 0;
 				o.Smoothness = 0;

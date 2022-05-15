@@ -14,7 +14,7 @@ namespace Texel
         public static bool[] MultiArraySize(SerializedObject serializedObject, bool[] foldoutArray, params SerializedProperty[] props)
         {
             if (props.Length == 0)
-                return;
+                return foldoutArray;
 
             int oldCount = props[0].arraySize;
             int newCount = Mathf.Max(0, EditorGUILayout.DelayedIntField("Size", props[0].arraySize));
@@ -32,14 +32,16 @@ namespace Texel
                 serializedObject.ApplyModifiedProperties();
             }
 
-            bool[] foldoutReturn = foldoutArray;
-            if (foldoutArray.Length != newCount)
+            foreach (SerializedProperty prop in props)
             {
-                foldoutReturn = new bool[newCount];
-                Array.Copy(foldoutArray, foldoutReturn, Math.Min(oldCount, newCount));
+                if (prop.arraySize != newCount)
+                    prop.arraySize = newCount;
             }
 
-            return foldoutReturn;
+            if (foldoutArray.Length != newCount)
+                Array.Resize(ref foldoutArray, newCount);
+
+            return foldoutArray;
         }
 
         public static string GetMeshRendererName(SerializedProperty list, int index)
@@ -52,7 +54,7 @@ namespace Texel
             return name;
         }
 
-        public static string GetMaterialName(SerializedPropertyList list, int index)
+        public static string GetMaterialName(SerializedProperty list, int index)
         {
             SerializedProperty matUpdate = list.GetArrayElementAtIndex(index);
             string name = "none";

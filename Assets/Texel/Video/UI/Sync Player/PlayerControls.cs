@@ -47,6 +47,14 @@ namespace Texel
         public Image playlistIcon;
         public Image masterIcon;
         public Image whitelistIcon;
+        public Image screenFitIcon;
+        public Image screenFitHeightIcon;
+        public Image screenFitWidthIcon;
+        public Image screenStretchIcon;
+
+        public Text modeAutoText;
+        public Text modeStreamText;
+        public Text modeVideoText;
 
         public GameObject muteToggleOn;
         public GameObject muteToggleOff;
@@ -91,6 +99,11 @@ namespace Texel
         const short VIDEO_SOURCE_NONE = 0;
         const short VIDEO_SOURCE_AVPRO = 1;
         const short VIDEO_SOURCE_UNITY = 2;
+
+        const short SCREEN_FIT = 0;
+        const short SCREEN_FIT_HEIGHT = 1;
+        const short SCREEN_FIT_WIDTH = 2;
+        const short SCREEN_STRETCH = 3;
 
         bool infoPanelOpen = false;
 
@@ -437,6 +450,30 @@ namespace Texel
 
         public void _HandleSourceModeClick()
         {
+            short mode = (short)(dataProxy.playerSourceOverride + 1);
+            if (mode > 2)
+                mode = 0;
+
+            _UpdateSource(mode);
+        }
+
+        public void _HandleSourceAuto()
+        {
+            _UpdateSource(VIDEO_SOURCE_NONE);
+        }
+
+        public void _HandleSourceStream()
+        {
+            _UpdateSource(VIDEO_SOURCE_AVPRO);
+        }
+
+        public void _HandleSourceVideo()
+        {
+            _UpdateSource(VIDEO_SOURCE_UNITY);
+        }
+
+        void _UpdateSource(short mode)
+        {
             if (!Utilities.IsValid(videoPlayer))
                 return;
 
@@ -446,11 +483,41 @@ namespace Texel
                 return;
             }
 
-            short mode = (short)(dataProxy.playerSourceOverride + 1);
-            if (mode > 2)
-                mode = 0;
-
             videoPlayer._SetSourceMode(mode);
+        }
+
+        public void _HandleScreenFit()
+        {
+            _UpdateScreenFit(SCREEN_FIT);
+        }
+
+        public void _HandleScreenFitHeight()
+        {
+            _UpdateScreenFit(SCREEN_FIT_HEIGHT);
+        }
+
+        public void _HandleScreenFitWidth()
+        {
+            _UpdateScreenFit(SCREEN_FIT_WIDTH);
+        }
+
+        public void _HandleScreenStretch()
+        {
+            _UpdateScreenFit(SCREEN_STRETCH);
+        }
+
+        void _UpdateScreenFit(short mode)
+        {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
+            if (!videoPlayer._CanTakeControl())
+            {
+                _SetStatusOverride(MakeOwnerMessage(), 3);
+                return;
+            }
+
+            videoPlayer._SetScreenFit(mode);
         }
 
         public void _ToggleVolumeMute()
@@ -817,6 +884,15 @@ namespace Texel
             if (videoPlayer.locked)
                 lockedIcon.color = canControl ? normalColor : attentionColor;
 
+            modeAutoText.color = dataProxy.playerSourceOverride == VIDEO_SOURCE_NONE ? activeColor : normalColor;
+            modeStreamText.color = dataProxy.playerSourceOverride == VIDEO_SOURCE_AVPRO ? activeColor : normalColor;
+            modeVideoText.color = dataProxy.playerSourceOverride == VIDEO_SOURCE_UNITY ? activeColor : normalColor;
+
+            screenFitIcon.color = dataProxy.screenFit == SCREEN_FIT ? activeColor : normalColor;
+            screenFitHeightIcon.color = dataProxy.screenFit == SCREEN_FIT_HEIGHT ? activeColor : normalColor;
+            screenFitWidthIcon.color = dataProxy.screenFit == SCREEN_FIT_WIDTH ? activeColor : normalColor;
+            screenStretchIcon.color = dataProxy.screenFit == SCREEN_STRETCH ? activeColor : normalColor;
+
             switch (dataProxy.playerSourceOverride)
             {
                 case VIDEO_SOURCE_UNITY:
@@ -1049,6 +1125,20 @@ namespace Texel
                 lastVideoText = (Text)_FindComponent("InfoPanel/Fields/LastVideo/InputField/TextMask/Text", typeof(Text));
             if (!Utilities.IsValid(playLastIcon))
                 playLastIcon = (Image)_FindComponent("InfoPanel/Fields/LastVideo/InputField/PlayButton/IconPlay", typeof(Image));
+            if (!Utilities.IsValid(screenFitIcon))
+                screenFitIcon = (Image)_FindComponent("InfoPanel/Fields/ScreenFit/ButtonScreenFit/IconScreenFit", typeof(Image));
+            if (!Utilities.IsValid(screenFitHeightIcon))
+                screenFitHeightIcon = (Image)_FindComponent("InfoPanel/Fields/ScreenFit/ButtonScreenFitHeight/IconScreenFitHeight", typeof(Image));
+            if (!Utilities.IsValid(screenFitWidthIcon))
+                screenFitWidthIcon = (Image)_FindComponent("InfoPanel/Fields/ScreenFit/ButtonScreenFitWidth/IconScreenFitWidth", typeof(Image));
+            if (!Utilities.IsValid(screenStretchIcon))
+                screenStretchIcon = (Image)_FindComponent("InfoPanel/Fields/ScreenFit/ButtonScreenStretch/IconScreenStretch", typeof(Image));
+            if (!Utilities.IsValid(modeAutoText))
+                modeAutoText = (Text)_FindComponent("InfoPanel/Fields/Mode/ButtonModeAuto/TextModeAuto", typeof(Text));
+            if (!Utilities.IsValid(modeStreamText))
+                modeStreamText = (Text)_FindComponent("InfoPanel/Fields/Mode/ButtonModeStream/TextModeStream", typeof(Text));
+            if (!Utilities.IsValid(modeVideoText))
+                modeVideoText = (Text)_FindComponent("InfoPanel/Fields/Mode/ButtonModeVideo/TextModeVideo", typeof(Text));
 
         }
 
