@@ -21,5 +21,10 @@ namespace Texel
         public string applyGamma;
         [Tooltip("The name of the shader property that sets the screen fit enum value (0=fit, 1=fit-h, 2=fit-w, 3=stretch)")]
         public string screenFit;
+
+        private void Start()
+        {
+
+        }
     }
 }

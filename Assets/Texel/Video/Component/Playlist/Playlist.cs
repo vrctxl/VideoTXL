@@ -370,7 +370,7 @@ namespace Texel
 
         public VRCUrl _GetCurrent()
         {
-            if (CurrentIndex < 0 || !syncEnabled)
+            if (CurrentIndex < 0 || !syncEnabled || CurrentIndex >= syncTrackerOrder.Length)
                 return VRCUrl.Empty;
 
             int index = syncTrackerOrder[CurrentIndex];
@@ -379,7 +379,7 @@ namespace Texel
 
         public VRCUrl _GetCurrentQuest()
         {
-            if (CurrentIndex < 0 || !syncEnabled)
+            if (CurrentIndex < 0 || !syncEnabled || CurrentIndex >= syncTrackerOrder.Length)
                 return VRCUrl.Empty;
 
             int index = syncTrackerOrder[CurrentIndex];
@@ -388,7 +388,7 @@ namespace Texel
 
         public VRCUrl _GetTrackURL(int index)
         {
-            if (index < 0 || index >= trackCount)
+            if (index < 0 || index >= trackCount || index >= syncTrackerOrder.Length)
                 return VRCUrl.Empty;
 
             index = syncTrackerOrder[index];
@@ -397,7 +397,7 @@ namespace Texel
 
         public VRCUrl _GetTrackQuestURL(int index)
         {
-            if (index < 0 || index >= trackCount)
+            if (index < 0 || index >= trackCount || index >= syncTrackerOrder.Length)
                 return VRCUrl.Empty;
 
             index = syncTrackerOrder[index];
@@ -406,7 +406,7 @@ namespace Texel
 
         public string _GetTrackName(int index)
         {
-            if (index < 0 || index >= trackCount)
+            if (index < 0 || index >= trackCount || index >= syncTrackerOrder.Length)
                 return "";
 
             index = syncTrackerOrder[index];

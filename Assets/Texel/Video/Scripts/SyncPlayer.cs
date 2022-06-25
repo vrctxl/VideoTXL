@@ -131,6 +131,7 @@ namespace Texel
         bool _waitForSync;
         bool _holdReadyState = false;
         bool _heldVideoReady = false;
+        bool _skipAdvanceNextTrack = false;
         float _lastSyncTime;
         float _playStartTime = 0;
         bool _overrideLock = false;
@@ -508,6 +509,12 @@ namespace Texel
             _UpdatePlayerHold(false, false);
         }
 
+        public void _SkipNextAdvance()
+        {
+            if (Networking.IsOwner(gameObject))
+                _skipAdvanceNextTrack = true;
+        }
+
         public void _UpdateQueuedUrl(VRCUrl url)
         {
             if (_syncLocked && !_CanTakeControl())
@@ -606,6 +613,7 @@ namespace Texel
             _loadedVideoNumber = _syncVideoNumber;
             _syncOwnerPlaying = false;
             _syncOwnerPaused = false;
+            _skipAdvanceNextTrack = false;
 
             _syncVideoStartNetworkTime = float.MaxValue;
             _syncVideoExpectedEndTime = 0;
@@ -631,13 +639,17 @@ namespace Texel
         public void _LoopVideo()
         {
             _overrideLock = true;
+            _skipAdvanceNextTrack = false;
+
             _PlayVideo(_syncUrl);
+
             _overrideLock = false;
         }
 
         public void _PlayQueuedUrl()
         {
             _overrideLock = true;
+            _skipAdvanceNextTrack = false;
 
             VRCUrl url = _syncQueuedUrl;
             _syncQueuedUrl = VRCUrl.Empty;
@@ -649,6 +661,7 @@ namespace Texel
         public void _PlayPlaylistUrl()
         {
             _overrideLock = true;
+            _skipAdvanceNextTrack = false;
             _syncQueuedUrl = VRCUrl.Empty;
 
             if (Utilities.IsValid(playlist) && Utilities.IsValid(playlist.playlistData))
@@ -906,8 +919,12 @@ namespace Texel
                 bool hasPlaylist = Utilities.IsValid(playlist) && playlist.PlaylistEnabled;
                 if (_IsUrlValid(_syncQueuedUrl))
                     SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
-                else if (hasPlaylist && playlist.autoAdvance && playlist._MoveNext())
-                    SendCustomEventDelayedFrames("_PlayPlaylistUrl", 1);
+                else if (hasPlaylist && playlist.autoAdvance)
+                {
+                    if (_skipAdvanceNextTrack || playlist._MoveNext())
+                        SendCustomEventDelayedFrames("_PlayPlaylistUrl", 1);
+                    _skipAdvanceNextTrack = false;
+                }
                 else if (!hasPlaylist && _syncRepeatPlaylist)
                     SendCustomEventDelayedFrames("_LoopVideo", 1);
                 else
@@ -1083,6 +1100,8 @@ namespace Texel
                         _VideoPause();
                         _UpdatePlayerPaused(true);
                     }
+                    if (!_IsUrlValid(_syncUrl))
+                        SendCustomEventDelayedFrames("_StopVideo", 1);
                 }
 
                 return;
@@ -1542,6 +1561,9 @@ namespace Texel
                 dataProxy.paused = false;
                 dataProxy.syncing = false;
             }
+
+            if (state == PLAYER_STATE_PLAYING || state == PLAYER_STATE_STOPPED)
+                _UpdatePlayerHold(false, false);
 
             dataProxy._EmitStateUpdate();
         }

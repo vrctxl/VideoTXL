@@ -405,7 +405,7 @@ namespace Texel
             //if (videoPlayer.localPlayerState == PLAYER_STATE_ERROR)
             //    loadActive = false;
             //else
-                loadActive = !loadActive;
+            loadActive = !loadActive;
 
             _UpdateAll();
         }
@@ -758,7 +758,8 @@ namespace Texel
                 urlInput.readOnly = !canControl;
                 SetPlaceholderText("Enter Video URL...");
                 SetStatusText("");
-            } else
+            }
+            else
                 loadIcon.color = enableControl ? normalColor : disabledColor;
 
             if (playerState == PLAYER_STATE_PLAYING && !loadActive)
@@ -1142,7 +1143,7 @@ namespace Texel
 
         }
 
-        GameObject _FindGameObject (string path)
+        GameObject _FindGameObject(string path)
         {
             if (Utilities.IsValid(videoPlayer) && Utilities.IsValid(videoPlayer.debugLog))
                 videoPlayer.debugLog._Write("PlayerControls", $"Missing UI Game Object {path}");
@@ -1154,7 +1155,7 @@ namespace Texel
             return t.gameObject;
         }
 
-        Component _FindComponent (string path, System.Type type)
+        Component _FindComponent(string path, System.Type type)
         {
             if (Utilities.IsValid(videoPlayer) && Utilities.IsValid(videoPlayer.debugLog))
                 videoPlayer.debugLog._Write("PlayerControls", $"Missing UI Component {path}:{type}");
@@ -1512,7 +1513,7 @@ namespace Texel
                 PrefabUtility.RecordPrefabInstancePropertyModifications(obj);
         }
 
-        void CollectObjects<T> (List<Object> list, GameObject root, string[] paths) where T : Object
+        void CollectObjects<T>(List<Object> list, GameObject root, string[] paths) where T : Object
         {
             foreach (string path in paths)
             {

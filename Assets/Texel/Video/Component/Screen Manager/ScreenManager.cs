@@ -98,6 +98,13 @@ namespace Texel
         public string[] propGammaList;
         public string[] propFitList;
 
+        [Tooltip("Blit the source video or placeholder image to a specified custom render texture (CRT).  Each copy of the video player that writes to a CRT and could play concurrently must have its own CRT asset and associated material.")]
+        public bool useRenderOut = false;
+        [Tooltip("A predefined custom render texture (CRT).  The CRT should be backed by a compatible material shader, such as VideoTXL/RenderOut.")]
+        public CustomRenderTexture outputCRT;
+        [Tooltip("A map of properties to update on the CRT's material as the video player state changes.")]
+        public ScreenPropertyMap outputMaterialProperties;
+
         Material[] _originalScreenMaterial;
         Texture[] _originalMaterialTexture;
 
@@ -131,6 +138,7 @@ namespace Texel
         bool currentInvert;
         bool currentGamma;
         int currentFit;
+        bool currentValid = false;
 
         const int eventCount = 3;
         const int UPDATE_EVENT = 0;
@@ -497,12 +505,12 @@ namespace Texel
             _ResetCaptureData();
 
             Texture captureTex = CaptureValid();
-            bool captureValid = Utilities.IsValid(captureTex);
+            currentValid = Utilities.IsValid(captureTex);
             bool usingVideoSource = _screenMode == SCREEN_MODE_NORMAL;
 
             if (useMaterialOverrides)
             {
-                Material replacementMat = _GetReplacementMaterial(captureValid);
+                Material replacementMat = _GetReplacementMaterial(currentValid);
                 usingVideoSource |= replacementMat == null;
 
                 _UpdateObjects(replacementMat);
@@ -510,7 +518,7 @@ namespace Texel
 
             if (useTextureOverrides)
             {
-                Texture replacementTex = _GetReplacemenTexture(captureValid);
+                Texture replacementTex = _GetReplacemenTexture(currentValid);
                 usingVideoSource |= replacementTex == null;
 
                 _UpdateCaptureData(replacementTex, captureTex);
@@ -521,7 +529,7 @@ namespace Texel
             //#if !UNITY_EDITOR
             if (usingVideoSource)
             {
-                if (!captureValid)
+                if (!currentValid)
                     SendCustomEventDelayedFrames("_CheckUpdateScreenMaterial", 1);
                 else
                 {
@@ -529,7 +537,7 @@ namespace Texel
                     _UpdateHandlers(CAPTURE_VALID_EVENT);
                 }
             }
-//#endif
+            //#endif
         }
 
         public void _CheckUpdateScreenMaterial()
@@ -540,12 +548,12 @@ namespace Texel
                 return;
 
             Texture captureTex = CaptureValid();
-            bool captureValid = Utilities.IsValid(captureTex);
+            currentValid = Utilities.IsValid(captureTex);
 
             if (useMaterialOverrides)
             {
                 Material replacementMat = null;
-                if (!captureValid)
+                if (!currentValid)
                 {
                     if (loadingMaterial != null && _checkFrameCount < 10)
                         replacementMat = loadingMaterial;
@@ -561,7 +569,7 @@ namespace Texel
             if (useTextureOverrides)
             {
                 Texture replacementTex = null;
-                if (!captureValid)
+                if (!currentValid)
                 {
                     if (loadingTexture != null && _checkFrameCount < 10)
                         replacementTex = loadingTexture;
@@ -576,7 +584,7 @@ namespace Texel
                 _UpdatePropertyBlocks();
             }
 
-            if (!captureValid)
+            if (!currentValid)
             {
                 _checkFrameCount += 1;
                 int delay = _checkFrameCount < 100 ? 1 : 10;
@@ -586,6 +594,7 @@ namespace Texel
             {
                 DebugLog("Capture valid");
                 _UpdateHandlers(CAPTURE_VALID_EVENT);
+                // SendCustomEventDelayedSeconds("_CheckUpdateScreenMaterial", 3);
             }
         }
 
@@ -668,6 +677,32 @@ namespace Texel
                 _SetMatIntProperty(mat, materialInvertList[i], currentInvert ? 1 : 0);
                 _SetMatIntProperty(mat, materialFitList[i], dataProxy.screenFit);
             }
+
+            if (useRenderOut && Utilities.IsValid(outputCRT))
+            {
+                Material mat = outputCRT.material;
+                if (Utilities.IsValid(mat))
+                {
+                    if (Utilities.IsValid(outputMaterialProperties))
+                    {
+                        mat.SetTexture(outputMaterialProperties.screenTexture, currentTexture);
+
+                        _SetMatIntProperty(mat, outputMaterialProperties.avProCheck, currentAVPro ? 1 : 0);
+                        _SetMatIntProperty(mat, outputMaterialProperties.applyGamma, currentGamma ? 1 : 0);
+                        _SetMatIntProperty(mat, outputMaterialProperties.invertY, currentInvert ? 1 : 0);
+                        _SetMatIntProperty(mat, outputMaterialProperties.screenFit, dataProxy.screenFit);
+                    } else
+                        mat.SetTexture("_MainTex", currentTexture);
+
+                    if (_screenMode == SCREEN_MODE_NORMAL)
+                        outputCRT.updateMode = CustomRenderTextureUpdateMode.Realtime;
+                    else
+                    {
+                        outputCRT.updateMode = CustomRenderTextureUpdateMode.OnDemand;
+                        outputCRT.Update();
+                    }
+                }
+            }
         }
 
         void _UpdatePropertyBlocks()
@@ -716,7 +751,7 @@ namespace Texel
             if (_screenSource == SCREEN_SOURCE_UNITY && Utilities.IsValid(playbackMaterialUnity))
                 return playbackMaterialUnity;
             if (_screenSource == SCREEN_SOURCE_AVPRO && Utilities.IsValid(playbackMaterialAVPro))
-                return  playbackMaterialAVPro;
+                return playbackMaterialAVPro;
 
             return _originalScreenMaterial[meshIndex];
         }

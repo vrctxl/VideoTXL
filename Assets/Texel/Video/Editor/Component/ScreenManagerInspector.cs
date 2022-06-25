@@ -76,6 +76,10 @@ namespace Texel
         //SerializedProperty propGammaListProperty;
         //SerializedProperty propFitListProperty;
 
+        SerializedProperty useRenderOutProperty;
+        SerializedProperty outputCRTProperty;
+        SerializedProperty outputMaterialPropertiesProperty;
+
         private void OnEnable()
         {
             dataProxyProperty = serializedObject.FindProperty(nameof(ScreenManager.dataProxy));
@@ -131,6 +135,10 @@ namespace Texel
             //propInvertListProperty = serializedObject.FindProperty(nameof(ScreenManager.propInvertList));
             //propGammaListProperty = serializedObject.FindProperty(nameof(ScreenManager.propGammaList));
             //propFitListProperty = serializedObject.FindProperty(nameof(ScreenManager.propFitList));
+
+            useRenderOutProperty = serializedObject.FindProperty(nameof(ScreenManager.useRenderOut));
+            outputCRTProperty = serializedObject.FindProperty(nameof(ScreenManager.outputCRT));
+            outputMaterialPropertiesProperty = serializedObject.FindProperty(nameof(ScreenManager.outputMaterialProperties));
         }
 
         public override void OnInspectorGUI()
@@ -215,6 +223,15 @@ namespace Texel
                 MaterialFoldout();
                 EditorGUILayout.Space();
                 PropBlockFoldout();
+
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Render Texture Output", EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(useRenderOutProperty);
+                if (useRenderOutProperty.boolValue)
+                {
+                    EditorGUILayout.PropertyField(outputCRTProperty);
+                    EditorGUILayout.PropertyField(outputMaterialPropertiesProperty);
+                }
             }
 
             serializedObject.ApplyModifiedProperties();

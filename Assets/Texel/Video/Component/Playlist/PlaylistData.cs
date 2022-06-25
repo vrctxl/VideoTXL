@@ -23,5 +23,10 @@ namespace Texel
         public const int FALLBACK_JINNAI = 1;
         public const int FALLBACK_CUSTOM = 2;
         public const int FALLBACK_INDIVIDUAL = 3;
+
+        private void Start()
+        {
+
+        }
     }
 }

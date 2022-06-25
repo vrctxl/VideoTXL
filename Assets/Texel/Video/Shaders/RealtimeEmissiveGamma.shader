@@ -27,6 +27,8 @@ Shader "VideoTXL/RealtimeEmissiveGamma" {
 		#pragma shader_feature _EMISSION
 		#pragma multi_compile_local APPLY_GAMMA_OFF APPLY_GAMMA
 
+		#include "VideoTXL.cginc"
+
 		fixed _Emission;
 		sampler2D _MainTex;
 		float4 _MainTex_TexelSize;
@@ -38,9 +40,6 @@ Shader "VideoTXL/RealtimeEmissiveGamma" {
 			float2 uv_MainTex;
 		};
 
-		float _AspectRatio;
-		float _SourceAspectRatio;
-		int _FitMode;
 		int _IsAVProInput;
 		int _InvertAVPro;
 		int _ApplyGammaAVPro;
@@ -53,41 +52,15 @@ Shader "VideoTXL/RealtimeEmissiveGamma" {
 			UNITY_INSTANCING_BUFFER_END(Props)
 
 			void surf(Input IN, inout SurfaceOutputStandard o) {
-				float2 res = _MainTex_TexelSize.zw;
-				float curAspectRatio = res.x / res.y;
+				float2 uv = float2(0, 0);
+				float visibility = 0;
+				TXL_ComputeScreenFit(IN.uv_MainTex.xy, _MainTex_TexelSize.zw, uv, visibility);
 
-				float2 uv = float2(IN.uv_MainTex.x, IN.uv_MainTex.y);
-				float visibility = 1;
-
-				if (abs(curAspectRatio - _AspectRatio) > .001 && _FitMode != 3) {
-					float2 normRes = float2(res.x / _AspectRatio, res.y);
-					float2 correction;
-
-					if (_FitMode == 2 || (_FitMode == 0 && normRes.x > normRes.y))
-						correction = float2(1, normRes.y / normRes.x);
-					else if (_FitMode == 1 || (_FitMode == 0 && normRes.x < normRes.y))
-						correction = float2(normRes.x / normRes.y, 1);
-
-					uv = ((uv - 0.5) / correction) + 0.5;
-
-					float2 uvPadding = (1 / res) * 0.1;
-					float2 uvFwidth = fwidth(uv.xy);
-					float2 maxf = smoothstep(uvFwidth + uvPadding + 1, uvPadding + 1, uv.xy);
-					float2 minf = smoothstep(-uvFwidth - uvPadding, -uvPadding, uv.xy);
-
-					visibility = maxf.x * maxf.y * minf.x * minf.y;
-				}
-
-				// emissive comes from texture
-				//float2 newUV = float2(IN.uv_MainTex.x, IN.uv_MainTex.y);
-				fixed4 margin = fixed4(0, 0, 0, 0);
-
-				if (_IsAVProInput && _InvertAVPro) {
+				if (_IsAVProInput && _InvertAVPro)
 					uv.y = 1 - uv.y;
-				}
 
 				float2 muv = TRANSFORM_TEX(float2(IN.uv_MainTex.x, IN.uv_MainTex.y), _MarginTex);
-				margin = tex2D(_MarginTex, muv) * _Emission * (1 - visibility);
+				float4 margin = tex2D(_MarginTex, muv) * _Emission * (1 - visibility);
 
 				fixed4 e = tex2D(_MainTex, uv);
 				o.Albedo = fixed4(0,0,0,0);
