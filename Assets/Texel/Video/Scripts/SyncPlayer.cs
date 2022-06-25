@@ -312,7 +312,7 @@ namespace Texel
                 if (!playbackZoneMembership._ContainsPlayer(currentOwner))
                     Networking.SetOwner(playerArg, gameObject);
 
-                if (_syncVideoExpectedEndTime > 0)
+                if (_syncVideoExpectedEndTime != 0)
                 {
                     float serverTime = (float)Networking.GetServerTimeInSeconds();
 
@@ -321,6 +321,7 @@ namespace Texel
                     if (serverTime < _syncVideoExpectedEndTime)
                     {
                         _videoTargetTime = serverTime - _syncVideoStartNetworkTime;
+                        DebugLog($"Playback enter: start at {_videoTargetTime}");
                         _StartVideoLoad();
                         return;
                     }
@@ -328,11 +329,13 @@ namespace Texel
                     // Otherwise play next available track or stop, depending on queue/settings
                     if (Networking.IsOwner(playerArg, gameObject))
                     {
+                        DebugLog($"Playback enter: is owner and track has ended");
                         _ConditionalPlayNext();
                         return;
                     }
                 }
 
+                DebugLog("Playback enter: no expected end time set");
                 _StartVideoLoad();
             }
         }

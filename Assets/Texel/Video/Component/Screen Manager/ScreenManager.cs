@@ -535,6 +535,7 @@ namespace Texel
                 {
                     DebugLog("Capture valid");
                     _UpdateHandlers(CAPTURE_VALID_EVENT);
+                    SendCustomEventDelayedFrames("_CheckUpdateScreenMaterial", 2);
                 }
             }
             //#endif
@@ -548,6 +549,7 @@ namespace Texel
                 return;
 
             Texture captureTex = CaptureValid();
+            bool prevValid = currentValid;
             currentValid = Utilities.IsValid(captureTex);
 
             if (useMaterialOverrides)
@@ -592,9 +594,12 @@ namespace Texel
             }
             else
             {
-                DebugLog("Capture valid");
-                _UpdateHandlers(CAPTURE_VALID_EVENT);
-                // SendCustomEventDelayedSeconds("_CheckUpdateScreenMaterial", 3);
+                if (!prevValid)
+                {
+                    DebugLog("Capture valid");
+                    _UpdateHandlers(CAPTURE_VALID_EVENT);
+                }
+                SendCustomEventDelayedSeconds("_CheckUpdateScreenMaterial", 2);
             }
         }
 
@@ -770,7 +775,8 @@ namespace Texel
                 if (tex.width < 16 || tex.height < 16)
                     return null;
 
-                DebugLog($"Resolution {tex.width} x {tex.height}");
+                if (!currentValid)
+                    DebugLog($"Resolution {tex.width} x {tex.height}");
                 return tex;
             }
 
@@ -783,7 +789,8 @@ namespace Texel
                 if (tex.width < 16 || tex.height < 16)
                     return null;
 
-                DebugLog($"Resolution {tex.width} x {tex.height}");
+                if (!currentValid)
+                    DebugLog($"Resolution {tex.width} x {tex.height}");
                 return tex;
             }
 
