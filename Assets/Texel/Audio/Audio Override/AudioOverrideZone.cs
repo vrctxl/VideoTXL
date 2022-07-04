@@ -79,6 +79,20 @@ namespace Texel
             }
         }
 
+        public AudioOverrideSettings _GetLocalSettings()
+        {
+            return localZoneSettings;
+        }
+
+        public void _SetLocalSettings(AudioOverrideSettings profile)
+        {
+            localZoneSettings = profile;
+            DebugLog($"Set local zone settings {gameObject.name} {(Utilities.IsValid(profile) ? profile.ToString() : "none")}");
+
+            if (hasManager)
+                manager._RebuildLocal();
+        }
+
         public void _SetDefaultActive(bool state)
         {
             if (defaultEnabled != state)
@@ -87,6 +101,32 @@ namespace Texel
                 if (hasManager)
                     manager._RebuildLocal();
             }
+        }
+
+        public AudioOverrideSettings _GetDefaultSettings()
+        {
+            return defaultSettings;
+        }
+
+        public void _SetDefaultSettings(AudioOverrideSettings profile)
+        {
+            defaultSettings = profile;
+            DebugLog($"Set default zone settings {gameObject.name} {(Utilities.IsValid(profile) ? profile.ToString() : "none")}");
+
+            if (hasManager)
+                manager._RebuildLocal();
+        }
+
+        public bool _GetLinkedZoneActive(AudioOverrideZone zone)
+        {
+            for (int i = 0; i < linkedZones.Length; i++)
+            {
+                if (zone == linkedZones[i])
+                {
+                    return linkedZoneEnabled[i];
+                }
+            }
+            return false;
         }
 
         public void _SetLinkedZoneActive(AudioOverrideZone zone, bool state)
@@ -98,6 +138,36 @@ namespace Texel
                     if (linkedZoneEnabled[i] != state)
                     {
                         linkedZoneEnabled[i] = state;
+                        if (hasManager)
+                            manager._RebuildLocal();
+                    }
+                    break;
+                }
+            }
+        }
+
+        public AudioOverrideSettings _GetLinkedZoneSettings(AudioOverrideZone zone)
+        {
+            for (int i = 0; i < linkedZones.Length; i++)
+            {
+                if (zone == linkedZones[i])
+                {
+                    return linkedZoneSettings[i];
+                }
+            }
+            return null;
+        }
+
+        public void _SetLinkedZoneSettings(AudioOverrideZone zone, AudioOverrideSettings profile)
+        {
+            for (int i = 0; i < linkedZones.Length; i++)
+            {
+                if (zone == linkedZones[i])
+                {
+                    if (linkedZoneSettings[i] != profile)
+                    {
+                        linkedZoneSettings[i] = profile;
+                        DebugLog($"Set linked zone settings {gameObject.name} from {zone} to {(Utilities.IsValid(profile) ? profile.ToString() : "none")}");
                         if (hasManager)
                             manager._RebuildLocal();
                     }
