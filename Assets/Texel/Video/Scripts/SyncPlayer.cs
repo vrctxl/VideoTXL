@@ -20,7 +20,6 @@ namespace Texel
         [Tooltip("A proxy for dispatching video-related events to other listening behaviors, such as a screen manager")]
         public VideoPlayerProxy dataProxy;
 
-        [Header("Optional Components")]
         [Tooltip("Pre-populated playlist to iterate through.  If default URL is set, the playlist will be disabled by default, otherwise it will auto-play.")]
         public Playlist playlist;
 
@@ -30,9 +29,7 @@ namespace Texel
         [Tooltip("Control access to player controls based on player type or whitelist")]
         public AccessControl accessControl;
 
-        [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
-
         public DebugState debugState;
 
         [Tooltip("Optional trigger zone the player must be in to sustain playback.  Disables playing audio on world load.")]
@@ -44,14 +41,12 @@ namespace Texel
         //[Tooltip("Optional component to start or stop player based on common trigger events")]
         //public TriggerManager triggerManager;
 
-        [Header("Default Options")]
         [Tooltip("Optional default URL to play on world load")]
         public VRCUrl defaultUrl;
 
         [Tooltip("Whether player controls are locked to master and instance owner by default")]
         public bool defaultLocked = false;
 
-        [Tooltip("Write out video player events to VRChat log")]
         public bool debugLogging = true;
 
         [Tooltip("Automatically loop track when finished")]
@@ -60,7 +55,9 @@ namespace Texel
         [Tooltip("Whether to keep playing the same URL if an error occurs")]
         public bool retryOnError = true;
 
-        [Header("Sync Options")]
+        [Tooltip("If AVPro component is available and enabled, automatically fail back to AVPro when auto mode failed under certain conditions to play in video mode.")]
+        public bool autoFailbackToAVPro = true;
+        
         [Tooltip("How often to check if video playback has fallen out of sync")]
         public float syncFrequency = 5;
 
@@ -70,11 +67,17 @@ namespace Texel
         [Tooltip("Experimental.  Video playback will periodically resync audio and video.  May cause stuttering or temporary playback failure.")]
         public bool autoInternalAVSync = false;
 
-        [Header("Internal Objects")]
         [Tooltip("AVPro video player component")]
         public VRCAVProVideoPlayer avProVideo;
         [Tooltip("Unity video player component")]
         public VRCUnityVideoPlayer unityVideo;
+
+        [SerializeField]
+        public short defaultVideoSource = VIDEO_SOURCE_NONE;
+        [SerializeField]
+        public bool useUnityVideo = true;
+        [SerializeField]
+        public bool useAVPro = true;
 
         float retryTimeout = 6;
         float loadWaitTime = 2;
@@ -244,6 +247,9 @@ namespace Texel
                 avProVideo.EnableAutomaticResync = false;
                 _currentPlayer = avProVideo;
             }
+            else
+                useAVPro = false;
+
             if (Utilities.IsValid(unityVideo))
             {
                 unityVideo.Loop = false;
@@ -251,8 +257,11 @@ namespace Texel
                 unityVideo.EnableAutomaticResync = false;
                 _currentPlayer = unityVideo;
             }
+            else
+                useUnityVideo = false;
 
-            _UpdateVideoSource(VIDEO_SOURCE_AVPRO, _syncVideoSourceOverride);
+            _syncVideoSourceOverride = _ValidMode(defaultVideoSource);
+            _UpdateVideoSource(_syncVideoSourceOverride, _syncVideoSourceOverride);
             _UpdatePlayerState(PLAYER_STATE_STOPPED);
 
             if (Utilities.IsValid(playlist))
@@ -458,10 +467,22 @@ namespace Texel
             if (_syncLocked && !_CanTakeControl())
                 return;
 
-            _syncVideoSourceOverride = mode;
+            _syncVideoSourceOverride = _ValidMode(mode);
             _UpdateVideoSource(_syncVideoSource, _syncVideoSourceOverride);
 
             RequestSerialization();
+        }
+
+        short _ValidMode(short mode)
+        {
+            if (mode == VIDEO_SOURCE_NONE && (!useAVPro || !useUnityVideo))
+                mode = VIDEO_SOURCE_AVPRO;
+            if (mode == VIDEO_SOURCE_AVPRO && !useAVPro)
+                mode = VIDEO_SOURCE_UNITY;
+            if (mode == VIDEO_SOURCE_UNITY && !useUnityVideo)
+                mode = VIDEO_SOURCE_AVPRO;
+
+            return mode;
         }
 
         public void _SetScreenFit(short mode)
@@ -989,7 +1010,7 @@ namespace Texel
             DebugLog("Error code: " + code);
 
             // Try to fall back to AVPro if auto video failed (the youtube livestream problem)
-            bool shouldFallback = videoError == VideoError.PlayerError && _syncVideoSourceOverride == VIDEO_SOURCE_NONE && _syncVideoSource == VIDEO_SOURCE_UNITY;
+            bool shouldFallback = autoFailbackToAVPro && videoError == VideoError.PlayerError && _syncVideoSourceOverride == VIDEO_SOURCE_NONE && _syncVideoSource == VIDEO_SOURCE_UNITY;
 
             _UpdatePlayerStateError(videoError);
             if (shouldFallback)
@@ -1678,7 +1699,8 @@ namespace Texel
 
         public void _UpdateDebugState()
         {
-            debugState._SetValue("owner", Networking.GetOwner(gameObject).displayName);
+            VRCPlayerApi owner = Networking.GetOwner(gameObject);
+            debugState._SetValue("owner", Utilities.IsValid(owner) ? owner.displayName : "--");
             debugState._SetValue("syncVideoSource", _syncVideoSource.ToString());
             debugState._SetValue("syncVideoSourceOverride", _syncVideoSourceOverride.ToString());
             debugState._SetValue("syncUrl", _syncUrl.ToString());

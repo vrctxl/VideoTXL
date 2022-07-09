@@ -894,35 +894,47 @@ namespace Texel
             screenFitWidthIcon.color = dataProxy.screenFit == SCREEN_FIT_WIDTH ? activeColor : normalColor;
             screenStretchIcon.color = dataProxy.screenFit == SCREEN_STRETCH ? activeColor : normalColor;
 
-            switch (dataProxy.playerSourceOverride)
+            if (!videoPlayer.useAVPro || !videoPlayer.useUnityVideo)
             {
-                case VIDEO_SOURCE_UNITY:
-                    modeText.text = "VIDEO";
-                    break;
-                case VIDEO_SOURCE_AVPRO:
-                    modeText.text = "STREAM";
-                    break;
-                case VIDEO_SOURCE_NONE:
-                default:
-                    if (playerState == PLAYER_STATE_STOPPED)
-                        modeText.text = "AUTO";
-                    else
-                    {
-                        switch (dataProxy.playerSource)
+                modeText.text = "";
+                modeAutoText.color = disabledColor;
+                if (!videoPlayer.useAVPro)
+                    modeStreamText.color = disabledColor;
+                if (!videoPlayer.useUnityVideo)
+                    modeVideoText.color = disabledColor;
+            }
+            else
+            {
+                switch (dataProxy.playerSourceOverride)
+                {
+                    case VIDEO_SOURCE_UNITY:
+                        modeText.text = "VIDEO";
+                        break;
+                    case VIDEO_SOURCE_AVPRO:
+                        modeText.text = "STREAM";
+                        break;
+                    case VIDEO_SOURCE_NONE:
+                    default:
+                        if (playerState == PLAYER_STATE_STOPPED)
+                            modeText.text = "AUTO";
+                        else
                         {
-                            case VIDEO_SOURCE_UNITY:
-                                modeText.text = "AUTO VIDEO";
-                                break;
-                            case VIDEO_SOURCE_AVPRO:
-                                modeText.text = "AUTO STREAM";
-                                break;
-                            case VIDEO_SOURCE_NONE:
-                            default:
-                                modeText.text = "AUTO";
-                                break;
+                            switch (dataProxy.playerSource)
+                            {
+                                case VIDEO_SOURCE_UNITY:
+                                    modeText.text = "AUTO VIDEO";
+                                    break;
+                                case VIDEO_SOURCE_AVPRO:
+                                    modeText.text = "AUTO STREAM";
+                                    break;
+                                case VIDEO_SOURCE_NONE:
+                                default:
+                                    modeText.text = "AUTO";
+                                    break;
+                            }
                         }
-                    }
-                    break;
+                        break;
+                }
             }
 
             _UpdatePlaylistInfo();
