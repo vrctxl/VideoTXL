@@ -1,9 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 using UnityEditor;
-using UnityEditorInternal;
 using UdonSharpEditor;
 
 namespace Texel
@@ -71,41 +68,41 @@ namespace Texel
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
 
-            EditorGUILayout.PropertyField(dataProxyProperty);
+            EditorGUILayout.PropertyField(dataProxyProperty, new GUIContent("Data Proxy", "A proxy for dispatching video-related events to other listening behaviors, such as a screen manager."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Optional Components", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(playlistPoperty);
-            EditorGUILayout.PropertyField(remapperProperty);
-            EditorGUILayout.PropertyField(accessControlProperty);
+            EditorGUILayout.PropertyField(playlistPoperty, new GUIContent("Playlist", "Pre-populated playlist to iterate through.  If default URL is set, the playlist will be disabled by default, otherwise it will auto-play."));
+            EditorGUILayout.PropertyField(remapperProperty, new GUIContent("URL Remapper", "Set of input URLs to remap to alternate URLs on a per-platform basis."));
+            EditorGUILayout.PropertyField(accessControlProperty, new GUIContent("Access Control", "Control access to player controls based on player type or whitelist."));
             
-            EditorGUILayout.PropertyField(playbackZoneProperty);
+            EditorGUILayout.PropertyField(playbackZoneProperty, new GUIContent("Playback Zone Membership", "Optional zone membership object tied to a trigger zone the player must be in to sustain playback.  Disables playing audio on world load."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Default Options", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(defaultUrlProperty);
-            EditorGUILayout.PropertyField(defaultLockedProperty);
-            EditorGUILayout.PropertyField(loopProperty);
-            EditorGUILayout.PropertyField(retryOnErrorProperty);
-            EditorGUILayout.PropertyField(autoFailbackAVProProperty);
+            EditorGUILayout.PropertyField(defaultUrlProperty, new GUIContent("Default URL", "Optional default URL to play on world load."));
+            EditorGUILayout.PropertyField(defaultLockedProperty, new GUIContent("Default Locked", "Whether player controls are locked to master and instance owner by default."));
+            EditorGUILayout.PropertyField(loopProperty, new GUIContent("Loop", "Automatically loop track when finished."));
+            EditorGUILayout.PropertyField(retryOnErrorProperty, new GUIContent("Retry on Error", "Whether to keep playing the same URL if an error occurs."));
+            EditorGUILayout.PropertyField(autoFailbackAVProProperty, new GUIContent("Auto Failover to AVPro", "If AVPro component is available and enabled, automatically fail back to AVPro when auto mode failed under certain conditions to play in video mode."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Sync Options", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(syncFrequencyProperty);
-            EditorGUILayout.PropertyField(syncThresholdProperty);
-            EditorGUILayout.PropertyField(autoAVSyncProperty);
+            EditorGUILayout.PropertyField(syncFrequencyProperty, new GUIContent("Sync Frequency", "How often to check if video playback has fallen out of sync."));
+            EditorGUILayout.PropertyField(syncThresholdProperty, new GUIContent("Sync Threshold", "How far video playback must have fallen out of sync to perform a correction."));
+            EditorGUILayout.PropertyField(autoAVSyncProperty, new GUIContent("Auto Internal AV Sync", "Experimental.  Video playback will periodically resync audio and video.  May cause stuttering or temporary playback failure."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Video Sources", EditorStyles.boldLabel);
 
-            EditorGUILayout.PropertyField(useAVProProperty);
+            EditorGUILayout.PropertyField(useAVProProperty, new GUIContent("Use AVPro", "Whether AVPro is a supported video source for this player.  Disabling this component also disables source selection."));
             if (useAVProProperty.boolValue)
-                EditorGUILayout.PropertyField(avProVideoProperty);
+                EditorGUILayout.PropertyField(avProVideoProperty, new GUIContent("AVPro Video Source", "AVPro video player component"));
 
             EditorGUILayout.Space();
-            EditorGUILayout.PropertyField(useUnityVideoProperty);
+            EditorGUILayout.PropertyField(useUnityVideoProperty, new GUIContent("Use Unity Video", "Whether Unity video is a supported video source for this player.  Disabling this component also disables source selection."));
             if (useUnityVideoProperty.boolValue)
-                EditorGUILayout.PropertyField(unityVideoProperty);
+                EditorGUILayout.PropertyField(unityVideoProperty, new GUIContent("Unity Video Source", "Unity video player component"));
 
             if (useAVProProperty.boolValue && useUnityVideoProperty.boolValue)
             {

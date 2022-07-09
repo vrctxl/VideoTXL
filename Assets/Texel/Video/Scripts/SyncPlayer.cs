@@ -17,59 +17,27 @@ namespace Texel
     [DefaultExecutionOrder(-1)]
     public class SyncPlayer : UdonSharpBehaviour
     {
-        [Tooltip("A proxy for dispatching video-related events to other listening behaviors, such as a screen manager")]
         public VideoPlayerProxy dataProxy;
 
-        [Tooltip("Pre-populated playlist to iterate through.  If default URL is set, the playlist will be disabled by default, otherwise it will auto-play.")]
         public Playlist playlist;
-
-        [Tooltip("Set of input URLs to remap to alternate URLs on a per-platform basis")]
         public UrlRemapper urlRemapper;
-
-        [Tooltip("Control access to player controls based on player type or whitelist")]
         public AccessControl accessControl;
 
-        public DebugLog debugLog;
-        public DebugState debugState;
-
-        [Tooltip("Optional trigger zone the player must be in to sustain playback.  Disables playing audio on world load.")]
         [HideInInspector]
         public CompoundZoneTrigger playbackZone;
-
         public ZoneMembership playbackZoneMembership;
 
-        //[Tooltip("Optional component to start or stop player based on common trigger events")]
-        //public TriggerManager triggerManager;
-
-        [Tooltip("Optional default URL to play on world load")]
         public VRCUrl defaultUrl;
-
-        [Tooltip("Whether player controls are locked to master and instance owner by default")]
         public bool defaultLocked = false;
-
-        public bool debugLogging = true;
-
-        [Tooltip("Automatically loop track when finished")]
         public bool loop = false;
-
-        [Tooltip("Whether to keep playing the same URL if an error occurs")]
         public bool retryOnError = true;
-
-        [Tooltip("If AVPro component is available and enabled, automatically fail back to AVPro when auto mode failed under certain conditions to play in video mode.")]
         public bool autoFailbackToAVPro = true;
-        
-        [Tooltip("How often to check if video playback has fallen out of sync")]
+
         public float syncFrequency = 5;
-
-        [Tooltip("How far video playback must have fallen out of sync to perform a correction")]
         public float syncThreshold = 1;
-
-        [Tooltip("Experimental.  Video playback will periodically resync audio and video.  May cause stuttering or temporary playback failure.")]
         public bool autoInternalAVSync = false;
 
-        [Tooltip("AVPro video player component")]
         public VRCAVProVideoPlayer avProVideo;
-        [Tooltip("Unity video player component")]
         public VRCUnityVideoPlayer unityVideo;
 
         [SerializeField]
@@ -79,8 +47,12 @@ namespace Texel
         [SerializeField]
         public bool useAVPro = true;
 
+        public bool debugLogging = true;
+        public DebugLog debugLog;
+        public DebugState debugState;
+
         float retryTimeout = 6;
-        float loadWaitTime = 2;
+        //float loadWaitTime = 2;
         //float syncLatchUpdateFrequency = 0.2f;
 
         [UdonSynced]
