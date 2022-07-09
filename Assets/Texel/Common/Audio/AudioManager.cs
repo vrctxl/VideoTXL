@@ -10,15 +10,11 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
     public class AudioManager : UdonSharpBehaviour
     {
-        [Header("Optional Components")]
-        [Tooltip("A sync attachment to AudioManager that will share audio settings with all players, allowing some to be locally overridden.")]
         public SyncAudioManager syncAudioManager;
-        [Tooltip("A proxy for dispatching video-related events to this object")]
+        public bool useSync = false;
         public VideoPlayerProxy dataProxy;
-        [Tooltip("Mute audio when video source is not actively playing")]
         public bool muteSourceForInactiveVideo = true;
 
-        [Header("Default Options")]
         [Range(0, 1)]
         public float inputVolume = 1f;
         public bool inputMute = false;
@@ -26,7 +22,6 @@ namespace Texel
         public float masterVolume = 0.9f;
         public bool masterMute = false;
 
-        [Header("Audio Channels")]
         public AudioSource[] channelAudio;
         public string[] channelNames;
         [Range(0, 1)]
@@ -66,7 +61,7 @@ namespace Texel
                     channelFadeZone[i]._RegisterAudioManager(this, i);
             }
 
-            if (Utilities.IsValid(syncAudioManager))
+            if (useSync && Utilities.IsValid(syncAudioManager))
             {
                 hasSync = true;
                 UdonBehaviour behavior = (UdonBehaviour)GetComponent(typeof(UdonBehaviour));
