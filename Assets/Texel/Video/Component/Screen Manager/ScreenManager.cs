@@ -140,7 +140,7 @@ namespace Texel
         int currentFit;
         bool currentValid = false;
 
-        const int eventCount = 3;
+        const int eventCount = 2;
         const int UPDATE_EVENT = 0;
         const int CAPTURE_VALID_EVENT = 1;
 
@@ -732,7 +732,10 @@ namespace Texel
                 _SetIntProperty(propInvertList[i], currentInvert ? 1 : 0);
                 _SetIntProperty(propFitList[i], dataProxy.screenFit);
 
-                renderer.SetPropertyBlock(block);
+                if (useMatIndex)
+                    renderer.SetPropertyBlock(block, propMaterialIndexList[i]);
+                else
+                    renderer.SetPropertyBlock(block);
             }
         }
 
