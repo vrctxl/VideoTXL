@@ -46,7 +46,8 @@ namespace Texel
                 startLocation = microphone.transform.position;
                 startRotation = microphone.transform.rotation;
 
-                microphone._Register((UdonBehaviour)(Component)this, "_Pickup", "_Drop", null);
+                microphone._RegisterTriggerOn(this, "_Pickup");
+                microphone._RegisterTriggerOff(this, "_Drop");
 
                 if (Networking.IsOwner(gameObject) && microphone.TriggerOnUse)
                 {

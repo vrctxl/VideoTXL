@@ -25,7 +25,8 @@ namespace Texel
 
         void Start()
         {
-            microphone._Register((UdonBehaviour)(Component)this, "_Pickup", "_Drop", null);
+            microphone._RegisterTriggerOn(this, "_Pickup");
+            microphone._RegisterTriggerOff(this, "_Drop");
 
             defaultSettings = botZone._GetLinkedZoneSettings(portalZone);
             defaultPortalLocalSettings = portalZone._GetLocalSettings();

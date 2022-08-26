@@ -16,21 +16,52 @@ namespace Texel
         [Tooltip("Optional ACL to check if pickup is usable for player")]
         public AccessControl accessControl;
 
-        int handlerCount = 0;
-        Component[] targetBehaviors;
-        string[] pickupEvents;
-        string[] dropEvents;
-        string[] playerArgs;
+        const int eventCount = 4;
+        const int PICKUP_EVENT = 0;
+        const int DROP_EVENT = 1;
+        const int TRIGGER_ON_EVENT = 2;
+        const int TRIGGER_OFF_EVENT = 3;
+
+        int[] handlerCount;
+        Component[][] handlers;
+        string[][] handlerEvents;
 
         bool hasAccessControl = false;
         bool triggerDown = false;
         bool triggered = false;
+        bool init = false;
 
         void Start()
         {
+            _EnsureInit();
+        }
+
+        public void _EnsureInit()
+        {
+            if (init)
+                return;
+
+            init = true;
+
+            _Init();
+        }
+
+        void _Init()
+        {
+            handlerCount = new int[eventCount];
+            handlers = new Component[eventCount][];
+            handlerEvents = new string[eventCount][];
+
+            for (int i = 0; i < eventCount; i++)
+            {
+                handlers[i] = new Component[0];
+                handlerEvents[i] = new string[0];
+            }
+
             hasAccessControl = Utilities.IsValid(accessControl);
 
-            if (hasAccessControl) {
+            if (hasAccessControl)
+            {
                 accessControl._RegisterValidateHandler(this, "_ValidateACL");
                 _ValidateACL();
             }
@@ -40,6 +71,9 @@ namespace Texel
         {
             if (hasAccessControl && !accessControl._LocalHasAccess())
                 return;
+
+            _UpdateHandlers(PICKUP_EVENT);
+ 
             if (triggerOnUse)
                 return;
 
@@ -51,6 +85,9 @@ namespace Texel
             triggerDown = false;
             if (hasAccessControl && !accessControl._LocalHasAccess())
                 return;
+
+            _UpdateHandlers(DROP_EVENT);
+
             if (triggerOnUse)
                 return;
 
@@ -147,50 +184,61 @@ namespace Texel
         void _TriggerOn()
         {
             triggered = true;
-            for (int i = 0; i < handlerCount; i++)
-            {
-                UdonBehaviour target = (UdonBehaviour)targetBehaviors[i];
-                string evt = pickupEvents[i];
-                if (!Utilities.IsValid(evt))
-                    continue;
-
-                string arg = playerArgs[i];
-                if (Utilities.IsValid(arg))
-                    target.SetProgramVariable(arg, Networking.LocalPlayer);
-
-                target.SendCustomEvent(evt);
-            }
+            _UpdateHandlers(TRIGGER_ON_EVENT);
         }
 
         void _TriggerOff()
         {
             triggered = false;
-            for (int i = 0; i < handlerCount; i++)
-            {
-                UdonBehaviour target = (UdonBehaviour)targetBehaviors[i];
-                string evt = dropEvents[i];
-                if (!Utilities.IsValid(evt))
-                    continue;
-
-                string arg = playerArgs[i];
-                if (Utilities.IsValid(arg))
-                    target.SetProgramVariable(arg, Networking.LocalPlayer);
-
-                target.SendCustomEvent(evt);
-            }
+            _UpdateHandlers(TRIGGER_OFF_EVENT);
         }
 
-        public void _Register(UdonBehaviour target, string pickupEvent, string dropEvent, string playerArg)
+        public void _RegisterPickup(Component handler, string eventName)
         {
-            if (!Utilities.IsValid(target))
+            _Register(PICKUP_EVENT, handler, eventName);
+        }
+
+        public void _RegisterDrop(Component handler, string eventName)
+        {
+            _Register(DROP_EVENT, handler, eventName);
+        }
+
+        public void _RegisterTriggerOn(Component handler, string eventName)
+        {
+            _Register(TRIGGER_ON_EVENT, handler, eventName);
+        }
+
+        public void _RegisterTriggerOff(Component handler, string eventName)
+        {
+            _Register(TRIGGER_OFF_EVENT, handler, eventName);
+        }
+
+        void _Register(int eventIndex, Component handler, string eventName)
+        {
+            if (!Utilities.IsValid(handler) || !Utilities.IsValid(eventName))
                 return;
 
-            targetBehaviors = (UdonBehaviour[])_AddElement(targetBehaviors, target, typeof(UdonBehaviour));
-            pickupEvents = (string[])_AddElement(pickupEvents, pickupEvent, typeof(string));
-            dropEvents = (string[])_AddElement(dropEvents, dropEvent, typeof(string));
-            playerArgs = (string[])_AddElement(playerArgs, playerArg, typeof(string));
+            _EnsureInit();
 
-            handlerCount += 1;
+            for (int i = 0; i < handlerCount[eventIndex]; i++)
+            {
+                if (handlers[eventIndex][i] == handler)
+                    return;
+            }
+
+            handlers[eventIndex] = (Component[])_AddElement(handlers[eventIndex], handler, typeof(Component));
+            handlerEvents[eventIndex] = (string[])_AddElement(handlerEvents[eventIndex], eventName, typeof(string));
+
+            handlerCount[eventIndex] += 1;
+        }
+
+        void _UpdateHandlers(int eventIndex)
+        {
+            for (int i = 0; i < handlerCount[eventIndex]; i++)
+            {
+                UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
+                script.SendCustomEvent(handlerEvents[eventIndex][i]);
+            }
         }
 
         Array _AddElement(Array arr, object elem, Type type)

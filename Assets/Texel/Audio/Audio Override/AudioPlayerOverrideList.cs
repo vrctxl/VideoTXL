@@ -35,7 +35,10 @@ namespace Texel
         void Start()
         {
             if (Utilities.IsValid(pickupTrigger))
-                pickupTrigger._Register((UdonBehaviour)(Component)this, "_Pickup", "_Drop", null);
+            {
+                pickupTrigger._RegisterTriggerOn(this, "_Pickup");
+                pickupTrigger._RegisterTriggerOff(this, "_Drop");
+            }
         }
 
         public void _Pickup()
