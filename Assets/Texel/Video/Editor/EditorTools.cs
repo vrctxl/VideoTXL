@@ -44,6 +44,16 @@ namespace Texel
             return foldoutArray;
         }
 
+        public static string GetObjectName(SerializedProperty list, int index)
+        {
+            SerializedProperty entry = list.GetArrayElementAtIndex(index);
+            string name = "none";
+            if (entry != null && entry.objectReferenceValue != null)
+                name = ((MonoBehaviour)entry.objectReferenceValue).name;
+
+            return name;
+        }
+
         public static string GetMeshRendererName(SerializedProperty list, int index)
         {
             SerializedProperty mesh = list.GetArrayElementAtIndex(index);

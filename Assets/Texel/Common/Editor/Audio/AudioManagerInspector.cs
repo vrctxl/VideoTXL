@@ -106,7 +106,7 @@ namespace Texel
                 SerializedProperty mute = channelMuteListProperty.GetArrayElementAtIndex(i);
                 SerializedProperty fadeZone = channelFadeZoneListProperty.GetArrayElementAtIndex(i);
 
-                EditorGUILayout.PropertyField(audioSource, new GUIContent(new GUIContent("Audio Source", "The audio source of the output channel")));
+                EditorGUILayout.PropertyField(audioSource, new GUIContent("Audio Source", "The audio source of the output channel"));
                 EditorGUILayout.PropertyField(name, new GUIContent("Name", "The name of the output channel"));
                 EditorGUILayout.PropertyField(volume, new GUIContent("Volume", "The default volume of the output channel.  Channel volume is multiplied by master volume and input volume to reach the final volume for the audio source."));
                 EditorGUILayout.PropertyField(mute, new GUIContent("Mute", "Whether the output channel is muted by default.  If input or master mute is set, the audio source will be muted regardless of this setting."));
