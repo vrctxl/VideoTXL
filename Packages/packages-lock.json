@@ -13,7 +13,7 @@
       "dependencies": {}
     },
     "com.unity.ads": {
-      "version": "3.7.1",
+      "version": "3.7.5",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -22,11 +22,20 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.analytics": {
-      "version": "3.3.5",
+      "version": "3.6.11",
       "depth": 0,
       "source": "registry",
       "dependencies": {
         "com.unity.ugui": "1.0.0"
+      },
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.burst": {
+      "version": "1.4.11",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.mathematics": "1.2.1"
       },
       "url": "https://packages.unity.com"
     },
@@ -38,7 +47,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.collab-proxy": {
-      "version": "1.6.0",
+      "version": "1.10.2",
       "depth": 0,
       "source": "registry",
       "dependencies": {},
@@ -61,7 +70,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.ide.visualstudio": {
-      "version": "2.0.9",
+      "version": "2.0.11",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -70,8 +79,24 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.ide.vscode": {
-      "version": "1.2.3",
+      "version": "1.2.4",
       "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.inputsystem": {
+      "version": "1.2.0",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.modules.uielements": "1.0.0"
+      },
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.mathematics": {
+      "version": "1.2.5",
+      "depth": 1,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
@@ -83,6 +108,13 @@
       "dependencies": {
         "nuget.mono-cecil": "0.1.6-preview"
       },
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.nuget.newtonsoft-json": {
+      "version": "2.0.2",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {},
       "url": "https://packages.unity.com"
     },
     "com.unity.package-manager-ui": {
@@ -155,13 +187,20 @@
       }
     },
     "com.unity.xr.legacyinputhelpers": {
-      "version": "2.1.7",
+      "version": "2.1.8",
       "depth": 0,
       "source": "registry",
       "dependencies": {
         "com.unity.modules.vr": "1.0.0",
         "com.unity.modules.xr": "1.0.0"
       },
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.xr.oculus.android": {
+      "version": "2.38.6",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {},
       "url": "https://packages.unity.com"
     },
     "com.unity.xr.oculus.standalone": {
@@ -178,11 +217,48 @@
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
-    "com.vrchat.vrcsdk3": {
-      "version": "file:com.vrchat.vrcsdk3",
+    "com.vrchat.base": {
+      "version": "file:com.vrchat.base",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.burst": "1.4.11",
+        "com.unity.mathematics": "1.2.5",
+        "com.unity.nuget.newtonsoft-json": "2.0.2"
+      }
+    },
+    "com.vrchat.clientsim": {
+      "version": "file:com.vrchat.clientsim",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.xr.oculus.standalone": "2.38.4",
+        "com.unity.inputsystem": "1.2.0"
+      }
+    },
+    "com.vrchat.core.vpm-resolver": {
+      "version": "file:com.vrchat.core.vpm-resolver",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "2.0.2"
+      }
+    },
+    "com.vrchat.udonsharp": {
+      "version": "file:com.vrchat.udonsharp",
       "depth": 0,
       "source": "embedded",
       "dependencies": {}
+    },
+    "com.vrchat.worlds": {
+      "version": "file:com.vrchat.worlds",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.cinemachine": "2.8.0",
+        "com.unity.postprocessing": "3.1.1",
+        "com.unity.textmeshpro": "2.1.6"
+      }
     },
     "nuget.mono-cecil": {
       "version": "0.1.6-preview",

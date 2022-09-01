@@ -127,13 +127,6 @@ namespace Texel
                 }
             }
 
-            if (!Utilities.IsValid(data))
-                DebugLog("Loading empty playlist data");
-            else if (index == -1)
-                DebugLog($"Couldn't find playlist data {data.playlistName} in catalogue, loading empty playlist data");
-            else
-                DebugLog($"Loading playlist data {data.playlistName} from catalogue");
-
             CatalogueIndex = index;
             RequestSerialization();
         }
@@ -149,13 +142,6 @@ namespace Texel
                 index = -1;
             if (index < 0 || index >= catalogue.PlaylistCount)
                 index = -1;
-
-            if (index == -1)
-                DebugLog("Loading empty playlist data");
-            else if (!Utilities.IsValid(catalogue.playlists[index]))
-                DebugLog($"No valid playlist data found at index {index}, loading empty playlist data");
-            else
-                DebugLog($"Loading playlist data {catalogue.playlists[index].playlistName} from catalogue");
 
             CatalogueIndex = index;
             RequestSerialization();

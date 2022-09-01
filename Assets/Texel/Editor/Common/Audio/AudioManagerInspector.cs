@@ -10,7 +10,7 @@ using System;
 namespace Texel
 {
     [CustomEditor(typeof(AudioManager))]
-    internal class AudioManagerInspector : Editor
+    public class AudioManagerInspector : Editor
     {
         static bool _showChannelListFoldout = true;
         static bool[] _showChannelFoldout = new bool[0];

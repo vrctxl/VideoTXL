@@ -1,15 +1,7 @@
-﻿
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.Udon;
 using System;
-
-#if UNITY_EDITOR && !COMPILER_UDONSHARP
-using UnityEditor;
-using UnityEditorInternal;
-using UdonSharpEditor;
-#endif
 
 namespace Texel
 {

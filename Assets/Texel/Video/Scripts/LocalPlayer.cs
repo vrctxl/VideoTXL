@@ -10,12 +10,6 @@ using VRC.SDK3.Video.Components.Base;
 using VRC.SDKBase;
 using VRC.Udon;
 
-#if UNITY_EDITOR && !COMPILER_UDONSHARP
-using UnityEditor;
-using UnityEditorInternal;
-using UdonSharpEditor;
-#endif
-
 namespace Texel
 {
     [AddComponentMenu("VideoTXL/Specialty/Zoned Stream Player")]
@@ -520,64 +514,4 @@ namespace Texel
                 debugLog._Write("SyncPlayer", message);
         }
     }
-
-#if UNITY_EDITOR && !COMPILER_UDONSHARP && FALSE
-    [CustomEditor(typeof(ZonedStreamPlayer))]
-    internal class ZonedStreamPlayerInspector : Editor
-    {
-        SerializedProperty screenManagerProperty;
-        SerializedProperty audioManagerProperty;
-        SerializedProperty triggerManagerProperty;
-
-        SerializedProperty avProVideoPlayerProperty;
-        SerializedProperty unityVideoPlayerProperty;
-
-        SerializedProperty staticUrlSourceProperty;
-        SerializedProperty urlProperty;
-
-        SerializedProperty loopProperty;
-        SerializedProperty resumePositionProperty;
-
-        private void OnEnable()
-        {
-            screenManagerProperty = serializedObject.FindProperty(nameof(ZonedStreamPlayer.screenManager));
-            audioManagerProperty = serializedObject.FindProperty(nameof(ZonedStreamPlayer.audioManager));
-            triggerManagerProperty = serializedObject.FindProperty(nameof(ZonedStreamPlayer.triggerManager));
-
-            avProVideoPlayerProperty = serializedObject.FindProperty(nameof(ZonedStreamPlayer.avProVideo));
-            unityVideoPlayerProperty = serializedObject.FindProperty(nameof(ZonedStreamPlayer.unityVideo));
-
-            staticUrlSourceProperty = serializedObject.FindProperty(nameof(ZonedStreamPlayer.staticUrlSource));
-            urlProperty = serializedObject.FindProperty(nameof(ZonedStreamPlayer.streamUrl));
-
-            loopProperty = serializedObject.FindProperty(nameof(ZonedStreamPlayer.loop));
-            resumePositionProperty = serializedObject.FindProperty(nameof(ZonedStreamPlayer.resumePosition));
-        }
-
-        public override void OnInspectorGUI()
-        {
-            if (UdonSharpGUI.DrawConvertToUdonBehaviourButton(target) ||
-                UdonSharpGUI.DrawProgramSource(target))
-                return;
-
-            EditorGUILayout.PropertyField(screenManagerProperty);
-            EditorGUILayout.PropertyField(audioManagerProperty);
-            EditorGUILayout.PropertyField(triggerManagerProperty);
-            EditorGUILayout.Space();
-            EditorGUILayout.PropertyField(unityVideoPlayerProperty);
-            EditorGUILayout.PropertyField(avProVideoPlayerProperty);
-            EditorGUILayout.Space();
-            EditorGUILayout.PropertyField(staticUrlSourceProperty);
-            if (staticUrlSourceProperty.objectReferenceValue == null)
-                EditorGUILayout.PropertyField(urlProperty);
-            if (unityVideoPlayerProperty.objectReferenceValue != null)
-            {
-                EditorGUILayout.PropertyField(loopProperty);
-                EditorGUILayout.PropertyField(resumePositionProperty);
-            }
-
-            serializedObject.ApplyModifiedProperties();
-        }
-    }
-#endif
 }
