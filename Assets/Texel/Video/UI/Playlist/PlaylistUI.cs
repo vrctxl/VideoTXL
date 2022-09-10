@@ -196,7 +196,7 @@ namespace Texel
 
             for (int i = 0; i < data.playlist.Length; i++)
             {
-                GameObject entry = VRCInstantiate(playlistEntryTemplate);
+                GameObject entry = Instantiate(playlistEntryTemplate);
 
                 PlaylistUIEntry script = (PlaylistUIEntry)entry.GetComponent(typeof(UdonBehaviour));
                 script.playlistUI = this;

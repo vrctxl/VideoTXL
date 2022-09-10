@@ -25,12 +25,19 @@ namespace Texel
         SerializedProperty inputMuteProperty;
         SerializedProperty masterVolumeProperty;
         SerializedProperty masterMuteProperty;
+        SerializedProperty master2DProperty;
 
         SerializedProperty channelAudioListProperty;
         SerializedProperty channelNameListProperty;
         SerializedProperty channelVolumeListProperty;
         SerializedProperty channelMuteListProperty;
+        SerializedProperty channel2DListProperty;
         SerializedProperty channelFadeZoneListProperty;
+
+        SerializedProperty channel2DMuteListProperty;
+        SerializedProperty channel2DVolumeListProperty;
+        SerializedProperty channel2DSeparateVolumeListProperty;
+        SerializedProperty channel2DFadeDisableListProperty;
 
         private void OnEnable()
         {
@@ -44,12 +51,19 @@ namespace Texel
             inputMuteProperty = serializedObject.FindProperty(nameof(AudioManager.inputMute));
             masterVolumeProperty = serializedObject.FindProperty(nameof(AudioManager.masterVolume));
             masterMuteProperty = serializedObject.FindProperty(nameof(AudioManager.masterMute));
+            master2DProperty = serializedObject.FindProperty(nameof(AudioManager.master2D));
 
             channelAudioListProperty = serializedObject.FindProperty(nameof(AudioManager.channelAudio));
             channelNameListProperty = serializedObject.FindProperty(nameof(AudioManager.channelNames));
             channelVolumeListProperty = serializedObject.FindProperty(nameof(AudioManager.channelVolume));
             channelMuteListProperty = serializedObject.FindProperty(nameof(AudioManager.channelMute));
+            channel2DListProperty = serializedObject.FindProperty(nameof(AudioManager.channel2D));
             channelFadeZoneListProperty = serializedObject.FindProperty(nameof(AudioManager.channelFadeZone));
+
+            channel2DMuteListProperty = serializedObject.FindProperty(nameof(AudioManager.channelMute2D));
+            channel2DVolumeListProperty = serializedObject.FindProperty(nameof(AudioManager.channelVolume2D));
+            channel2DSeparateVolumeListProperty = serializedObject.FindProperty(nameof(AudioManager.channelSeparateVolume2D));
+            channel2DFadeDisableListProperty = serializedObject.FindProperty(nameof(AudioManager.channelDisableFade2D));
         }
 
         public override void OnInspectorGUI()
@@ -71,6 +85,7 @@ namespace Texel
             EditorGUILayout.PropertyField(inputMuteProperty, new GUIContent("Input Mute", "Whether the input source is muted by default"));
             EditorGUILayout.PropertyField(masterVolumeProperty, new GUIContent("Master Volume", "The default master volume. Can be overridden locally by users."));
             EditorGUILayout.PropertyField(masterMuteProperty, new GUIContent("Master Mute", "Whethre all audio is muted by default"));
+            EditorGUILayout.PropertyField(master2DProperty, new GUIContent("Master 2D", "Whether all audio is forced to 2D spatial blend by default.  Master 2D also invokes several separate per-channel settings."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Audio Channels", EditorStyles.boldLabel);
@@ -89,7 +104,8 @@ namespace Texel
 
             EditorGUI.indentLevel++;
             _showChannelFoldout = EditorTools.MultiArraySize(serializedObject, _showChannelFoldout,
-                channelAudioListProperty, channelNameListProperty, channelVolumeListProperty, channelMuteListProperty, channelFadeZoneListProperty);
+                channelAudioListProperty, channelNameListProperty, channelVolumeListProperty, channelMuteListProperty, channel2DListProperty, channelFadeZoneListProperty,
+                channel2DMuteListProperty, channel2DVolumeListProperty, channel2DSeparateVolumeListProperty, channel2DFadeDisableListProperty);
 
             for (int i = 0; i < channelAudioListProperty.arraySize; i++)
             {
@@ -104,13 +120,31 @@ namespace Texel
                 SerializedProperty audioSource = channelAudioListProperty.GetArrayElementAtIndex(i);
                 SerializedProperty volume = channelVolumeListProperty.GetArrayElementAtIndex(i);
                 SerializedProperty mute = channelMuteListProperty.GetArrayElementAtIndex(i);
+                SerializedProperty audio2D = channel2DListProperty.GetArrayElementAtIndex(i);
                 SerializedProperty fadeZone = channelFadeZoneListProperty.GetArrayElementAtIndex(i);
+                SerializedProperty audio2DMute = channel2DMuteListProperty.GetArrayElementAtIndex(i);
+                SerializedProperty audio2DVolume = channel2DVolumeListProperty.GetArrayElementAtIndex(i);
+                SerializedProperty audio2DSepVolume = channel2DSeparateVolumeListProperty.GetArrayElementAtIndex(i);
+                SerializedProperty audio2DFade = channel2DFadeDisableListProperty.GetArrayElementAtIndex(i);
 
                 EditorGUILayout.PropertyField(audioSource, new GUIContent("Audio Source", "The audio source of the output channel"));
                 EditorGUILayout.PropertyField(name, new GUIContent("Name", "The name of the output channel"));
                 EditorGUILayout.PropertyField(volume, new GUIContent("Volume", "The default volume of the output channel.  Channel volume is multiplied by master volume and input volume to reach the final volume for the audio source."));
                 EditorGUILayout.PropertyField(mute, new GUIContent("Mute", "Whether the output channel is muted by default.  If input or master mute is set, the audio source will be muted regardless of this setting."));
                 EditorGUILayout.PropertyField(fadeZone, new GUIContent("Fade Zone", "A fade zone that automatically controls the volume of the output channel"));
+                EditorGUILayout.PropertyField(audio2D, new GUIContent("2D", "Whether the spatial blend of the channel is forced 2D by default.  Channel can have separate mute and volume characteristics when 2D is set."));
+
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Master 2D Profile", EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(audio2DMute, new GUIContent("Mute", "Whether the output channel is muted when master 2D audio is enabled.  In some multi-channel setups, only a single channel may be desired in a 2D spatial blend."));
+                EditorGUILayout.PropertyField(audio2DSepVolume, new GUIContent("Override Volume", "Whether to override the channel volume with a separate value when master 2D audio is enabled."));
+                if (audio2DSepVolume.boolValue)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(audio2DVolume, new GUIContent("Volume", "The default volume of the output channel when master 2D audio is enabled."));
+                    EditorGUI.indentLevel--;
+                }
+                EditorGUILayout.PropertyField(audio2DFade, new GUIContent("Disable Fade Zone", "Whether the fade zone should be ignored when the channel is set to 2D.  Note that fade zones are often used with 2D audio sources to limit them like 3D spatial sources, but that is separate from the concept of a master 2D audio toggle."));
 
                 if (GUILayout.Button("Remove", GUILayout.Width(EditorGUIUtility.labelWidth)))
                 {
@@ -140,7 +174,12 @@ namespace Texel
             channelNameListProperty.DeleteArrayElementAtIndex(index);
             channelVolumeListProperty.DeleteArrayElementAtIndex(index);
             channelMuteListProperty.DeleteArrayElementAtIndex(index);
+            channel2DListProperty.DeleteArrayElementAtIndex(index);
             channelFadeZoneListProperty.DeleteArrayElementAtIndex(index);
+            channel2DMuteListProperty.DeleteArrayElementAtIndex(index);
+            channel2DVolumeListProperty.DeleteArrayElementAtIndex(index);
+            channel2DSeparateVolumeListProperty.DeleteArrayElementAtIndex(index);
+            channel2DFadeDisableListProperty.DeleteArrayElementAtIndex(index);
         }
     }
 }

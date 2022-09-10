@@ -3179,9 +3179,9 @@ MonoBehaviour:
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
   m_Interactable: 1
-  m_TargetGraphic: {fileID: 0}
-  m_TextComponent: {fileID: 0}
-  m_Placeholder: {fileID: 0}
+  m_TargetGraphic: {fileID: 341667615478662721}
+  m_TextComponent: {fileID: 341667615394690367}
+  m_Placeholder: {fileID: 341667614896199375}
   m_ContentType: 0
   m_InputType: 0
   m_AsteriskChar: 42
@@ -3192,10 +3192,32 @@ MonoBehaviour:
   m_CharacterLimit: 0
   m_OnEndEdit:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 6974168070773837743}
+        m_MethodName: SendCustomEvent
+        m_Mode: 5
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: _HandleUrlInput
+          m_BoolArgument: 0
+        m_CallState: 2
   m_OnValueChanged:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 6974168070773837743}
+        m_MethodName: SendCustomEvent
+        m_Mode: 5
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: _HandleUrlInputChange
+          m_BoolArgument: 0
+        m_CallState: 2
   m_CaretColor: {r: 0.19607843, g: 0.19607843, b: 0.19607843, a: 1}
   m_CustomCaretColor: 0
   m_SelectionColor: {r: 0.65882355, g: 0.80784315, b: 1, a: 0.7529412}
@@ -8185,7 +8207,7 @@ MonoBehaviour:
   videoPlayer: {fileID: 0}
   audioManager: {fileID: 0}
   colorProfile: {fileID: 0}
-  urlInput: {fileID: 0}
+  urlInput: {fileID: 341667615478662734}
   volumeSliderControl: {fileID: 6974168070730553908}
   audio2DControl: {fileID: 6974168070899177639}
   urlInputControl: {fileID: 341667615478662733}
@@ -8236,7 +8258,7 @@ MonoBehaviour:
   lastVideoInput: {fileID: 341667614876156990}
   currentVideoText: {fileID: 341667614079501687}
   lastVideoText: {fileID: 341667615208966520}
-  playlistPanel: {fileID: 0}
+  playlistPanel: {fileID: 6197426830985258428}
 --- !u!114 &6974168070773837743
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10225,6 +10247,12 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 0c4300505aec5164e8e5c4397ab4b73f, type: 3}
+--- !u!1 &6197426830985258428 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8269847551497029458, guid: 0c4300505aec5164e8e5c4397ab4b73f,
+    type: 3}
+  m_PrefabInstance: {fileID: 2649744229009761006}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &6197426830985258430 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8269847551497029456, guid: 0c4300505aec5164e8e5c4397ab4b73f,

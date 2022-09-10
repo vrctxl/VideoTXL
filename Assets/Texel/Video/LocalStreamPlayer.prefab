@@ -89,7 +89,7 @@ MonoBehaviour:
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 846867465256740884}
   localPlayer: {fileID: 4346171467024813151}
-  sourceName: 
+  sourceName: AVPro
 --- !u!114 &846867465256740884
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -269,17 +269,21 @@ MonoBehaviour:
   _udonSharpBackingUdonBehaviour: {fileID: 846867465412071935}
   syncAudioManager: {fileID: 0}
   useSync: 0
-  dataProxy: {fileID: 0}
+  dataProxy: {fileID: 9001628075233532548}
   muteSourceForInactiveVideo: 1
   inputVolume: 1
   inputMute: 0
   masterVolume: 0.9
   masterMute: 0
-  channelAudio: []
-  channelNames: []
-  channelVolume: []
-  channelMute: 
-  channelFadeZone: []
+  channelAudio:
+  - {fileID: 2712397176882815672}
+  channelNames:
+  - Default
+  channelVolume:
+  - 1
+  channelMute: 00
+  channelFadeZone:
+  - {fileID: 5343352191021366516}
 --- !u!114 &846867465412071935
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -818,18 +822,8 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4748988602138931912, guid: 88a505f83830feb4497450b7a09f3969,
         type: 3}
-      propertyPath: innerZone
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 4748988602138931912, guid: 88a505f83830feb4497450b7a09f3969,
-        type: 3}
-      propertyPath: outerZone
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 4748988602138931912, guid: 88a505f83830feb4497450b7a09f3969,
-        type: 3}
       propertyPath: lowerBound
-      value: 0
+      value: 0.403
       objectReference: {fileID: 0}
     - target: {fileID: 4748988602138931912, guid: 88a505f83830feb4497450b7a09f3969,
         type: 3}
@@ -839,6 +833,18 @@ PrefabInstance:
         type: 3}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 88a505f83830feb4497450b7a09f3969, type: 3}
+--- !u!114 &5343352191021366516 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4748988602138931912, guid: 88a505f83830feb4497450b7a09f3969,
+    type: 3}
+  m_PrefabInstance: {fileID: 846867465542340156}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f701cb8a66aac3c4c868a6202d0d4b0f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &846867465676918884
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -908,15 +914,21 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c5a3aa6c352ef1d498c71d5c250c6cb7, type: 3}
---- !u!4 &4894637386341776444 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 5200975580391894104, guid: c5a3aa6c352ef1d498c71d5c250c6cb7,
+--- !u!82 &2712397176882815672 stripped
+AudioSource:
+  m_CorrespondingSourceObject: {fileID: 3343064715933610716, guid: c5a3aa6c352ef1d498c71d5c250c6cb7,
     type: 3}
   m_PrefabInstance: {fileID: 846867465676918884}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &371646581125774502 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1074381059795152066, guid: c5a3aa6c352ef1d498c71d5c250c6cb7,
+    type: 3}
+  m_PrefabInstance: {fileID: 846867465676918884}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &4894637386341776444 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5200975580391894104, guid: c5a3aa6c352ef1d498c71d5c250c6cb7,
     type: 3}
   m_PrefabInstance: {fileID: 846867465676918884}
   m_PrefabAsset: {fileID: 0}
@@ -947,6 +959,21 @@ PrefabInstance:
       propertyPath: publicVariablesUnityEngineObjects.Array.data[4]
       value: 
       objectReference: {fileID: 846867465412071935}
+    - target: {fileID: 3149668054718199746, guid: 73c3857879213ac4fb7e2f785aa20847,
+        type: 3}
+      propertyPath: videoPlayer
+      value: 
+      objectReference: {fileID: 846867466370278379}
+    - target: {fileID: 3149668054718199746, guid: 73c3857879213ac4fb7e2f785aa20847,
+        type: 3}
+      propertyPath: audioManager
+      value: 
+      objectReference: {fileID: 3870766609103184513}
+    - target: {fileID: 3149668054718199746, guid: 73c3857879213ac4fb7e2f785aa20847,
+        type: 3}
+      propertyPath: colorProfile
+      value: 
+      objectReference: {fileID: 987104612782686434}
     - target: {fileID: 3149668054718199746, guid: 73c3857879213ac4fb7e2f785aa20847,
         type: 3}
       propertyPath: serializationData.Prefab
@@ -1120,170 +1147,20 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
         type: 3}
-      propertyPath: outputCRT
+      propertyPath: dataProxy
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 9001628075233532548}
     - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
         type: 3}
-      propertyPath: logoTexture
+      propertyPath: streamCaptureRenderer
       value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: syncTexture
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: audioTexture
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: errorTexture
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: logoMaterial
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: syncMaterial
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: audioMaterial
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: editorTexture
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: errorMaterial
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: editorMaterial
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: loadingTexture
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: captureMaterial
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: loadingMaterial
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: errorBlockedTexture
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: errorInvalidTexture
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: useTextureOverrides
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: errorBlockedMaterial
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: errorInvalidMaterial
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: captureTextureProperty
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: propFitList.Array.size
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: errorRateLimitedTexture
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: propMeshList.Array.size
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: errorRateLimitedMaterial
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: outputMaterialProperties
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: propAVProList.Array.size
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: propGammaList.Array.size
-      value: 0
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 846867466254988478}
     - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
         type: 3}
       propertyPath: serializationData.Prefab
       value: 
       objectReference: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
         type: 3}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: propInvertList.Array.size
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: propMainTexList.Array.size
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: propPropertyList.Array.size
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: propMaterialIndexList.Array.size
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -7888119283210594231, guid: 6ac6c4803b19f754598a697148f4c228,
-        type: 3}
-      propertyPath: propMaterialOverrideList.Array.size
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 4474344769088069288, guid: 6ac6c4803b19f754598a697148f4c228,
         type: 3}
       propertyPath: serializationData.Prefab

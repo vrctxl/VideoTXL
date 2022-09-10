@@ -21,15 +21,24 @@ namespace Texel
         [Range(0, 1)]
         public float masterVolume = 0.9f;
         public bool masterMute = false;
+        public bool master2D = false;
 
         public AudioSource[] channelAudio;
         public string[] channelNames;
         [Range(0, 1)]
         public float[] channelVolume;
         public bool[] channelMute;
+        public bool[] channel2D;
         public AudioFadeZone[] channelFadeZone;
+        public bool[] channelDisableFade2D;
+        public bool[] channelMute2D;
+        public bool[] channelSeparateVolume2D;
+        [Range(0, 1)]
+        public float[] channelVolume2D;
 
         float[] channelFade;
+        float[] spatialBlend;
+        AnimationCurve[] spatialCurve;
 
         bool initialized = false;
         Component[] audioControls;
@@ -38,6 +47,7 @@ namespace Texel
         bool hasSync = false;
         bool ovrMasterMute = false;
         bool ovrMasterVolume = false;
+        bool ovrMaster2D = false;
         bool videoMute = false;
 
         const int PLAYER_STATE_STOPPED = 0;
@@ -54,18 +64,27 @@ namespace Texel
 
             channelCount = channelAudio.Length;
             channelFade = new float[channelCount];
+            spatialBlend = new float[channelCount];
+            spatialCurve = new AnimationCurve[channelCount];
+
             for (int i = 0; i < channelCount; i++)
             {
                 channelFade[i] = 1;
                 if (i < channelFadeZone.Length && Utilities.IsValid(channelFadeZone[i]))
                     channelFadeZone[i]._RegisterAudioManager(this, i);
+
+                if (Utilities.IsValid(channelAudio[i])) {
+                    spatialCurve[i] = channelAudio[i].GetCustomCurve(AudioSourceCurveType.SpatialBlend);
+                    if (!Utilities.IsValid(spatialCurve[i]))
+                        spatialBlend[i] = channelAudio[i].spatialBlend;
+                }
             }
 
             if (useSync && Utilities.IsValid(syncAudioManager))
             {
                 hasSync = true;
                 UdonBehaviour behavior = (UdonBehaviour)GetComponent(typeof(UdonBehaviour));
-                syncAudioManager._Initialize(behavior, inputVolume, masterVolume, channelVolume, inputMute, masterMute, channelMute, channelNames);
+                syncAudioManager._Initialize(behavior, inputVolume, masterVolume, channelVolume, inputMute, masterMute, master2D, channelMute, channel2D, channelNames);
             }
 
             initialized = true;
@@ -141,12 +160,30 @@ namespace Texel
             _UpdateAll();
         }
 
+        public void _SetMaster2D(bool state)
+        {
+            ovrMaster2D = true;
+            master2D = state;
+
+            _UpdateAll();
+        }
+
         public void _SetChannelFade(int channel, float fade)
         {
             if (channel < 0 || channel >= channelCount)
                 return;
 
             channelFade[channel] = Mathf.Clamp01(fade);
+
+            _UpdateAudioChannel(channel);
+        }
+
+        public void _SetChannelMute(int channel, bool state)
+        {
+            if (channel < 0 || channel >= channelCount)
+                return;
+
+            channelMute[channel] = state;
 
             _UpdateAudioChannel(channel);
         }
@@ -166,21 +203,23 @@ namespace Texel
         {
             bool baseMute = _InputMute() || _MasterMute();
             float baseVolume = _InputVolume() * _MasterVolume();
+            bool base2D = _Master2D();
 
             for (int i = 0; i < channelCount; i++)
-                _UpdateAudioChannelWithBase(i, baseMute, baseVolume);
+                _UpdateAudioChannelWithBase(i, baseMute, baseVolume, base2D);
         }
 
         void _UpdateAudioChannel(int channel)
         {
             bool baseMute = _InputMute() || _MasterMute();
             float baseVolume = _InputVolume() * _MasterVolume();
+            bool base2D = _Master2D();
 
-            _UpdateAudioChannelWithBase(channel, baseMute, baseVolume);
+            _UpdateAudioChannelWithBase(channel, baseMute, baseVolume, base2D);
         }
 
         // todo: private internal and cache some stuff
-        void _UpdateAudioChannelWithBase(int channel, bool baseMute, float baseVolume)
+        void _UpdateAudioChannelWithBase(int channel, bool baseMute, float baseVolume, bool base2D)
         {
             AudioSource source = channelAudio[channel];
             if (!Utilities.IsValid(source))
@@ -191,6 +230,24 @@ namespace Texel
 
             source.mute = baseMute || _ChannelMute(channel);
             source.volume = expVolume;
+
+            bool audio2D = base2D || _Channel2D(channel);
+
+            // Update 2D/3D audio
+            if (audio2D)
+            {
+                spatialCurve[channel] = source.GetCustomCurve(AudioSourceCurveType.SpatialBlend);
+                if (!Utilities.IsValid(spatialCurve[channel]))
+                    spatialBlend[channel] = source.spatialBlend;
+                source.spatialBlend = 0;
+            } else
+            {
+                if (Utilities.IsValid(spatialCurve[channel]))
+                    source.SetCustomCurve(AudioSourceCurveType.SpatialBlend, spatialCurve[channel]);
+                else
+                    source.spatialBlend = spatialBlend[channel];
+            }
+
         }
 
         void _UpdateAudioControls()
@@ -229,6 +286,11 @@ namespace Texel
             return (hasSync && !ovrMasterVolume) ? syncAudioManager.syncMasterVolume : masterVolume;
         }
 
+        bool _Master2D()
+        {
+            return (hasSync && !ovrMaster2D) ? syncAudioManager.syncMaster2D : master2D;
+        }
+
         bool _ChannelMute(int channel)
         {
             return (hasSync ? syncAudioManager.syncChannelMutes[channel] : channelMute[channel]) || videoMute;
@@ -237,6 +299,11 @@ namespace Texel
         float _ChannelVolume(int channel)
         {
             return hasSync ? syncAudioManager.syncChannelVolumes[channel] : channelVolume[channel];
+        }
+
+        bool _Channel2D(int channel)
+        {
+            return hasSync ? syncAudioManager.syncChannel2Ds[channel] : channel2D[channel];
         }
     }
 }
