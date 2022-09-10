@@ -2,6 +2,8 @@
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components.Video;
+using VRC.SDK3.Video.Components;
+using VRC.SDK3.Video.Components.AVPro;
 using VRC.SDKBase;
 using VRC.Udon;
 
@@ -13,6 +15,35 @@ namespace Texel
     {
         public SyncPlayer syncPlayer;
         public string sourceName = "";
+
+        public bool lowLatency = false;
+        public int maxResolution = 720;
+
+        public const short VIDEO_SOURCE_NONE = 0;
+        public const short VIDEO_SOURCE_AVPRO = 1;
+        public const short VIDEO_SOURCE_UNITY = 2;
+
+        public short VideoSource { get; private set; }
+
+        void _AutoDetect()
+        {
+            VRCAVProVideoPlayer avp = GetComponent<VRCAVProVideoPlayer>();
+            if (avp != null)
+            {
+                VideoSource = VIDEO_SOURCE_AVPRO;
+                return;
+            }
+
+            VRCUnityVideoPlayer unity = GetComponent<VRCUnityVideoPlayer>();
+            if (unity != null)
+            {
+                VideoSource = VIDEO_SOURCE_UNITY;
+                return;
+            }
+
+            VideoSource = VIDEO_SOURCE_NONE;
+        }
+
 
         public override void OnVideoReady()
         {
