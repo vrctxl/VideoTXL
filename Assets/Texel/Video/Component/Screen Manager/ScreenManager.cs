@@ -14,6 +14,8 @@ namespace Texel
     {
         [Tooltip("A proxy for dispatching video-related events to this object")]
         public VideoPlayerProxy dataProxy;
+        [Tooltip("Optional video mux component to swap out capture meshes in muxed setups")]
+        public VideoMux videoMux;
 
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
@@ -108,10 +110,6 @@ namespace Texel
         Material[] _originalScreenMaterial;
         Texture[] _originalMaterialTexture;
 
-        public const int SCREEN_SOURCE_NONE = 0;
-        public const int SCREEN_SOURCE_AVPRO = 1;
-        public const int SCREEN_SOURCE_UNITY = 2;
-
         public const int SCREEN_MODE_UNINITIALIZED = -1;
         public const int SCREEN_MODE_NORMAL = 0;
         public const int SCREEN_MODE_LOGO = 1;
@@ -126,7 +124,7 @@ namespace Texel
         const int PLAYER_STATE_ERROR = 3;
 
         bool _initComplete = false;
-        int _screenSource = SCREEN_SOURCE_UNITY;
+        int _screenSource = VideoSource.VIDEO_SOURCE_UNITY;
         int _screenMode = SCREEN_MODE_UNINITIALIZED;
         int _screenFit = 0;
         VideoError _lastErrorCode = 0;
@@ -155,6 +153,9 @@ namespace Texel
         {
             if (Utilities.IsValid(dataProxy))
                 dataProxy._RegisterEventHandler(this, "_VideoStateUpdate");
+
+            if (videoMux)
+                videoMux._Register(VideoMux.SOURCE_CHANGE_EVENT, this, "_OnSourceChanged");
 
             _Init();
         }
@@ -378,7 +379,9 @@ namespace Texel
 
         public void _VideoStateUpdate()
         {
-            _UpdateScreenSource(dataProxy.playerSource);
+            // TODO: Should be able to deprecate existing video/stream capture properties on this object and just rely on optional mux
+            if (!videoMux)
+                _UpdateScreenSource(dataProxy.playerSource);
 
             switch (dataProxy.playerState)
             {
@@ -406,6 +409,17 @@ namespace Texel
         public void _UpdateScreenSource(int source)
         {
             _screenSource = source;
+        }
+
+        public void _OnSourceChanged()
+        {
+            int source = videoMux.ActiveSourceType;
+            if (source == VideoSource.VIDEO_SOURCE_UNITY)
+                videoCaptureRenderer = videoMux.CaptureRenderer;
+            else if (source == VideoSource.VIDEO_SOURCE_AVPRO)
+                streamCaptureRenderer = videoMux.CaptureRenderer;
+
+            _UpdateScreenSource(source);
         }
 
         Material _GetReplacementMaterial(bool captureValid)
@@ -503,6 +517,7 @@ namespace Texel
             _checkFrameCount = 0;
 
             _ResetCaptureData();
+            currentValid = false;
 
             Texture captureTex = CaptureValid();
             currentValid = Utilities.IsValid(captureTex);
@@ -624,12 +639,12 @@ namespace Texel
             else
             {
 
-                if (_screenSource == SCREEN_SOURCE_AVPRO && texOverrideValidAVPro)
+                if (_screenSource == VideoSource.VIDEO_SOURCE_AVPRO && texOverrideValidAVPro)
                 {
                     currentTexture = captureTex;
                     currentAVPro = true;
                 }
-                else if (_screenSource == SCREEN_SOURCE_UNITY && texOverrideValidUnity)
+                else if (_screenSource == VideoSource.VIDEO_SOURCE_UNITY && texOverrideValidUnity)
                     currentTexture = captureTex;
 
                 if (currentAVPro)
@@ -756,9 +771,9 @@ namespace Texel
             if (!separatePlaybackMaterials)
                 return Utilities.IsValid(playbackMaterial) ? playbackMaterial : _originalScreenMaterial[meshIndex];
 
-            if (_screenSource == SCREEN_SOURCE_UNITY && Utilities.IsValid(playbackMaterialUnity))
+            if (_screenSource == VideoSource.VIDEO_SOURCE_UNITY && Utilities.IsValid(playbackMaterialUnity))
                 return playbackMaterialUnity;
-            if (_screenSource == SCREEN_SOURCE_AVPRO && Utilities.IsValid(playbackMaterialAVPro))
+            if (_screenSource == VideoSource.VIDEO_SOURCE_AVPRO && Utilities.IsValid(playbackMaterialAVPro))
                 return playbackMaterialAVPro;
 
             return _originalScreenMaterial[meshIndex];
@@ -766,7 +781,7 @@ namespace Texel
 
         public Texture CaptureValid()
         {
-            if (_screenSource == SCREEN_SOURCE_AVPRO && Utilities.IsValid(streamCaptureRenderer))
+            if (_screenSource == VideoSource.VIDEO_SOURCE_AVPRO && Utilities.IsValid(streamCaptureRenderer))
             {
                 Material mat = streamCaptureRenderer.sharedMaterial;
                 if (mat == null)
@@ -783,7 +798,7 @@ namespace Texel
                 return tex;
             }
 
-            if (_screenSource == SCREEN_SOURCE_UNITY && Utilities.IsValid(videoCaptureRenderer))
+            if (_screenSource == VideoSource.VIDEO_SOURCE_UNITY && Utilities.IsValid(videoCaptureRenderer))
             {
                 videoCaptureRenderer.GetPropertyBlock(block);
                 Texture tex = block.GetTexture("_MainTex");
@@ -797,7 +812,7 @@ namespace Texel
                 return tex;
             }
 
-            if (_screenSource == SCREEN_SOURCE_UNITY && Utilities.IsValid(captureRT))
+            if (_screenSource == VideoSource.VIDEO_SOURCE_UNITY && Utilities.IsValid(captureRT))
                 return captureRT;
 
             return null;

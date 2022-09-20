@@ -49,7 +49,7 @@ namespace Texel
             }
         }
 
-        protected void _Register(int eventIndex, Component handler, string eventName, string[] args)
+        public void _Register(int eventIndex, Component handler, string eventName, params string[] args)
         {
             if (!Utilities.IsValid(handler) || !Utilities.IsValid(eventName))
                 return;

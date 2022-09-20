@@ -14,6 +14,8 @@ namespace Texel
         public bool useSync = false;
         public VideoPlayerProxy dataProxy;
         public bool muteSourceForInactiveVideo = true;
+        public UdonBehaviour audioLinkSystem;
+        public string audioLinkChannel;
 
         [Range(0, 1)]
         public float inputVolume = 1f;
@@ -88,7 +90,9 @@ namespace Texel
             }
 
             initialized = true;
+
             _UpdateAll();
+            _UpdateAudioLink();
         }
 
         public void _RegisterControls(Component controls)
@@ -188,6 +192,70 @@ namespace Texel
             _UpdateAudioChannel(channel);
         }
 
+        public AudioSource _GetChannelSource(string channel)
+        {
+            return _GetChannelSource(_GetChannelIndex(channel));
+        }
+
+        public AudioSource _GetChannelSource(int index)
+        {
+            if (index < 0 || index >= channelCount)
+                return null;
+
+            return channelAudio[index];
+        }
+
+        public void _SetChannelSource(string channel, AudioSource source)
+        {
+            _SetChannelSource(_GetChannelIndex(channel), source);
+        }
+
+        public void _SetChannelSource(int channel, AudioSource source)
+        {
+            if (channel >= 0 && channel < channelCount)
+            {
+                channelAudio[channel] = source;
+                if (source)
+                    source.enabled = true;
+
+                _UpdateAudioLink();
+                _UpdateAudioChannel(channel);
+            }
+        }
+
+        int _GetChannelIndex(string channel)
+        {
+            int index = -1;
+            if (channel == null || channel == "")
+                index = 0;
+            else
+            {
+                for (int i = 0; i < channelCount; i++)
+                {
+                    if (channelNames[i] == channel)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+            }
+
+            return index;
+        }
+
+        public void _ClearChannelSources()
+        {
+            for (int i = 0; i < channelCount; i++)
+            {
+                if (channelAudio[i])
+                    channelAudio[i].enabled = false;
+                channelAudio[i] = null;
+            }
+
+            if (audioLinkSystem)
+                audioLinkSystem.SetProgramVariable("audioSource", null);
+        }
+
         public void _SyncUpdate()
         {
             _UpdateAll();
@@ -225,13 +293,15 @@ namespace Texel
             if (!Utilities.IsValid(source))
                 return;
 
-            float rawVolume = baseVolume * _ChannelVolume(channel) * channelFade[channel];
+            bool audio2D = base2D || _Channel2D(channel);
+
+            float rawVolume = baseVolume * _ChannelVolume(channel);
+            if (!audio2D)
+                rawVolume *= channelFade[channel];
             float expVolume = Mathf.Clamp01(3.1623e-3f * Mathf.Exp(rawVolume * 5.757f) - 3.1623e-3f);
 
             source.mute = baseMute || _ChannelMute(channel);
             source.volume = expVolume;
-
-            bool audio2D = base2D || _Channel2D(channel);
 
             // Update 2D/3D audio
             if (audio2D)
@@ -304,6 +374,30 @@ namespace Texel
         bool _Channel2D(int channel)
         {
             return hasSync ? syncAudioManager.syncChannel2Ds[channel] : channel2D[channel];
+        }
+
+        void _UpdateAudioLink()
+        {
+            if (!audioLinkSystem)
+                return;
+
+            AudioSource source = null;
+            if (audioLinkChannel != null && audioLinkChannel != "")
+                source = _GetChannelSource(audioLinkChannel);
+
+            if (!source)
+            {
+                for (int i = 0; i < channelCount; i++)
+                {
+                    if (channelAudio[i])
+                    {
+                        source = channelAudio[i];
+                        break;
+                    }
+                }
+            }
+
+            audioLinkSystem.SetProgramVariable("audioSource", source);
         }
     }
 }

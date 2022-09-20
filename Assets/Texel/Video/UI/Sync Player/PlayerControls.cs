@@ -6,10 +6,11 @@ using VRC.SDKBase;
 using VRC.Udon;
 using VRC.SDK3.Components;
 using VRC.SDK3.Components.Video;
+using System;
 
 namespace Texel
 {
-    [AddComponentMenu("VideoTXL/UI/Player Controls")]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class PlayerControls : UdonSharpBehaviour
     {
         public SyncPlayer videoPlayer;
@@ -19,7 +20,6 @@ namespace Texel
         public VRCUrlInputField urlInput;
 
         public GameObject volumeSliderControl;
-        public GameObject audio2DControl;
         public GameObject urlInputControl;
         public GameObject progressSliderControl;
         public GameObject syncSliderControl;
@@ -33,21 +33,11 @@ namespace Texel
         public Image repeatIcon;
         public Image shuffleIcon;
         public Image infoIcon;
-        public Image playCurrentIcon;
-        public Image playLastIcon;
         public Image nextIcon;
         public Image prevIcon;
         public Image playlistIcon;
         public Image masterIcon;
         public Image whitelistIcon;
-        public Image screenFitIcon;
-        public Image screenFitHeightIcon;
-        public Image screenFitWidthIcon;
-        public Image screenStretchIcon;
-
-        public Text modeAutoText;
-        public Text modeStreamText;
-        public Text modeVideoText;
 
         public GameObject muteToggleOn;
         public GameObject muteToggleOff;
@@ -65,16 +55,7 @@ namespace Texel
 
         public Text playlistText;
 
-        public GameObject infoPanel;
-        public Text instanceOwnerText;
-        public Text masterText;
-        public Text playerOwnerText;
-        public Text videoOwnerText;
-        public InputField currentVideoInput;
-        public InputField lastVideoInput;
-        public Text currentVideoText;
-        public Text lastVideoText;
-
+        public OptionsUI optionsPanel; 
         public GameObject playlistPanel;
 
         VideoPlayerProxy dataProxy;
@@ -89,20 +70,11 @@ namespace Texel
         const int PLAYER_STATE_PLAYING = 2;
         const int PLAYER_STATE_ERROR = 3;
 
-        const short VIDEO_SOURCE_NONE = 0;
-        const short VIDEO_SOURCE_AVPRO = 1;
-        const short VIDEO_SOURCE_UNITY = 2;
-
-        const short SCREEN_FIT = 0;
-        const short SCREEN_FIT_HEIGHT = 1;
-        const short SCREEN_FIT_WIDTH = 2;
-        const short SCREEN_STRETCH = 3;
-
-        bool infoPanelOpen = false;
-
         string statusOverride = null;
-        string instanceMaster = "";
-        string instanceOwner = "";
+        [NonSerialized]
+        public string instanceMaster = "";
+        [NonSerialized]
+        public string instanceOwner = "";
 
         bool loadActive = false;
         VRCUrl pendingSubmit;
@@ -114,6 +86,9 @@ namespace Texel
         {
             if (Utilities.IsValid(videoPlayer))
                 videoPlayer._EnsureInit();
+
+            if (optionsPanel)
+                optionsPanel._SetControls(this);
 
             _PopulateMissingReferences();
 
@@ -149,24 +124,6 @@ namespace Texel
                 }
             }
 
-            if (dataProxy.quest)
-            {
-                currentVideoText.enabled = true;
-                lastVideoText.enabled = true;
-
-                if (Utilities.IsValid(currentVideoInput))
-                    currentVideoInput.enabled = false;
-                if (Utilities.IsValid(lastVideoInput))
-                    lastVideoInput.enabled = false;
-                if (Utilities.IsValid(urlInput))
-                    urlInput.enabled = false;
-            }
-            else
-            {
-                currentVideoInput.enabled = true;
-                lastVideoInput.enabled = true;
-            }
-
             if (Utilities.IsValid(playlistPanel))
             {
                 PlaylistUI pui = (PlaylistUI)playlistPanel.GetComponent(typeof(UdonBehaviour));
@@ -192,9 +149,6 @@ namespace Texel
             loadIcon.color = disabledColor;
             resyncIcon.color = disabledColor;
             repeatIcon.color = disabledColor;
-            //shuffleIcon.color = disabledColor;
-            playCurrentIcon.color = disabledColor;
-            playLastIcon.color = disabledColor;
             nextIcon.color = disabledColor;
             prevIcon.color = disabledColor;
             playlistIcon.color = disabledColor;
@@ -297,7 +251,7 @@ namespace Texel
         public void _HandleUrlInputClick()
         {
             if (!videoPlayer._CanTakeControl())
-                _SetStatusOverride(MakeOwnerMessage(), 3);
+                _SetStatusOverride(_MakeOwnerMessage(), 3);
         }
 
         public void _HandleUrlInputChange()
@@ -318,7 +272,7 @@ namespace Texel
             if (videoPlayer._CanTakeControl())
                 videoPlayer._TriggerStop();
             else
-                _SetStatusOverride(MakeOwnerMessage(), 3);
+                _SetStatusOverride(_MakeOwnerMessage(), 3);
         }
 
         public void _HandlePause()
@@ -329,7 +283,7 @@ namespace Texel
             if (videoPlayer._CanTakeControl())
                 videoPlayer._TriggerPause();
             else
-                _SetStatusOverride(MakeOwnerMessage(), 3);
+                _SetStatusOverride(_MakeOwnerMessage(), 3);
         }
 
         public void _HandleResync()
@@ -350,7 +304,7 @@ namespace Texel
             if (videoPlayer._CanTakeControl())
                 videoPlayer._ChangeUrl(videoPlayer.currentUrl);
             else
-                _SetStatusOverride(MakeOwnerMessage(), 3);
+                _SetStatusOverride(_MakeOwnerMessage(), 3);
         }
 
         public void _HandlePlayLast()
@@ -363,14 +317,7 @@ namespace Texel
             if (videoPlayer._CanTakeControl())
                 videoPlayer._ChangeUrl(videoPlayer.lastUrl);
             else
-                _SetStatusOverride(MakeOwnerMessage(), 3);
-        }
-
-        public void _HandleInfo()
-        {
-            infoPanelOpen = !infoPanelOpen;
-            infoPanel.SetActive(infoPanelOpen);
-            infoIcon.color = infoPanelOpen ? activeColor : normalColor;
+                _SetStatusOverride(_MakeOwnerMessage(), 3);
         }
 
         public void _HandleLock()
@@ -381,7 +328,7 @@ namespace Texel
             if (videoPlayer._CanTakeControl())
                 videoPlayer._TriggerLock();
             else
-                _SetStatusOverride(MakeOwnerMessage(), 3);
+                _SetStatusOverride(_MakeOwnerMessage(), 3);
         }
 
         public void _HandleLoad()
@@ -391,7 +338,7 @@ namespace Texel
 
             if (!videoPlayer._CanTakeControl())
             {
-                _SetStatusOverride(MakeOwnerMessage(), 3);
+                _SetStatusOverride(_MakeOwnerMessage(), 3);
                 return;
             }
 
@@ -411,7 +358,7 @@ namespace Texel
             if (videoPlayer._CanTakeControl())
                 videoPlayer._TriggerRepeatMode();
             else
-                _SetStatusOverride(MakeOwnerMessage(), 3);
+                _SetStatusOverride(_MakeOwnerMessage(), 3);
         }
 
         bool _draggingProgressSlider = false;
@@ -452,17 +399,17 @@ namespace Texel
 
         public void _HandleSourceAuto()
         {
-            _UpdateSource(VIDEO_SOURCE_NONE);
+            _UpdateSource(VideoSource.VIDEO_SOURCE_NONE);
         }
 
         public void _HandleSourceStream()
         {
-            _UpdateSource(VIDEO_SOURCE_AVPRO);
+            _UpdateSource(VideoSource.VIDEO_SOURCE_AVPRO);
         }
 
         public void _HandleSourceVideo()
         {
-            _UpdateSource(VIDEO_SOURCE_UNITY);
+            _UpdateSource(VideoSource.VIDEO_SOURCE_UNITY);
         }
 
         void _UpdateSource(short mode)
@@ -472,47 +419,13 @@ namespace Texel
 
             if (!videoPlayer._CanTakeControl())
             {
-                _SetStatusOverride(MakeOwnerMessage(), 3);
+                _SetStatusOverride(_MakeOwnerMessage(), 3);
                 return;
             }
 
             videoPlayer._SetSourceMode(mode);
         }
-
-        public void _HandleScreenFit()
-        {
-            _UpdateScreenFit(SCREEN_FIT);
-        }
-
-        public void _HandleScreenFitHeight()
-        {
-            _UpdateScreenFit(SCREEN_FIT_HEIGHT);
-        }
-
-        public void _HandleScreenFitWidth()
-        {
-            _UpdateScreenFit(SCREEN_FIT_WIDTH);
-        }
-
-        public void _HandleScreenStretch()
-        {
-            _UpdateScreenFit(SCREEN_STRETCH);
-        }
-
-        void _UpdateScreenFit(short mode)
-        {
-            if (!Utilities.IsValid(videoPlayer))
-                return;
-
-            if (!videoPlayer._CanTakeControl())
-            {
-                _SetStatusOverride(MakeOwnerMessage(), 3);
-                return;
-            }
-
-            videoPlayer._SetScreenFit(mode);
-        }
-
+        
         public void _ToggleVolumeMute()
         {
             if (inVolumeControllerUpdate)
@@ -521,15 +434,6 @@ namespace Texel
             if (Utilities.IsValid(audioManager))
                 audioManager._SetMasterMute(!audioManager.masterMute);
             //audioManager._ToggleMute();
-        }
-
-        public void _ToggleAudio2D()
-        {
-            if (inVolumeControllerUpdate)
-                return;
-
-            //if (Utilities.IsValid(audioManager))
-            //    audioManager._ToggleAudio2D();
         }
 
         public void _UpdateVolumeSlider()
@@ -602,7 +506,7 @@ namespace Texel
             }
         }
 
-        void _SetStatusOverride(string msg, float timeout)
+        public void _SetStatusOverride(string msg, float timeout)
         {
             statusOverride = msg;
             SendCustomEventDelayedSeconds("_ClearStatusOverride", timeout);
@@ -668,39 +572,8 @@ namespace Texel
 
         public void _UpdateInfo()
         {
-            bool canControl = videoPlayer._CanTakeControl();
-            bool enableControl = !videoPlayer.locked || canControl;
-
-            string currentUrl = dataProxy.currentUrl.Get();
-            string lastUrl = dataProxy.lastUrl.Get();
-
-            playCurrentIcon.color = (enableControl && currentUrl != "") ? normalColor : disabledColor;
-            playLastIcon.color = (enableControl && lastUrl != "") ? normalColor : disabledColor;
-
-            if (dataProxy.quest)
-            {
-                currentVideoText.text = currentUrl;
-                lastVideoText.text = lastUrl;
-            }
-            else
-            {
-                currentVideoInput.text = currentUrl;
-                lastVideoInput.text = lastUrl;
-            }
-
-            instanceOwnerText.text = instanceOwner;
-            masterText.text = instanceMaster;
-            // videoOwnerText.text = videoPlayer.videoOwner;
-
             string queuedUrl = dataProxy.queuedUrl.Get();
             queuedText.text = (queuedUrl != "") ? "QUEUED" : "";
-
-            VRCPlayerApi owner = Networking.GetOwner(videoPlayer.gameObject);
-            if (Utilities.IsValid(owner) && owner.IsValid())
-                playerOwnerText.text = owner.displayName;
-            else
-                playerOwnerText.text = "";
-
         }
 
         public void _UpdatePlaylistInfo()
@@ -867,7 +740,7 @@ namespace Texel
                         else
                         {
                             SetPlaceholderText("");
-                            SetStatusText(MakeOwnerMessage());
+                            SetStatusText(_MakeOwnerMessage());
                         }
                     }
                 }
@@ -878,35 +751,21 @@ namespace Texel
             if (videoPlayer.locked)
                 lockedIcon.color = canControl ? normalColor : attentionColor;
 
-            modeAutoText.color = dataProxy.playerSourceOverride == VIDEO_SOURCE_NONE ? activeColor : normalColor;
-            modeStreamText.color = dataProxy.playerSourceOverride == VIDEO_SOURCE_AVPRO ? activeColor : normalColor;
-            modeVideoText.color = dataProxy.playerSourceOverride == VIDEO_SOURCE_UNITY ? activeColor : normalColor;
-
-            screenFitIcon.color = dataProxy.screenFit == SCREEN_FIT ? activeColor : normalColor;
-            screenFitHeightIcon.color = dataProxy.screenFit == SCREEN_FIT_HEIGHT ? activeColor : normalColor;
-            screenFitWidthIcon.color = dataProxy.screenFit == SCREEN_FIT_WIDTH ? activeColor : normalColor;
-            screenStretchIcon.color = dataProxy.screenFit == SCREEN_STRETCH ? activeColor : normalColor;
-
-            if (!videoPlayer.useAVPro || !videoPlayer.useUnityVideo)
+            if (!videoPlayer.videoMux.HasMultipleTypes)
             {
                 modeText.text = "";
-                modeAutoText.color = disabledColor;
-                if (!videoPlayer.useAVPro)
-                    modeStreamText.color = disabledColor;
-                if (!videoPlayer.useUnityVideo)
-                    modeVideoText.color = disabledColor;
             }
             else
             {
                 switch (dataProxy.playerSourceOverride)
                 {
-                    case VIDEO_SOURCE_UNITY:
+                    case VideoSource.VIDEO_SOURCE_UNITY:
                         modeText.text = "VIDEO";
                         break;
-                    case VIDEO_SOURCE_AVPRO:
+                    case VideoSource.VIDEO_SOURCE_AVPRO:
                         modeText.text = "STREAM";
                         break;
-                    case VIDEO_SOURCE_NONE:
+                    case VideoSource.VIDEO_SOURCE_NONE:
                     default:
                         if (playerState == PLAYER_STATE_STOPPED)
                             modeText.text = "AUTO";
@@ -914,13 +773,13 @@ namespace Texel
                         {
                             switch (dataProxy.playerSource)
                             {
-                                case VIDEO_SOURCE_UNITY:
+                                case VideoSource.VIDEO_SOURCE_UNITY:
                                     modeText.text = "AUTO VIDEO";
                                     break;
-                                case VIDEO_SOURCE_AVPRO:
+                                case VideoSource.VIDEO_SOURCE_AVPRO:
                                     modeText.text = "AUTO STREAM";
                                     break;
-                                case VIDEO_SOURCE_NONE:
+                                case VideoSource.VIDEO_SOURCE_NONE:
                                 default:
                                     modeText.text = "AUTO";
                                     break;
@@ -965,7 +824,7 @@ namespace Texel
             }
         }
 
-        string MakeOwnerMessage()
+        public string _MakeOwnerMessage()
         {
             if (instanceMaster == instanceOwner || instanceOwner == "")
                 return $"Controls locked to master {instanceMaster}";
@@ -993,11 +852,6 @@ namespace Texel
                 {
                     muteToggleOn.SetActive(audioManager.masterMute);
                     muteToggleOff.SetActive(!audioManager.masterMute);
-                }
-                if (Utilities.IsValid(audio2DToggleOn) && Utilities.IsValid(audio2DToggleOff))
-                {
-                    //audio2DToggleOn.SetActive(audioManager.audio2D);
-                    //audio2DToggleOff.SetActive(!audioManager.audio2D);
                 }
             }
         }
@@ -1106,46 +960,6 @@ namespace Texel
 
             if (!Utilities.IsValid(urlInput) && Utilities.IsValid(videoPlayer.debugLog))
                 videoPlayer.debugLog._Write("PlayerControls", "Could not resolve URL input component: is your VRC SDK missing VRCUrlInput?");
-
-            // Info Panel 
-
-            if (!Utilities.IsValid(infoPanel))
-                infoPanel = _FindGameObject("InfoPanel");
-            if (!Utilities.IsValid(instanceOwnerText))
-                instanceOwnerText = (Text)_FindComponent("InfoPanel/Fields/InstanceOwner/InstanceOwnerName", typeof(Text));
-            if (!Utilities.IsValid(masterText))
-                masterText = (Text)_FindComponent("InfoPanel/Fields/Master/MasterName", typeof(Text));
-            if (!Utilities.IsValid(playerOwnerText))
-                playerOwnerText = (Text)_FindComponent("InfoPanel/Fields/PlayerOwner/PlayerOwnerName", typeof(Text));
-            if (!Utilities.IsValid(videoOwnerText))
-                videoOwnerText = (Text)_FindComponent("InfoPanel/Fields/VideoOwner/VideoOwnerName", typeof(Text));
-            if (!Utilities.IsValid(currentVideoInput))
-                currentVideoInput = (InputField)_FindComponent("InfoPanel/Fields/CurrentVideo/InputField", typeof(InputField));
-            if (!Utilities.IsValid(currentVideoText))
-                currentVideoText = (Text)_FindComponent("InfoPanel/Fields/CurrentVideo/InputField/TextMask/Text", typeof(Text));
-            if (!Utilities.IsValid(playCurrentIcon))
-                playCurrentIcon = (Image)_FindComponent("InfoPanel/Fields/CurrentVideo/InputField/PlayButton/IconPlay", typeof(Image));
-            if (!Utilities.IsValid(lastVideoInput))
-                lastVideoInput = (InputField)_FindComponent("InfoPanel/Fields/LastVideo/InputField", typeof(InputField));
-            if (!Utilities.IsValid(lastVideoText))
-                lastVideoText = (Text)_FindComponent("InfoPanel/Fields/LastVideo/InputField/TextMask/Text", typeof(Text));
-            if (!Utilities.IsValid(playLastIcon))
-                playLastIcon = (Image)_FindComponent("InfoPanel/Fields/LastVideo/InputField/PlayButton/IconPlay", typeof(Image));
-            if (!Utilities.IsValid(screenFitIcon))
-                screenFitIcon = (Image)_FindComponent("InfoPanel/Fields/ScreenFit/ButtonScreenFit/IconScreenFit", typeof(Image));
-            if (!Utilities.IsValid(screenFitHeightIcon))
-                screenFitHeightIcon = (Image)_FindComponent("InfoPanel/Fields/ScreenFit/ButtonScreenFitHeight/IconScreenFitHeight", typeof(Image));
-            if (!Utilities.IsValid(screenFitWidthIcon))
-                screenFitWidthIcon = (Image)_FindComponent("InfoPanel/Fields/ScreenFit/ButtonScreenFitWidth/IconScreenFitWidth", typeof(Image));
-            if (!Utilities.IsValid(screenStretchIcon))
-                screenStretchIcon = (Image)_FindComponent("InfoPanel/Fields/ScreenFit/ButtonScreenStretch/IconScreenStretch", typeof(Image));
-            if (!Utilities.IsValid(modeAutoText))
-                modeAutoText = (Text)_FindComponent("InfoPanel/Fields/Mode/ButtonModeAuto/TextModeAuto", typeof(Text));
-            if (!Utilities.IsValid(modeStreamText))
-                modeStreamText = (Text)_FindComponent("InfoPanel/Fields/Mode/ButtonModeStream/TextModeStream", typeof(Text));
-            if (!Utilities.IsValid(modeVideoText))
-                modeVideoText = (Text)_FindComponent("InfoPanel/Fields/Mode/ButtonModeVideo/TextModeVideo", typeof(Text));
-
         }
 
         GameObject _FindGameObject(string path)

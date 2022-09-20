@@ -1,9 +1,8 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿
 using UnityEngine;
+using VRC.Udon;
 
 using UnityEditor;
-using UnityEditorInternal;
 using UdonSharpEditor;
 using System;
 
@@ -39,6 +38,9 @@ namespace Texel
         SerializedProperty channel2DSeparateVolumeListProperty;
         SerializedProperty channel2DFadeDisableListProperty;
 
+        SerializedProperty audioLinkProperty;
+        SerializedProperty audioLinkChannelProperty;
+
         private void OnEnable()
         {
             dataProxyProperty = serializedObject.FindProperty(nameof(AudioManager.dataProxy));
@@ -64,6 +66,9 @@ namespace Texel
             channel2DVolumeListProperty = serializedObject.FindProperty(nameof(AudioManager.channelVolume2D));
             channel2DSeparateVolumeListProperty = serializedObject.FindProperty(nameof(AudioManager.channelSeparateVolume2D));
             channel2DFadeDisableListProperty = serializedObject.FindProperty(nameof(AudioManager.channelDisableFade2D));
+
+            audioLinkProperty = serializedObject.FindProperty(nameof(AudioManager.audioLinkSystem));
+            audioLinkChannelProperty = serializedObject.FindProperty(nameof(AudioManager.audioLinkChannel));
         }
 
         public override void OnInspectorGUI()
@@ -90,6 +95,13 @@ namespace Texel
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Audio Channels", EditorStyles.boldLabel);
             ChannelFoldout();
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("AudioLink", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(audioLinkProperty, new GUIContent("AudioLink", "Set the main AudioLink script to have the AudioManager update it as audio sources are changed out."));
+            EditorGUILayout.PropertyField(audioLinkChannelProperty, new GUIContent("AudioLink Channel", "The name of the audio channel that should be assigned to AudioLink.  If not channel is specified, or the channel is not used by a given source, the first available channel will be used instead."));
+            if (GUILayout.Button(new GUIContent("Link AudioLink to this manager", "Finds first AudioLink UdonBehaviour and sets its reference automatically.")))
+                LinkAudioLink();
 
             serializedObject.ApplyModifiedProperties();
         }
@@ -180,6 +192,34 @@ namespace Texel
             channel2DVolumeListProperty.DeleteArrayElementAtIndex(index);
             channel2DSeparateVolumeListProperty.DeleteArrayElementAtIndex(index);
             channel2DFadeDisableListProperty.DeleteArrayElementAtIndex(index);
+        }
+
+        private void LinkAudioLink()
+        {
+            UdonBehaviour[] allBehaviours = FindObjectsOfType<UdonBehaviour>();
+            foreach (UdonBehaviour behaviour in allBehaviours)
+            {
+                if (!behaviour.programSource)
+                    continue;
+
+                var program = behaviour.programSource.SerializedProgramAsset.RetrieveProgram();
+                if (behaviour.programSource.name != "AudioLink")
+                    continue;
+
+                audioLinkProperty.objectReferenceValue = behaviour;
+                break;
+            }
+
+            string channel = audioLinkChannelProperty.stringValue;
+            if (channel == null || channel == "")
+            {
+                for (int i = 0; i < channelNameListProperty.arraySize; i++)
+                {
+                    string name = channelNameListProperty.GetArrayElementAtIndex(i).stringValue;
+                    if (name == "audioLink" || name == "AudioLink")
+                        audioLinkChannelProperty.stringValue = name;
+                }
+            }
         }
     }
 }

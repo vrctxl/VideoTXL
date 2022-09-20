@@ -1,5 +1,6 @@
 ﻿
 using UdonSharp;
+using UnityEngine;
 using VRC.SDK3.Components.Video;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
@@ -12,7 +13,9 @@ namespace Texel
     public class VideoSource : UdonSharpBehaviour
     {
         public VideoMux videoMux;
-        public string sourceName = "";
+        public MeshRenderer captureRenderer;
+        public AudioSource[] audioSources;
+        public string[] audioSourceChannels;
 
         public bool lowLatency = false;
         public int maxResolution = 720;
@@ -46,11 +49,13 @@ namespace Texel
             id = muxId;
 
             _AutoDetect();
+            _InitVideoPlayer();
         }
 
         void _AutoDetect()
         {
-            VRCAVProVideoPlayer avp = GetComponent<VRCAVProVideoPlayer>();
+            // The type-based lookup was actually finding and incorrectly casting VRCUnityVideoPlayer components ._.
+            VRCAVProVideoPlayer avp = (VRCAVProVideoPlayer)gameObject.GetComponent("VRC.SDK3.Video.Components.AVPro.VRCAVProVideoPlayer");
             if (avp != null)
             {
                 videoPlayer = avp;
@@ -58,7 +63,7 @@ namespace Texel
                 return;
             }
 
-            VRCUnityVideoPlayer unity = GetComponent<VRCUnityVideoPlayer>();
+            VRCUnityVideoPlayer unity = (VRCUnityVideoPlayer)gameObject.GetComponent("VRC.SDK3.Video.Components.VRCUnityVideoPlayer");
             if (unity != null)
             {
                 videoPlayer = unity;
@@ -67,6 +72,16 @@ namespace Texel
             }
 
             VideoSourceType = VIDEO_SOURCE_NONE;
+        }
+
+        void _InitVideoPlayer()
+        {
+            if (videoPlayer == null)
+                return;
+
+            videoPlayer.Loop = false;
+            videoPlayer.EnableAutomaticResync = false;
+            videoPlayer.Stop();
         }
 
 
@@ -128,7 +143,7 @@ namespace Texel
             SendCustomEventDelayedFrames("_VideoStop", frameDelay);
         }
 
-        public void _VideoLoadUrl(VRCUrl url)
+        public void _VideoLoadURL(VRCUrl url)
         {
             if (videoPlayer != null)
                 videoPlayer.LoadURL(url);

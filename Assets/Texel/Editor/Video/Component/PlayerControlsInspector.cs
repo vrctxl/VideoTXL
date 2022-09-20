@@ -48,7 +48,6 @@ namespace Texel
 
         [ObjectPath("MainPanel/UpperRow/VolumeGroup/Slider")]
         SerializedProperty volumeSliderControlProperty;
-        SerializedProperty audio2DControlProperty;
         SerializedProperty urlInputControlProperty;
         SerializedProperty progressSliderControlProperty;
         SerializedProperty syncSliderControlProperty;
@@ -64,8 +63,6 @@ namespace Texel
         SerializedProperty repeatIconProperty;
         SerializedProperty shuffleIconProperty;
         SerializedProperty infoIconProperty;
-        SerializedProperty playCurrentIconProperty;
-        SerializedProperty playlastIconProperty;
         SerializedProperty nextIconProperty;
         SerializedProperty prevIconProperty;
         SerializedProperty playlistIconProperty;
@@ -88,16 +85,7 @@ namespace Texel
 
         SerializedProperty playlistTextProperty;
 
-        SerializedProperty infoPanelProperty;
-        SerializedProperty instanceOwnerTextProperty;
-        SerializedProperty masterTextProperty;
-        SerializedProperty playerOwnerTextProperty;
-        SerializedProperty videoOwnerTextProperty;
-        SerializedProperty currentVideoInputProperty;
-        SerializedProperty lastVideoInputProperty;
-        SerializedProperty currentVideoTextProperty;
-        SerializedProperty lastVideoTextProperty;
-
+        SerializedProperty optionsPanelProperty;
         SerializedProperty playlistPanelProperty;
 
         string[] backgroundImagePaths = new string[] {
@@ -111,8 +99,6 @@ namespace Texel
         string[] sliderBgImagePaths = new string[] {
             "MainPanel/UpperRow/VolumeGroup/Background",
             "MainPanel/LowerRow/InputProgress/Background",
-            "InfoPanel/Fields/CurrentVideo/InputField",
-            "InfoPanel/Fields/LastVideo/InputField",
         };
         string[] volumeFillBgPaths = new string[] {
             "MainPanel/UpperRow/VolumeGroup/Slider/Fill Area/Fill",
@@ -139,8 +125,6 @@ namespace Texel
             "MainPanel/UpperRow/ButtonGroup/InfoButton",
             "MainPanel/LowerRow/InputProgress/LoadButton",
             "MainPanel/LowerRow/InputProgress/MasterLockButton",
-            "InfoPanel/Fields/CurrentVideo/InputField/PlayButton",
-            "InfoPanel/Fields/LastVideo/InputField/PlayButton",
         };
         string[] buttonIconImagePaths = new string[]
         {
@@ -157,32 +141,16 @@ namespace Texel
             "MainPanel/LowerRow/InputProgress/LoadButton/IconLoad",
             "MainPanel/LowerRow/InputProgress/MasterLockButton/IconLocked",
             "MainPanel/LowerRow/InputProgress/MasterLockButton/IconUnlocked",
-            "InfoPanel/Fields/CurrentVideo/InputField/PlayButton/IconPlay",
-            "InfoPanel/Fields/LastVideo/InputField/PlayButton/IconPlay",
         };
         string[] generalTextPaths = new string[]
         {
             "InfoPanel/VersionInfo/Text",
-            "InfoPanel/Fields/InstanceOwner",
-            "InfoPanel/Fields/InstanceOwner/InstanceOwnerName",
-            "InfoPanel/Fields/Master",
-            "InfoPanel/Fields/Master/MasterName",
-            "InfoPanel/Fields/PlayerOwner",
-            "InfoPanel/Fields/PlayerOwner/PlayerOwnerName",
-            "InfoPanel/Fields/VideoOwner",
-            "InfoPanel/Fields/VideoOwner/VideoOwnerName",
-            "InfoPanel/Fields/CurrentVideo",
-            "InfoPanel/Fields/LastVideo",
         };
         string[] mainTextPaths = new string[]
         {
             "MainPanel/LowerRow/InputProgress/StatusText",
             "MainPanel/LowerRow/InputProgress/InputField/TextMask/Text",
             "MainPanel/LowerRow/InputProgress/InputField/TextMask/Placeholder",
-            "InfoPanel/Fields/CurrentVideo/InputField/TextMask/Text",
-            "InfoPanel/Fields/CurrentVideo/InputField/TextMask/Placeholder",
-            "InfoPanel/Fields/LastVideo/InputField/TextMask/Text",
-            "InfoPanel/Fields/LastVideo/InputField/TextMask/Placeholder",
         };
         string[] subTextPaths = new string[]
         {
@@ -205,7 +173,6 @@ namespace Texel
             urlInputProperty = serializedObject.FindProperty(nameof(PlayerControls.urlInput));
 
             volumeSliderControlProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeSliderControl));
-            audio2DControlProperty = serializedObject.FindProperty(nameof(PlayerControls.audio2DControl));
             progressSliderControlProperty = serializedObject.FindProperty(nameof(PlayerControls.progressSliderControl));
             syncSliderControlProperty = serializedObject.FindProperty(nameof(PlayerControls.syncSliderControl));
             urlInputControlProperty = serializedObject.FindProperty(nameof(PlayerControls.urlInputControl));
@@ -219,8 +186,6 @@ namespace Texel
             repeatIconProperty = serializedObject.FindProperty(nameof(PlayerControls.repeatIcon));
             shuffleIconProperty = serializedObject.FindProperty(nameof(PlayerControls.shuffleIcon));
             infoIconProperty = serializedObject.FindProperty(nameof(PlayerControls.infoIcon));
-            playCurrentIconProperty = serializedObject.FindProperty(nameof(PlayerControls.playCurrentIcon));
-            playlastIconProperty = serializedObject.FindProperty(nameof(PlayerControls.playLastIcon));
             nextIconProperty = serializedObject.FindProperty(nameof(PlayerControls.nextIcon));
             prevIconProperty = serializedObject.FindProperty(nameof(PlayerControls.prevIcon));
             playlistIconProperty = serializedObject.FindProperty(nameof(PlayerControls.playlistIcon));
@@ -243,15 +208,7 @@ namespace Texel
 
             playlistTextProperty = serializedObject.FindProperty(nameof(PlayerControls.playlistText));
 
-            infoPanelProperty = serializedObject.FindProperty(nameof(PlayerControls.infoPanel));
-            instanceOwnerTextProperty = serializedObject.FindProperty(nameof(PlayerControls.instanceOwnerText));
-            masterTextProperty = serializedObject.FindProperty(nameof(PlayerControls.masterText));
-            playerOwnerTextProperty = serializedObject.FindProperty(nameof(PlayerControls.playerOwnerText));
-            videoOwnerTextProperty = serializedObject.FindProperty(nameof(PlayerControls.videoOwnerText));
-            currentVideoInputProperty = serializedObject.FindProperty(nameof(PlayerControls.currentVideoInput));
-            lastVideoInputProperty = serializedObject.FindProperty(nameof(PlayerControls.lastVideoInput));
-            currentVideoTextProperty = serializedObject.FindProperty(nameof(PlayerControls.currentVideoText));
-            lastVideoTextProperty = serializedObject.FindProperty(nameof(PlayerControls.lastVideoText));
+            optionsPanelProperty = serializedObject.FindProperty(nameof(PlayerControls.optionsPanel));
 
             playlistPanelProperty = serializedObject.FindProperty(nameof(PlayerControls.playlistPanel));
         }
@@ -277,7 +234,6 @@ namespace Texel
                 EditorGUILayout.Space();
                 EditorGUILayout.PropertyField(urlInputProperty);
                 EditorGUILayout.PropertyField(volumeSliderControlProperty);
-                EditorGUILayout.PropertyField(audio2DControlProperty);
                 EditorGUILayout.PropertyField(urlInputControlProperty);
                 EditorGUILayout.PropertyField(progressSliderControlProperty);
                 EditorGUILayout.PropertyField(syncSliderControlProperty);
@@ -290,8 +246,6 @@ namespace Texel
                 EditorGUILayout.PropertyField(repeatIconProperty);
                 EditorGUILayout.PropertyField(shuffleIconProperty);
                 EditorGUILayout.PropertyField(infoIconProperty);
-                EditorGUILayout.PropertyField(playCurrentIconProperty);
-                EditorGUILayout.PropertyField(playlastIconProperty);
                 EditorGUILayout.PropertyField(nextIconProperty);
                 EditorGUILayout.PropertyField(prevIconProperty);
                 EditorGUILayout.PropertyField(playlistIconProperty);
@@ -310,15 +264,7 @@ namespace Texel
                 EditorGUILayout.PropertyField(modeTextProperty);
                 EditorGUILayout.PropertyField(queuedTextProperty);
                 EditorGUILayout.PropertyField(playlistTextProperty);
-                EditorGUILayout.PropertyField(infoPanelProperty);
-                EditorGUILayout.PropertyField(instanceOwnerTextProperty);
-                EditorGUILayout.PropertyField(masterTextProperty);
-                EditorGUILayout.PropertyField(playerOwnerTextProperty);
-                EditorGUILayout.PropertyField(videoOwnerTextProperty);
-                EditorGUILayout.PropertyField(currentVideoInputProperty);
-                EditorGUILayout.PropertyField(lastVideoInputProperty);
-                EditorGUILayout.PropertyField(currentVideoTextProperty);
-                EditorGUILayout.PropertyField(lastVideoTextProperty);
+                EditorGUILayout.PropertyField(optionsPanelProperty);
                 EditorGUILayout.PropertyField(playlistPanelProperty);
                 EditorGUI.indentLevel--;
             }

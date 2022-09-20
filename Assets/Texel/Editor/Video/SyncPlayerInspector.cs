@@ -2,6 +2,12 @@
 
 using UnityEditor;
 using UdonSharpEditor;
+using System.Collections.Generic;
+using UnityEngine.UI;
+using System.Collections;
+using UnityEditor.SceneManagement;
+using VRC.SDK3.Video.Components.AVPro;
+using VRC.SDK3.Video.Components;
 
 namespace Texel
 {
@@ -9,6 +15,7 @@ namespace Texel
     internal class SyncPlayerInspector : Editor
     {
         SerializedProperty dataProxyProperty;
+        SerializedProperty videoMuxProperty;
 
         SerializedProperty playlistPoperty;
         SerializedProperty remapperProperty;
@@ -29,14 +36,15 @@ namespace Texel
         SerializedProperty autoAVSyncProperty;
 
         SerializedProperty defaultVideoModeProperty;
-        SerializedProperty useUnityVideoProperty;
-        SerializedProperty useAVProProperty;
-        SerializedProperty unityVideoProperty;
-        SerializedProperty avProVideoProperty;
+        //SerializedProperty useUnityVideoProperty;
+        //SerializedProperty useAVProProperty;
+        //SerializedProperty unityVideoProperty;
+        //SerializedProperty avProVideoProperty;
 
         private void OnEnable()
         {
             dataProxyProperty = serializedObject.FindProperty(nameof(SyncPlayer.dataProxy));
+            videoMuxProperty = serializedObject.FindProperty(nameof(SyncPlayer.videoMux));
 
             playlistPoperty = serializedObject.FindProperty(nameof(SyncPlayer.playlist));
             remapperProperty = serializedObject.FindProperty(nameof(SyncPlayer.urlRemapper));
@@ -57,10 +65,10 @@ namespace Texel
             autoAVSyncProperty = serializedObject.FindProperty(nameof(SyncPlayer.autoInternalAVSync));
 
             defaultVideoModeProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultVideoSource));
-            useUnityVideoProperty = serializedObject.FindProperty(nameof(SyncPlayer.useUnityVideo));
-            useAVProProperty = serializedObject.FindProperty(nameof(SyncPlayer.useAVPro));
-            unityVideoProperty = serializedObject.FindProperty(nameof(SyncPlayer.unityVideo));
-            avProVideoProperty = serializedObject.FindProperty(nameof(SyncPlayer.avProVideo));
+            //useUnityVideoProperty = serializedObject.FindProperty(nameof(SyncPlayer.useUnityVideo));
+            //useAVProProperty = serializedObject.FindProperty(nameof(SyncPlayer.useAVPro));
+            //unityVideoProperty = serializedObject.FindProperty(nameof(SyncPlayer.unityVideo));
+            //avProVideoProperty = serializedObject.FindProperty(nameof(SyncPlayer.avProVideo));
         }
 
         public override void OnInspectorGUI()
@@ -69,6 +77,7 @@ namespace Texel
                 return;
 
             EditorGUILayout.PropertyField(dataProxyProperty, new GUIContent("Data Proxy", "A proxy for dispatching video-related events to other listening behaviors, such as a screen manager."));
+            EditorGUILayout.PropertyField(videoMuxProperty, new GUIContent("Video Source Manager", "Internal object for multiplexing multiple video sources."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Optional Components", EditorStyles.boldLabel);
@@ -95,7 +104,7 @@ namespace Texel
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Video Sources", EditorStyles.boldLabel);
 
-            EditorGUILayout.PropertyField(useAVProProperty, new GUIContent("Use AVPro", "Whether AVPro is a supported video source for this player.  Disabling this component also disables source selection."));
+            /*EditorGUILayout.PropertyField(useAVProProperty, new GUIContent("Use AVPro", "Whether AVPro is a supported video source for this player.  Disabling this component also disables source selection."));
             if (useAVProProperty.boolValue)
                 EditorGUILayout.PropertyField(avProVideoProperty, new GUIContent("AVPro Video Source", "AVPro video player component"));
 
@@ -103,13 +112,14 @@ namespace Texel
             EditorGUILayout.PropertyField(useUnityVideoProperty, new GUIContent("Use Unity Video", "Whether Unity video is a supported video source for this player.  Disabling this component also disables source selection."));
             if (useUnityVideoProperty.boolValue)
                 EditorGUILayout.PropertyField(unityVideoProperty, new GUIContent("Unity Video Source", "Unity video player component"));
+            */
 
-            if (useAVProProperty.boolValue && useUnityVideoProperty.boolValue)
-            {
+            //if (useAVProProperty.boolValue && useUnityVideoProperty.boolValue)
+            //{
                 EditorGUILayout.Space();
                 GUIContent desc = new GUIContent("Default Video Source", "The video source that should be active by default, or auto to let the player determine on a per-URL basis.");
                 defaultVideoModeProperty.intValue = EditorGUILayout.Popup(desc, defaultVideoModeProperty.intValue, new string[] { "Auto", "AVPro", "Unity Video" });
-            }
+            //}
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Debug Options", EditorStyles.boldLabel);
@@ -118,6 +128,168 @@ namespace Texel
             EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
 
             serializedObject.ApplyModifiedProperties();
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Update", EditorStyles.boldLabel);
+            if (GUILayout.Button("Update Connected Components", GUILayout.Width(EditorGUIUtility.labelWidth)))
+                UpdateComponents();
+        }
+
+        void UpdateComponents()
+        {
+            if (EditorApplication.isPlaying)
+                return;
+
+            SyncPlayer videoPlayer = (SyncPlayer)serializedObject.targetObject;
+            if (!videoPlayer)
+                return;
+
+            List<int> resolutions = GetResolutions(videoPlayer.videoMux);
+            List<int> latencies = GetLatencies(videoPlayer.videoMux);
+            List<int> videoModes = GetTypes(videoPlayer.videoMux);
+
+            OptionsUI[] list = Object.FindObjectsOfType<OptionsUI>();
+            foreach (var item in list)
+            {
+                if (!item.mainControls || item.mainControls.videoPlayer != serializedObject.targetObject)
+                    continue;
+
+                Debug.Log($"Found {item}");
+
+                if (resolutions.Count <= 1)
+                {
+                    GameObject row = item.videoResolutionDropdown.transform.parent.gameObject;
+                    Undo.RecordObject(row, "Update Connected Components");
+                    row.SetActive(false);
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(row);
+                }
+                else
+                {
+                    Dropdown template = null;
+                    Transform templateObj = item.videoResolutionDropdown.transform.Find("IconTemplate");
+                    if (templateObj)
+                        template = templateObj.GetComponent<Dropdown>();
+
+                    Undo.RecordObject(item.videoResolutionDropdown, "Update Connected Components");
+
+                    item.videoResolutionDropdown.ClearOptions();
+                    item.videoResolutionDropdown.AddOptions(GetResolutionOptions(resolutions, template));
+
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(item.videoResolutionDropdown);
+                }
+
+                if (latencies.Count <= 1)
+                {
+                    GameObject row = item.videoLatencyDropdown.transform.parent.gameObject;
+                    Undo.RecordObject(row, "Update Connected Components");
+                    row.SetActive(false);
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(row);
+                }
+
+                if (videoModes.Count <= 1)
+                {
+                    GameObject row = item.videoModeDropdown.transform.parent.gameObject;
+                    Undo.RecordObject(row, "Update Connected Components");
+                    row.SetActive(false);
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(row);
+                }
+            }
+        }
+
+        List<int> GetResolutions(VideoMux mux)
+        {
+            List<int> resolutions = new List<int>();
+            if (!mux)
+                return resolutions;
+
+            foreach (VideoSource source in mux.sources)
+            {
+                if (!source)
+                    continue;
+                if (resolutions.IndexOf(source.maxResolution) < 0)
+                    resolutions.Add(source.maxResolution);
+            }
+
+            return resolutions;
+        }
+
+        List<int> GetLatencies(VideoMux mux)
+        {
+            List<int> latencies = new List<int>();
+            if (!mux)
+                return latencies;
+
+            foreach (VideoSource source in mux.sources)
+            {
+                if (!source)
+                    continue;
+                int value = source.lowLatency ? VideoSource.LOW_LATENCY_ENABLE : VideoSource.LOW_LATENCY_DISABLE;
+                if (latencies.IndexOf(value) < 0)
+                    latencies.Add(value);
+            }
+
+            return latencies;
+        }
+
+        List<int> GetTypes(VideoMux mux)
+        {
+            List<int> types = new List<int>();
+            if (!mux)
+                return types;
+
+            foreach (VideoSource source in mux.sources)
+            {
+                if (!source)
+                    continue;
+
+                int value = -1;
+                if (source.gameObject.GetComponent<VRCAVProVideoPlayer>())
+                    value = VideoSource.VIDEO_SOURCE_AVPRO;
+                else if (source.gameObject.GetComponent<VRCUnityVideoPlayer>())
+                    value = VideoSource.VIDEO_SOURCE_UNITY;
+
+                if (value >= 0 && types.IndexOf(value) < 0)
+                    types.Add(value);
+            }
+
+            return types;
+        }
+
+        List<Dropdown.OptionData> GetResolutionOptions(List<int> resolutions, Dropdown iconTemplate)
+        {
+            List<int> sorted = new List<int>(resolutions);
+            sorted.Sort();
+            sorted.Reverse();
+
+            Sprite iconLow = null;
+            Sprite iconMid = null;
+            Sprite iconHigh = null;
+            if (iconTemplate)
+            {
+                foreach (var entry in iconTemplate.options)
+                {
+                    if (entry.text == "low")
+                        iconLow = entry.image;
+                    else if (entry.text == "mid")
+                        iconMid = entry.image;
+                    else if (entry.text == "high")
+                        iconHigh = entry.image;
+                }
+            }
+
+            List<Dropdown.OptionData> options = new List<Dropdown.OptionData>();
+            foreach (int res in sorted)
+            {
+                Sprite icon = iconHigh;
+                if (res < 1080)
+                    icon = iconMid;
+                if (res < 480)
+                    icon = iconLow;
+
+                options.Add(new Dropdown.OptionData($"{res}p", icon));
+            }
+
+            return options;
         }
     }
 }

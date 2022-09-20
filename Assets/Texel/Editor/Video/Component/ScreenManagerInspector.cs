@@ -23,6 +23,7 @@ namespace Texel
         static bool[] _showPropOverrideFoldout = new bool[0];
 
         SerializedProperty dataProxyProperty;
+        SerializedProperty videoMuxProperty;
 
         SerializedProperty debugLogProperty;
 
@@ -83,6 +84,7 @@ namespace Texel
         private void OnEnable()
         {
             dataProxyProperty = serializedObject.FindProperty(nameof(ScreenManager.dataProxy));
+            videoMuxProperty = serializedObject.FindProperty(nameof(ScreenManager.videoMux));
 
             debugLogProperty = serializedObject.FindProperty(nameof(ScreenManager.debugLog));
 
@@ -147,6 +149,7 @@ namespace Texel
                 return;
 
             EditorGUILayout.PropertyField(dataProxyProperty);
+            EditorGUILayout.PropertyField(videoMuxProperty);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Optional Components", EditorStyles.boldLabel);

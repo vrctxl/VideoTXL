@@ -66,7 +66,7 @@ namespace Texel
         public override void OnVideoError(VideoError videoError)
         {
             _DebugLog($"Video error: {videoError}");
-            syncPlayer._OnVideoError(videoError);
+            syncPlayer._OnVideoError();
         }
 
         public override void OnVideoLoop()
