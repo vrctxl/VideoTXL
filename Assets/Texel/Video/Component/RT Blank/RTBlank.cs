@@ -6,11 +6,10 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [AddComponentMenu("Texel/Video/RT Blank")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class RTBlank : UdonSharpBehaviour
     {
-        public VideoPlayerProxy dataProxy;
+        public TXLVideoPlayer videoPlayer;
         public Camera blankingCamera;
 
         const int PLAYER_STATE_STOPPED = 0;
@@ -20,15 +19,15 @@ namespace Texel
 
         void Start()
         {
-            if (Utilities.IsValid(dataProxy))
-                dataProxy._RegisterEventHandler(this, "_VideoStateUpdate");
+            if (videoPlayer)
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
 
             blankingCamera.enabled = false;
         }
 
-        public void _VideoStateUpdate()
+        public void _OnVideoStateUpdate()
         {
-            switch (dataProxy.playerState)
+            switch (videoPlayer.playerState)
             {
                 case PLAYER_STATE_PLAYING:
                     break;

@@ -1,9 +1,7 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿
 using UnityEngine;
 
 using UnityEditor;
-using UnityEditorInternal;
 using UdonSharpEditor;
 
 namespace Texel
@@ -17,13 +15,10 @@ namespace Texel
         static bool[] _showScreenFoldout = new bool[0];
         static bool _showMaterialListFoldout;
         static bool[] _showMaterialFoldout = new bool[0];
-        static bool[] _showMaterialOverrideFoldout = new bool[0];
         static bool _showPropListFoldout;
         static bool[] _showPropFoldout = new bool[0];
-        static bool[] _showPropOverrideFoldout = new bool[0];
 
-        SerializedProperty dataProxyProperty;
-        SerializedProperty videoMuxProperty;
+        SerializedProperty videoPlayerProperty;
 
         SerializedProperty debugLogProperty;
 
@@ -45,12 +40,6 @@ namespace Texel
         SerializedProperty screenMeshListProperty;
         SerializedProperty screenMatIndexListProperty;
 
-        SerializedProperty videoCaptureRendererProperty;
-        SerializedProperty streamCaptureRendererProperty;
-        SerializedProperty captureMaterialProperty;
-        SerializedProperty captureTexturePropertyProperty;
-        SerializedProperty captureRTProperty;
-
         SerializedProperty useTextureOverrideProperty;
         SerializedProperty logoTextureProperty;
         SerializedProperty loadingTextureProperty;
@@ -71,11 +60,6 @@ namespace Texel
         SerializedProperty propMaterialOverrideListProperty;
         SerializedProperty propMaterialIndexListProperty;
         SerializedProperty propPropertyListProperty;
-        SerializedProperty propMainTexListProperty;
-        SerializedProperty propAVProListProperty;
-        //SerializedProperty propInvertListProperty;
-        //SerializedProperty propGammaListProperty;
-        //SerializedProperty propFitListProperty;
 
         SerializedProperty useRenderOutProperty;
         SerializedProperty outputCRTProperty;
@@ -83,8 +67,7 @@ namespace Texel
 
         private void OnEnable()
         {
-            dataProxyProperty = serializedObject.FindProperty(nameof(ScreenManager.dataProxy));
-            videoMuxProperty = serializedObject.FindProperty(nameof(ScreenManager.videoMux));
+            videoPlayerProperty = serializedObject.FindProperty(nameof(ScreenManager.videoPlayer));
 
             debugLogProperty = serializedObject.FindProperty(nameof(ScreenManager.debugLog));
 
@@ -106,12 +89,6 @@ namespace Texel
             screenMeshListProperty = serializedObject.FindProperty(nameof(ScreenManager.screenMesh));
             screenMatIndexListProperty = serializedObject.FindProperty(nameof(ScreenManager.screenMaterialIndex));
 
-            videoCaptureRendererProperty = serializedObject.FindProperty(nameof(ScreenManager.videoCaptureRenderer));
-            streamCaptureRendererProperty = serializedObject.FindProperty(nameof(ScreenManager.streamCaptureRenderer));
-            captureMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.captureMaterial));
-            captureTexturePropertyProperty = serializedObject.FindProperty(nameof(ScreenManager.captureTextureProperty));
-            captureRTProperty = serializedObject.FindProperty(nameof(ScreenManager.captureRT));
-
             useTextureOverrideProperty = serializedObject.FindProperty(nameof(ScreenManager.useTextureOverrides));
             logoTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.logoTexture));
             loadingTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.loadingTexture));
@@ -132,11 +109,6 @@ namespace Texel
             propMaterialOverrideListProperty = serializedObject.FindProperty(nameof(ScreenManager.propMaterialOverrideList));
             propMaterialIndexListProperty = serializedObject.FindProperty(nameof(ScreenManager.propMaterialIndexList));
             propPropertyListProperty = serializedObject.FindProperty(nameof(ScreenManager.propPropertyList));
-            propMainTexListProperty = serializedObject.FindProperty(nameof(ScreenManager.propMainTexList));
-            propAVProListProperty = serializedObject.FindProperty(nameof(ScreenManager.propAVProList));
-            //propInvertListProperty = serializedObject.FindProperty(nameof(ScreenManager.propInvertList));
-            //propGammaListProperty = serializedObject.FindProperty(nameof(ScreenManager.propGammaList));
-            //propFitListProperty = serializedObject.FindProperty(nameof(ScreenManager.propFitList));
 
             useRenderOutProperty = serializedObject.FindProperty(nameof(ScreenManager.useRenderOut));
             outputCRTProperty = serializedObject.FindProperty(nameof(ScreenManager.outputCRT));
@@ -148,8 +120,7 @@ namespace Texel
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
 
-            EditorGUILayout.PropertyField(dataProxyProperty);
-            EditorGUILayout.PropertyField(videoMuxProperty);
+            EditorGUILayout.PropertyField(videoPlayerProperty);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Optional Components", EditorStyles.boldLabel);
@@ -196,13 +167,6 @@ namespace Texel
             EditorGUILayout.PropertyField(useTextureOverrideProperty);
             if (useTextureOverrideProperty.boolValue)
             {
-                EditorGUILayout.PropertyField(videoCaptureRendererProperty);
-                EditorGUILayout.PropertyField(streamCaptureRendererProperty);
-                //EditorGUILayout.PropertyField(captureMaterialProperty);
-                //if (captureMaterialProperty.objectReferenceValue != null || videoCaptureRendererProperty.objectReferenceValue != null)
-                //    EditorGUILayout.PropertyField(captureTexturePropertyProperty);
-                //EditorGUILayout.PropertyField(captureRTProperty);
-
                 EditorGUILayout.Space();
                 EditorGUILayout.PropertyField(logoTextureProperty);
                 EditorGUILayout.PropertyField(loadingTextureProperty);
@@ -281,9 +245,6 @@ namespace Texel
                 _showMaterialFoldout = EditorTools.MultiArraySize(serializedObject, _showMaterialFoldout,
                     materialUpdateListProperty, materialPropertyListProperty, materialTexPropertyListProperty, materialAVPropertyListProperty);
 
-                if (_showMaterialFoldout.Length != _showMaterialOverrideFoldout.Length)
-                    _showMaterialOverrideFoldout = new bool[_showMaterialFoldout.Length];
-
                 for (int i = 0; i < materialUpdateListProperty.arraySize; i++)
                 {
                     string name = EditorTools.GetMaterialName(materialUpdateListProperty, i);
@@ -300,15 +261,6 @@ namespace Texel
                         EditorGUILayout.PropertyField(matUpdate, new GUIContent("Material"));
                         EditorGUILayout.PropertyField(matProperties, new GUIContent("Property Map"));
 
-                        _showMaterialOverrideFoldout[i] = EditorGUILayout.Foldout(_showMaterialOverrideFoldout[i], "Property Map Overrides");
-                        if (_showMaterialOverrideFoldout[i])
-                        {
-                            EditorGUI.indentLevel++;
-                            EditorGUILayout.PropertyField(matTexProperty, new GUIContent("Texture Property"));
-                            EditorGUILayout.PropertyField(matAVProperty, new GUIContent("AVPro Check Property"));
-                            EditorGUI.indentLevel--;
-                        }
-
                         EditorGUI.indentLevel--;
                     }
                 }
@@ -324,11 +276,7 @@ namespace Texel
             {
                 EditorGUI.indentLevel++;
                 _showPropFoldout = EditorTools.MultiArraySize(serializedObject, _showPropFoldout,
-                    propRenderListProperty, propMaterialOverrideListProperty, propMaterialIndexListProperty, propPropertyListProperty,
-                    propMainTexListProperty, propAVProListProperty);
-
-                if (_showPropFoldout.Length != _showPropOverrideFoldout.Length)
-                    _showPropOverrideFoldout = new bool[_showPropFoldout.Length];
+                    propRenderListProperty, propMaterialOverrideListProperty, propMaterialIndexListProperty, propPropertyListProperty);
 
                 for (int i = 0; i < propRenderListProperty.arraySize; i++)
                 {
@@ -342,11 +290,6 @@ namespace Texel
                         SerializedProperty useMatOverride = propMaterialOverrideListProperty.GetArrayElementAtIndex(i);
                         SerializedProperty matIndex = propMaterialIndexListProperty.GetArrayElementAtIndex(i);
                         SerializedProperty matProperties = propPropertyListProperty.GetArrayElementAtIndex(i);
-                        SerializedProperty mainTexProperty = propMainTexListProperty.GetArrayElementAtIndex(i);
-                        SerializedProperty AVProProperty = propAVProListProperty.GetArrayElementAtIndex(i);
-                        //SerializedProperty invertProperty = propInvertListProperty.GetArrayElementAtIndex(i);
-                        //SerializedProperty gammaProperty = propGammaListProperty.GetArrayElementAtIndex(i);
-                        //SerializedProperty fitProperty = propFitListProperty.GetArrayElementAtIndex(i);
 
                         EditorGUILayout.PropertyField(mesh, new GUIContent("Renderer"));
 
@@ -356,18 +299,6 @@ namespace Texel
                             EditorGUILayout.PropertyField(matIndex, new GUIContent("Material Index"));
 
                         EditorGUILayout.PropertyField(matProperties, new GUIContent("Property Map"));
-
-                        _showPropOverrideFoldout[i] = EditorGUILayout.Foldout(_showPropOverrideFoldout[i], "Property Map Overrides");
-                        if (_showPropOverrideFoldout[i])
-                        {
-                            EditorGUI.indentLevel++;
-                            EditorGUILayout.PropertyField(mainTexProperty, new GUIContent("Texture Property", "The name of the shader property holding the main screen texture"));
-                            EditorGUILayout.PropertyField(AVProProperty, new GUIContent("AVPro Check Property", "Optional.  The name of the shader property that indicates the source is AVPro-based.  AVPro sources should have gamma applied for all platforms and flip the image on the Y axis on PC/VR."));
-                            //EditorGUILayout.PropertyField(invertProperty, new GUIContent("Invert Y Property", "Optional.  The name of the shader property that indicates the screen should be flipped on the Y axis"));
-                            //EditorGUILayout.PropertyField(gammaProperty, new GUIContent("Apply Gamma Property", "Optional.  The name of the shader property that indicates gamma correction should be applied to the image"));
-                            //EditorGUILayout.PropertyField(fitProperty, new GUIContent("Screen Fit Property", "Optional.  The name of the shader property that sets the screen fit enum value (0=fit, 1=fit-h, 2=fit-w, 3=stretch)"));
-                            EditorGUI.indentLevel--;
-                        }
 
                         EditorGUI.indentLevel--;
                     }

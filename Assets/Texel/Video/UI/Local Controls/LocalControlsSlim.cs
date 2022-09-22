@@ -6,11 +6,10 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [AddComponentMenu("VideoTXL/UI/Local Controls Slim")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class LocalControlsSlim : UdonSharpBehaviour
     {
-        public UdonBehaviour videoPlayer;
+        public TXLVideoPlayer videoPlayer;
         public AudioManager audioManager;
         public ControlColorProfile colorProfile;
 
@@ -63,7 +62,7 @@ namespace Texel
         public void _Resync()
         {
             if (Utilities.IsValid(videoPlayer))
-                videoPlayer.SendCustomEvent("_Resync");
+                videoPlayer._Resync();
         }
 
         public void _ToggleVolumeMute()

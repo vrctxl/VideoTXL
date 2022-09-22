@@ -1,13 +1,10 @@
 ﻿
 using UdonSharp;
 using UnityEngine;
-using VRC.SDKBase;
-using VRC.Udon;
 
 namespace Texel
 {
-    [AddComponentMenu("VideoTXL/UI/Control Color Profile")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class ControlColorProfile : UdonSharpBehaviour
     {
         [Header("State Colors")]

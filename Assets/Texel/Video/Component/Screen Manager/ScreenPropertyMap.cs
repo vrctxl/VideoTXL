@@ -6,7 +6,7 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class ScreenPropertyMap : UdonSharpBehaviour
     {
         [Tooltip("The name of the shader property holding the main screen texture")]

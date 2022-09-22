@@ -8,7 +8,7 @@ using VRC.Udon;
 namespace Texel
 {
     [AddComponentMenu("Texel/Access Control")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     [DefaultExecutionOrder(-1)]
     public class AccessControl : UdonSharpBehaviour
     {
@@ -33,9 +33,9 @@ namespace Texel
         [Tooltip("A list of admin users who have access when allow whitelist is enabled")]
         public string[] userWhitelist;
 
-        const int RESULT_ALLOW = 1;
-        const int RESULT_PASS = 0;
-        const int RESULT_DENY = -1;
+        public const int RESULT_ALLOW = 1;
+        public const int RESULT_PASS = 0;
+        public const int RESULT_DENY = -1;
 
         bool _localPlayerWhitelisted = false;
         bool _localPlayerMaster = false;

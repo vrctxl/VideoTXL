@@ -7,7 +7,7 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class PlaylistUI : UdonSharpBehaviour
     {
         public Playlist playlist;
@@ -19,7 +19,6 @@ namespace Texel
         public GameObject layoutGroup;
         public Text titleText;
 
-        VideoPlayerProxy dataProxy;
         PlaylistData data;
         PlaylistUIEntry[] entries;
         RectTransform[] entriesRT;
@@ -46,15 +45,12 @@ namespace Texel
             {
                 this.playlist = playlist;
 
-                playlist._RegisterListChange(this, "_OnListChange");
-                playlist._RegisterTrackChange(this, "_OnTrackChange");
-                playlist._RegisterOptionChange(this, "_OnOptionChange");
+                playlist._Register(Playlist.EVENT_LIST_CHANGE, this, "_OnListChange");
+                playlist._Register(Playlist.EVENT_TRACK_CHANGE, this, "_OnTrackChange");
+                playlist._Register(Playlist.EVENT_OPTION_CHANGE, this, "_OnOptionChange");
 
                 if (Utilities.IsValid(playlist.syncPlayer))
-                {
-                    dataProxy = playlist.syncPlayer.dataProxy;
-                    dataProxy._RegisterEventHandler(this, "_VideoTrackingUpdate");
-                }
+                    playlist.syncPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_TRACKING_UPDATE, this, "_OnVideoTrackingUpdate");
             }
 
             SendCustomEventDelayedFrames("_InitUI", 1);
@@ -135,7 +131,7 @@ namespace Texel
                 _UnselectEntries();
         }
 
-        public void _VideoTrackingUpdate()
+        public void _OnVideoTrackingUpdate()
         {
             int track = playlist.CurrentIndex;
             if (track < 0 || track >= entries.Length)
@@ -145,8 +141,9 @@ namespace Texel
             if (!Utilities.IsValid(entry))
                 return;
 
-            if (dataProxy.trackDuration > 0)
-                entry.TrackProgress = dataProxy.trackPosition / dataProxy.trackDuration;
+            TXLVideoPlayer player = playlist.syncPlayer;
+            if (player.trackDuration > 0)
+                entry.TrackProgress = player.trackPosition / player.trackDuration;
             else
                 entry.TrackProgress = 0;
         }

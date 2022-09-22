@@ -3,11 +3,10 @@ using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
 using VRC.SDKBase;
-using VRC.Udon;
 
 namespace Texel
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class PlaylistUIEntry : UdonSharpBehaviour
     {
         public PlaylistUI playlistUI;

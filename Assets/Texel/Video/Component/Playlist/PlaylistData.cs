@@ -6,7 +6,7 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class PlaylistData : UdonSharpBehaviour
     {
         public string playlistName;

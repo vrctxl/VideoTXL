@@ -6,8 +6,7 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [AddComponentMenu("Texel/VideoTXL/URL Remapper")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class UrlRemapper : UdonSharpBehaviour
     {
         public VRCUrl[] referenceUrls;
@@ -17,8 +16,8 @@ namespace Texel
 
         int gameMode = GAME_MODE_PC;
 
-        const int GAME_MODE_PC = 0;
-        const int GAME_MDOE_QUEST = 1;
+        public const int GAME_MODE_PC = 0;
+        public const int GAME_MODE_QUEST = 1;
 
         public void _SetGameMode(int mode)
         {
@@ -39,7 +38,7 @@ namespace Texel
 
                 if (gameMode == GAME_MODE_PC && (applyPC.Length <= i || !applyPC[i]))
                     continue;
-                if (gameMode == GAME_MDOE_QUEST && (applyQuest.Length <= i || !applyQuest[i]))
+                if (gameMode == GAME_MODE_QUEST && (applyQuest.Length <= i || !applyQuest[i]))
                     continue;
 
                 if (remappedUrls.Length <= i || !Utilities.IsValid(remappedUrls[i]))

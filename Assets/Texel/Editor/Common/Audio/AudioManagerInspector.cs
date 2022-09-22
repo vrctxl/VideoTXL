@@ -14,7 +14,7 @@ namespace Texel
         static bool _showChannelListFoldout = true;
         static bool[] _showChannelFoldout = new bool[0];
 
-        SerializedProperty dataProxyProperty;
+        SerializedProperty videoPlayerProperty;
         SerializedProperty muteSourcePropertyProperty;
 
         SerializedProperty enableSyncProperty;
@@ -43,7 +43,7 @@ namespace Texel
 
         private void OnEnable()
         {
-            dataProxyProperty = serializedObject.FindProperty(nameof(AudioManager.dataProxy));
+            videoPlayerProperty = serializedObject.FindProperty(nameof(AudioManager.videoPlayer));
             muteSourcePropertyProperty = serializedObject.FindProperty(nameof(AudioManager.muteSourceForInactiveVideo));
 
             enableSyncProperty = serializedObject.FindProperty(nameof(AudioManager.useSync));
@@ -76,7 +76,7 @@ namespace Texel
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
 
-            EditorGUILayout.PropertyField(dataProxyProperty, new GUIContent("Data Proxy", "The data proxy of the video player acting as input to the audio manager"));
+            EditorGUILayout.PropertyField(videoPlayerProperty, new GUIContent("Video Player", "Optional reference to video player acting as input to the audio manager"));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Sync", EditorStyles.boldLabel);

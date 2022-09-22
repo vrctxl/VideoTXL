@@ -8,14 +8,11 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [AddComponentMenu("Texel/VideoTXL/Screen Manager")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
-    public class ScreenManager : UdonSharpBehaviour
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+    public class ScreenManager : EventBase
     {
         [Tooltip("A proxy for dispatching video-related events to this object")]
-        public VideoPlayerProxy dataProxy;
-        [Tooltip("Optional video mux component to swap out capture meshes in muxed setups")]
-        public VideoMux videoMux;
+        public TXLVideoPlayer videoPlayer;
 
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
@@ -54,14 +51,6 @@ namespace Texel
 
         [Tooltip("Whether to update textures properties on a set of shared material objects")]
         public bool useTextureOverrides = false;
-        public MeshRenderer videoCaptureRenderer;
-        public MeshRenderer streamCaptureRenderer;
-        [Tooltip("The material capturing the video or stream source")]
-        public Material captureMaterial;
-        [Tooltip("The name of the property holding the main texture in the capture material")]
-        public string captureTextureProperty;
-        [Tooltip("The render texture receiving data from a unity video component")]
-        public RenderTexture captureRT;
 
         [Tooltip("The screen texture to apply when no video is playing or loading.")]
         public Texture logoTexture;
@@ -118,12 +107,7 @@ namespace Texel
         public const int SCREEN_MODE_AUDIO = 4;
         public const int SCREEN_MODE_SYNC = 5;
 
-        const int PLAYER_STATE_STOPPED = 0;
-        const int PLAYER_STATE_LOADING = 1;
-        const int PLAYER_STATE_PLAYING = 2;
-        const int PLAYER_STATE_ERROR = 3;
-
-        bool _initComplete = false;
+        MeshRenderer captureRenderer;
         int _screenSource = VideoSource.VIDEO_SOURCE_UNITY;
         int _screenMode = SCREEN_MODE_UNINITIALIZED;
         int _screenFit = 0;
@@ -138,32 +122,29 @@ namespace Texel
         int currentFit;
         bool currentValid = false;
 
-        const int eventCount = 2;
-        const int UPDATE_EVENT = 0;
-        const int CAPTURE_VALID_EVENT = 1;
-
-        int[] handlerCount;
-        Component[][] handlers;
-        string[][] handlerEvents;
-
-        bool texOverrideValidAVPro = false;
-        bool texOverrideValidUnity = false;
+        const int EVENT_UPDATE = 0;
+        const int EVENT_CAPTURE_VALID = 1;
+        const int EVENT_COUNT = 2;
 
         void Start()
         {
-            if (Utilities.IsValid(dataProxy))
-                dataProxy._RegisterEventHandler(this, "_VideoStateUpdate");
-
-            if (videoMux)
-                videoMux._Register(VideoMux.SOURCE_CHANGE_EVENT, this, "_OnSourceChanged");
-
-            _Init();
+            _EnsureInit();
         }
 
-        public void _Init()
+        protected override void _Init()
         {
-            if (_initComplete)
-                return;
+            _InitHandlers(EVENT_COUNT);
+
+            if (videoPlayer)
+            {
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
+
+                if (videoPlayer.videoMux)
+                {
+                    videoPlayer.videoMux._Register(VideoMux.SOURCE_CHANGE_EVENT, this, "_OnSourceChanged");
+                    captureRenderer = videoPlayer.videoMux.CaptureRenderer;
+                }
+            }
 
             block = new MaterialPropertyBlock();
 
@@ -181,8 +162,6 @@ namespace Texel
             _InitMaterialOverrides();
             _InitTextureOverrides();
 #endif
-
-            _initComplete = true;
         }
 
         private void OnDisable()
@@ -266,17 +245,8 @@ namespace Texel
                 return;
             }
 
-            texOverrideValidAVPro = Utilities.IsValid(streamCaptureRenderer) && Utilities.IsValid(captureTextureProperty) && captureTextureProperty != "";
-
-            texOverrideValidUnity = Utilities.IsValid(videoCaptureRenderer) && Utilities.IsValid(captureTextureProperty) && captureTextureProperty != "";
-            texOverrideValidUnity |= Utilities.IsValid(captureRT);
-
-            if (!texOverrideValidAVPro && !texOverrideValidUnity)
-            {
-                useTextureOverrides = false;
-                return;
-            }
-
+            materialTexPropertyList = new string[materialUpdateList.Length];
+            materialAVPropertyList = new string[materialUpdateList.Length];
             materialInvertList = new string[materialUpdateList.Length];
             materialGammaList = new string[materialUpdateList.Length];
             materialFitList = new string[materialUpdateList.Length];
@@ -290,14 +260,16 @@ namespace Texel
                 ScreenPropertyMap map = materialPropertyList[i];
                 if (Utilities.IsValid(map))
                 {
-                    materialTexPropertyList[i] = _ConditionalCopy(materialTexPropertyList[i], map.screenTexture);
-                    materialAVPropertyList[i] = _ConditionalCopy(materialAVPropertyList[i], map.avProCheck);
+                    materialTexPropertyList[i] = map.screenTexture;
+                    materialAVPropertyList[i] = map.avProCheck;
                     materialInvertList[i] = map.invertY;
                     materialGammaList[i] = map.applyGamma;
                     materialFitList[i] = map.screenFit;
                 }
             }
 
+            propMainTexList = new string[propMeshList.Length];
+            propAVProList = new string[propMeshList.Length];
             propInvertList = new string[propMeshList.Length];
             propGammaList = new string[propMeshList.Length];
             propFitList = new string[propMeshList.Length];
@@ -311,8 +283,8 @@ namespace Texel
                 ScreenPropertyMap map = propPropertyList[i];
                 if (Utilities.IsValid(map))
                 {
-                    propMainTexList[i] = _ConditionalCopy(propMainTexList[i], map.screenTexture);
-                    propAVProList[i] = _ConditionalCopy(propAVProList[i], map.avProCheck);
+                    propMainTexList[i] = map.screenTexture;
+                    propAVProList[i] = map.avProCheck;
                     propInvertList[i] = map.invertY;
                     propGammaList[i] = map.applyGamma;
                     propFitList[i] = map.screenFit;
@@ -332,13 +304,6 @@ namespace Texel
 
                 _originalMaterialTexture[i] = materialUpdateList[i].GetTexture(name);
             }
-        }
-
-        string _ConditionalCopy(string source, string replace)
-        {
-            if (Utilities.IsValid(source) && source.Length > 0)
-                return source;
-            return replace;
         }
 
         void _RestoreMaterialOverrides()
@@ -377,25 +342,21 @@ namespace Texel
             }
         }
 
-        public void _VideoStateUpdate()
+        public void _OnVideoStateUpdate()
         {
-            // TODO: Should be able to deprecate existing video/stream capture properties on this object and just rely on optional mux
-            if (!videoMux)
-                _UpdateScreenSource(dataProxy.playerSource);
-
-            switch (dataProxy.playerState)
+            switch (videoPlayer.playerState)
             {
-                case PLAYER_STATE_STOPPED:
+                case TXLVideoPlayer.VIDEO_STATE_STOPPED:
                     _UpdateScreenMaterial(SCREEN_MODE_LOGO);
                     break;
-                case PLAYER_STATE_LOADING:
+                case TXLVideoPlayer.VIDEO_STATE_LOADING:
                     _UpdateScreenMaterial(SCREEN_MODE_LOADING);
                     break;
-                case PLAYER_STATE_PLAYING:
-                    _UpdateScreenMaterial(dataProxy.syncing ? SCREEN_MODE_SYNC : SCREEN_MODE_NORMAL);
+                case TXLVideoPlayer.VIDEO_STATE_PLAYING:
+                    _UpdateScreenMaterial(videoPlayer.syncing ? SCREEN_MODE_SYNC : SCREEN_MODE_NORMAL);
                     break;
-                case PLAYER_STATE_ERROR:
-                    _lastErrorCode = dataProxy.lastErrorCode;
+                case TXLVideoPlayer.VIDEO_STATE_ERROR:
+                    _lastErrorCode = videoPlayer.lastErrorCode;
                     _UpdateScreenMaterial(SCREEN_MODE_ERROR);
                     break;
             }
@@ -413,11 +374,8 @@ namespace Texel
 
         public void _OnSourceChanged()
         {
-            int source = videoMux.ActiveSourceType;
-            if (source == VideoSource.VIDEO_SOURCE_UNITY)
-                videoCaptureRenderer = videoMux.CaptureRenderer;
-            else if (source == VideoSource.VIDEO_SOURCE_AVPRO)
-                streamCaptureRenderer = videoMux.CaptureRenderer;
+            captureRenderer = videoPlayer.videoMux.CaptureRenderer;
+            int source = videoPlayer.videoMux.ActiveSourceType;
 
             _UpdateScreenSource(source);
         }
@@ -506,14 +464,13 @@ namespace Texel
 
         public void _UpdateScreenMaterial(int screenMode)
         {
-            if (!_initComplete)
-                _Init();
+            _EnsureInit();
 
-            if (_screenMode == screenMode && _screenFit == dataProxy.screenFit)
+            if (_screenMode == screenMode && _screenFit == videoPlayer.screenFit)
                 return;
 
             _screenMode = screenMode;
-            _screenFit = dataProxy.screenFit;
+            _screenFit = videoPlayer.screenFit;
             _checkFrameCount = 0;
 
             _ResetCaptureData();
@@ -549,7 +506,7 @@ namespace Texel
                 else
                 {
                     DebugLog("Capture valid");
-                    _UpdateHandlers(CAPTURE_VALID_EVENT);
+                    _UpdateHandlers(EVENT_CAPTURE_VALID);
                     SendCustomEventDelayedFrames("_CheckUpdateScreenMaterial", 2);
                 }
             }
@@ -558,8 +515,7 @@ namespace Texel
 
         public void _CheckUpdateScreenMaterial()
         {
-            if (!_initComplete)
-                _Init();
+            _EnsureInit();
             if (_screenMode != SCREEN_MODE_NORMAL)
                 return;
 
@@ -612,7 +568,7 @@ namespace Texel
                 if (!prevValid)
                 {
                     DebugLog("Capture valid");
-                    _UpdateHandlers(CAPTURE_VALID_EVENT);
+                    _UpdateHandlers(EVENT_CAPTURE_VALID);
                 }
                 SendCustomEventDelayedSeconds("_CheckUpdateScreenMaterial", 2);
             }
@@ -624,7 +580,7 @@ namespace Texel
             currentAVPro = false;
             currentInvert = false;
             currentGamma = false;
-            currentFit = dataProxy.screenFit;
+            currentFit = videoPlayer.screenFit;
         }
 
         void _UpdateCaptureData(Texture replacementTex, Texture captureTex)
@@ -638,24 +594,23 @@ namespace Texel
             }
             else
             {
-
-                if (_screenSource == VideoSource.VIDEO_SOURCE_AVPRO && texOverrideValidAVPro)
+                if (_screenSource == VideoSource.VIDEO_SOURCE_AVPRO && captureRenderer)
                 {
                     currentTexture = captureTex;
                     currentAVPro = true;
                 }
-                else if (_screenSource == VideoSource.VIDEO_SOURCE_UNITY && texOverrideValidUnity)
+                else if (_screenSource == VideoSource.VIDEO_SOURCE_UNITY && captureRenderer)
                     currentTexture = captureTex;
 
                 if (currentAVPro)
                 {
-                    currentInvert = !dataProxy.quest;
+                    currentInvert = !videoPlayer.IsQuest;
                     currentGamma = true;
                 }
             }
 
             if (lastTex != currentTexture)
-                _UpdateHandlers(UPDATE_EVENT);
+                _UpdateHandlers(EVENT_UPDATE);
         }
 
         void _UpdateObjects(Material replacementMat)
@@ -695,7 +650,7 @@ namespace Texel
                 _SetMatIntProperty(mat, materialAVPropertyList[i], currentAVPro ? 1 : 0);
                 _SetMatIntProperty(mat, materialGammaList[i], currentGamma ? 1 : 0);
                 _SetMatIntProperty(mat, materialInvertList[i], currentInvert ? 1 : 0);
-                _SetMatIntProperty(mat, materialFitList[i], dataProxy.screenFit);
+                _SetMatIntProperty(mat, materialFitList[i], videoPlayer.screenFit);
             }
 
             if (useRenderOut && Utilities.IsValid(outputCRT))
@@ -710,7 +665,7 @@ namespace Texel
                         _SetMatIntProperty(mat, outputMaterialProperties.avProCheck, currentAVPro ? 1 : 0);
                         _SetMatIntProperty(mat, outputMaterialProperties.applyGamma, currentGamma ? 1 : 0);
                         _SetMatIntProperty(mat, outputMaterialProperties.invertY, currentInvert ? 1 : 0);
-                        _SetMatIntProperty(mat, outputMaterialProperties.screenFit, dataProxy.screenFit);
+                        _SetMatIntProperty(mat, outputMaterialProperties.screenFit, videoPlayer.screenFit);
                     } else
                         mat.SetTexture("_MainTex", currentTexture);
 
@@ -745,7 +700,7 @@ namespace Texel
                 _SetIntProperty(propAVProList[i], currentAVPro ? 1 : 0);
                 _SetIntProperty(propGammaList[i], currentGamma ? 1 : 0);
                 _SetIntProperty(propInvertList[i], currentInvert ? 1 : 0);
-                _SetIntProperty(propFitList[i], dataProxy.screenFit);
+                _SetIntProperty(propFitList[i], videoPlayer.screenFit);
 
                 if (useMatIndex)
                     renderer.SetPropertyBlock(block, propMaterialIndexList[i]);
@@ -781,9 +736,9 @@ namespace Texel
 
         public Texture CaptureValid()
         {
-            if (_screenSource == VideoSource.VIDEO_SOURCE_AVPRO && Utilities.IsValid(streamCaptureRenderer))
+            if (_screenSource == VideoSource.VIDEO_SOURCE_AVPRO && Utilities.IsValid(captureRenderer))
             {
-                Material mat = streamCaptureRenderer.sharedMaterial;
+                Material mat = captureRenderer.sharedMaterial;
                 if (mat == null)
                     return null;
 
@@ -798,9 +753,9 @@ namespace Texel
                 return tex;
             }
 
-            if (_screenSource == VideoSource.VIDEO_SOURCE_UNITY && Utilities.IsValid(videoCaptureRenderer))
+            if (_screenSource == VideoSource.VIDEO_SOURCE_UNITY && Utilities.IsValid(captureRenderer))
             {
-                videoCaptureRenderer.GetPropertyBlock(block);
+                captureRenderer.GetPropertyBlock(block);
                 Texture tex = block.GetTexture("_MainTex");
                 if (tex == null)
                     return null;
@@ -812,67 +767,7 @@ namespace Texel
                 return tex;
             }
 
-            if (_screenSource == VideoSource.VIDEO_SOURCE_UNITY && Utilities.IsValid(captureRT))
-                return captureRT;
-
             return null;
-        }
-
-        public void _RegisterUpdate(Component handler, string eventName)
-        {
-            _Register(UPDATE_EVENT, handler, eventName);
-            useTextureOverrides = true;
-        }
-
-        public void _RegisterCaptureValid(Component handler, string eventName)
-        {
-            _Register(CAPTURE_VALID_EVENT, handler, eventName);
-        }
-
-        void _Register(int eventIndex, Component handler, string eventName)
-        {
-            if (!Utilities.IsValid(handler) || !Utilities.IsValid(eventName))
-                return;
-
-            _Init();
-
-            for (int i = 0; i < handlerCount[eventIndex]; i++)
-            {
-                if (handlers[eventIndex][i] == handler)
-                    return;
-            }
-
-            handlers[eventIndex] = (Component[])_AddElement(handlers[eventIndex], handler, typeof(Component));
-            handlerEvents[eventIndex] = (string[])_AddElement(handlerEvents[eventIndex], eventName, typeof(string));
-
-            handlerCount[eventIndex] += 1;
-        }
-
-        void _UpdateHandlers(int eventIndex)
-        {
-            for (int i = 0; i < handlerCount[eventIndex]; i++)
-            {
-                UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
-                script.SendCustomEvent(handlerEvents[eventIndex][i]);
-            }
-        }
-
-        Array _AddElement(Array arr, object elem, Type type)
-        {
-            Array newArr;
-            int count = 0;
-
-            if (Utilities.IsValid(arr))
-            {
-                count = arr.Length;
-                newArr = Array.CreateInstance(type, count + 1);
-                Array.Copy(arr, newArr, count);
-            }
-            else
-                newArr = Array.CreateInstance(type, 1);
-
-            newArr.SetValue(elem, count);
-            return newArr;
         }
 
         void DebugLog(string message)

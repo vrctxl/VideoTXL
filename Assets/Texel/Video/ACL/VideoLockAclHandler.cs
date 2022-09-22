@@ -7,7 +7,7 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class VideoLockAclHandler : UdonSharpBehaviour
     {
         public AccessControl acl;
@@ -18,25 +18,21 @@ namespace Texel
         [NonSerialized]
         public int checkResult;
 
-        const int RESULT_ALLOW = 1;
-        const int RESULT_PASS = 0;
-        const int RESULT_DENY = -1;
-
         void Start()
         {
             acl._RegsiterAccessHandler(this, "_CheckAccess", "playerArg", "checkResult");
-            videoPlayer.dataProxy._RegisterEventHandler(this, "_VideoLockUpdate");
+            videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_LOCK_UPDATE, this, "_OnVideoLockUpdate");
         }
 
         public void _CheckAccess()
         {
             if (!videoPlayer.locked)
-                checkResult = RESULT_ALLOW;
+                checkResult = AccessControl.RESULT_ALLOW;
             else
-                checkResult = RESULT_PASS;
+                checkResult = AccessControl.RESULT_PASS;
         }
 
-        public void _VideoLockUpdate()
+        public void _OnVideoLockUpdate()
         {
             acl._Validate();
         }

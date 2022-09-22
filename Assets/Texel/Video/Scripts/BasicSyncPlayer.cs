@@ -10,7 +10,6 @@ using VRC.Udon.Common;
 
 namespace Texel
 {
-    [AddComponentMenu("VideoTXL/Sync Player")]
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class BasicSyncPlayer : UdonSharpBehaviour
     {

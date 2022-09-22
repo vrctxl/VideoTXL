@@ -1,24 +1,15 @@
 ﻿
-using System;
 using UdonSharp;
 using UnityEngine;
-using VRC.SDK3.Components;
 using VRC.SDK3.Components.Video;
-using VRC.SDK3.Video.Components;
-using VRC.SDK3.Video.Components.AVPro;
-using VRC.SDK3.Video.Components.Base;
 using VRC.SDKBase;
 using VRC.Udon;
 
 namespace Texel
 {
-    [AddComponentMenu("VideoTXL/Specialty/Zoned Stream Player")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
-    public class LocalPlayer : UdonSharpBehaviour
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+    public class LocalPlayer : TXLVideoPlayer
     {
-        [Tooltip("A proxy for dispatching video-related events to other listening behaviors, such as a screen manager")]
-        public VideoPlayerProxy dataProxy;
-
         [Header("Optional Components")]
         [Tooltip("Set of input URLs to remap to alternate URLs on a per-platform basis")]
         public UrlRemapper urlRemapper;
@@ -48,45 +39,10 @@ namespace Texel
         [Tooltip("Whether to keep playing the same URL if an error occurs")]
         public bool retryOnError = true;
 
-        [Header("Internal Objects")]
-        [Tooltip("AVPro video player component")]
-        public VRCAVProVideoPlayer avProVideo;
-        [Tooltip("Unity video player component")]
-        public VRCUnityVideoPlayer unityVideo;
-
         float retryTimeout = 6;
-
-        // Realtime state
-
-        short videoSourceOverride = VIDEO_SOURCE_NONE;
-
-        [NonSerialized]
-        public int localPlayerState = PLAYER_STATE_STOPPED;
-        [NonSerialized]
-        public VideoError localLastErrorCode;
-        [NonSerialized]
-        public bool seekableSource;
-        [NonSerialized]
-        public float trackDuration;
-        [NonSerialized]
-        public float trackPosition;
-
-        // Constants
-
-        const int PLAYER_STATE_STOPPED = 0;
-        const int PLAYER_STATE_LOADING = 1;
-        const int PLAYER_STATE_PLAYING = 2;
-        const int PLAYER_STATE_ERROR = 3;
-
-        const short VIDEO_SOURCE_NONE = 0;
-        const short VIDEO_SOURCE_AVPRO = 1;
-        const short VIDEO_SOURCE_UNITY = 2;
 
         const int SOURCE_TYPE_URL = 0;
         const int SOURCE_TYPE_STATIC = 1;
-
-        const int GAME_MODE_PC = 0;
-        const int GAME_MODE_QUEST = 1;
 
         bool _hasSustainZone = false;
         bool _inSustainZone = false;
@@ -94,26 +50,19 @@ namespace Texel
 
         bool _isStreamPlayer;
         int _urlSourceType;
-        BaseVRCVideoPlayer _currentPlayer;
 
         float _lastVideoPosition = 0;
 
         VRCUrl playAtUrl;
         float playAt = 0;
         float playStartTime = 0;
-        bool paused = false;
-        //float trackDuration = 0;
 
-        void Start()
+        protected override void _Init()
         {
-            dataProxy._Init();
-
-#if UNITY_ANDROID
-            dataProxy.quest = true;
-#endif
+            base._Init();
 
             if (Utilities.IsValid(urlRemapper))
-                urlRemapper._SetGameMode(dataProxy.quest ? GAME_MODE_QUEST : GAME_MODE_PC);
+                urlRemapper._SetGameMode(IsQuest ? UrlRemapper.GAME_MODE_QUEST : UrlRemapper.GAME_MODE_PC);
 
             _hasSustainZone = Utilities.IsValid(playbackZone);
             if (_hasSustainZone)
@@ -138,31 +87,24 @@ namespace Texel
             else
                 _urlSourceType = SOURCE_TYPE_URL;
 
-            if (Utilities.IsValid(avProVideo))
-            {
-                avProVideo.Loop = false;
-                avProVideo.Stop();
-                avProVideo.EnableAutomaticResync = false;
-            }
-            if (Utilities.IsValid(unityVideo))
-            {
-                unityVideo.Loop = loop;
-                unityVideo.Stop();
-                unityVideo.EnableAutomaticResync = false;
-            }
+            videoMux._Register(VideoMux.VIDEO_READY_EVENT, this, "_OnVideoReady");
+            videoMux._Register(VideoMux.VIDEO_START_EVENT, this, "_OnVideoStart");
+            videoMux._Register(VideoMux.VIDEO_END_EVENT, this, "_OnVideoEnd");
+            videoMux._Register(VideoMux.VIDEO_ERROR_EVENT, this, "_OnVideoError");
+            videoMux._Register(VideoMux.SOURCE_CHANGE_EVENT, this, "_OnSourceChange");
 
-            if (Utilities.IsValid(avProVideo))
-                _UpdateVideoSource(VIDEO_SOURCE_AVPRO, videoSourceOverride);
-            else
-                _UpdateVideoSource(VIDEO_SOURCE_UNITY, videoSourceOverride);
+            if (videoMux.SupportsAVPro)
+                videoMux._UpdateVideoSource(VideoSource.VIDEO_SOURCE_AVPRO);
+            else if (videoMux.SupportsUnity)
+                videoMux._UpdateVideoSource(VideoSource.VIDEO_SOURCE_UNITY);
 
-            _UpdatePlayerState(PLAYER_STATE_STOPPED);
+            _UpdatePlayerState(VIDEO_STATE_STOPPED);
         }
 
         public void _TriggerPlay()
         {
             Debug.Log("[VideoTXL:ZonedStreamPlayer] Trigger play");
-            if (playAt > 0 || localPlayerState == PLAYER_STATE_PLAYING || localPlayerState == PLAYER_STATE_LOADING)
+            if (playAt > 0 || playerState == VIDEO_STATE_PLAYING || playerState == VIDEO_STATE_LOADING)
                 return;
 
             _PlayVideoAfter(_GetSelectedUrl(), 0);
@@ -192,16 +134,24 @@ namespace Texel
             _TriggerStop();
         }
 
-        public void _Resync()
+        public override void _Resync()
         {
+            if (playerState == VIDEO_STATE_STOPPED)
+                return;
+
             _StopVideo();
             _PlayVideo(_GetSelectedUrl());
         }
 
         public void _UrlChanged()
         {
-            if (localPlayerState == PLAYER_STATE_PLAYING || localPlayerState == PLAYER_STATE_LOADING)
-                _Resync();
+            _Resync();
+        }
+
+        public override void _ChangeUrl(VRCUrl url)
+        {
+            streamUrl = url;
+            _UrlChanged();
         }
 
         void _PlayVideoAfter(VRCUrl url, float delay)
@@ -222,6 +172,22 @@ namespace Texel
             }
         }
 
+        public override void _SetSourceLatency(int latency)
+        {
+            videoMux._UpdateLowLatency(latency);
+        }
+
+        public override void _SetSourceResolution(int res)
+        {
+            videoMux._UpdatePreferredResolution(res);
+        }
+
+        public override void _SetScreenFit(int fit)
+        {
+            screenFit = (short)fit;
+            _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
+        }
+
         void _PlayVideo(VRCUrl url)
         {
             playAt = 0;
@@ -234,9 +200,8 @@ namespace Texel
             if (urlStr == null || urlStr == "")
                 return;
 
-            _UpdatePlayerState(PLAYER_STATE_LOADING);
+            _UpdatePlayerState(VIDEO_STATE_LOADING);
 
-            //#if !UNITY_EDITOR
             VRCUrl resolvedUrl = url;
             if (Utilities.IsValid(urlRemapper))
             {
@@ -245,8 +210,7 @@ namespace Texel
                     DebugLog("Remapped URL");
             }
 
-            _currentPlayer.LoadURL(resolvedUrl);
-            //#endif
+            videoMux._VideoLoadURL(resolvedUrl);
         }
 
         void _StopVideo()
@@ -254,13 +218,13 @@ namespace Texel
             DebugLog("Stop video");
 
             if (seekableSource && resumePosition)
-                _lastVideoPosition = _currentPlayer.GetTime();
+                _lastVideoPosition = videoMux.VideoTime;
             else
                 _lastVideoPosition = 0;
 
-            _UpdatePlayerState(PLAYER_STATE_STOPPED);
+            _UpdatePlayerState(VIDEO_STATE_STOPPED);
 
-            _currentPlayer.Stop();
+            videoMux._VideoStop();
 
             playAt = 0;
             seekableSource = false;
@@ -271,23 +235,23 @@ namespace Texel
         {
             DebugLog("Pause video");
 
-            if (localPlayerState != PLAYER_STATE_PLAYING)
+            if (playerState != VIDEO_STATE_PLAYING)
                 return;
 
             if (paused)
             {
-                _currentPlayer.Play();
+                videoMux._VideoPlay();
                 if (seekableSource)
                 {
                     DebugLog($"Set time to {_lastVideoPosition}");
-                    _currentPlayer.SetTime(_lastVideoPosition);
+                    videoMux._VideoSetTime(_lastVideoPosition);
                 }
             }
             else
             {
                 if (seekableSource)
-                    _lastVideoPosition = _currentPlayer.GetTime();
-                _currentPlayer.Pause();
+                    _lastVideoPosition = videoMux.VideoTime;
+                videoMux._VideoPause();
             }
 
             paused = !paused;
@@ -295,8 +259,8 @@ namespace Texel
 
         public void _OnVideoReady()
         {
-            float position = _currentPlayer.GetTime();
-            float duration = _currentPlayer.GetDuration();
+            float position = videoMux.VideoTime;
+            float duration = videoMux.VideoDuration;
             DebugLog("Video ready, duration: " + duration + ", position: " + position);
 
             if (_hasSustainZone && !_inSustainZone)
@@ -308,10 +272,9 @@ namespace Texel
 
             // If a seekable video is loaded it should have a positive duration.  Otherwise we assume it's a non-seekable stream
             seekableSource = !float.IsInfinity(duration) && !float.IsNaN(duration) && duration > 1;
-            dataProxy.seekableSource = seekableSource;
             _UpdateTracking(position, position, duration);
 
-            _currentPlayer.Play();
+            videoMux._VideoPlay();
         }
 
         public void _OnVideoStart()
@@ -325,13 +288,13 @@ namespace Texel
                 return;
             }
 
-            _UpdatePlayerState(PLAYER_STATE_PLAYING);
+            _UpdatePlayerState(VIDEO_STATE_PLAYING);
             //_UpdatePlayerPaused(false);
             playStartTime = Time.time;
 
             if (seekableSource)
             {
-                _currentPlayer.SetTime(_lastVideoPosition);
+                videoMux._VideoSetTime(_lastVideoPosition);
                 _lastVideoPosition = 0;
             }
         }
@@ -347,27 +310,21 @@ namespace Texel
             DebugLog("Video end");
 
             seekableSource = false;
-            dataProxy.seekableSource = false;
             paused = false;
 
-            _UpdatePlayerState(PLAYER_STATE_STOPPED);
+            _UpdatePlayerState(VIDEO_STATE_STOPPED);
 
             _lastVideoPosition = 0;
 
             // TODO: Loop for AVPro
         }
 
-        public void _OnVideoLoop()
-        {
-
-        }
-
         public void _OnVideoError(VideoError videoError)
         {
-            if (localPlayerState == PLAYER_STATE_STOPPED)
+            if (playerState == VIDEO_STATE_STOPPED)
                 return;
 
-            _currentPlayer.Stop();
+            videoMux._VideoStop();
 
             string code = "";
             switch (videoError)
@@ -389,110 +346,40 @@ namespace Texel
                 _PlayVideoAfter(url, retryTimeout);
         }
 
-        public void _StopAVPro()
+        public void _OnSourceChange()
         {
-            avProVideo.Stop();
-        }
+            playerSource = (short)videoMux.ActiveSourceType;
+            _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
 
-        public void _StopUnity()
-        {
-            unityVideo.Stop();
-        }
-
-        void _UpdateVideoSource(int source, int sourceOverride)
-        {
-            bool change = false;
-            int oldSourceOverride = dataProxy.playerSourceOverride;
-
-            if (oldSourceOverride != sourceOverride)
-            {
-                _StopVideo();
-
-                dataProxy.playerSourceOverride = (short)sourceOverride;
-
-                switch (dataProxy.playerSourceOverride)
-                {
-                    case VIDEO_SOURCE_AVPRO:
-                        DebugLog("Setting video source override to AVPro");
-                        _currentPlayer = avProVideo;
-                        break;
-                    case VIDEO_SOURCE_UNITY:
-                        DebugLog("Setting video source override to Unity");
-                        _currentPlayer = unityVideo;
-                        break;
-                    case VIDEO_SOURCE_NONE:
-                    default:
-                        DebugLog("Setting video source override to Auto");
-                        _currentPlayer = unityVideo;
-                        break;
-                }
-
-                change = true;
-            }
-
-            if (dataProxy.playerSource != source)
-            {
-                if (oldSourceOverride == sourceOverride)
-                {
-                    switch (dataProxy.playerSource)
-                    {
-                        case VIDEO_SOURCE_AVPRO: SendCustomEventDelayedFrames("_StopAVPro", 1); break;
-                        case VIDEO_SOURCE_UNITY: SendCustomEventDelayedFrames("_StopUnity", 1); break;
-                    }
-                }
-
-                dataProxy.playerSource = (short)source;
-
-                switch (dataProxy.playerSource)
-                {
-                    case VIDEO_SOURCE_AVPRO:
-                        DebugLog("Switching video source to AVPro");
-                        _currentPlayer = avProVideo;
-                        break;
-                    case VIDEO_SOURCE_UNITY:
-                        DebugLog("Switching video source to Unity");
-                        _currentPlayer = unityVideo;
-                        break;
-                }
-
-                change = true;
-            }
-
-            if (change)
-                dataProxy._EmitStateUpdate();
+            _Resync();
         }
 
         void _UpdatePlayerState(int state)
         {
-            localPlayerState = state;
-            dataProxy.playerState = state;
+            playerState = state;
 
-            if (state != PLAYER_STATE_PLAYING)
+            if (state != VIDEO_STATE_PLAYING)
             {
-                dataProxy.paused = false;
-                dataProxy.syncing = false;
+                paused = false;
+                syncing = false;
             }
 
-            dataProxy._EmitStateUpdate();
+            _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
         }
 
         void _UpdatePlayerStateError(VideoError error)
         {
-            localPlayerState = PLAYER_STATE_ERROR;
-            localLastErrorCode = error;
-            dataProxy.playerState = PLAYER_STATE_ERROR;
-            dataProxy.lastErrorCode = error;
-            dataProxy._EmitStateUpdate();
+            playerState = VIDEO_STATE_ERROR;
+            lastErrorCode = error;
+            _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
         }
 
         void _UpdateTracking(float position, float target, float duration)
         {
             trackPosition = position;
             trackDuration = duration;
-            dataProxy.trackPosition = position;
-            dataProxy.trackTarget = target;
-            dataProxy.trackDuration = duration;
-            dataProxy._EmitTrackingUpdate();
+            trackTarget = target;
+            _UpdateHandlers(EVENT_VIDEO_TRACKING_UPDATE);
         }
 
         // Update is called once per frame
@@ -511,7 +398,7 @@ namespace Texel
             if (debugLogging)
                 Debug.Log("[VideoTXL:LocalPlayer] " + message);
             if (Utilities.IsValid(debugLog))
-                debugLog._Write("SyncPlayer", message);
+                debugLog._Write("LocalPlayer", message);
         }
     }
 }

@@ -12,8 +12,7 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [AddComponentMenu("VideoTXL/Component/Static URL Source")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class StaticUrlSource : UdonSharpBehaviour
     {
         [Tooltip("If enabled, specify separate URLs for 720 and 1080 video sources")]

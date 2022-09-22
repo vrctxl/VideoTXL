@@ -1,32 +1,24 @@
 ﻿
 using UdonSharp;
-using UnityEngine;
 using VRC.SDKBase;
-using VRC.Udon;
 
 namespace Texel
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class UrlControl : UdonSharpBehaviour
     {
-        public SyncPlayer syncPlayer;
-        public LocalPlayer localPlayer;
+        public TXLVideoPlayer videoPlayer;
 
         public VRCUrl url;
 
         public void _Trigger()
         {
-            if (Utilities.IsValid(syncPlayer))
-            {
-                syncPlayer._ChangeUrl(url);
-            }
+            if (Utilities.IsValid(videoPlayer))
+                videoPlayer._ChangeUrl(url);
 
-            if (Utilities.IsValid(localPlayer))
-            {
-                localPlayer.streamUrl = url;
-                localPlayer._TriggerStop();
+            LocalPlayer localPlayer = (LocalPlayer)videoPlayer;
+            if (localPlayer && videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_STOPPED)
                 localPlayer._TriggerPlay();
-            }
         }
 
         public override void Interact()

@@ -2,12 +2,10 @@
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.Udon;
 
 namespace Texel
 {
-    [AddComponentMenu("Texel/Audio/Audio Fade Zone")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class AudioFadeZone : UdonSharpBehaviour
     {
         [Header("Optional Components")]

@@ -7,14 +7,8 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-    public class UtilityTxl : UdonSharpBehaviour
+    public abstract class UtilityTxl : UdonSharpBehaviour
     {
-        private void Start()
-        {
-            
-        }
-
         public static void ArraySort(int[] arr)
         {
             for (int i = 0; i < arr.Length - 1; i++)

@@ -7,8 +7,7 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [AddComponentMenu("VideoTXL/UI/Local Controls")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class LocalControls : UdonSharpBehaviour
     {
         public UdonBehaviour videoPlayer;

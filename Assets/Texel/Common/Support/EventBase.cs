@@ -7,7 +7,7 @@ using VRC.Udon;
 
 namespace Texel
 {
-    public class EventBase : UdonSharpBehaviour
+    public abstract class EventBase : UdonSharpBehaviour
     {
         protected int[] handlerCount;
         protected Component[][] handlers;

@@ -7,8 +7,7 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [AddComponentMenu("Texel/General/Zone Membership")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class ZoneMembership : UdonSharpBehaviour
     {
         [Tooltip("Optional zone that the membership list will hook into for player leave events")]

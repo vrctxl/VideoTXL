@@ -6,13 +6,12 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [AddComponentMenu("Texel/Audio/Audio Manager")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class AudioManager : UdonSharpBehaviour
     {
         public SyncAudioManager syncAudioManager;
         public bool useSync = false;
-        public VideoPlayerProxy dataProxy;
+        public TXLVideoPlayer videoPlayer;
         public bool muteSourceForInactiveVideo = true;
         public UdonBehaviour audioLinkSystem;
         public string audioLinkChannel;
@@ -59,8 +58,8 @@ namespace Texel
 
         void Start()
         {
-            if (Utilities.IsValid(dataProxy))
-                dataProxy._RegisterEventHandler(this, "_VideoStateUpdate");
+            if (Utilities.IsValid(videoPlayer))
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
             if (!Utilities.IsValid(audioControls))
                 audioControls = new Component[0];
 
@@ -120,12 +119,12 @@ namespace Texel
                 _UpdateAudioControl(controls);
         }
 
-        public void _VideoStateUpdate()
+        public void _OnVideoStateUpdate()
         {
             if (!muteSourceForInactiveVideo)
                 return;
 
-            switch (dataProxy.playerState)
+            switch (videoPlayer.playerState)
             {
                 case PLAYER_STATE_PLAYING:
                     videoMute = false;

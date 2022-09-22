@@ -14,7 +14,6 @@ namespace Texel
     [CustomEditor(typeof(SyncPlayer))]
     internal class SyncPlayerInspector : Editor
     {
-        SerializedProperty dataProxyProperty;
         SerializedProperty videoMuxProperty;
 
         SerializedProperty playlistPoperty;
@@ -43,7 +42,6 @@ namespace Texel
 
         private void OnEnable()
         {
-            dataProxyProperty = serializedObject.FindProperty(nameof(SyncPlayer.dataProxy));
             videoMuxProperty = serializedObject.FindProperty(nameof(SyncPlayer.videoMux));
 
             playlistPoperty = serializedObject.FindProperty(nameof(SyncPlayer.playlist));
@@ -76,7 +74,6 @@ namespace Texel
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
 
-            EditorGUILayout.PropertyField(dataProxyProperty, new GUIContent("Data Proxy", "A proxy for dispatching video-related events to other listening behaviors, such as a screen manager."));
             EditorGUILayout.PropertyField(videoMuxProperty, new GUIContent("Video Source Manager", "Internal object for multiplexing multiple video sources."));
 
             EditorGUILayout.Space();

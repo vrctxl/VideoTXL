@@ -51,9 +51,9 @@ namespace Texel
 
         int optionsTabOpen = OPTIONS_TAB_NONE;
 
-        SyncPlayer videoPlayer;
+        TXLVideoPlayer videoPlayer;
         AudioManager audioManager;
-        VideoPlayerProxy dataProxy;
+        //VideoPlayerProxy dataProxy;
 
         Color normalColor = new Color(1f, 1f, 1f, .8f);
         Color disabledColor = new Color(.5f, .5f, .5f, .4f);
@@ -92,11 +92,7 @@ namespace Texel
                 audioManager = mainControls.audioManager;
 
                 if (videoPlayer)
-                {
-                    dataProxy = videoPlayer.dataProxy;
-                    if (dataProxy)
-                        dataProxy._RegisterEventHandler(this, "_VideoInfoUpdate");
-                }
+                    videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, "_OnVideoInfoUpdate");
             }
         }
 
@@ -157,8 +153,8 @@ namespace Texel
             bool canControl = videoPlayer._CanTakeControl();
             bool enableControl = !videoPlayer.locked || canControl;
 
-            string currentUrl = dataProxy.currentUrl.Get();
-            string lastUrl = dataProxy.lastUrl.Get();
+            string currentUrl = videoPlayer.currentUrl.Get();
+            string lastUrl = videoPlayer.lastUrl.Get();
 
             infoPlayCurrentVideoImage.color = (enableControl && currentUrl != "") ? normalColor : disabledColor;
             infoPlayLastVideoImage.color = (enableControl && lastUrl != "") ? normalColor : disabledColor;
@@ -173,7 +169,7 @@ namespace Texel
             else
                 infoLastVideoText.text = lastUrl;
 
-            if (!dataProxy.quest)
+            if (!videoPlayer.IsQuest)
             {
                 infoCurrentVideoInput.text = currentUrl;
                 infoLastVideoInput.text = lastUrl;
@@ -243,7 +239,7 @@ namespace Texel
 
         public void _HandleLatencyChangedUI()
         {
-            if (!videoPlayer || !videoPlayer.videoMux)
+            if (!videoPlayer)
                 return;
 
             int mode = videoLatencyDropdown.value;
@@ -252,7 +248,7 @@ namespace Texel
             else if (mode == 1)
                 mode = VideoSource.LOW_LATENCY_DISABLE;
 
-            videoPlayer.videoMux._UpdateLowLatency(mode);
+            videoPlayer._SetSourceLatency(mode);
         }
 
         public void _HandleScreenFitChangedUI()
@@ -272,10 +268,10 @@ namespace Texel
 
         public void _HandleResolutionChangedUI()
         {
-            if (!videoPlayer || !videoPlayer.videoMux)
+            if (!videoPlayer)
                 return;
 
-            videoPlayer.videoMux._UpdatePreferredResolution(videoResolutionDropdown.value);
+            videoPlayer._SetSourceResolution(videoResolutionDropdown.value);
         }
 
         // Audio Panel

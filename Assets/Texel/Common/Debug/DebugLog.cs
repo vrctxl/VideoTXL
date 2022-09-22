@@ -7,8 +7,7 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [AddComponentMenu("Texel/Debug Log")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class DebugLog : UdonSharpBehaviour
     {
         public string title;

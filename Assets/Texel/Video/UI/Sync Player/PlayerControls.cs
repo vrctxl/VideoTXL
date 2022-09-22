@@ -58,17 +58,10 @@ namespace Texel
         public OptionsUI optionsPanel; 
         public GameObject playlistPanel;
 
-        VideoPlayerProxy dataProxy;
-
         Color normalColor = new Color(1f, 1f, 1f, .8f);
         Color disabledColor = new Color(.5f, .5f, .5f, .4f);
         Color activeColor = new Color(0f, 1f, .5f, .7f);
         Color attentionColor = new Color(.9f, 0f, 0f, .5f);
-
-        const int PLAYER_STATE_STOPPED = 0;
-        const int PLAYER_STATE_LOADING = 1;
-        const int PLAYER_STATE_PLAYING = 2;
-        const int PLAYER_STATE_ERROR = 3;
 
         string statusOverride = null;
         [NonSerialized]
@@ -111,17 +104,13 @@ namespace Texel
 
             if (Utilities.IsValid(videoPlayer))
             {
-                if (Utilities.IsValid(videoPlayer.dataProxy))
-                {
-                    dataProxy = videoPlayer.dataProxy;
-                    dataProxy._RegisterEventHandler(this, "_VideoStateUpdate");
-                    dataProxy._RegisterEventHandler(this, "_VideoLockUpdate");
-                    dataProxy._RegisterEventHandler(this, "_VideoTrackingUpdate");
-                    dataProxy._RegisterEventHandler(this, "_VideoInfoUpdate");
-                    dataProxy._RegisterEventHandler(this, "_VideoPlaylistUpdate");
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_VideoStateUpdate");
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_LOCK_UPDATE, this, "_VideoLockUpdate");
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_TRACKING_UPDATE, this, "_VideoTrackingUpdate");
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, "_OnVideoInfoUpdate");
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_PLAYLIST_UPDATE, this, "_VideoPlaylistUpdate");
 
-                    unlockedIcon.color = normalColor;
-                }
+                unlockedIcon.color = normalColor;
             }
 
             if (Utilities.IsValid(playlistPanel))
@@ -174,25 +163,6 @@ namespace Texel
 
             inVolumeControllerUpdate = false;
         }
-
-        /*public void _VolumeControllerUpdate()
-        {
-            if (!Utilities.IsValid(audioManager))
-                return;
-
-            inVolumeControllerUpdate = true;
-
-            if (Utilities.IsValid(volumeSlider))
-            {
-                float volume = audioManager.volume;
-                if (volume != volumeSlider.value)
-                    volumeSlider.value = volume;
-            }
-
-            UpdateToggleVisual();
-
-            inVolumeControllerUpdate = false;
-        }*/
 
         public void _VideoStateUpdate()
         {
@@ -381,16 +351,16 @@ namespace Texel
             if (_draggingProgressSlider || _updatingProgressSlider)
                 return;
 
-            if (float.IsInfinity(dataProxy.trackDuration) || dataProxy.trackDuration <= 0)
+            if (float.IsInfinity(videoPlayer.trackDuration) || videoPlayer.trackDuration <= 0)
                 return;
 
-            float targetTime = dataProxy.trackDuration * progressSlider.value;
+            float targetTime = videoPlayer.trackDuration * progressSlider.value;
             videoPlayer._SetTargetTime(targetTime);
         }
 
         public void _HandleSourceModeClick()
         {
-            short mode = (short)(dataProxy.playerSourceOverride + 1);
+            short mode = (short)(videoPlayer.playerSourceOverride + 1);
             if (mode > 2)
                 mode = 0;
 
@@ -521,12 +491,12 @@ namespace Texel
 
         public void _UpdateTrackingDragging()
         {
-            int playerState = dataProxy.playerState;
-            if (!_draggingProgressSlider || playerState != PLAYER_STATE_PLAYING || loadActive || !dataProxy.seekableSource)
+            int playerState = videoPlayer.playerState;
+            if (!_draggingProgressSlider || playerState != TXLVideoPlayer.VIDEO_STATE_PLAYING || loadActive || !videoPlayer.seekableSource)
                 return;
 
-            string durationStr = System.TimeSpan.FromSeconds(dataProxy.trackDuration).ToString(@"hh\:mm\:ss");
-            string positionStr = System.TimeSpan.FromSeconds(dataProxy.trackDuration * progressSlider.value).ToString(@"hh\:mm\:ss");
+            string durationStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration).ToString(@"hh\:mm\:ss");
+            string positionStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration * progressSlider.value).ToString(@"hh\:mm\:ss");
             SetStatusText(positionStr + " / " + durationStr);
             progressSliderControl.SetActive(true);
             syncSliderControl.SetActive(false);
@@ -536,8 +506,8 @@ namespace Texel
 
         public void _UpdateTracking()
         {
-            int playerState = dataProxy.playerState;
-            if (playerState != PLAYER_STATE_PLAYING || loadActive)
+            int playerState = videoPlayer.playerState;
+            if (playerState != TXLVideoPlayer.VIDEO_STATE_PLAYING || loadActive)
                 return;
 
             if (!videoPlayer.seekableSource)
@@ -548,23 +518,23 @@ namespace Texel
             }
             else if (!_draggingProgressSlider)
             {
-                if (dataProxy.trackTarget - dataProxy.trackPosition > 1)
+                if (videoPlayer.trackTarget - videoPlayer.trackPosition > 1)
                 {
                     SetStatusText("Synchronizing...");
                     progressSliderControl.SetActive(false);
                     syncSliderControl.SetActive(true);
-                    syncSlider.value = dataProxy.trackPosition / dataProxy.trackTarget;
+                    syncSlider.value = videoPlayer.trackPosition / videoPlayer.trackTarget;
                 }
                 else
                 {
-                    string durationStr = System.TimeSpan.FromSeconds(dataProxy.trackDuration).ToString(@"hh\:mm\:ss");
-                    string positionStr = System.TimeSpan.FromSeconds(dataProxy.trackPosition).ToString(@"hh\:mm\:ss");
+                    string durationStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration).ToString(@"hh\:mm\:ss");
+                    string positionStr = System.TimeSpan.FromSeconds(videoPlayer.trackPosition).ToString(@"hh\:mm\:ss");
                     SetStatusText(positionStr + " / " + durationStr);
                     progressSliderControl.SetActive(true);
                     syncSliderControl.SetActive(false);
 
                     _updatingProgressSlider = true;
-                    progressSlider.value = (dataProxy.trackDuration <= 0) ? 0f : Mathf.Clamp01(dataProxy.trackPosition / dataProxy.trackDuration);
+                    progressSlider.value = (videoPlayer.trackDuration <= 0) ? 0f : Mathf.Clamp01(videoPlayer.trackPosition / videoPlayer.trackDuration);
                     _updatingProgressSlider = false;
                 }
             }
@@ -572,7 +542,7 @@ namespace Texel
 
         public void _UpdateInfo()
         {
-            string queuedUrl = dataProxy.queuedUrl.Get();
+            string queuedUrl = videoPlayer.queuedUrl.Get();
             queuedText.text = (queuedUrl != "") ? "QUEUED" : "";
         }
 
@@ -593,7 +563,7 @@ namespace Texel
                 bool playlistActive = playlist.PlaylistEnabled && playlist.CurrentIndex >= 0 && playlist.trackCount > 0;
                 if (!playlistActive)
                     playlistText.text = "";
-                else if (playlist.catalogueMode)
+                else if (playlist.trackCatalogMode)
                     playlistText.text = $"TRACK: {playlist.CurrentIndex + 1}";
                 else
                     playlistText.text = $"TRACK: {playlist.CurrentIndex + 1} / {playlist.trackCount}";
@@ -615,7 +585,7 @@ namespace Texel
             bool canControl = videoPlayer._CanTakeControl();
             bool enableControl = !videoPlayer.locked || canControl;
 
-            int playerState = dataProxy.playerState;
+            int playerState = videoPlayer.playerState;
 
             if (enableControl && loadActive)
             {
@@ -628,7 +598,7 @@ namespace Texel
             else
                 loadIcon.color = enableControl ? normalColor : disabledColor;
 
-            if (playerState == PLAYER_STATE_PLAYING && !loadActive)
+            if (playerState == TXLVideoPlayer.VIDEO_STATE_PLAYING && !loadActive)
             {
                 urlInput.readOnly = true;
                 urlInputControl.SetActive(false);
@@ -637,7 +607,7 @@ namespace Texel
                 //loadIcon.color = enableControl ? normalColor : disabledColor;
                 resyncIcon.color = normalColor;
 
-                if (dataProxy.paused)
+                if (videoPlayer.paused)
                     pauseIcon.color = activeColor;
                 else
                     pauseIcon.color = (enableControl && videoPlayer.seekableSource) ? normalColor : disabledColor;
@@ -655,7 +625,7 @@ namespace Texel
                 syncSliderControl.SetActive(false);
                 urlInputControl.SetActive(true);
 
-                if (playerState == PLAYER_STATE_LOADING)
+                if (playerState == TXLVideoPlayer.VIDEO_STATE_LOADING)
                 {
                     stopIcon.color = enableControl ? normalColor : disabledColor;
                     //loadIcon.color = enableControl ? normalColor : disabledColor;
@@ -664,12 +634,12 @@ namespace Texel
 
                     if (!loadActive)
                     {
-                        SetPlaceholderText(dataProxy.heldReady ? "Ready" : "Loading...");
+                        SetPlaceholderText(videoPlayer.heldReady ? "Ready" : "Loading...");
                         urlInput.readOnly = true;
                         SetStatusText("");
                     }
                 }
-                else if (playerState == PLAYER_STATE_ERROR)
+                else if (playerState == TXLVideoPlayer.VIDEO_STATE_ERROR)
                 {
                     stopIcon.color = disabledColor;
                     //loadIcon.color = normalColor;
@@ -679,7 +649,7 @@ namespace Texel
 
                     if (!loadActive)
                     {
-                        switch (videoPlayer.localLastErrorCode)
+                        switch (videoPlayer.lastErrorCode)
                         {
                             case VideoError.RateLimited:
                                 SetPlaceholderText("Rate limited, wait and try again");
@@ -699,16 +669,16 @@ namespace Texel
                                 break;
                         }
 
-                        if (dataProxy.streamFallback)
+                        if (videoPlayer.streamFallback)
                             SetPlaceholderText("Retrying as stream source");
 
                         urlInput.readOnly = !canControl;
                         SetStatusText("");
                     }
                 }
-                else if (playerState == PLAYER_STATE_PLAYING || playerState == PLAYER_STATE_STOPPED)
+                else if (playerState == TXLVideoPlayer.VIDEO_STATE_PLAYING || playerState == TXLVideoPlayer.VIDEO_STATE_STOPPED)
                 {
-                    if (playerState == PLAYER_STATE_STOPPED)
+                    if (playerState == TXLVideoPlayer.VIDEO_STATE_STOPPED)
                     {
                         //loadActive = false;
                         pendingFromLoadOverride = false;
@@ -723,7 +693,7 @@ namespace Texel
                         //loadIcon.color = activeColor;
                         resyncIcon.color = normalColor;
 
-                        if (dataProxy.paused)
+                        if (videoPlayer.paused)
                             pauseIcon.color = activeColor;
                         else
                             pauseIcon.color = (enableControl && videoPlayer.seekableSource) ? normalColor : disabledColor;
@@ -757,7 +727,7 @@ namespace Texel
             }
             else
             {
-                switch (dataProxy.playerSourceOverride)
+                switch (videoPlayer.playerSourceOverride)
                 {
                     case VideoSource.VIDEO_SOURCE_UNITY:
                         modeText.text = "VIDEO";
@@ -767,11 +737,11 @@ namespace Texel
                         break;
                     case VideoSource.VIDEO_SOURCE_NONE:
                     default:
-                        if (playerState == PLAYER_STATE_STOPPED)
+                        if (playerState == TXLVideoPlayer.VIDEO_STATE_STOPPED)
                             modeText.text = "AUTO";
                         else
                         {
-                            switch (dataProxy.playerSource)
+                            switch (videoPlayer.playerSource)
                             {
                                 case VideoSource.VIDEO_SOURCE_UNITY:
                                     modeText.text = "AUTO VIDEO";

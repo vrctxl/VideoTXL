@@ -8,7 +8,7 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class DebugState : UdonSharpBehaviour
     {
         public string title = "Component State";
