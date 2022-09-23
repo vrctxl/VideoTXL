@@ -7,7 +7,7 @@ using VRC.Udon;
 namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-    public class AudioManager : UdonSharpBehaviour
+    public class AudioManager : EventBase
     {
         public SyncAudioManager syncAudioManager;
         public bool useSync = false;
@@ -37,6 +37,15 @@ namespace Texel
         [Range(0, 1)]
         public float[] channelVolume2D;
 
+        public const int EVENT_MASTER_VOLUME_UPDATE = 0;
+        public const int EVENT_MASTER_MUTE_UPDATE = 1;
+        public const int EVENT_MASTER_2D_UPDATE = 2;
+        //public const int EVENT_CHANNEL_VOLUME_UPDATE = 3;
+        public const int EVENT_CHANNEL_MUTE_UPDATE = 4;
+        //public const int EVENT_CHANNEL_2D_UPDATE = 5;
+        public const int EVENT_CHANNEL_SOURCE_UPDATE = 6;
+        const int EVENT_COUNT = 7;
+
         float[] channelFade;
         float[] spatialBlend;
         AnimationCurve[] spatialCurve;
@@ -51,13 +60,15 @@ namespace Texel
         bool ovrMaster2D = false;
         bool videoMute = false;
 
-        const int PLAYER_STATE_STOPPED = 0;
-        const int PLAYER_STATE_LOADING = 1;
-        const int PLAYER_STATE_PLAYING = 2;
-        const int PLAYER_STATE_ERROR = 3;
-
         void Start()
         {
+            _EnsureInit();
+        }
+
+        protected override void _Init()
+        {
+            _InitHandlers(EVENT_COUNT);
+
             if (Utilities.IsValid(videoPlayer))
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
             if (!Utilities.IsValid(audioControls))
@@ -74,7 +85,8 @@ namespace Texel
                 if (i < channelFadeZone.Length && Utilities.IsValid(channelFadeZone[i]))
                     channelFadeZone[i]._RegisterAudioManager(this, i);
 
-                if (Utilities.IsValid(channelAudio[i])) {
+                if (Utilities.IsValid(channelAudio[i]))
+                {
                     spatialCurve[i] = channelAudio[i].GetCustomCurve(AudioSourceCurveType.SpatialBlend);
                     if (!Utilities.IsValid(spatialCurve[i]))
                         spatialBlend[i] = channelAudio[i].spatialBlend;
@@ -126,7 +138,7 @@ namespace Texel
 
             switch (videoPlayer.playerState)
             {
-                case PLAYER_STATE_PLAYING:
+                case TXLVideoPlayer.VIDEO_STATE_PLAYING:
                     videoMute = false;
                     _UpdateAudioSources();
                     break;
@@ -143,6 +155,7 @@ namespace Texel
             masterVolume = value;
 
             _UpdateAll();
+            _UpdateHandlers(EVENT_MASTER_VOLUME_UPDATE);
         }
 
         public void _SetMasterMuted()
@@ -161,6 +174,7 @@ namespace Texel
             masterMute = state;
 
             _UpdateAll();
+            _UpdateHandlers(EVENT_MASTER_MUTE_UPDATE);
         }
 
         public void _SetMaster2D(bool state)
@@ -169,6 +183,7 @@ namespace Texel
             master2D = state;
 
             _UpdateAll();
+            _UpdateHandlers(EVENT_MASTER_2D_UPDATE);
         }
 
         public void _SetChannelFade(int channel, float fade)
@@ -189,6 +204,7 @@ namespace Texel
             channelMute[channel] = state;
 
             _UpdateAudioChannel(channel);
+            _UpdateHandlers(EVENT_CHANNEL_MUTE_UPDATE, channel);
         }
 
         public AudioSource _GetChannelSource(string channel)
@@ -219,6 +235,7 @@ namespace Texel
 
                 _UpdateAudioLink();
                 _UpdateAudioChannel(channel);
+                _UpdateHandlers(EVENT_CHANNEL_SOURCE_UPDATE, channel);
             }
         }
 

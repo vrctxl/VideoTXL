@@ -9,7 +9,7 @@ using UdonSharpEditor;
 namespace Texel
 {
     [CustomEditor(typeof(CompoundZoneTrigger))]
-    public class ZoneTriggerInspector : Editor
+    public class CompoundZoneTriggerInspector : Editor
     {
         SerializedProperty configureEventsProperty;
         SerializedProperty targetBehaviorProperty;

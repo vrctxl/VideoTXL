@@ -11,9 +11,9 @@ namespace Texel
     public class ZoneMembership : UdonSharpBehaviour
     {
         [Tooltip("Optional zone that the membership list will hook into for player leave events")]
-        public CompoundZoneTrigger zone;
+        public ZoneTrigger zone;
         [Tooltip("Optional zone that the membership list will hook into for player enter events")]
-        public CompoundZoneTrigger triggerZone;
+        public ZoneTrigger triggerZone;
         [Tooltip("Update membership in response to world join and leave events")]
         public bool worldEvents = false;
 
@@ -74,12 +74,14 @@ namespace Texel
 
             if (Utilities.IsValid(zone))
             {
-                if (!Utilities.IsValid(triggerZone) || zone == triggerZone)
-                    zone._Register((UdonBehaviour)(Component)this, "_PlayerTriggerEnter", "_PlayerTriggerExit", "playerEventArg");
+                if (!Utilities.IsValid(triggerZone) || zone == triggerZone) {
+                    zone._Register(ZoneTrigger.EVENT_PLAYER_ENTER, this, "_PlayerTriggerEnter", "playerEventArg");
+                    zone._Register(ZoneTrigger.EVENT_PLAYER_LEAVE, this, "_PlayerTriggerExit", "playerEventArg");
+                }
                 else
                 {
-                    zone._Register((UdonBehaviour)(Component)this, null, "_PlayerTriggerExit", "playerEventArg");
-                    triggerZone._Register((UdonBehaviour)(Component)this, "_PlayerTriggerEnter", null, "playerEventArg");
+                    zone._Register(ZoneTrigger.EVENT_PLAYER_LEAVE, this, "_PlayerTriggerExit", "playerEventArg");
+                    triggerZone._Register(ZoneTrigger.EVENT_PLAYER_ENTER, this, "_PlayerTriggerEnter", "playerEventArg");
                 }
             }
         }

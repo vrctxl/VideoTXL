@@ -82,6 +82,19 @@ namespace Texel
             }
         }
 
+        protected void _UpdateHandlers(int eventIndex, object arg1)
+        {
+            for (int i = 0; i < handlerCount[eventIndex]; i++)
+            {
+                UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
+                string argName = handlerArg1[eventIndex][i];
+                if (argName != null && argName != "")
+                    script.SetProgramVariable(argName, arg1);
+
+                script.SendCustomEvent(handlerEvents[eventIndex][i]);
+            }
+        }
+
         protected Array _AddElement(Array arr, object elem, Type type)
         {
             Array newArr;

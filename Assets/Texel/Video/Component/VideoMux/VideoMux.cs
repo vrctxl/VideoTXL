@@ -60,6 +60,10 @@ namespace Texel
         public float PreviousStateTime { get; private set; }
         public float PreviousStateDuration { get; private set; }
 
+        public int VideoType { get { return videoType; } }
+        public int Latency { get { return lowLatency; } }
+        public int ResolutionIndex { get { return preferredResIndex; } }
+
         void Start()
         {
             _EnsureInit();

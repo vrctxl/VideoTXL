@@ -10,6 +10,8 @@ namespace Texel
     public class OptionsUI : UdonSharpBehaviour
     {
         public PlayerControls mainControls;
+        public TXLVideoPlayer videoPlayer;
+        public AudioManager audioManager;
 
         public bool infoPanel = true;
         public bool videoPanel = true;
@@ -50,10 +52,8 @@ namespace Texel
         const int OPTIONS_TAB_AUDIO = 3;
 
         int optionsTabOpen = OPTIONS_TAB_NONE;
-
-        TXLVideoPlayer videoPlayer;
-        AudioManager audioManager;
-        //VideoPlayerProxy dataProxy;
+        bool registeredVideo = false;
+        bool registeredAudio = false;
 
         Color normalColor = new Color(1f, 1f, 1f, .8f);
         Color disabledColor = new Color(.5f, .5f, .5f, .4f);
@@ -88,13 +88,36 @@ namespace Texel
 
             if (mainControls)
             {
-                videoPlayer = mainControls.videoPlayer;
-                audioManager = mainControls.audioManager;
+                if (!videoPlayer)
+                    videoPlayer = mainControls.videoPlayer;
+                if (!audioManager)
+                    audioManager = mainControls.audioManager;
+            }
 
-                if (videoPlayer)
-                    videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, "_OnVideoInfoUpdate");
+            _UpdateComponents();
+        }
+
+        void _UpdateComponents()
+        {
+            if (videoPlayer && !registeredVideo)
+            {
+                registeredVideo = true;
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, "_OnVideoInfoUpdate");
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
+
+                VideoMux mux = videoPlayer.videoMux;
+                if (mux)
+                    mux._Register(VideoMux.SETTINGS_CHANGE_EVENT, this, "_OnMuxSettingsChange");
+            }
+
+            if (audioManager && !registeredAudio)
+            {
+                registeredAudio = true;
+                audioManager._Register(AudioManager.EVENT_MASTER_2D_UPDATE, this, "_OnMaster2DUpdate");
             }
         }
+
+        
 
         public void _HandleOptions()
         {
@@ -109,7 +132,7 @@ namespace Texel
                     tab = OPTIONS_TAB_AUDIO;
 
                 _OpenOptionsTab(tab);
-                _VideoInfoUpdate();
+                _OnVideoInfoUpdate();
             }
             else
                 _OpenOptionsTab(OPTIONS_TAB_NONE);
@@ -143,9 +166,21 @@ namespace Texel
             optionsTabOpen = tab;
         }
 
+        public void _OnMuxSettingsChange()
+        {
+            videoModeDropdown.SetValueWithoutNotify(videoPlayer.videoMux.VideoType);
+            videoLatencyDropdown.SetValueWithoutNotify(videoPlayer.videoMux.Latency);
+            videoResolutionDropdown.SetValueWithoutNotify(videoPlayer.videoMux.ResolutionIndex);
+        }
+
+        public void _OnVideoStateUpdate()
+        {
+            videoFitDropdown.SetValueWithoutNotify(videoPlayer.screenFit);
+        }
+
         // Info Panel
 
-        public void _VideoInfoUpdate()
+        public void _OnVideoInfoUpdate()
         {
             if (!optionsInfoPanel.activeInHierarchy)
                 return;
@@ -275,6 +310,11 @@ namespace Texel
         }
 
         // Audio Panel
+
+        public void _OnMaster2DUpdate()
+        {
+            audioSpatialDropdown.SetValueWithoutNotify(audioManager.master2D ? 1 : 0);
+        }
 
         public void _HandleSpatialAudioChangedUI()
         {

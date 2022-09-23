@@ -12,7 +12,7 @@ namespace Texel
     public class AudioOverrideZone : UdonSharpBehaviour
     {
         public ZoneMembership membership;
-        public CompoundZoneTrigger zone;
+        public ZoneTrigger zone;
 
         public AudioOverrideSettings localZoneSettings;
         public bool localZoneEnabled = true;
@@ -44,7 +44,10 @@ namespace Texel
         void Start()
         {
             if (Utilities.IsValid(zone))
-                zone._Register((UdonBehaviour)(Component)this, "_PlayerEnter", "_PlayerLeave", "playerArg");
+            {
+                zone._Register(ZoneTrigger.EVENT_PLAYER_ENTER, this, "_PlayerEnter", "playerArg");
+                zone._Register(ZoneTrigger.EVENT_PLAYER_LEAVE, this, "_PlayerLeave", "playerArg");
+            }
 
             if (Utilities.IsValid(linkedZones))
                 linkCount = linkedZones.Length;

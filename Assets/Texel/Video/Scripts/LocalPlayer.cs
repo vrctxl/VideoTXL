@@ -19,9 +19,9 @@ namespace Texel
 
         [Header("Playback")]
         [Tooltip("Optional trigger zone the player must be in to sustain playback.  Disables playing audio on world load.")]
-        public CompoundZoneTrigger playbackZone;
+        public ZoneTrigger playbackZone;
         [Tooltip("Optional trigger zone that will start playback if player enters.")]
-        public CompoundZoneTrigger triggerZone;
+        public ZoneTrigger triggerZone;
 
         [Header("Default Options")]
         public StaticUrlSource staticUrlSource;
@@ -68,7 +68,8 @@ namespace Texel
             if (_hasSustainZone)
             {
                 _inSustainZone = playbackZone._LocalPlayerInZone();
-                playbackZone._Register((UdonBehaviour)(Component)this, "_PlaybackZoneEnter", "_PlaybackZoneExit", null);
+                playbackZone._Register(ZoneTrigger.EVENT_PLAYER_ENTER, this, "_PlaybackZoneEnter");
+                playbackZone._Register(ZoneTrigger.EVENT_PLAYER_LEAVE, this, "_PlaybackZoneExit");
             }
 
             if (Utilities.IsValid(triggerZone))
@@ -76,7 +77,7 @@ namespace Texel
                 if (_hasSustainZone && triggerZone == playbackZone)
                     _triggerZoneSame = true;
                 else
-                    triggerZone._Register((UdonBehaviour)(Component)this, "_TriggerPlay", null, null);
+                    triggerZone._Register(ZoneTrigger.EVENT_PLAYER_ENTER, this, "_TriggerPlay");
             }
 
             if (Utilities.IsValid(staticUrlSource))
