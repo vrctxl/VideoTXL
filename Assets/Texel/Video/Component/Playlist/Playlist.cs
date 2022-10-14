@@ -47,7 +47,7 @@ namespace Texel
 
         [NonSerialized]
         public int trackCount;
-        
+
         public const int EVENT_LIST_CHANGE = 0;
         public const int EVENT_TRACK_CHANGE = 1;
         public const int EVENT_OPTION_CHANGE = 2;
@@ -58,21 +58,11 @@ namespace Texel
             _EnsureInit();
         }
 
+        protected override int EventCount { get => EVENT_COUNT; }
+
         protected override void _Init()
         {
             DebugLog("Common initialization");
-
-            _InitHandlers(EVENT_COUNT);
-
-            handlerCount = new int[eventCount];
-            handlers = new Component[eventCount][];
-            handlerEvents = new string[eventCount][];
-
-            for (int i = 0; i < eventCount; i++)
-            {
-                handlers[i] = new Component[0];
-                handlerEvents[i] = new string[0];
-            }
 
             syncShuffle = shuffle;
             _LoadDataLow(playlistData);

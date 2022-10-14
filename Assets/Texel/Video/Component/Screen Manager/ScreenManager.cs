@@ -131,37 +131,27 @@ namespace Texel
             _EnsureInit();
         }
 
+        protected override int EventCount { get => EVENT_COUNT; }
+
         protected override void _Init()
         {
-            _InitHandlers(EVENT_COUNT);
-
-            if (videoPlayer)
-            {
-                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
-
-                if (videoPlayer.videoMux)
-                {
-                    videoPlayer.videoMux._Register(VideoMux.SOURCE_CHANGE_EVENT, this, "_OnSourceChanged");
-                    captureRenderer = videoPlayer.videoMux.CaptureRenderer;
-                }
-            }
-
             block = new MaterialPropertyBlock();
-
-            handlerCount = new int[eventCount];
-            handlers = new Component[eventCount][];
-            handlerEvents = new string[eventCount][];
-
-            for (int i = 0; i < eventCount; i++)
-            {
-                handlers[i] = new Component[0];
-                handlerEvents[i] = new string[0];
-            }
 
 #if COMPILER_UDONSHARP
             _InitMaterialOverrides();
             _InitTextureOverrides();
 #endif
+
+            if (videoPlayer)
+            {
+                if (videoPlayer.videoMux)
+                {
+                    videoPlayer.videoMux._Register(VideoMux.SOURCE_CHANGE_EVENT, this, "_OnSourceChanged");
+                    captureRenderer = videoPlayer.videoMux.CaptureRenderer;
+                }
+
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
+            }
         }
 
         private void OnDisable()
@@ -374,6 +364,7 @@ namespace Texel
 
         public void _OnSourceChanged()
         {
+            Debug.Log("SCREENMAN SOURCE CHANGED");
             captureRenderer = videoPlayer.videoMux.CaptureRenderer;
             int source = videoPlayer.videoMux.ActiveSourceType;
 
@@ -666,7 +657,8 @@ namespace Texel
                         _SetMatIntProperty(mat, outputMaterialProperties.applyGamma, currentGamma ? 1 : 0);
                         _SetMatIntProperty(mat, outputMaterialProperties.invertY, currentInvert ? 1 : 0);
                         _SetMatIntProperty(mat, outputMaterialProperties.screenFit, videoPlayer.screenFit);
-                    } else
+                    }
+                    else
                         mat.SetTexture("_MainTex", currentTexture);
 
                     if (_screenMode == SCREEN_MODE_NORMAL)

@@ -28,6 +28,8 @@ namespace Texel
 
         bool triggered = false;
 
+        protected override int EventCount { get => EVENT_COUNT; }
+
         void Start()
         {
             _EnsureInit();
@@ -35,8 +37,6 @@ namespace Texel
 
         protected override void _Init()
         {
-            _InitHandlers(EVENT_COUNT);
-
             if (configureEvents)
             {
                 if (Utilities.IsValid(targetBehavior) && playerEnterEvent != null && playerEnterEvent != "")

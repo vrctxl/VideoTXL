@@ -70,6 +70,8 @@ namespace Texel
 
         public bool IsQuest { get; private set; }
 
+        protected override int EventCount { get => EVENT_COUNT; }
+
         void Start()
         {
             _EnsureInit();
@@ -77,8 +79,6 @@ namespace Texel
 
         protected override void _Init()
         {
-            _InitHandlers(EVENT_COUNT);
-
             IsQuest = false;
 #if UNITY_ANDROID
             IsQuest = true;

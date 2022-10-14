@@ -65,12 +65,10 @@ namespace Texel
             _EnsureInit();
         }
 
+        protected override int EventCount { get => EVENT_COUNT; }
+
         protected override void _Init()
         {
-            _InitHandlers(EVENT_COUNT);
-
-            if (Utilities.IsValid(videoPlayer))
-                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
             if (!Utilities.IsValid(audioControls))
                 audioControls = new Component[0];
 
@@ -104,6 +102,9 @@ namespace Texel
 
             _UpdateAll();
             _UpdateAudioLink();
+
+            if (Utilities.IsValid(videoPlayer))
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
         }
 
         public void _RegisterControls(Component controls)
@@ -326,7 +327,8 @@ namespace Texel
                 if (!Utilities.IsValid(spatialCurve[channel]))
                     spatialBlend[channel] = source.spatialBlend;
                 source.spatialBlend = 0;
-            } else
+            }
+            else
             {
                 if (Utilities.IsValid(spatialCurve[channel]))
                     source.SetCustomCurve(AudioSourceCurveType.SpatialBlend, spatialCurve[channel]);

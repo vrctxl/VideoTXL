@@ -69,10 +69,10 @@ namespace Texel
             _EnsureInit();
         }
 
+        protected override int EventCount { get => EVENT_COUNT; }
+
         protected override void _Init()
         {
-            _InitHandlers(EVENT_COUNT);
-
             if (sources == null)
                 sources = new VideoSource[0];
 
@@ -81,6 +81,9 @@ namespace Texel
                 if (sources[i] != null)
                     sources[i]._Register(this, i);
             }
+
+            if (audioManager)
+                audioManager._EnsureInit();
 
             _Discover();
 

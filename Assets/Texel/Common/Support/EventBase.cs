@@ -15,9 +15,10 @@ namespace Texel
         protected string[][] handlerArg1;
         protected string[][] handlerArg2;
 
-        protected int eventCount = 0;
-
         bool init = false;
+        bool handlersInit = false;
+
+        protected virtual int EventCount { get; }
 
         public void _EnsureInit()
         {
@@ -25,14 +26,19 @@ namespace Texel
                 return;
 
             init = true;
+            _InitHandlers();
             _Init();
         }
 
         protected virtual void _Init() { }
 
-        protected void _InitHandlers(int count)
+        protected void _InitHandlers()
         {
-            eventCount = count;
+            if (handlersInit)
+                return;
+
+            handlersInit = true;
+            int eventCount = EventCount;
 
             handlerCount = new int[eventCount];
             handlers = new Component[eventCount][];
@@ -54,7 +60,7 @@ namespace Texel
             if (!Utilities.IsValid(handler) || !Utilities.IsValid(eventName))
                 return;
 
-            _EnsureInit();
+            _InitHandlers();
 
             for (int i = 0; i < handlerCount[eventIndex]; i++)
             {
@@ -65,10 +71,13 @@ namespace Texel
             handlers[eventIndex] = (Component[])_AddElement(handlers[eventIndex], handler, typeof(Component));
             handlerEvents[eventIndex] = (string[])_AddElement(handlerEvents[eventIndex], eventName, typeof(string));
 
+            handlerArg1[eventIndex] = (string[])_AddElement(handlerArg1[eventIndex], "", typeof(string));
+            handlerArg2[eventIndex] = (string[])_AddElement(handlerArg2[eventIndex], "", typeof(string));
+
             if (Utilities.IsValid(args) && args.Length >= 1)
-                handlerArg1[eventIndex] = (string[])_AddElement(handlerArg1[eventIndex], args[0], typeof(string));
+                handlerArg1[eventIndex][handlerArg1.Length - 1] = args[0];
             if (Utilities.IsValid(args) && args.Length >= 2)
-                handlerArg1[eventIndex] = (string[])_AddElement(handlerArg1[eventIndex], args[1], typeof(string));
+                handlerArg2[eventIndex][handlerArg2.Length - 1] = args[1];
 
             handlerCount[eventIndex] += 1;
         }
