@@ -19,6 +19,8 @@ namespace Texel
         public AudioOverrideZone aoeZone;
         public AudioOverrideZone[] targetZones;
 
+        public AudioOverrideSettings defaultSettings;
+        public AudioOverrideSettings broadcastSettings;
         public AudioOverrideSettings suppressSettings;
 
         public bool defaultLocked = true;
@@ -153,7 +155,6 @@ namespace Texel
                 microphone._Register(PickupTrigger.EVENT_TRIGGER_ON, this, "_OnTriggerOn");
                 microphone._Register(PickupTrigger.EVENT_TRIGGER_OFF, this, "_OnTriggerOff");
                 overrideList._Register(AudioPlayerOverrideList.EVENT_BOUND_PLAYER_CHANGED, this, "_OnBoundPlayerChanged");
-                overrideList._Register(AudioPlayerOverrideList.EVENT_ENABLED_CHANGED, this, "_OnOverrideEnabledChanged");
 
                 if (Networking.IsOwner(gameObject) && microphone.TriggerOnUse)
                 {
@@ -206,6 +207,9 @@ namespace Texel
             set
             {
                 syncLocked = value;
+
+                microphone.enforceACL = syncLocked;
+                microphone._ValidateACL();
 
                 _SetButton(UI_BUTTON_LOCK, syncLocked);
                 _ValidateAccess();
@@ -278,17 +282,9 @@ namespace Texel
             {
                 syncAOE = value;
 
-                if (Utilities.IsValid(aoeZone))
-                {
-                    bool active = syncAOE && Utilities.IsValid(microphone) && microphone.IsTriggered;
-                    foreach (var zone in targetZones)
-                    {
-                        if (Utilities.IsValid(zone))
-                            zone._SetLinkedZoneActive(aoeZone, active);
-                    }
-                }
-
                 _SetButton(UI_BUTTON_MICAOE, syncAOE);
+                _UpdateAOEOverride();
+                _UpdateSupression();
             }
             get { return syncAOE; }
         }
@@ -302,6 +298,7 @@ namespace Texel
                 _SetButton(UI_BUTTON_RAISE, syncRaise);
                 _UpdateMicOverride();
                 _UpdateZoneOverride();
+                _UpdateSupression();
             }
             get { return syncRaise; }
         }
@@ -313,6 +310,8 @@ namespace Texel
                 syncLower = value;
 
                 _SetButton(UI_BUTTON_LOWER, syncLower);
+                _UpdateMicOverride();
+                _UpdateZoneOverride();
                 _UpdateSupression();
             }
             get { return syncLower; }
@@ -342,12 +341,8 @@ namespace Texel
             else
                 micTxIcon.color = inactiveYellow;
 
+            _UpdateAOEOverride();
             _UpdateSupression();
-        }
-
-        public void _OnOverrideEnabledChanged()
-        {
-            //_SetButton(UI_BUTTON_MICMUTE, !overrideList.Enabled);
         }
 
         public void _OnPickup()
@@ -374,26 +369,12 @@ namespace Texel
 
         public void _OnTriggerOn()
         {
-            if (AOEEnabled && Utilities.IsValid(aoeZone))
-            {
-                foreach (var zone in targetZones)
-                {
-                    if (Utilities.IsValid(zone))
-                        zone._SetLinkedZoneActive(aoeZone, true);
-                }
-            }
+            _UpdateAOEOverride();
         }
 
         public void _OnTriggerOff()
         {
-            if (AOEEnabled && Utilities.IsValid(aoeZone))
-            {
-                foreach (var zone in targetZones)
-                {
-                    if (Utilities.IsValid(zone))
-                        zone._SetLinkedZoneActive(aoeZone, false);
-                }
-            }
+            _UpdateAOEOverride();
         }
 
         public void _ValidateAccess()
@@ -501,12 +482,12 @@ namespace Texel
 
         void _UpdateMicOverride()
         {
-            overrideList._SetEnabled(!MuteEnabled && RaiseEnabled);
+            overrideList._SetZoneActive(!MuteEnabled && (RaiseEnabled || LowerEnabled));
         }
 
         void _UpdateZoneOverride()
         {
-            bool state = ZoneEnabled && RaiseEnabled;
+            bool state = ZoneEnabled && (RaiseEnabled || LowerEnabled);
 
             if (Utilities.IsValid(baseZone))
             {
@@ -518,9 +499,24 @@ namespace Texel
             }
         }
 
+        void _UpdateAOEOverride()
+        {
+            bool state = AOEEnabled && _MicTransmitting() && (RaiseEnabled || LowerEnabled);
+            if (Utilities.IsValid(aoeZone))
+            {
+                foreach (var zone in targetZones)
+                {
+                    if (Utilities.IsValid(zone))
+                        zone._SetLinkedZoneActive(aoeZone, state);
+                }
+            }
+        }
+
         void _UpdateSupression()
         {
             bool state = LowerEnabled && _AnyOverrideActive();
+            bool linkState = LowerEnabled && !RaiseEnabled;
+
             for (int i = 0; i < targetZones.Length; i++)
             {
                 AudioOverrideZone zone = targetZones[i];
@@ -528,6 +524,14 @@ namespace Texel
                 {
                     zone._SetDefaultSettings(state ? suppressSettings : targetDefaultSettings[i]);
                     zone._SetLocalSettings(state ? suppressSettings : targetLocalSettings[i]);
+
+                    AudioOverrideSettings linkedProfile = linkState ? defaultSettings : broadcastSettings;
+                    if (baseZone)
+                        zone._SetLinkedZoneSettings(baseZone, linkedProfile);
+                    if (aoeZone)
+                        zone._SetLinkedZoneSettings(aoeZone, linkedProfile);
+
+                    overrideList._SetZoneSettings(zone, linkedProfile);
                 }
             }
         }

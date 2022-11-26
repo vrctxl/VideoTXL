@@ -40,6 +40,7 @@ namespace Texel
         int[] playerOverrides;
         int maxOverrideIndex = -1;
         AudioOverrideSettings[] playerOverrideSettings;
+        bool[] playerOverrideEnabled;
 
         void Start()
         {
@@ -58,6 +59,7 @@ namespace Texel
 
             playerOverrides = new int[100];
             playerOverrideSettings = new AudioOverrideSettings[100];
+            playerOverrideEnabled = new bool[100];
         }
 
         public void _Register(AudioOverrideManager overrideManager, int zoneId)
@@ -77,8 +79,13 @@ namespace Texel
             if (localZoneEnabled != state)
             {
                 localZoneEnabled = state;
+                DebugLog($"Set local zone {gameObject.name} active={state}");
+
                 if (hasManager)
+                {
                     manager._RebuildLocal();
+                    manager._UpdateZoneData();
+                }
             }
         }
 
@@ -96,7 +103,10 @@ namespace Texel
             DebugLog($"Set local zone settings {gameObject.name} {(Utilities.IsValid(profile) ? profile.ToString() : "none")}");
 
             if (hasManager)
+            {
                 manager._RebuildLocal();
+                manager._UpdateZoneData();
+            }
         }
 
         public void _SetDefaultActive(bool state)
@@ -104,8 +114,13 @@ namespace Texel
             if (defaultEnabled != state)
             {
                 defaultEnabled = state;
+                DebugLog($"Set default zone {gameObject.name} active={state}");
+
                 if (hasManager)
+                {
                     manager._RebuildLocal();
+                    manager._UpdateZoneData();
+                }
             }
         }
 
@@ -123,7 +138,10 @@ namespace Texel
             DebugLog($"Set default zone settings {gameObject.name} {(Utilities.IsValid(profile) ? profile.ToString() : "none")}");
 
             if (hasManager)
+            {
                 manager._RebuildLocal();
+                manager._UpdateZoneData();
+            }
         }
 
         public bool _GetLinkedZoneActive(AudioOverrideZone zone)
@@ -147,8 +165,13 @@ namespace Texel
                     if (linkedZoneEnabled[i] != state)
                     {
                         linkedZoneEnabled[i] = state;
+                        DebugLog($"Set linked zone {gameObject.name} <-- {zone.name} active={state}");
+
                         if (hasManager)
+                        {
                             manager._RebuildLocal();
+                            manager._UpdateZoneData();
+                        }
                     }
                     break;
                 }
@@ -180,8 +203,12 @@ namespace Texel
 
                         linkedZoneSettings[i] = profile;
                         DebugLog($"Set linked zone settings {gameObject.name} from {zone} to {(Utilities.IsValid(profile) ? profile.ToString() : "none")}");
+
                         if (hasManager)
+                        {
                             manager._RebuildLocal();
+                            manager._UpdateZoneData();
+                        }
                     }
                     break;
                 }
@@ -193,7 +220,10 @@ namespace Texel
             if (hasMembership)
                 membership._AddPlayer(playerArg);
             if (hasManager)
+            {
                 manager._PlayerEnterZone(this, playerArg);
+                manager._UpdateZoneData();
+            }
         }
 
         public void _PlayerLeave()
@@ -201,7 +231,10 @@ namespace Texel
             if (hasMembership)
                 membership._RemovePlayer(playerArg);
             if (hasManager)
+            {
                 manager._PlayerLeaveZone(this, playerArg);
+                manager._UpdateZoneData();
+            }
         }
 
         public bool _ContainsPlayer(VRCPlayerApi player)
@@ -222,6 +255,7 @@ namespace Texel
                 return true;
             }
 
+            //Debug.Log($"{name} hasLocal={hasLocal} enabled={localZoneEnabled} contains={_ContainsPlayer(player)}");
             if (hasLocal && localZoneEnabled && _ContainsPlayer(player))
             {
                 localZoneSettings._Apply(player);
@@ -233,6 +267,7 @@ namespace Texel
             {
                 AudioOverrideZone zone = linkedZones[i];
                 bool zoneEnabled = linkedZoneEnabled[i];
+                //Debug.Log($"{name} link={zone.name} enabled={zoneEnabled} contains={zone._ContainsPlayer(player)}");
                 if (zoneEnabled && zone._ContainsPlayer(player))
                 {
                     linkedZoneSettings[i]._Apply(player);
@@ -241,6 +276,7 @@ namespace Texel
                 }
             }
 
+            //Debug.Log($"{name} hasDefault={hasDefault} enabled={defaultEnabled}");
             if (hasDefault && defaultEnabled)
             {
                 defaultSettings._Apply(player);
@@ -251,7 +287,7 @@ namespace Texel
             return false;
         }
 
-        public void _AddPlayerOverride(VRCPlayerApi player, AudioOverrideSettings settings)
+        public void _AddPlayerOverride(VRCPlayerApi player, AudioOverrideSettings settings, bool enabled)
         {
             if (!Utilities.IsValid(player))
                 return;
@@ -274,6 +310,7 @@ namespace Texel
             maxOverrideIndex += 1;
             playerOverrides[maxOverrideIndex] = id;
             playerOverrideSettings[maxOverrideIndex] = settings;
+            playerOverrideEnabled[maxOverrideIndex] = enabled;
 
             if (hasManager)
                 manager._RebuildLocal();
@@ -293,6 +330,7 @@ namespace Texel
                 {
                     playerOverrides[i] = playerOverrides[maxOverrideIndex];
                     playerOverrideSettings[i] = playerOverrideSettings[maxOverrideIndex];
+                    playerOverrideEnabled[i] = playerOverrideEnabled[maxOverrideIndex];
                     maxOverrideIndex -= 1;
 
                     if (hasManager)
@@ -312,10 +350,20 @@ namespace Texel
             for (int i = 0; i <= maxOverrideIndex; i++)
             {
                 if (playerOverrides[i] == id)
+                {
+                    if (!playerOverrideEnabled[i])
+                        return null;
                     return playerOverrideSettings[i];
+                }
             }
 
             return null;
+        }
+
+        public void _RebuildLocal()
+        {
+            if (hasManager)
+                manager._RebuildLocal();
         }
 
         void DebugAO(VRCPlayerApi player, string zone, string profile)

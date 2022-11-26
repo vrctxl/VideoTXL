@@ -13,17 +13,15 @@ namespace Texel
         public PickupTrigger pickupTrigger;
 
         public const int EVENT_BOUND_PLAYER_CHANGED = 0;
-        public const int EVENT_ENABLED_CHANGED = 1;
-        const int EVENT_COUNT = 2;
+        const int EVENT_COUNT = 1;
 
         public AudioOverrideZone[] zones;
         public AudioOverrideSettings[] profiles;
+        public bool[] zoneEnabled;
 
         public DebugLog debugLog;
         public bool vrcLogging = false;
 
-        [UdonSynced, FieldChangeCallback("Enabled")]
-        bool syncEnabled = true;
         [UdonSynced, FieldChangeCallback("BoundPlayerID")]
         int syncBoundPlayerID = -1;
 
@@ -64,36 +62,86 @@ namespace Texel
             RequestSerialization();
         }
 
-        public void _SetEnabled(bool state)
+        public bool _GetZoneActive(AudioOverrideZone zone)
         {
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
-
-            Enabled = state;
-            RequestSerialization();
+            for (int i = 0; i < zones.Length; i++)
+            {
+                if (zone == zones[i])
+                {
+                    return zoneEnabled[i];
+                }
+            }
+            return false;
         }
 
-        public bool Enabled
+        public void _SetZoneActive(bool state)
         {
-            set
+            for (int i = 0; i < zones.Length; i++)
+                _SetZoneActive(i, state);
+        }
+
+        public void _SetZoneActive(AudioOverrideZone zone, bool state)
+        {
+            for (int i = 0; i < zones.Length; i++)
             {
-                if (syncEnabled == value)
-                    return;
+                if (zone == zones[i])
+                {
+                    _SetZoneActive(i, state);
+                    break;
+                }
+            }
+        }
+
+        void _SetZoneActive(int zoneIndex, bool state)
+        {
+            AudioOverrideZone zone = zones[zoneIndex];
+            if (zone && zoneEnabled[zoneIndex] != state)
+            {
+                zoneEnabled[zoneIndex] = state;
 
                 VRCPlayerApi player = VRCPlayerApi.GetPlayerById(syncBoundPlayerID);
                 if (Utilities.IsValid(player))
-                {
-                    if (value)
-                        _AddPlayer(player);
-                    else
-                        _RemovePlayer(player);
-                }
+                    _AddPlayerZone(player, zoneIndex);
 
-                syncEnabled = value;
-
-                _UpdateHandlers(EVENT_ENABLED_CHANGED);
+                zone._RebuildLocal();
             }
-            get { return syncEnabled; }
+        }
+
+        public AudioOverrideSettings _GetZoneSettings(AudioOverrideZone zone)
+        {
+            for (int i = 0; i < zones.Length; i++)
+            {
+                if (zone == zones[i])
+                {
+                    return profiles[i];
+                }
+            }
+            return null;
+        }
+
+        public void _SetZoneSettings(AudioOverrideZone zone, AudioOverrideSettings profile)
+        {
+            for (int i = 0; i < zones.Length; i++)
+            {
+                if (zone == zones[i])
+                {
+                    if (profiles[i] != profile)
+                    {
+                        if (profiles[i] == profile)
+                            continue;
+
+                        profiles[i] = profile;
+
+                        VRCPlayerApi player = VRCPlayerApi.GetPlayerById(syncBoundPlayerID);
+                        if (Utilities.IsValid(player))
+                            _AddPlayerZone(player, i);
+
+                        DebugLog($"Set linked zone settings {gameObject.name} from {zone} to {(Utilities.IsValid(profile) ? profile.ToString() : "none")}");
+                        zone._RebuildLocal();
+                    }
+                    break;
+                }
+            }
         }
 
         public int BoundPlayerID
@@ -110,7 +158,7 @@ namespace Texel
                 DebugLog($"Setting override list bound player ID = {value}");
 
                 VRCPlayerApi newPlayer = VRCPlayerApi.GetPlayerById(syncBoundPlayerID);
-                if (Utilities.IsValid(newPlayer) && Enabled)
+                if (Utilities.IsValid(newPlayer))
                     _AddPlayer(newPlayer);
 
                 if (previous != value)
@@ -125,17 +173,20 @@ namespace Texel
                 return;
 
             for (int i = 0; i < zones.Length; i++)
-            {
-                AudioOverrideZone zone = zones[i];
-                if (!Utilities.IsValid(zone))
-                    continue;
+                _AddPlayerZone(player, i);
+        }
 
-                AudioOverrideSettings profile = profiles[i];
-                if (!Utilities.IsValid(profile))
-                    continue;
+        void _AddPlayerZone(VRCPlayerApi player, int zoneIndex)
+        {
+            AudioOverrideZone zone = zones[zoneIndex];
+            if (!Utilities.IsValid(zone))
+                return;
 
-                zone._AddPlayerOverride(player, profile);
-            }
+            AudioOverrideSettings profile = profiles[zoneIndex];
+            if (!Utilities.IsValid(profile))
+                return;
+
+            zone._AddPlayerOverride(player, profile, zoneEnabled[zoneIndex]);
         }
 
         public void _RemovePlayer(VRCPlayerApi player)

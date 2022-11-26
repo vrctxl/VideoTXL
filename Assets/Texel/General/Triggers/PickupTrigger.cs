@@ -15,6 +15,7 @@ namespace Texel
 
         [Tooltip("Optional ACL to check if pickup is usable for player")]
         public AccessControl accessControl;
+        public bool enforceACL = true;
 
         public const int EVENT_PICKUP = 0;
         public const int EVENT_DROP = 1;
@@ -46,11 +47,11 @@ namespace Texel
 
         public override void OnPickup()
         {
-            if (hasAccessControl && !accessControl._LocalHasAccess())
+            if (!_HasAccess())
                 return;
 
             _UpdateHandlers(EVENT_PICKUP);
- 
+
             if (triggerOnUse)
                 return;
 
@@ -60,7 +61,7 @@ namespace Texel
         public override void OnDrop()
         {
             triggerDown = false;
-            if (hasAccessControl && !accessControl._LocalHasAccess())
+            if (!_HasAccess())
                 return;
 
             _UpdateHandlers(EVENT_DROP);
@@ -74,7 +75,7 @@ namespace Texel
         public override void OnPickupUseDown()
         {
             triggerDown = true;
-            if (hasAccessControl && !accessControl._LocalHasAccess())
+            if (!_HasAccess())
                 return;
 
             if (!triggerOnUse)
@@ -86,7 +87,7 @@ namespace Texel
         public override void OnPickupUseUp()
         {
             triggerDown = false;
-            if (hasAccessControl && !accessControl._LocalHasAccess())
+            if (!_HasAccess())
                 return;
             if (!triggerOnUse)
                 return;
@@ -132,7 +133,7 @@ namespace Texel
             VRC_Pickup pickup = (VRC_Pickup)GetComponent(typeof(VRC_Pickup));
             if (Utilities.IsValid(pickup))
             {
-                bool grant = accessControl._LocalHasAccess();
+                bool grant = _HasAccess();
                 pickup.pickupable = grant;
                 Debug.Log(grant);
 
@@ -140,6 +141,15 @@ namespace Texel
                 if (!grant)
                     _Drop();
             }
+        }
+
+        bool _HasAccess()
+        {
+            if (!enforceACL)
+                return true;
+            if (!hasAccessControl)
+                return true;
+            return accessControl._LocalHasAccess();
         }
 
         public void _ValidateState()

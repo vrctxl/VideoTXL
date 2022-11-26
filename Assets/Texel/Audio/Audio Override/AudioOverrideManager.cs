@@ -24,6 +24,9 @@ namespace Texel
 
         void Start()
         {
+            if (debugState)
+                debugState._SetManager(this);
+
             if (Utilities.IsValid(overrideZones))
                 zoneCount = overrideZones.Length;
 
@@ -37,6 +40,14 @@ namespace Texel
                 defaultZone._Register(this, -1);
 
             SendCustomEventDelayedSeconds("_RebuildLocal", 1f);
+
+            _UpdateZoneData();
+        }
+
+        public void _UpdateZoneData()
+        {
+            if (debugState)
+                debugState._UpdateZoneData();
         }
 
         public void _PlayerEnterZone(AudioOverrideZone zone, VRCPlayerApi player)
@@ -105,9 +116,11 @@ namespace Texel
 
         void _RebuildPlayer(VRCPlayerApi player, AudioOverrideZone localZone)
         {
+            //Debug.Log($"Try Rebuild player {player.displayName} from {localZone.name}");
             if (localZone._Apply(player))
                 return;
 
+            //Debug.Log($"Try Rebuild player {player.displayName} from {defaultZone.name}");
             if (defaultZone != localZone && defaultZone._Apply(player))
                 return;
 
