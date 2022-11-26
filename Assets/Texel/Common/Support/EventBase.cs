@@ -75,9 +75,9 @@ namespace Texel
             handlerArg2[eventIndex] = (string[])_AddElement(handlerArg2[eventIndex], "", typeof(string));
 
             if (Utilities.IsValid(args) && args.Length >= 1)
-                handlerArg1[eventIndex][handlerArg1.Length - 1] = args[0];
+                handlerArg1[eventIndex][handlerArg1[eventIndex].Length - 1] = args[0];
             if (Utilities.IsValid(args) && args.Length >= 2)
-                handlerArg2[eventIndex][handlerArg2.Length - 1] = args[1];
+                handlerArg2[eventIndex][handlerArg2[eventIndex].Length - 1] = args[1];
 
             handlerCount[eventIndex] += 1;
         }

@@ -80,6 +80,8 @@ namespace Texel
             {
                 if (sources[i] != null)
                     sources[i]._Register(this, i);
+                GameObject copy = Instantiate(sources[i].audioSources[0].gameObject);
+                copy.transform.SetParent(sources[i].audioSources[0].transform.parent);
             }
 
             if (audioManager)
@@ -186,7 +188,7 @@ namespace Texel
                 return null;
 
             VideoSource source = null;
-            if (lowLatency == VideoSource.LOW_LATENCY_DISABLE)
+            if (lowLatency == VideoSource.LOW_LATENCY_DISABLE || lowLatency == VideoSource.LOW_LATENCY_UNKNOWN)
                 source = avproSources[resIndex];
             if (source == null)
                 source = avproSources[resIndex + supportedResolutions.Length];
@@ -196,7 +198,7 @@ namespace Texel
 
             for (int i = 0; i < supportedResolutions.Length; i++)
             {
-                if (lowLatency == VideoSource.LOW_LATENCY_DISABLE)
+                if (lowLatency == VideoSource.LOW_LATENCY_DISABLE || lowLatency == VideoSource.LOW_LATENCY_UNKNOWN)
                     source = avproSources[i];
                 if (source == null)
                     source = avproSources[i + supportedResolutions.Length];
@@ -207,11 +209,16 @@ namespace Texel
             return source;
         }
 
+        bool _ActiveSourceValid()
+        {
+            return activeSource >= 0 && activeSource < sources.Length && sources[activeSource];
+        }
+
         public int ActiveSourceType
         {
             get
             {
-                if (activeSource < 0)
+                if (activeSource < 0 || activeSource >= sources.Length)
                     return VideoSource.VIDEO_SOURCE_NONE;
 
                 VideoSource source = sources[activeSource];
@@ -301,6 +308,9 @@ namespace Texel
 
         public void _VideoPlay()
         {
+            if (!_ActiveSourceValid())
+                return;
+
             VideoSource source = sources[activeSource];
             _DebugLog(source, "Play");
 
@@ -309,6 +319,9 @@ namespace Texel
 
         public void _VideoPause()
         {
+            if (!_ActiveSourceValid())
+                return;
+
             VideoSource source = sources[activeSource];
             _DebugLog(source, "Pause");
 
@@ -317,6 +330,9 @@ namespace Texel
 
         public void _VideoStop()
         {
+            if (!_ActiveSourceValid())
+                return;
+
             VideoSource source = sources[activeSource];
             _DebugLog(source, "Stop");
 
@@ -325,6 +341,9 @@ namespace Texel
 
         public void _VideoStop(int frameDelay)
         {
+            if (!_ActiveSourceValid())
+                return;
+
             VideoSource source = sources[activeSource];
             _DebugLog(source, $"Stop({frameDelay})");
 
@@ -333,6 +352,9 @@ namespace Texel
 
         public void _VideoLoadURL(VRCUrl url)
         {
+            if (!_ActiveSourceValid())
+                return;
+
             VideoSource source = sources[activeSource];
             _DebugLog(source, $"Load Url: {url}");
 
@@ -341,6 +363,9 @@ namespace Texel
 
         public void _VideoSetTime(float time)
         {
+            if (!_ActiveSourceValid())
+                return;
+
             VideoSource source = sources[activeSource];
             _DebugLog(source, $"Set time: {time}");
 
@@ -350,7 +375,9 @@ namespace Texel
         public void _SetAVSync(bool state)
         {
             avSyncEnabled = state;
-            _UpdateAVSync(sources[activeSource]);
+
+            if (_ActiveSourceValid())
+                _UpdateAVSync(sources[activeSource]);
         }
 
         void _UpdateAVSync(VideoSource source)

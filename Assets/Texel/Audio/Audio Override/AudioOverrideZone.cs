@@ -89,6 +89,9 @@ namespace Texel
 
         public void _SetLocalSettings(AudioOverrideSettings profile)
         {
+            if (localZoneSettings == profile)
+                return;
+
             localZoneSettings = profile;
             DebugLog($"Set local zone settings {gameObject.name} {(Utilities.IsValid(profile) ? profile.ToString() : "none")}");
 
@@ -113,6 +116,9 @@ namespace Texel
 
         public void _SetDefaultSettings(AudioOverrideSettings profile)
         {
+            if (defaultSettings == profile)
+                return;
+
             defaultSettings = profile;
             DebugLog($"Set default zone settings {gameObject.name} {(Utilities.IsValid(profile) ? profile.ToString() : "none")}");
 
@@ -169,6 +175,9 @@ namespace Texel
                 {
                     if (linkedZoneSettings[i] != profile)
                     {
+                        if (linkedZoneSettings[i] == profile)
+                            continue;
+
                         linkedZoneSettings[i] = profile;
                         DebugLog($"Set linked zone settings {gameObject.name} from {zone} to {(Utilities.IsValid(profile) ? profile.ToString() : "none")}");
                         if (hasManager)
@@ -209,12 +218,14 @@ namespace Texel
             if (Utilities.IsValid(overrideSettings))
             {
                 overrideSettings._Apply(player);
+                DebugAO(player, $"{name} [override]", overrideSettings.name);
                 return true;
             }
 
             if (hasLocal && localZoneEnabled && _ContainsPlayer(player))
             {
                 localZoneSettings._Apply(player);
+                DebugAO(player, $"{name} [local]", localZoneSettings.name);
                 return true;
             }
 
@@ -225,6 +236,7 @@ namespace Texel
                 if (zoneEnabled && zone._ContainsPlayer(player))
                 {
                     linkedZoneSettings[i]._Apply(player);
+                    DebugAO(player, $"{name} <- {zone.name}", linkedZoneSettings[i].name);
                     return true;
                 }
             }
@@ -232,6 +244,7 @@ namespace Texel
             if (hasDefault && defaultEnabled)
             {
                 defaultSettings._Apply(player);
+                DebugAO(player, $"{name} [default]", defaultSettings.name);
                 return true;
             }
 
@@ -303,6 +316,14 @@ namespace Texel
             }
 
             return null;
+        }
+
+        void DebugAO(VRCPlayerApi player, string zone, string profile)
+        {
+            if (!hasManager || !manager.debugState)
+                return;
+
+            manager.debugState._UpdatePlayer(player, zone, profile);
         }
 
         void DebugLog(string message)

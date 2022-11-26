@@ -13,6 +13,9 @@ namespace Texel
         public AudioOverrideZone defaultZone;
         public AudioOverrideZone[] overrideZones;
 
+        [Header("Debug")]
+        public AudioOverrideDebug debugState;
+
         bool waitForInit = true;
         int zoneCount = 0;
         VRCPlayerApi[] playerBuffer = new VRCPlayerApi[100];
@@ -79,6 +82,9 @@ namespace Texel
             if (!Utilities.IsValid(cachedLocalZone))
                 cachedLocalZone = defaultZone;
 
+            if (debugState)
+                debugState._UpdateLocal(cachedLocalZone);
+
             _RebuildAll(player, cachedLocalZone);
         }
 
@@ -100,6 +106,9 @@ namespace Texel
         void _RebuildPlayer(VRCPlayerApi player, AudioOverrideZone localZone)
         {
             if (localZone._Apply(player))
+                return;
+
+            if (defaultZone != localZone && defaultZone._Apply(player))
                 return;
 
             _ResetSettings(player);
@@ -126,6 +135,9 @@ namespace Texel
             player.SetVoiceDistanceNear(0);
             player.SetVoiceDistanceFar(25);
             player.SetVoiceLowpass(true);
+
+            if (debugState)
+                debugState._UpdatePlayer(player, "[reset]", "[reset]");
         }
     }
 }

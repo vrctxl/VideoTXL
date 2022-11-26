@@ -25,8 +25,8 @@ namespace Texel
 
         void Start()
         {
-            microphone._RegisterTriggerOn(this, "_Pickup");
-            microphone._RegisterTriggerOff(this, "_Drop");
+            microphone._Register(PickupTrigger.EVENT_TRIGGER_ON, this, "_OnTriggerOn");
+            microphone._Register(PickupTrigger.EVENT_TRIGGER_OFF, this, "_OnTriggerOff");
 
             defaultSettings = botZone._GetLinkedZoneSettings(portalZone);
             defaultPortalLocalSettings = portalZone._GetLocalSettings();
@@ -43,7 +43,7 @@ namespace Texel
             }
         }
 
-        public void _Pickup()
+        public void _OnTriggerOn()
         {
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
@@ -52,7 +52,7 @@ namespace Texel
             RequestSerialization();
         }
 
-        public void _Drop()
+        public void _OnTriggerOff()
         {
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);

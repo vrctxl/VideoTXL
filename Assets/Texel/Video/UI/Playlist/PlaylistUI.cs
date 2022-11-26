@@ -41,6 +41,9 @@ namespace Texel
 
         public void _InitFromPlaylist(Playlist playlist)
         {
+            if (entries == null)
+                entries = new PlaylistUIEntry[0];
+
             if (Utilities.IsValid(playlist))
             {
                 this.playlist = playlist;

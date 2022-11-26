@@ -14,6 +14,8 @@ namespace Texel
 
         [UdonSynced, FieldChangeCallback("MicRemoved")]
         bool _syncMicRemoved = false;
+        [UdonSynced, FieldChangeCallback("Enabled")]
+        bool _syncEnabled = true;
 
         Vector3 initialMicPos;
         Quaternion initialMicRot;
@@ -25,8 +27,8 @@ namespace Texel
                 initialMicPos = microphone.transform.position;
                 initialMicRot = microphone.transform.rotation;
 
-                microphone._RegisterPickup(this, "_OnPickup");
-                microphone._RegisterDrop(this, "_OnDrop");
+                microphone._Register(PickupTrigger.EVENT_PICKUP, this, "_OnPickup");
+                microphone._Register(PickupTrigger.EVENT_DROP, this, "_OnDrop");
 
                 if (Utilities.IsValid(microphone.accessControl))
                     microphone.accessControl._RegisterValidateHandler(this, "_OnValidateAccess");
@@ -46,6 +48,17 @@ namespace Texel
             }
         }
 
+        public bool Enabled
+        {
+            get { return _syncEnabled; }
+            set
+            {
+                _syncEnabled = value;
+
+                _UpdateTrigger();
+            }
+        }
+
         public void _OnPickup()
         {
             if (!_AccessCheck())
@@ -56,7 +69,6 @@ namespace Texel
 
             MicRemoved = true;
             RequestSerialization();
-            Debug.Log("XXX");
         }
 
         public void _OnDrop()
@@ -67,6 +79,18 @@ namespace Texel
         public void _OnValidateAccess()
         {
             _UpdateTrigger();
+        }
+
+        public void _SetEnabled(bool state)
+        {
+            if (!_AccessCheck())
+                return;
+
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            Enabled = state;
+            RequestSerialization();
         }
 
         public void _Respawn()
@@ -88,6 +112,18 @@ namespace Texel
             RequestSerialization();
         }
 
+        public void _Reset()
+        {
+            if (!_AccessCheck())
+                return;
+
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            MicRemoved = false;
+            RequestSerialization();
+        }
+
         public override void Interact()
         {
             _Respawn();
@@ -95,7 +131,7 @@ namespace Texel
 
         void _UpdateTrigger()
         {
-            micStandCollider.enabled = _AccessCheck() && MicRemoved;
+            micStandCollider.enabled = _AccessCheck() && MicRemoved && Enabled;
         }
 
         bool _AccessCheck()

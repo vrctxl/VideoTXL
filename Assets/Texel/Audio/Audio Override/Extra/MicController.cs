@@ -1,6 +1,7 @@
 ﻿
 using UdonSharp;
 using UnityEngine;
+using UnityEngine.UI;
 using VRC.SDKBase;
 using VRC.Udon;
 
@@ -10,44 +11,149 @@ namespace Texel
     public class MicController : UdonSharpBehaviour
     {
         public PickupTrigger microphone;
-        public Collider microphoneCollider;
+        public AudioPlayerOverrideList overrideList;
+        public Collider[] microphoneCollider;
+        public MicStandToggle standToggle;
 
         public AudioOverrideZone baseZone;
         public AudioOverrideZone aoeZone;
         public AudioOverrideZone[] targetZones;
 
+        public AudioOverrideSettings suppressSettings;
+
+        public bool defaultLocked = true;
+        public bool defaultRaise = true;
+        public bool defaultLower = false;
+        public string zoneName = "ZONE";
+
         [Header("UI")]
-        public Material buttonOnMat;
-        public Material buttonOffMat;
+        public GameObject lockButton;
+        public GameObject zoneButton;
+        public GameObject raiseButton;
+        public GameObject lowerButton;
+        public GameObject micGrabButton;
+        public GameObject micMuteButton;
+        public GameObject micAoeButton;
+        public GameObject micPttButton;
+        public GameObject micResetButton;
+        public Image accessIcon;
+        public Image micTxIcon;
+        public Text micUserText;
 
-        public MeshRenderer zoneButton;
-        public MeshRenderer respawnButton;
-        public MeshRenderer lockedButton;
-        public MeshRenderer aoeButton;
-        public MeshRenderer grabBututon;
-        public MeshRenderer pttButton;
-
+        [UdonSynced, FieldChangeCallback("Locked")]
+        bool syncLocked = false;
+        [UdonSynced, FieldChangeCallback("MuteEnabled")]
+        bool syncMute = false;
         [UdonSynced, FieldChangeCallback("PTTEnabled")]
         bool syncPTT = false;
         [UdonSynced, FieldChangeCallback("GrabEnabled")]
-        bool syncGrab = true;
+        bool syncGrab = false;
         [UdonSynced, FieldChangeCallback("ZoneEnabled")]
         bool syncZone = false;
         [UdonSynced, FieldChangeCallback("AOEEnabled")]
         bool syncAOE = false;
+        [UdonSynced, FieldChangeCallback("RaiseEnabled")]
+        bool syncRaise = false;
+        [UdonSynced, FieldChangeCallback("LowerEnabled")]
+        bool syncLower = false;
+        [UdonSynced, FieldChangeCallback("BoundPlayerID")]
+        int syncBoundPlayerID = -1;
+
+        AudioOverrideSettings[] targetDefaultSettings;
+        AudioOverrideSettings[] targetLocalSettings;
 
         Vector3 startLocation;
         Quaternion startRotation;
 
+        const int COLOR_RED = 0;
+        const int COLOR_YELLOW = 1;
+
+        Color activeYellow = Color.HSVToRGB(60 / 360f, .8f, .9f);
+        Color activeRed = Color.HSVToRGB(0, .7f, .9f);
+
+        Color activeYellowLabel = Color.HSVToRGB(60 / 360f, .8f, .5f);
+        Color activeRedLabel = Color.HSVToRGB(0, .7f, .5f);
+
+        Color inactiveYellow = Color.HSVToRGB(60 / 360f, .35f, .35f);
+        Color inactiveRed = Color.HSVToRGB(0, .35f, .35f);
+
+        Color inactiveYellowLabel = Color.HSVToRGB(60 / 360f, .35f, .2f);
+        Color inactiveRedLabel = Color.HSVToRGB(0, .35f, .2f);
+
+        const int UI_BUTTON_LOCK = 0;
+        const int UI_BUTTON_ZONE = 1;
+        const int UI_BUTTON_MICGRAB = 2;
+        const int UI_BUTTON_MICMUTE = 3;
+        const int UI_BUTTON_MICAOE = 4;
+        const int UI_BUTTON_MICPTT = 5;
+        const int UI_BUTTON_MICRESET = 6;
+        const int UI_BUTTON_RAISE = 7;
+        const int UI_BUTTON_LOWER = 8;
+        const int UI_BUTTON_COUNT = 9;
+
+        Image[] buttonBackground;
+        Image[] buttonIcon;
+        Text[] buttonText;
+        int[] buttonColorIndex;
+
+        Color[] colorLookupActive;
+        Color[] colorLookupInactive;
+        Color[] colorLookupDisabled;
+        Color[] colorLookupActiveLabel;
+        Color[] colorLookupInactiveLabel;
+
         void Start()
         {
+            colorLookupActive = new Color[] { activeRed, activeYellow };
+            colorLookupInactive = new Color[] { inactiveRed, inactiveYellow };
+            colorLookupDisabled = new Color[] { inactiveRed, inactiveYellow };
+
+            colorLookupActiveLabel = new Color[] { activeRedLabel, activeYellowLabel };
+            colorLookupInactiveLabel = new Color[] { inactiveRedLabel, inactiveYellowLabel };
+
+            buttonColorIndex = new int[UI_BUTTON_COUNT];
+            buttonBackground = new Image[UI_BUTTON_COUNT];
+            buttonIcon = new Image[UI_BUTTON_COUNT];
+            buttonText = new Text[UI_BUTTON_COUNT];
+
+            _DiscoverButton(UI_BUTTON_LOCK, lockButton, COLOR_RED);
+            _DiscoverButton(UI_BUTTON_ZONE, zoneButton, COLOR_YELLOW);
+            _DiscoverButton(UI_BUTTON_MICGRAB, micGrabButton, COLOR_YELLOW);
+            _DiscoverButton(UI_BUTTON_MICMUTE, micMuteButton, COLOR_RED);
+            _DiscoverButton(UI_BUTTON_MICAOE, micAoeButton, COLOR_YELLOW);
+            _DiscoverButton(UI_BUTTON_MICPTT, micPttButton, COLOR_YELLOW);
+            _DiscoverButton(UI_BUTTON_MICRESET, micResetButton, COLOR_YELLOW);
+            _DiscoverButton(UI_BUTTON_RAISE, raiseButton, COLOR_YELLOW);
+            _DiscoverButton(UI_BUTTON_LOWER, lowerButton, COLOR_RED);
+
+            if (buttonText[UI_BUTTON_ZONE])
+                buttonText[UI_BUTTON_ZONE].text = zoneName;
+
+            micTxIcon.color = inactiveYellow;
+            micUserText.text = "";
+
+            targetDefaultSettings = new AudioOverrideSettings[targetZones.Length];
+            targetLocalSettings = new AudioOverrideSettings[targetZones.Length];
+            for (int i = 0; i < targetZones.Length; i++)
+            {
+                if (targetZones[i])
+                {
+                    targetDefaultSettings[i] = targetZones[i]._GetDefaultSettings();
+                    targetLocalSettings[i] = targetZones[i]._GetLocalSettings();
+                }
+            }
+
             if (Utilities.IsValid(microphone))
             {
                 startLocation = microphone.transform.position;
                 startRotation = microphone.transform.rotation;
 
-                microphone._RegisterTriggerOn(this, "_Pickup");
-                microphone._RegisterTriggerOff(this, "_Drop");
+                microphone._Register(PickupTrigger.EVENT_PICKUP, this, "_OnPickup");
+                microphone._Register(PickupTrigger.EVENT_DROP, this, "_OnDrop");
+                microphone._Register(PickupTrigger.EVENT_TRIGGER_ON, this, "_OnTriggerOn");
+                microphone._Register(PickupTrigger.EVENT_TRIGGER_OFF, this, "_OnTriggerOff");
+                overrideList._Register(AudioPlayerOverrideList.EVENT_BOUND_PLAYER_CHANGED, this, "_OnBoundPlayerChanged");
+                overrideList._Register(AudioPlayerOverrideList.EVENT_ENABLED_CHANGED, this, "_OnOverrideEnabledChanged");
 
                 if (Networking.IsOwner(gameObject) && microphone.TriggerOnUse)
                 {
@@ -58,11 +164,65 @@ namespace Texel
                 if (Utilities.IsValid(microphone.accessControl))
                 {
                     microphone.accessControl._RegisterValidateHandler(this, "_ValidateAccess");
-                    _ValidateAccess();
+                } else
+                    _SetButton(UI_BUTTON_LOCK, false);
+
+                _ValidateAccess();
+
+                if (Networking.IsOwner(gameObject))
+                {
+                    Locked = defaultLocked;
+                    RaiseEnabled = defaultRaise;
+                    LowerEnabled = defaultLower;
+                    GrabEnabled = true;
+                    PTTEnabled = true;
+                    RequestSerialization();
                 }
             }
+        }
 
-            _SetButton(grabBututon, true);
+        void _DiscoverButton(int index, GameObject button, int colorIndex)
+        {
+            if (!button)
+                return;
+
+            buttonColorIndex[index] = colorIndex;
+            buttonBackground[index] = button.GetComponent<Image>();
+            int childCount = button.transform.childCount;
+            for (int i = 0; i < childCount; i++)
+            {
+                Transform child = button.transform.GetChild(i);
+                if (!buttonIcon[index])
+                    buttonIcon[index] = child.GetComponent<Image>();
+                if (!buttonText[index])
+                    buttonText[index] = child.GetComponent<Text>();
+            }
+
+            _SetButton(index, false);
+        }
+
+        public bool Locked
+        {
+            set
+            {
+                syncLocked = value;
+
+                _SetButton(UI_BUTTON_LOCK, syncLocked);
+                _ValidateAccess();
+            }
+            get { return syncLocked; }
+        }
+
+        public bool MuteEnabled
+        {
+            set
+            {
+                syncMute = value;
+
+                _SetButton(UI_BUTTON_MICMUTE, syncMute);
+                _UpdateMicOverride();
+            }
+            get { return syncMute; }
         }
 
         public bool PTTEnabled
@@ -74,7 +234,7 @@ namespace Texel
                 if (Utilities.IsValid(microphone))
                     microphone.TriggerOnUse = value;
 
-                _SetButton(pttButton, syncPTT);
+                _SetButton(UI_BUTTON_MICPTT, syncPTT);
             }
             get { return syncPTT; }
         }
@@ -87,10 +247,14 @@ namespace Texel
 
                 if (Utilities.IsValid(microphone) && !syncGrab)
                     microphone._Drop();
-                if (Utilities.IsValid(microphoneCollider))
-                    microphoneCollider.enabled = syncGrab;
 
-                _SetButton(grabBututon, syncGrab);
+                foreach (var collider in microphoneCollider)
+                {
+                    if (Utilities.IsValid(collider))
+                        collider.enabled = syncGrab;
+                }
+
+                _SetButton(UI_BUTTON_MICGRAB, syncGrab);
             }
             get { return syncGrab; }
         }
@@ -101,16 +265,9 @@ namespace Texel
             {
                 syncZone = value;
 
-                if (Utilities.IsValid(baseZone))
-                {
-                    foreach (var zone in targetZones)
-                    {
-                        if (Utilities.IsValid(zone))
-                            zone._SetLinkedZoneActive(baseZone, syncZone);
-                    }
-                }
-
-                _SetButton(zoneButton, syncZone);
+                _SetButton(UI_BUTTON_ZONE, syncZone);
+                _UpdateZoneOverride();
+                _UpdateSupression();
             }
             get { return syncZone; }
         }
@@ -131,12 +288,91 @@ namespace Texel
                     }
                 }
 
-                _SetButton(aoeButton, syncAOE);
+                _SetButton(UI_BUTTON_MICAOE, syncAOE);
             }
             get { return syncAOE; }
         }
 
-        public void _Pickup()
+        public bool RaiseEnabled
+        {
+            set
+            {
+                syncRaise = value;
+
+                _SetButton(UI_BUTTON_RAISE, syncRaise);
+                _UpdateMicOverride();
+                _UpdateZoneOverride();
+            }
+            get { return syncRaise; }
+        }
+
+        public bool LowerEnabled
+        {
+            set
+            {
+                syncLower = value;
+
+                _SetButton(UI_BUTTON_LOWER, syncLower);
+                _UpdateSupression();
+            }
+            get { return syncLower; }
+        }
+
+        public int BoundPlayerID
+        {
+            set
+            {
+                syncBoundPlayerID = value;
+
+                VRCPlayerApi player = VRCPlayerApi.GetPlayerById(syncBoundPlayerID);
+                if (player != null && player.IsValid())
+                    micUserText.text = player.displayName;
+                else
+                    micUserText.text = "";
+
+                _UpdateSupression();
+            }
+            get { return syncBoundPlayerID; }
+        }
+
+        public void _OnBoundPlayerChanged()
+        {
+            if (_MicTransmitting())
+                micTxIcon.color = activeYellow;
+            else
+                micTxIcon.color = inactiveYellow;
+
+            _UpdateSupression();
+        }
+
+        public void _OnOverrideEnabledChanged()
+        {
+            //_SetButton(UI_BUTTON_MICMUTE, !overrideList.Enabled);
+        }
+
+        public void _OnPickup()
+        {
+            if (!_AccessCheck())
+                return;
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            BoundPlayerID = Networking.LocalPlayer.playerId;
+            RequestSerialization();
+        }
+
+        public void _OnDrop()
+        {
+            if (!_AccessCheck())
+                return;
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            BoundPlayerID = -1;
+            RequestSerialization();
+        }
+
+        public void _OnTriggerOn()
         {
             if (AOEEnabled && Utilities.IsValid(aoeZone))
             {
@@ -148,7 +384,7 @@ namespace Texel
             }
         }
 
-        public void _Drop()
+        public void _OnTriggerOff()
         {
             if (AOEEnabled && Utilities.IsValid(aoeZone))
             {
@@ -162,7 +398,7 @@ namespace Texel
 
         public void _ValidateAccess()
         {
-            _SetButton(lockedButton, !microphone.accessControl._LocalHasAccess());
+            accessIcon.color = _AccessCheck() ? inactiveRed : activeRed;
         }
 
         public void _ToggleZone()
@@ -173,6 +409,57 @@ namespace Texel
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             ZoneEnabled = !ZoneEnabled;
+            RequestSerialization();
+        }
+
+        public void _ToggleLock()
+        {
+            if (!_AccessCheck())
+                return;
+
+            AccessControl acl = microphone.accessControl;
+            if (acl && acl._LocalHasAccess())
+            {
+                if (!Networking.IsOwner(gameObject))
+                    Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+                Locked = !Locked;
+                RequestSerialization();
+            }
+        }
+
+        public void _ToggleRaise()
+        {
+            if (!_AccessCheck())
+                return;
+
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            RaiseEnabled = !RaiseEnabled;
+            RequestSerialization();
+        }
+
+        public void _ToggleLower()
+        {
+            if (!_AccessCheck())
+                return;
+
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            LowerEnabled = !LowerEnabled;
+            RequestSerialization();
+        }
+
+        public void _ToggleMute()
+        {
+            if (!_AccessCheck())
+                return;
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            MuteEnabled = !MuteEnabled;
             RequestSerialization();
         }
 
@@ -196,6 +483,9 @@ namespace Texel
 
             GrabEnabled = !GrabEnabled;
             RequestSerialization();
+
+            if (standToggle)
+                standToggle._SetEnabled(GrabEnabled);
         }
 
         public void _TogglePTT()
@@ -207,6 +497,54 @@ namespace Texel
 
             PTTEnabled = !PTTEnabled;
             RequestSerialization();
+        }
+
+        void _UpdateMicOverride()
+        {
+            overrideList._SetEnabled(!MuteEnabled && RaiseEnabled);
+        }
+
+        void _UpdateZoneOverride()
+        {
+            bool state = ZoneEnabled && RaiseEnabled;
+
+            if (Utilities.IsValid(baseZone))
+            {
+                foreach (var zone in targetZones)
+                {
+                    if (Utilities.IsValid(zone))
+                        zone._SetLinkedZoneActive(baseZone, state);
+                }
+            }
+        }
+
+        void _UpdateSupression()
+        {
+            bool state = LowerEnabled && _AnyOverrideActive();
+            for (int i = 0; i < targetZones.Length; i++)
+            {
+                AudioOverrideZone zone = targetZones[i];
+                if (Utilities.IsValid(zone))
+                {
+                    zone._SetDefaultSettings(state ? suppressSettings : targetDefaultSettings[i]);
+                    zone._SetLocalSettings(state ? suppressSettings : targetLocalSettings[i]);
+                }
+            }
+        }
+
+        bool _AnyOverrideActive()
+        {
+            if (ZoneEnabled)
+                return true;
+            if (_MicTransmitting() && !MuteEnabled)
+                return true;
+            return false;
+        }
+
+        bool _MicTransmitting()
+        {
+            VRCPlayerApi player = VRCPlayerApi.GetPlayerById(overrideList.BoundPlayerID);
+            return player != null && player.IsValid();
         }
 
         public void _Respawn()
@@ -221,13 +559,16 @@ namespace Texel
                 microphone.transform.SetPositionAndRotation(startLocation, startRotation);
             }
 
-            _SetButton(respawnButton, true);
+            if (standToggle)
+                standToggle._Reset();
+
+            _SetButton(UI_BUTTON_MICRESET, true);
             SendCustomEventDelayedSeconds("_ResetRespawn", 0.5f);
         }
 
         public void _ResetRespawn()
         {
-            _SetButton(respawnButton, false);
+            _SetButton(UI_BUTTON_MICRESET, false);
         }
 
         bool _AccessCheck()
@@ -239,19 +580,29 @@ namespace Texel
             if (!Utilities.IsValid(acl))
                 return true;
 
+            if (!Locked)
+                return true;
+
             return acl._LocalHasAccess();
         }
 
-        void _SetButton(MeshRenderer mesh, bool state)
+        void _SetButton(int buttonIndex, bool state)
         {
-            _SetMaterial(mesh, state ? buttonOnMat : buttonOffMat);
-        }
+            if (buttonIndex < 0 || buttonIndex >= UI_BUTTON_COUNT)
+                return;
 
-        void _SetMaterial(MeshRenderer mesh, Material mat)
-        {
-            Material[] shared = mesh.sharedMaterials;
-            shared[0] = mat;
-            mesh.sharedMaterials = shared;
+            int colorIndex = buttonColorIndex[buttonIndex];
+            Image bg = buttonBackground[buttonIndex];
+            if (bg)
+                bg.color = state ? colorLookupActive[colorIndex] : colorLookupInactive[colorIndex];
+
+            Image icon = buttonIcon[buttonIndex];
+            if (icon)
+                icon.color = state ? colorLookupActiveLabel[colorIndex] : colorLookupInactiveLabel[colorIndex];
+
+            Text text = buttonText[buttonIndex];
+            if (text)
+                text.color = state ? colorLookupActiveLabel[colorIndex] : colorLookupInactiveLabel[colorIndex];
         }
     }
 }
