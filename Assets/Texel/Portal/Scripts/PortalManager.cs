@@ -12,6 +12,7 @@ namespace Texel
 
         public AccessControl botAcl;
         public AccessControl modAcl;
+        public AudioOverrideZone botAudioZone;
 
         public GameObject botCamBox;
 
@@ -74,6 +75,12 @@ namespace Texel
             RequestSerialization();
 
             botCamBox.SetActive(true);
+
+            if (Utilities.IsValid(botAudioZone))
+            {
+                botAudioZone.playerArg = Networking.LocalPlayer;
+                botAudioZone._PlayerEnter();
+            }
         }
 
         public void _StationExit()
@@ -86,6 +93,12 @@ namespace Texel
 
             botCamBox.SetActive(false);
             Networking.LocalPlayer.Immobilize(false);
+
+            if (Utilities.IsValid(botAudioZone))
+            {
+                botAudioZone.playerArg = Networking.LocalPlayer;
+                botAudioZone._PlayerLeave();
+            }
         }
 
         public override bool OnOwnershipRequest(VRCPlayerApi requestingPlayer, VRCPlayerApi requestedOwner)
