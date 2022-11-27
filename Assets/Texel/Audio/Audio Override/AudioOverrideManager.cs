@@ -21,6 +21,7 @@ namespace Texel
         VRCPlayerApi[] playerBuffer = new VRCPlayerApi[100];
 
         AudioOverrideZone cachedLocalZone;
+        bool rebuildLocalQueued = false;
 
         void Start()
         {
@@ -79,6 +80,17 @@ namespace Texel
         public void _RebuildLocal()
         {
             waitForInit = false;
+
+            if (!rebuildLocalQueued)
+            {
+                rebuildLocalQueued = true;
+                SendCustomEventDelayedFrames("_CommitRebuildLocal", 1);
+            }
+        }
+
+        public void _CommitRebuildLocal()
+        {
+            rebuildLocalQueued = false;
 
             VRCPlayerApi player = Networking.LocalPlayer;
             if (!Utilities.IsValid(player))

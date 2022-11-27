@@ -23,10 +23,18 @@ namespace Texel
         public AudioOverrideSettings broadcastSettings;
         public AudioOverrideSettings suppressSettings;
 
+        [Header("System Defaults")]
+        public bool defaultZoneEnabled = false;
         public bool defaultLocked = true;
         public bool defaultRaise = true;
         public bool defaultLower = false;
         public string zoneName = "ZONE";
+
+        [Header("Microphone Defaults")]
+        public bool defaultMicMute = false;
+        public bool defaultMicGrab = true;
+        public bool defaultMicPTT = true;
+        public bool defaultMicAOE = false;
 
         [Header("UI")]
         public GameObject lockButton;
@@ -173,10 +181,13 @@ namespace Texel
                 if (Networking.IsOwner(gameObject))
                 {
                     Locked = defaultLocked;
+                    ZoneEnabled = defaultZoneEnabled;
                     RaiseEnabled = defaultRaise;
                     LowerEnabled = defaultLower;
-                    GrabEnabled = true;
-                    PTTEnabled = true;
+                    GrabEnabled = defaultMicGrab;
+                    PTTEnabled = defaultMicPTT;
+                    MuteEnabled = defaultMicMute;
+                    PTTEnabled = defaultMicPTT;
                     RequestSerialization();
                 }
             }
