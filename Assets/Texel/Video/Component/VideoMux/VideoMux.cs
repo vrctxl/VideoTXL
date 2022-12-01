@@ -231,32 +231,40 @@ namespace Texel
 
         public void _OnVideoReady(int id)
         {
-            VideoSource source = sources[id];
-            _DebugLog(source, "Video ready event");
+            if (!_GateEvent(id, "Video ready event"))
+                return;
+            //VideoSource source = sources[id];
+            //_DebugLog(source, "Video ready event");
 
             _UpdateHandlers(VIDEO_READY_EVENT);
         }
 
         public void _OnVideoStart(int id)
         {
-            VideoSource source = sources[id];
-            _DebugLog(source, "Video start event");
+            if (!_GateEvent(id, "Video start event"))
+                return;
+            //VideoSource source = sources[id];
+            //_DebugLog(source, "Video start event");
 
             _UpdateHandlers(VIDEO_START_EVENT);
         }
 
         public void _OnVideoEnd(int id)
         {
-            VideoSource source = sources[id];
-            _DebugLog(source, "Video end event");
+            if (!_GateEvent(id, "Video end event"))
+                return;
+            //VideoSource source = sources[id];
+            //_DebugLog(source, "Video end event");
 
             _UpdateHandlers(VIDEO_END_EVENT);
         }
 
         public void _OnVideoError(int id, VideoError videoError)
         {
-            VideoSource source = sources[id];
-            _DebugLog(source, $"Video error event: {videoError}");
+            if (!_GateEvent(id, $"Video error event: {videoError}"))
+                return;
+            //VideoSource source = sources[id];
+            //_DebugLog(source, $"Video error event: {videoError}");
 
             LastError = videoError;
             _UpdateHandlers(VIDEO_ERROR_EVENT);
@@ -264,26 +272,45 @@ namespace Texel
 
         public void _OnVideoLoop(int id)
         {
-            VideoSource source = sources[id];
-            _DebugLog(source, "Video loop event");
+            if (!_GateEvent(id, "Video loop event"))
+                return;
+            //VideoSource source = sources[id];
+            //_DebugLog(source, "Video loop event");
 
             _UpdateHandlers(VIDEO_LOOP_EVENT);
         }
 
         public void _OnVideoPause(int id)
         {
-            VideoSource source = sources[id];
-            _DebugLog(source, "Video pause event");
+            if (!_GateEvent(id, "Video pause event"))
+                return;
+            //VideoSource source = sources[id];
+            //_DebugLog(source, "Video pause event");
 
             _UpdateHandlers(VIDEO_PAUSE_EVENT);
         }
 
         public void _OnVideoPlay(int id)
         {
-            VideoSource source = sources[id];
-            _DebugLog(source, "Video play event");
+            if (!_GateEvent(id, "Video play event"))
+                return;
+            //VideoSource source = sources[id];
+            //_DebugLog(source, "Video play event");
 
             _UpdateHandlers(VIDEO_PLAY_EVENT);
+        }
+
+        bool _GateEvent(int id, string message)
+        {
+            VideoSource source = sources[id];
+            if (activeSource != id)
+                message += " (ignored)";
+
+            _DebugLog(source, message);
+            if (activeSource != id)
+                return false;
+
+            return true;
         }
 
         public bool VideoIsPlaying
@@ -425,6 +452,9 @@ namespace Texel
                 for (int i = 0; i < source.audioSources.Length; i++)
                     audioManager._SetChannelSource(source.audioSourceChannels[i], source.audioSources[i]);
             }
+
+            if (source)
+                _DebugLog($"Selected source {source.name} ({source._FormattedAttributes()})");
 
             _UpdateHandlers(SOURCE_CHANGE_EVENT);
         }

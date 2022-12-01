@@ -84,6 +84,16 @@ namespace Texel
             videoPlayer.Stop();
         }
 
+        public string _FormattedAttributes()
+        {
+            string str = "None";
+            if (VideoSourceType == VIDEO_SOURCE_AVPRO)
+                str = $"AVPro, res={maxResolution}, ll={lowLatency}";
+            else if (VideoSourceType == VIDEO_SOURCE_UNITY)
+                str = $"Unity, res={maxResolution}";
+            return str;
+        }
+
 
         public override void OnVideoReady()
         {

@@ -95,6 +95,7 @@ namespace Texel
         float _lastSyncTime;
         float _playStartTime = 0;
         bool _overrideLock = false;
+        bool _suppressSourceUpdate = false;
 
         float _pendingLoadTime = 0;
 
@@ -144,8 +145,11 @@ namespace Texel
 
             videoMux._UpdateLowLatency(VideoSource.LOW_LATENCY_ENABLE);
 
+            _suppressSourceUpdate = true;
             _UpdateVideoSourceOverride(defaultVideoSource);
             videoMux._UpdateVideoSource(videoMux.ActiveSourceType);
+            _suppressSourceUpdate = false;
+
             _UpdatePlayerState(VIDEO_STATE_STOPPED);
 
             if (Utilities.IsValid(playlist))
@@ -512,8 +516,10 @@ namespace Texel
                 else
                     _syncVideoSource = VideoSource.VIDEO_SOURCE_AVPRO;
             }
-            
+
+            _suppressSourceUpdate = true;
             videoMux._UpdateVideoSource(_syncVideoSource);
+            _suppressSourceUpdate = false;
 
             _syncUrl = url;
             _syncQuestUrl = questUrl;
@@ -937,7 +943,8 @@ namespace Texel
             _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
             //dataProxy._EmitStateUpdate();
 
-            _ForceResync(true);
+            if (!_suppressSourceUpdate)
+                _ForceResync(true);
         }
 
         public bool _IsAdmin()
