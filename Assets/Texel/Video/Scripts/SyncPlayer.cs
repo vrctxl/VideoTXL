@@ -142,6 +142,8 @@ namespace Texel
             videoMux._Register(VideoMux.VIDEO_ERROR_EVENT, this, "_OnVideoError");
             videoMux._Register(VideoMux.SOURCE_CHANGE_EVENT, this, "_OnSourceChange");
 
+            videoMux._UpdateLowLatency(VideoSource.LOW_LATENCY_ENABLE);
+
             _UpdateVideoSourceOverride(defaultVideoSource);
             videoMux._UpdateVideoSource(videoMux.ActiveSourceType);
             _UpdatePlayerState(VIDEO_STATE_STOPPED);

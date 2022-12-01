@@ -107,7 +107,10 @@ namespace Texel
 
                 VideoMux mux = videoPlayer.videoMux;
                 if (mux)
+                {
                     mux._Register(VideoMux.SETTINGS_CHANGE_EVENT, this, "_OnMuxSettingsChange");
+                    _OnMuxSettingsChange();
+                }
             }
 
             if (audioManager && !registeredAudio)

@@ -387,6 +387,8 @@ namespace Texel
 
         void _UpdateSource()
         {
+            _EnsureInit();
+
             VideoSource bestSource = _FindBestSource(videoType, preferredResIndex, lowLatency);
             int bestSourceId = (bestSource != null) ? bestSource.ID : -1;
 
@@ -429,6 +431,8 @@ namespace Texel
 
         public void _UpdatePreferredResolution(int resIndex)
         {
+            _EnsureInit();
+
             if (preferredResIndex == resIndex)
                 return;
 
@@ -447,6 +451,8 @@ namespace Texel
 
         public void _UpdateLowLatency(int value)
         {
+            _EnsureInit();
+
             if (lowLatency == value)
                 return;
 
@@ -467,6 +473,8 @@ namespace Texel
         // The preferredSourceType is the video component type selected in UI that should be preferred (or NONE for auto)
         public void _UpdateVideoSource(int activeSourceType)
         {
+            _EnsureInit();
+
             if (videoType == activeSourceType)
                 return;
 

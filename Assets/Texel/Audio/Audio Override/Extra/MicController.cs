@@ -1,4 +1,5 @@
 ﻿
+using System;
 using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
@@ -18,6 +19,15 @@ namespace Texel
         public AudioOverrideZone baseZone;
         public AudioOverrideZone aoeZone;
         public AudioOverrideZone[] targetZones;
+        public bool[] targetControlLocal;
+        public bool[] targetControlDefault;
+        public bool[] targetControlLinkBase;
+        public bool[] targetControlLinkAOE;
+
+        public AudioOverrideZone[] targetLinkDest;
+        public AudioOverrideZone[] targetLinkSource;
+        public AudioOverrideSettings[] targetLinkBroadcastProfile;
+        public AudioOverrideSettings[] targetLinkSuppressProfile;
 
         public AudioOverrideSettings defaultSettings;
         public AudioOverrideSettings broadcastSettings;
@@ -71,6 +81,7 @@ namespace Texel
 
         AudioOverrideSettings[] targetDefaultSettings;
         AudioOverrideSettings[] targetLocalSettings;
+        AudioOverrideSettings[] targetLinkCaptureProfile;
 
         Vector3 startLocation;
         Quaternion startRotation;
@@ -153,6 +164,18 @@ namespace Texel
                 }
             }
 
+            targetControlLocal = (bool[])_EnforceArrayLength(targetControlLocal, targetZones);
+            targetControlDefault = (bool[])_EnforceArrayLength(targetControlDefault, targetZones);
+            targetControlLinkBase = (bool[])_EnforceArrayLength(targetControlLinkBase, targetZones);
+            targetControlLinkAOE = (bool[])_EnforceArrayLength(targetControlLinkAOE, targetZones);
+
+            targetLinkCaptureProfile = new AudioOverrideSettings[targetLinkDest.Length];
+            for (int i = 0; i < targetLinkDest.Length; i++)
+            {
+                if (targetLinkDest[i])
+                    targetLinkCaptureProfile[i] = targetLinkDest[i]._GetLinkedZoneSettings(targetLinkSource[i]);
+            }
+
             if (Utilities.IsValid(microphone))
             {
                 startLocation = microphone.transform.position;
@@ -173,7 +196,8 @@ namespace Texel
                 if (Utilities.IsValid(microphone.accessControl))
                 {
                     microphone.accessControl._RegisterValidateHandler(this, "_ValidateAccess");
-                } else
+                }
+                else
                     _SetButton(UI_BUTTON_LOCK, false);
 
                 _ValidateAccess();
@@ -191,6 +215,19 @@ namespace Texel
                     RequestSerialization();
                 }
             }
+        }
+
+        Array _EnforceArrayLength(Array arr, Array reference)
+        {
+            int length = reference.Length;
+            if (arr != null && arr.Length == length)
+                return arr;
+
+            Array copy = Array.CreateInstance(arr.GetType(), length);
+            if (arr != null)
+                Array.Copy(arr, copy, Math.Min(arr.Length, length));
+
+            return copy;
         }
 
         void _DiscoverButton(int index, GameObject button, int colorIndex)
@@ -525,7 +562,8 @@ namespace Texel
 
         void _UpdateSupression()
         {
-            bool state = LowerEnabled && _AnyOverrideActive();
+            bool active = _AnyOverrideActive();
+            bool state = LowerEnabled && active;
             bool linkState = LowerEnabled && !RaiseEnabled;
 
             for (int i = 0; i < targetZones.Length; i++)
@@ -533,17 +571,40 @@ namespace Texel
                 AudioOverrideZone zone = targetZones[i];
                 if (Utilities.IsValid(zone))
                 {
-                    zone._SetDefaultSettings(state ? suppressSettings : targetDefaultSettings[i]);
-                    zone._SetLocalSettings(state ? suppressSettings : targetLocalSettings[i]);
+                    if (targetControlDefault[i])
+                        zone._SetDefaultSettings(state ? suppressSettings : targetDefaultSettings[i]);
+                    if (targetControlLocal[i])
+                        zone._SetLocalSettings(state ? suppressSettings : targetLocalSettings[i]);
 
                     AudioOverrideSettings linkedProfile = linkState ? defaultSettings : broadcastSettings;
-                    if (baseZone)
+                    if (baseZone && targetControlLinkBase[i])
                         zone._SetLinkedZoneSettings(baseZone, linkedProfile);
-                    if (aoeZone)
+                    if (aoeZone && targetControlLinkAOE[i])
                         zone._SetLinkedZoneSettings(aoeZone, linkedProfile);
 
                     overrideList._SetZoneSettings(zone, linkedProfile);
                 }
+            }
+
+            for (int i = 0; i < targetLinkDest.Length; i++)
+            {
+                AudioOverrideZone zone = targetLinkDest[i];
+                if (!zone)
+                    continue;
+
+                AudioOverrideSettings profile = null;
+                if (active)
+                {
+                    if (RaiseEnabled)
+                        profile = targetLinkBroadcastProfile[i];
+                    if (LowerEnabled && !profile)
+                        profile = targetLinkSuppressProfile[i];
+                }
+
+                if (!profile)
+                    profile = targetLinkCaptureProfile[i];
+
+                zone._SetLinkedZoneSettings(targetLinkSource[i], profile);
             }
         }
 

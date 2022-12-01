@@ -26,7 +26,11 @@ namespace Texel
 
         void Start()
         {
-
+            if (Networking.IsOwner(gameObject))
+            {
+                StreamOutEnabled = true;
+                RequestSerialization();
+            }
         }
 
         public bool StreamOutEnabled
