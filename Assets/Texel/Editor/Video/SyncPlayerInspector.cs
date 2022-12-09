@@ -71,8 +71,11 @@ namespace Texel
 
         public override void OnInspectorGUI()
         {
+            serializedObject.Update();
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
+
+            EditorGUI.BeginChangeCheck();
 
             EditorGUILayout.PropertyField(videoMuxProperty, new GUIContent("Video Source Manager", "Internal object for multiplexing multiple video sources."));
 
@@ -124,7 +127,8 @@ namespace Texel
             EditorGUILayout.PropertyField(debugStageProperty, new GUIContent("Debug State", "Periodically refresh internal object state on a world object"));
             EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
 
-            serializedObject.ApplyModifiedProperties();
+            if (EditorGUI.EndChangeCheck())
+                serializedObject.ApplyModifiedProperties();
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Update", EditorStyles.boldLabel);

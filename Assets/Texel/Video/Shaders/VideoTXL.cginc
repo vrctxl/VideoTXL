@@ -4,7 +4,7 @@
 uniform float _AspectRatio;
 uniform int _FitMode;
 
-float TXL_ComputeScreenCorrection(float2 res) {
+float2 TXL_ComputeScreenCorrection(float2 res) {
 	float2 normRes = float2(res.x / _AspectRatio, res.y);
 	float2 correction;
 

@@ -88,6 +88,7 @@ namespace Texel
                 audioManager._EnsureInit();
 
             _Discover();
+            _UpdateAudio();
 
             nextSourceIndex = sources.Length;
             activeSource = -1;
@@ -445,18 +446,28 @@ namespace Texel
                 activeVideoPlayer = source.VideoPlayer;
             }
 
-            // TODO: Move to bridge?
-            if (audioManager)
-            {
-                audioManager._ClearChannelSources();
-                for (int i = 0; i < source.audioSources.Length; i++)
-                    audioManager._SetChannelSource(source.audioSourceChannels[i], source.audioSources[i]);
-            }
+            _UpdateAudio();
 
             if (source)
                 _DebugLog($"Selected source {source.name} ({source._FormattedAttributes()})");
 
             _UpdateHandlers(SOURCE_CHANGE_EVENT);
+        }
+
+        // TODO: Move to bridge?
+        void _UpdateAudio()
+        {
+            if (!audioManager || activeSource < 0)
+                return;
+
+            audioManager._ClearChannelSources();
+
+            VideoSource source = sources[activeSource];
+            if (!source)
+                return;
+
+            for (int i = 0; i < source.audioSources.Length; i++)
+                audioManager._SetChannelSource(source.audioSourceChannels[i], source.audioSources[i]);
         }
 
         public void _UpdatePreferredResolution(int resIndex)
