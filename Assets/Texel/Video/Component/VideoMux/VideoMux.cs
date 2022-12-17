@@ -13,7 +13,7 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class VideoMux : EventBase
     {
-        public AudioManager audioManager;
+        //public AudioManager audioManager;
         public VideoSource[] sources;
 
         [Header("Debug")]
@@ -80,15 +80,15 @@ namespace Texel
             {
                 if (sources[i] != null)
                     sources[i]._Register(this, i);
-                GameObject copy = Instantiate(sources[i].audioSources[0].gameObject);
-                copy.transform.SetParent(sources[i].audioSources[0].transform.parent);
+                //GameObject copy = Instantiate(sources[i].audioSources[0].gameObject);
+                //copy.transform.SetParent(sources[i].audioSources[0].transform.parent);
             }
 
-            if (audioManager)
-                audioManager._EnsureInit();
+            //if (audioManager)
+            //    audioManager._EnsureInit();
 
             _Discover();
-            _UpdateAudio();
+            //_UpdateAudio();
 
             nextSourceIndex = sources.Length;
             activeSource = -1;
@@ -227,6 +227,17 @@ namespace Texel
                     return VideoSource.VIDEO_SOURCE_NONE;
 
                 return source.VideoSourceType;
+            }
+        }
+
+        public VideoSource ActiveSource
+        {
+            get
+            {
+                if (activeSource < 0 || activeSource >= sources.Length)
+                    return null;
+
+                return sources[activeSource];
             }
         }
 
@@ -446,7 +457,7 @@ namespace Texel
                 activeVideoPlayer = source.VideoPlayer;
             }
 
-            _UpdateAudio();
+            //_UpdateAudio();
 
             if (source)
                 _DebugLog($"Selected source {source.name} ({source._FormattedAttributes()})");
@@ -455,7 +466,7 @@ namespace Texel
         }
 
         // TODO: Move to bridge?
-        void _UpdateAudio()
+        /*void _UpdateAudio()
         {
             if (!audioManager || activeSource < 0)
                 return;
@@ -468,7 +479,7 @@ namespace Texel
 
             for (int i = 0; i < source.audioSources.Length; i++)
                 audioManager._SetChannelSource(source.audioSourceChannels[i], source.audioSources[i]);
-        }
+        }*/
 
         public void _UpdatePreferredResolution(int resIndex)
         {

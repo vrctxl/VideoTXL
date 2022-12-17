@@ -14,8 +14,9 @@ namespace Texel
     {
         public VideoMux videoMux;
         public MeshRenderer captureRenderer;
-        public AudioSource[] audioSources;
-        public string[] audioSourceChannels;
+        public VideoSourceAudioGroup[] audioGroups;
+        //public AudioSource[] audioSources;
+        //public string[] audioSourceChannels;
 
         public bool lowLatency = false;
         public int maxResolution = 720;

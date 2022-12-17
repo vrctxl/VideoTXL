@@ -6,7 +6,7 @@ using VRC.SDKBase;
 namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-    public class AudioFadeZone : UdonSharpBehaviour
+    public class AudioFadeZone : EventBase
     {
         [Header("Optional Components")]
         [Tooltip("An audio source to update directly.  Does not need to be specified if the Audio Fade Zone is attached to an Audio Manager")]
@@ -27,6 +27,8 @@ namespace Texel
         public float lowerBound = 0;
 
         [Header("Performance")]
+        [Tooltip("Whether the fade zone is active by default")]
+        public bool active = true;
         [Tooltip("Interval in seconds that player position is checked for correct fade within the zones")]
         public float updateRate = 0.25f;
         [Tooltip("Force re-checking zone membership on player enter events.  May be needed in certain instances where you map can lose enter or leave events (such as stations within the zones).  You can save some performance by calling _RecalculateNextEvent yourself as needed.")]
@@ -38,25 +40,44 @@ namespace Texel
         [Tooltip("Write debug statements to VRChat log")]
         public bool vrcLog;
 
-        AudioManager audioManager;
-        int audioChannel;
+        //AudioManager audioManager;
+        //int audioChannel;
 
         bool hasAudioSource = false;
-        bool hasAudioManager = false;
+        //bool hasAudioManager = false;
         bool forceRecalc = false;
         bool pendingRecalc = false;
 
         int triggerCount = 0;
         float zoneFadeScale;
 
+        public const int EVENT_FADE_UPDATE = 0;
+        public const int EVENT_COUNT = 1;
+
         void Start()
+        {
+            _EnsureInit();
+        }
+
+        protected override int EventCount { get => EVENT_COUNT; }
+
+        protected override void _Init()
         {
             hasAudioSource = Utilities.IsValid(audioSource);
 
-            _UpdateFade();
-            _InitInterpolateZoneFadeLoop();
+            if (active)
+            {
+                _UpdateFade();
+                _InitInterpolateZoneFadeLoop();
+            }
         }
 
+        public float Fade
+        {
+            get { return zoneFadeScale; }
+        }
+
+        /*
         public void _RegisterAudioManager(AudioManager manager, int channel)
         {
             if (!Utilities.IsValid(manager))
@@ -68,6 +89,7 @@ namespace Texel
 
             _UpdateFade();
         }
+        */
 
         public override void OnPlayerTriggerEnter(VRCPlayerApi player)
         {
@@ -127,7 +149,7 @@ namespace Texel
 
         void _InitInterpolateZoneFadeLoop()
         {
-            if (!Utilities.IsValid(innerZone) || !Utilities.IsValid(outerZone))
+            if (!active || !Utilities.IsValid(innerZone) || !Utilities.IsValid(outerZone))
                 return;
 
             innerZone.enabled = false;
@@ -143,6 +165,15 @@ namespace Texel
         {
             _InterpolateZoneFade();
             SendCustomEventDelayedSeconds("_InterpolateZoneFadeLoop", updateRate);
+        }
+
+        public void _SetActive(bool state)
+        {
+            if (active != state) {
+                active = state;
+                if (active)
+                    _InitInterpolateZoneFadeLoop();
+            }
         }
 
         void _InterpolateZoneFade()
@@ -208,8 +239,10 @@ namespace Texel
             if (hasAudioSource)
                 audioSource.volume = zoneFadeScale;
 
-            if (hasAudioManager)
-                audioManager._SetChannelFade(audioChannel, zoneFadeScale);
+            _UpdateHandlers(EVENT_FADE_UPDATE);
+
+            //if (hasAudioManager)
+            //    audioManager._SetChannelFade(audioChannel, zoneFadeScale);
         }
 
         void DebugLog(string message)

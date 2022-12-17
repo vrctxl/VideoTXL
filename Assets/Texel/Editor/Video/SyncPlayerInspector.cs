@@ -8,6 +8,7 @@ using System.Collections;
 using UnityEditor.SceneManagement;
 using VRC.SDK3.Video.Components.AVPro;
 using VRC.SDK3.Video.Components;
+using VRC.SDK3.Components;
 
 namespace Texel
 {
@@ -15,6 +16,7 @@ namespace Texel
     internal class SyncPlayerInspector : Editor
     {
         SerializedProperty videoMuxProperty;
+        SerializedProperty audioManagerProperty;
 
         SerializedProperty playlistPoperty;
         SerializedProperty remapperProperty;
@@ -43,6 +45,7 @@ namespace Texel
         private void OnEnable()
         {
             videoMuxProperty = serializedObject.FindProperty(nameof(SyncPlayer.videoMux));
+            audioManagerProperty = serializedObject.FindProperty(nameof(SyncPlayer.audioManager));
 
             playlistPoperty = serializedObject.FindProperty(nameof(SyncPlayer.playlist));
             remapperProperty = serializedObject.FindProperty(nameof(SyncPlayer.urlRemapper));
@@ -78,6 +81,7 @@ namespace Texel
             EditorGUI.BeginChangeCheck();
 
             EditorGUILayout.PropertyField(videoMuxProperty, new GUIContent("Video Source Manager", "Internal object for multiplexing multiple video sources."));
+            EditorGUILayout.PropertyField(audioManagerProperty, new GUIContent("Audio Source Manager", "Internal object for managing multiple audio source sets against video sources."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Optional Components", EditorStyles.boldLabel);
@@ -195,6 +199,133 @@ namespace Texel
                     PrefabUtility.RecordPrefabInstancePropertyModifications(row);
                 }
             }
+
+            Undo.RecordObject(videoPlayer.gameObject, "Update Audio Setup");
+
+            // Enumerate video sources
+            List<VideoSource> unitySources = new List<VideoSource>();
+            List<VideoSource> avproSources = new List<VideoSource>();
+
+            foreach (VideoSource source in videoPlayer.videoMux.sources)
+            {
+                if (!source)
+                    continue;
+
+                if (source.gameObject.GetComponent<VRCAVProVideoPlayer>())
+                    avproSources.Add(source);
+                else if (source.gameObject.GetComponent<VRCUnityVideoPlayer>())
+                    unitySources.Add(source);
+            }
+
+            // Unity audios sources must be copied as settings
+
+            // Apply Audio
+            AudioChannelGroup[] groups = videoPlayer.audioManager.channelGroups;
+
+            foreach (VideoSource source in avproSources)
+            {
+                Transform sourceRoot = source.gameObject.transform;
+                Transform template = sourceRoot.Find("AudioTemplates");
+                Transform resources = sourceRoot.Find("AudioResources");
+                if (!resources)
+                {
+                    resources = Instantiate(new GameObject("AudioResources"), sourceRoot).transform;
+                    resources.name = "AudioResources";
+                }
+
+                source.audioGroups = new VideoSourceAudioGroup[groups.Length];
+
+                for (int g = 0; g < groups.Length; g++)
+                {
+                    AudioChannelGroup group = groups[g];
+                    Transform groupRoot = resources.Find(group.groupName);
+                    if (groupRoot)
+                        DestroyImmediate(groupRoot.gameObject);
+
+                    groupRoot = Instantiate(new GameObject(), resources).transform;
+                    groupRoot.name = group.groupName;
+
+                    VideoSourceAudioGroup audioGroup = groupRoot.gameObject.AddUdonSharpComponent<VideoSourceAudioGroup>();
+                    audioGroup.groupName = group.groupName;
+                    audioGroup.channelAudio = new AudioSource[group.avproChannels.Length];
+                    audioGroup.channelName = new string[group.avproChannels.Length];
+                    audioGroup.channelReference = new AudioChannel[group.avproChannels.Length];
+
+                    source.audioGroups[g] = audioGroup;
+
+                    for (int i = 0; i < group.avproChannels.Length; i++)
+                    {
+                        AudioChannel channel = group.avproChannels[i];
+                        Transform existingChannel = groupRoot.Find(channel.channelName);
+                        if (existingChannel)
+                            DestroyImmediate(existingChannel.gameObject);
+
+                        string templateName = null;
+                        switch (channel.track)
+                        {
+                            case AudioChannelTrack.STEREO: templateName = "StereoMix"; break;
+                            case AudioChannelTrack.LEFT: templateName = "MonoLeft"; break;
+                            case AudioChannelTrack.RIGHT: templateName = "MonoRight"; break;
+                            case AudioChannelTrack.THREE: templateName = "Three"; break;
+                            case AudioChannelTrack.FOUR: templateName = "Four"; break;
+                            case AudioChannelTrack.FIVE: templateName = "Five"; break;
+                        }
+
+                        if (templateName == null)
+                            continue;
+
+                        Transform templateChannel = template.Find(templateName);
+                        if (!templateChannel)
+                            continue;
+
+                        GameObject audioResource = Instantiate(templateChannel.gameObject, groupRoot);
+                        audioResource.name = channel.channelName;
+
+                        VRCSpatialAudioSource sourceSpatial = channel.gameObject.GetComponent<VRCSpatialAudioSource>();
+                        VRCSpatialAudioSource targetSpatial = audioResource.gameObject.GetComponent<VRCSpatialAudioSource>();
+                        if (sourceSpatial && targetSpatial)
+                        {
+                            targetSpatial.Gain = sourceSpatial.Gain;
+                            targetSpatial.Far = sourceSpatial.Far;
+                            targetSpatial.Near = sourceSpatial.Near;
+                            targetSpatial.VolumetricRadius = sourceSpatial.VolumetricRadius;
+                            targetSpatial.EnableSpatialization = sourceSpatial.EnableSpatialization;
+                            targetSpatial.UseAudioSourceVolumeCurve = sourceSpatial.UseAudioSourceVolumeCurve;
+                        }
+
+                        AudioSource sourceAudioSource = channel.gameObject.GetComponent<AudioSource>();
+                        AudioSource targetAudioSource = audioResource.gameObject.GetComponent<AudioSource>();
+                        if (sourceAudioSource && targetAudioSource)
+                        {
+                            targetAudioSource.volume = sourceAudioSource.volume;
+                            targetAudioSource.spatialBlend = sourceAudioSource.spatialBlend;
+                            targetAudioSource.spread = sourceAudioSource.spread;
+                            targetAudioSource.minDistance = sourceAudioSource.minDistance;
+                            targetAudioSource.maxDistance = sourceAudioSource.maxDistance;
+                            targetAudioSource.spatialize = sourceAudioSource.spatialize;
+                            targetAudioSource.rolloffMode = sourceAudioSource.rolloffMode;
+                            targetAudioSource.reverbZoneMix = sourceAudioSource.reverbZoneMix;
+                            targetAudioSource.dopplerLevel = sourceAudioSource.dopplerLevel;
+
+                            if (sourceAudioSource.GetCustomCurve(AudioSourceCurveType.SpatialBlend) != null)
+                                targetAudioSource.SetCustomCurve(AudioSourceCurveType.SpatialBlend, sourceAudioSource.GetCustomCurve(AudioSourceCurveType.SpatialBlend));
+                            if (sourceAudioSource.GetCustomCurve(AudioSourceCurveType.Spread) != null)
+                                targetAudioSource.SetCustomCurve(AudioSourceCurveType.Spread, sourceAudioSource.GetCustomCurve(AudioSourceCurveType.Spread));
+                            if (sourceAudioSource.GetCustomCurve(AudioSourceCurveType.ReverbZoneMix) != null)
+                                targetAudioSource.SetCustomCurve(AudioSourceCurveType.ReverbZoneMix, sourceAudioSource.GetCustomCurve(AudioSourceCurveType.ReverbZoneMix));
+                            if (sourceAudioSource.GetCustomCurve(AudioSourceCurveType.CustomRolloff) != null)
+                                targetAudioSource.SetCustomCurve(AudioSourceCurveType.CustomRolloff, sourceAudioSource.GetCustomCurve(AudioSourceCurveType.CustomRolloff));
+                        }
+
+                        audioGroup.channelName[i] = channel.name;
+                        audioGroup.channelAudio[i] = targetAudioSource;
+                        audioGroup.channelReference[i] = channel;
+                    }
+                }
+                
+            }
+
+            PrefabUtility.RecordPrefabInstancePropertyModifications(videoPlayer.gameObject);
         }
 
         List<int> GetResolutions(VideoMux mux)

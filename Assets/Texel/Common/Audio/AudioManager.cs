@@ -9,12 +9,13 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class AudioManager : EventBase
     {
-        public SyncAudioManager syncAudioManager;
-        public bool useSync = false;
+        //public SyncAudioManager syncAudioManager;
+        //public bool useSync = false;
         public TXLVideoPlayer videoPlayer;
         public bool muteSourceForInactiveVideo = true;
+
         public UdonBehaviour audioLinkSystem;
-        public string audioLinkChannel;
+        //public string audioLinkChannel;
 
         [Range(0, 1)]
         public float inputVolume = 1f;
@@ -22,43 +23,57 @@ namespace Texel
         [Range(0, 1)]
         public float masterVolume = 0.9f;
         public bool masterMute = false;
-        public bool master2D = false;
+        //public bool master2D = false;
 
-        public AudioSource[] channelAudio;
-        public string[] channelNames;
-        [Range(0, 1)]
-        public float[] channelVolume;
-        public bool[] channelMute;
-        public bool[] channel2D;
-        public AudioFadeZone[] channelFadeZone;
-        public bool[] channelDisableFade2D;
-        public bool[] channelMute2D;
-        public bool[] channelSeparateVolume2D;
-        [Range(0, 1)]
-        public float[] channelVolume2D;
+        public AudioChannelGroup[] channelGroups;
+
+        public bool debugLogging = true;
+        public DebugLog debugLog;
+
+        //public AudioSource[] channelAudio;
+        //public string[] channelNames;
+        //public AudioChannel[] channelData;
+
+        //[Range(0, 1)]
+        //public float[] channelVolume;
+        //public bool[] channelMute;
+        //public bool[] channel2D;
+        //public AudioFadeZone[] channelFadeZone;
+        //public bool[] channelDisableFade2D;
+        //public bool[] channelMute2D;
+        //public bool[] channelSeparateVolume2D;
+        //[Range(0, 1)]
+        //public float[] channelVolume2D;
+
+        AudioChannelGroup selectedChannelGroup;
+        VideoSource selectedVideoSource;
+        VideoSourceAudioGroup activeAudioGroup;
 
         public const int EVENT_MASTER_VOLUME_UPDATE = 0;
         public const int EVENT_MASTER_MUTE_UPDATE = 1;
-        public const int EVENT_MASTER_2D_UPDATE = 2;
+        //public const int EVENT_MASTER_2D_UPDATE = 2;
         //public const int EVENT_CHANNEL_VOLUME_UPDATE = 3;
-        public const int EVENT_CHANNEL_MUTE_UPDATE = 4;
+        //public const int EVENT_CHANNEL_MUTE_UPDATE = 4;
         //public const int EVENT_CHANNEL_2D_UPDATE = 5;
-        public const int EVENT_CHANNEL_SOURCE_UPDATE = 6;
+        //public const int EVENT_CHANNEL_SOURCE_UPDATE = 6;
         const int EVENT_COUNT = 7;
 
-        float[] channelFade;
-        float[] spatialBlend;
-        AnimationCurve[] spatialCurve;
+        //float[] channelFade;
+        //float[] spatialBlend;
+        //AnimationCurve[] spatialCurve;
 
         bool initialized = false;
         Component[] audioControls;
 
         int channelCount = 0;
-        bool hasSync = false;
-        bool ovrMasterMute = false;
-        bool ovrMasterVolume = false;
-        bool ovrMaster2D = false;
+        //bool hasSync = false;
+        //bool ovrMasterMute = false;
+        //bool ovrMasterVolume = false;
+        //bool ovrMaster2D = false;
         bool videoMute = false;
+
+        const int UNITY = 0;
+        const int AVPRO = 1;
 
         void Start()
         {
@@ -72,12 +87,29 @@ namespace Texel
             if (!Utilities.IsValid(audioControls))
                 audioControls = new Component[0];
 
-            channelCount = channelAudio.Length;
-            channelFade = new float[channelCount];
-            spatialBlend = new float[channelCount];
-            spatialCurve = new AnimationCurve[channelCount];
+            foreach (AudioChannelGroup group in channelGroups)
+            {
+                foreach (AudioChannel channel in group.unityChannels)
+                    channel._SetAudioManager(this);
+                foreach (AudioChannel channel in group.avproChannels)
+                    channel._SetAudioManager(this);
+            }
 
-            for (int i = 0; i < channelCount; i++)
+            foreach (AudioChannelGroup group in channelGroups)
+            {
+                if (group)
+                {
+                    _SelectChannelGroup(group);
+                    break;
+                }
+            }
+
+            //channelCount = channelAudio.Length;
+            //channelFade = new float[channelCount];
+            //spatialBlend = new float[channelCount];
+            //spatialCurve = new AnimationCurve[channelCount];
+
+            /*for (int i = 0; i < channelCount; i++)
             {
                 channelFade[i] = 1;
                 if (i < channelFadeZone.Length && Utilities.IsValid(channelFadeZone[i]))
@@ -89,23 +121,129 @@ namespace Texel
                     if (!Utilities.IsValid(spatialCurve[i]))
                         spatialBlend[i] = channelAudio[i].spatialBlend;
                 }
-            }
+            }*/
 
-            if (useSync && Utilities.IsValid(syncAudioManager))
+            /*if (useSync && Utilities.IsValid(syncAudioManager))
             {
                 hasSync = true;
                 UdonBehaviour behavior = (UdonBehaviour)GetComponent(typeof(UdonBehaviour));
-                syncAudioManager._Initialize(behavior, inputVolume, masterVolume, channelVolume, inputMute, masterMute, master2D, channelMute, channel2D, channelNames);
-            }
+                syncAudioManager._Initialize(behavior, inputVolume, masterVolume, channelVolume, inputMute, masterMute, channelMute, channelNames);
+            }*/
 
             initialized = true;
 
             _UpdateAll();
             _UpdateAudioLink();
 
-            if (Utilities.IsValid(videoPlayer))
+            if (videoPlayer)
+            {
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
+                if (videoPlayer.videoMux)
+                    videoPlayer.videoMux._Register(VideoMux.SOURCE_CHANGE_EVENT, this, "_OnVideoSourceChange");
+            }
         }
+
+        public void _SelectChannelGroup(AudioChannelGroup group)
+        {
+            if (group == selectedChannelGroup)
+                return;
+
+            selectedChannelGroup = group;
+            _DebugLog($"Selected Audio Channel Group {group.groupName}");
+
+            _UpdateActiveAudioGroup();
+        }
+
+        public void _SelectVideoSource(VideoSource source)
+        {
+            if (selectedVideoSource == source)
+                return;
+
+            selectedVideoSource = source;
+
+            _UpdateActiveAudioGroup();
+        }
+
+        void _UpdateActiveAudioGroup()
+        {
+            _SetVideoAudioGroupState(activeAudioGroup, false);
+
+            channelCount = 0;
+            activeAudioGroup = null;
+            AudioChannel[] channelData = null;
+
+            if (!selectedChannelGroup || !selectedVideoSource)
+            {
+                _UpdateAll();
+                _UpdateAudioLink(null);
+                return;
+            }
+
+            if (selectedVideoSource.VideoSourceType == VideoSource.VIDEO_SOURCE_UNITY)
+                channelData = selectedChannelGroup.unityChannels;
+            else if (selectedVideoSource.VideoSourceType == VideoSource.VIDEO_SOURCE_AVPRO)
+                channelData = selectedChannelGroup.avproChannels;
+
+            if (channelData == null)
+            {
+                _UpdateAll();
+                _UpdateAudioLink(null);
+                return;
+            }
+
+            channelCount = channelData.Length;
+            foreach (var audioGroup in selectedVideoSource.audioGroups)
+            {
+                if (!audioGroup || audioGroup.groupName != selectedChannelGroup.groupName)
+                    continue;
+
+                activeAudioGroup = audioGroup;
+                _SetVideoAudioGroupState(activeAudioGroup, true);
+                break;
+            }
+
+            _UpdateAll();
+            _UpdateAudioLink();
+        }
+
+        void _SetVideoAudioGroupState(VideoSourceAudioGroup group, bool enabled)
+        {
+            if (!group)
+                return;
+
+            for (int i = 0; i < group.channelAudio.Length; i++)
+            {
+                if (group.channelAudio[i])
+                {
+                    group.channelAudio[i].enabled = enabled;
+                    group.channelAudio[i].gameObject.SetActive(enabled);
+                }
+
+                if (enabled && group.channelReference[i])
+                    group.channelReference[i]._BindSource(group.channelAudio[i]);
+            }
+        }
+
+        /*
+        void _LoadChannels()
+        {
+            channelCount = 0;
+            if (!activeAudioGroup)
+                return;
+
+            channelCount = activeAudioGroup.channelAudio.Length;
+            channelAudio = (AudioSource[]) UtilityTxl.ArrayMinSize(channelAudio, channelCount, typeof(AudioSource));
+            channelNames = (string[]) UtilityTxl.ArrayMinSize(channelNames, channelCount, typeof(string));
+            channelVolume = (float[]) UtilityTxl.ArrayMinSize(channelVolume, channelCount, typeof(float));
+            channelMute = (bool[]) UtilityTxl.ArrayMinSize(channelMute, channelCount, typeof(bool));
+            channelFadeZone = (AudioFadeZone[]) UtilityTxl.ArrayMinSize(channelFade, channelCount, typeof(AudioFadeZone));
+
+            for (int i = 0; i < channelCount; i++) {
+                channelAudio[i] = activeAudioGroup.channelAudio[i];
+                channelNames[i] = activeAudioGroup.channelName[i];
+            }
+        }
+        */
 
         public void _RegisterControls(Component controls)
         {
@@ -150,9 +288,14 @@ namespace Texel
             }
         }
 
+        public void _OnVideoSourceChange()
+        {
+            _SelectVideoSource(videoPlayer.videoMux.ActiveSource);
+        }
+
         public void _SetMasterVolume(float value)
         {
-            ovrMasterVolume = true;
+            //ovrMasterVolume = true;
             masterVolume = value;
 
             _UpdateAll();
@@ -171,22 +314,14 @@ namespace Texel
 
         public void _SetMasterMute(bool state)
         {
-            ovrMasterMute = true;
+            //ovrMasterMute = true;
             masterMute = state;
 
             _UpdateAll();
             _UpdateHandlers(EVENT_MASTER_MUTE_UPDATE);
         }
 
-        public void _SetMaster2D(bool state)
-        {
-            ovrMaster2D = true;
-            master2D = state;
-
-            _UpdateAll();
-            _UpdateHandlers(EVENT_MASTER_2D_UPDATE);
-        }
-
+        /*
         public void _SetChannelFade(int channel, float fade)
         {
             if (channel < 0 || channel >= channelCount)
@@ -202,7 +337,7 @@ namespace Texel
             if (channel < 0 || channel >= channelCount)
                 return;
 
-            channelMute[channel] = state;
+            channelData[channel].mute = state;
 
             _UpdateAudioChannel(channel);
             _UpdateHandlers(EVENT_CHANNEL_MUTE_UPDATE, channel);
@@ -218,9 +353,10 @@ namespace Texel
             if (index < 0 || index >= channelCount)
                 return null;
 
-            return channelAudio[index];
-        }
+            return activeAudioGroup.channelAudio[index];
+        }*/
 
+        /*
         public void _SetChannelSource(string channel, AudioSource source)
         {
             _SetChannelSource(_GetChannelIndex(channel), source);
@@ -239,7 +375,9 @@ namespace Texel
                 _UpdateHandlers(EVENT_CHANNEL_SOURCE_UPDATE, channel);
             }
         }
+        */
 
+            /*
         int _GetChannelIndex(string channel)
         {
             int index = -1;
@@ -249,7 +387,7 @@ namespace Texel
             {
                 for (int i = 0; i < channelCount; i++)
                 {
-                    if (channelNames[i] == channel)
+                    if (channelData[i].channelName == channel)
                     {
                         index = i;
                         break;
@@ -259,7 +397,9 @@ namespace Texel
 
             return index;
         }
+        */
 
+        /*
         public void _ClearChannelSources()
         {
             for (int i = 0; i < channelCount; i++)
@@ -272,11 +412,14 @@ namespace Texel
             if (audioLinkSystem)
                 audioLinkSystem.SetProgramVariable("audioSource", null);
         }
+        */
 
+        /*
         public void _SyncUpdate()
         {
             _UpdateAll();
         }
+        */
 
         void _UpdateAll()
         {
@@ -286,56 +429,61 @@ namespace Texel
 
         void _UpdateAudioSources()
         {
-            bool baseMute = _InputMute() || _MasterMute();
+            if (!activeAudioGroup)
+                return;
+
+            for (int i = 0; i < activeAudioGroup.channelReference.Length; i++)
+            {
+                AudioChannel channel = activeAudioGroup.channelReference[i];
+                if (channel)
+                    channel._UpdateAudioSource();
+            }
+
+            /*bool baseMute = _InputMute() || _MasterMute();
             float baseVolume = _InputVolume() * _MasterVolume();
-            bool base2D = _Master2D();
 
             for (int i = 0; i < channelCount; i++)
-                _UpdateAudioChannelWithBase(i, baseMute, baseVolume, base2D);
+                _UpdateAudioChannelWithBase(i, baseMute, baseVolume);*/
         }
 
+        /*
         void _UpdateAudioChannel(int channel)
         {
             bool baseMute = _InputMute() || _MasterMute();
             float baseVolume = _InputVolume() * _MasterVolume();
-            bool base2D = _Master2D();
 
-            _UpdateAudioChannelWithBase(channel, baseMute, baseVolume, base2D);
+            _UpdateAudioChannelWithBase(channel, baseMute, baseVolume);
         }
 
         // todo: private internal and cache some stuff
-        void _UpdateAudioChannelWithBase(int channel, bool baseMute, float baseVolume, bool base2D)
+        void _UpdateAudioChannelWithBase(int channel, bool baseMute, float baseVolume)
         {
-            AudioSource source = channelAudio[channel];
+            AudioSource source = activeAudioGroup.channelAudio[channel];
             if (!Utilities.IsValid(source))
                 return;
 
-            bool audio2D = base2D || _Channel2D(channel);
-
-            float rawVolume = baseVolume * _ChannelVolume(channel);
-            if (!audio2D)
-                rawVolume *= channelFade[channel];
+            float rawVolume = baseVolume * _ChannelVolume(channel) * channelFade[channel];
             float expVolume = Mathf.Clamp01(3.1623e-3f * Mathf.Exp(rawVolume * 5.757f) - 3.1623e-3f);
 
             source.mute = baseMute || _ChannelMute(channel);
             source.volume = expVolume;
 
-            // Update 2D/3D audio
-            if (audio2D)
-            {
-                spatialCurve[channel] = source.GetCustomCurve(AudioSourceCurveType.SpatialBlend);
-                if (!Utilities.IsValid(spatialCurve[channel]))
-                    spatialBlend[channel] = source.spatialBlend;
-                source.spatialBlend = 0;
-            }
-            else
-            {
-                if (Utilities.IsValid(spatialCurve[channel]))
-                    source.SetCustomCurve(AudioSourceCurveType.SpatialBlend, spatialCurve[channel]);
-                else
-                    source.spatialBlend = spatialBlend[channel];
-            }
+            //if (Utilities.IsValid(spatialCurve[channel]))
+            //    source.SetCustomCurve(AudioSourceCurveType.SpatialBlend, spatialCurve[channel]);
+            //else
+            //    source.spatialBlend = spatialBlend[channel];
 
+        }
+        */
+
+        public float _BaseVolume()
+        {
+            return _InputVolume() * _MasterVolume();
+        }
+
+        public bool _BaseMute()
+        {
+            return _InputMute() || _MasterMute();
         }
 
         void _UpdateAudioControls()
@@ -356,66 +504,74 @@ namespace Texel
 
         bool _InputMute()
         {
-            return hasSync ? syncAudioManager.syncInputMute : inputMute;
+            return /*hasSync ? syncAudioManager.syncInputMute :*/ inputMute;
         }
 
         float _InputVolume()
         {
-            return hasSync ? syncAudioManager.syncInputVolume : inputVolume;
+            return /*hasSync ? syncAudioManager.syncInputVolume :*/ inputVolume;
         }
 
         bool _MasterMute()
         {
-            return ((hasSync && !ovrMasterMute) ? syncAudioManager.syncMasterMute : masterMute) || videoMute;
+            return (/*(hasSync && !ovrMasterMute) ? syncAudioManager.syncMasterMute :*/ masterMute) || videoMute;
         }
 
         float _MasterVolume()
         {
-            return (hasSync && !ovrMasterVolume) ? syncAudioManager.syncMasterVolume : masterVolume;
+            return /*(hasSync && !ovrMasterVolume) ? syncAudioManager.syncMasterVolume :*/ masterVolume;
         }
 
-        bool _Master2D()
-        {
-            return (hasSync && !ovrMaster2D) ? syncAudioManager.syncMaster2D : master2D;
-        }
+        //bool _ChannelMute(int channel)
+        //{
+        //    return (/*hasSync ? syncAudioManager.syncChannelMutes[channel] :*/ channelData[channel].mute) || videoMute;
+        //}
 
-        bool _ChannelMute(int channel)
-        {
-            return (hasSync ? syncAudioManager.syncChannelMutes[channel] : channelMute[channel]) || videoMute;
-        }
-
-        float _ChannelVolume(int channel)
-        {
-            return hasSync ? syncAudioManager.syncChannelVolumes[channel] : channelVolume[channel];
-        }
-
-        bool _Channel2D(int channel)
-        {
-            return hasSync ? syncAudioManager.syncChannel2Ds[channel] : channel2D[channel];
-        }
+        //float _ChannelVolume(int channel)
+        //{
+        //    return /*hasSync ? syncAudioManager.syncChannelVolumes[channel] :*/ channelData[channel].volume;
+        //}
 
         void _UpdateAudioLink()
         {
-            if (!audioLinkSystem)
+            if (!audioLinkSystem || !activeAudioGroup)
+            {
+                _UpdateAudioLink(null);
                 return;
+            }
 
             AudioSource source = null;
-            if (audioLinkChannel != null && audioLinkChannel != "")
-                source = _GetChannelSource(audioLinkChannel);
-
-            if (!source)
+            for (int i = 0; i < activeAudioGroup.channelReference.Length; i++)
             {
-                for (int i = 0; i < channelCount; i++)
+                AudioChannel channel = activeAudioGroup.channelReference[i];
+                if (channel)
                 {
-                    if (channelAudio[i])
+                    AudioSource channelSource = activeAudioGroup.channelAudio[i];
+                    if (channelSource)
                     {
-                        source = channelAudio[i];
-                        break;
+                        if (!source || channel.audioLinkSource)
+                            source = channelSource;
                     }
                 }
             }
 
+            _UpdateAudioLink(source);
+        }
+
+        void _UpdateAudioLink(AudioSource source)
+        {
+            if (!audioLinkSystem)
+                return;
+
             audioLinkSystem.SetProgramVariable("audioSource", source);
+        }
+
+        void _DebugLog(string message)
+        {
+            if (debugLogging)
+                Debug.Log("[VideoTXL:AudioManager] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write("AudioManager", message);
         }
     }
 }

@@ -30,6 +30,7 @@ namespace Texel
         [Header("Internal Objects")]
         [Tooltip("Manager for multiplexing video sources")]
         public VideoMux videoMux;
+        public AudioManager audioManager;
 
         [NonSerialized]
         public short playerSource;

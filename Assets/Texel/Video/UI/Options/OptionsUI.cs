@@ -116,7 +116,7 @@ namespace Texel
             if (audioManager && !registeredAudio)
             {
                 registeredAudio = true;
-                audioManager._Register(AudioManager.EVENT_MASTER_2D_UPDATE, this, "_OnMaster2DUpdate");
+                // audioManager._Register(AudioManager.EVENT_MASTER_2D_UPDATE, this, "_OnMaster2DUpdate");
             }
         }
 
@@ -316,7 +316,7 @@ namespace Texel
 
         public void _OnMaster2DUpdate()
         {
-            audioSpatialDropdown.SetValueWithoutNotify(audioManager.master2D ? 1 : 0);
+            audioSpatialDropdown.SetValueWithoutNotify(0);
         }
 
         public void _HandleSpatialAudioChangedUI()
@@ -329,7 +329,7 @@ namespace Texel
             if (!audioManager)
                 return;
 
-            audioManager._SetMaster2D(mode == 1);
+            //audioManager._SetMaster2D(mode == 1);
         }
     }
 }

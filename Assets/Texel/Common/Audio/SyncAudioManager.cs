@@ -34,8 +34,8 @@ namespace Texel
         public float[] syncChannelVolumes;
         [UdonSynced, NonSerialized]
         public bool[] syncChannelMutes;
-        [UdonSynced, NonSerialized]
-        public bool[] syncChannel2Ds;
+        //[UdonSynced, NonSerialized]
+        //public bool[] syncChannel2Ds;
 
         [NonSerialized]
         public string[] channelNames;
@@ -50,7 +50,7 @@ namespace Texel
 
         UdonBehaviour listener;
 
-        public void _Initialize(UdonBehaviour localManager, float inputVolume, float masterVolume, float[] channelVolumes, bool inputMute, bool masterMute, bool master2D, bool[] channelMutes, bool[] channel2Ds, string[] channelNames)
+        public void _Initialize(UdonBehaviour localManager, float inputVolume, float masterVolume, float[] channelVolumes, bool inputMute, bool masterMute, bool[] channelMutes, string[] channelNames)
         {
             hasAccessControl = Utilities.IsValid(accessControl);
 
@@ -62,9 +62,7 @@ namespace Texel
             syncChannelVolumes = channelVolumes;
             syncInputMute = inputMute;
             syncMasterMute = masterMute;
-            syncMaster2D = master2D;
             syncChannelMutes = channelMutes;
-            syncChannel2Ds = channel2Ds;
 
             this.channelNames = channelNames;
 
@@ -150,15 +148,6 @@ namespace Texel
             _RequestSerialization();
         }
 
-        public void _SetMaster2D(bool state)
-        {
-            if (state == syncMaster2D || !_TakeControl())
-                return;
-
-            syncMaster2D = state;
-            _RequestSerialization();
-        }
-
         public void _MuteChannel(int channel, bool state)
         {
             if (channel < 0 || channel >= channelCount || state == syncChannelMutes[channel])
@@ -167,17 +156,6 @@ namespace Texel
                 return;
 
             syncChannelMutes[channel] = state;
-            _RequestSerialization();
-        }
-
-        public void _SetChannel2D(int channel, bool state)
-        {
-            if (channel < 0 || channel >= channelCount || state == syncChannel2Ds[channel])
-                return;
-            if (!_TakeControl())
-                return;
-
-            syncChannel2Ds[channel] = state;
             _RequestSerialization();
         }
 
