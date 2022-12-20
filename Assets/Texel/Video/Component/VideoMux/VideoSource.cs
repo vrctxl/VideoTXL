@@ -12,14 +12,21 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class VideoSource : UdonSharpBehaviour
     {
+        [Tooltip("The main video source manager")]
         public VideoMux videoMux;
+        [Tooltip("Internal object for capturing the video source's render texture.")]
         public MeshRenderer captureRenderer;
-        public VideoSourceAudioGroup[] audioGroups;
-        //public AudioSource[] audioSources;
-        //public string[] audioSourceChannels;
-
-        public bool lowLatency = false;
+        [Tooltip("If multiple resolutions are available for a given URL, the video source will attempt to load the video with the largest resolution that is equal to or smaller than this limit.")]
         public int maxResolution = 720;
+
+        [Tooltip("The audio group definitions associated with this source.  This list is usually auto-generated from the update components button in the main video player inspector.")]       
+        public VideoSourceAudioGroup[] audioGroups;
+
+        [Header("AVPro Options")]
+        [Tooltip("A special audio source for AVPro video sources that's enabled for all audio groups and required for proper functioning of audio group switching.  This source should usually be used for AudioLink, and will be used if no override is specified in an audio group.")]
+        public AudioSource avproReservedChannel;
+        [Tooltip("Whether this source has AVPro's low latency option enabled.  Low latency is necessary for some sources like VRCDN RSTP URLs.")]
+        public bool lowLatency = false;
 
         int id = 0;
         BaseVRCVideoPlayer videoPlayer;

@@ -153,7 +153,9 @@ namespace Texel
             List<int> latencies = GetLatencies(videoPlayer.videoMux);
             List<int> videoModes = GetTypes(videoPlayer.videoMux);
 
-            OptionsUI[] list = Object.FindObjectsOfType<OptionsUI>();
+            AudioChannelGroup[] groups = videoPlayer.audioManager.channelGroups;
+
+            OptionsUI[] list = FindObjectsOfType<OptionsUI>();
             foreach (var item in list)
             {
                 if (!item.mainControls || item.mainControls.videoPlayer != serializedObject.targetObject)
@@ -198,6 +200,27 @@ namespace Texel
                     row.SetActive(false);
                     PrefabUtility.RecordPrefabInstancePropertyModifications(row);
                 }
+
+                if (groups.Length <= 1)
+                {
+                    GameObject row = item.audioSpatialDropdown.transform.parent.gameObject;
+                    Undo.RecordObject(row, "Update Connected Components");
+                    row.SetActive(false);
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(row);
+                } else
+                {
+                    Dropdown template = null;
+                    Transform templateObj = item.audioSpatialDropdown.transform.Find("IconTemplate");
+                    if (templateObj)
+                        template = templateObj.GetComponent<Dropdown>();
+
+                    Undo.RecordObject(item.audioSpatialDropdown, "Update Connected Components");
+
+                    item.audioSpatialDropdown.ClearOptions();
+                    item.audioSpatialDropdown.AddOptions(GetAudioGroupOptions(new List<AudioChannelGroup>(groups)));
+
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(item.audioSpatialDropdown);
+                }
             }
 
             Undo.RecordObject(videoPlayer.gameObject, "Update Audio Setup");
@@ -219,18 +242,15 @@ namespace Texel
 
             // Unity audios sources must be copied as settings
 
-            // Apply Audio
-            AudioChannelGroup[] groups = videoPlayer.audioManager.channelGroups;
-
-            foreach (VideoSource source in avproSources)
+            // Unity Audio Groups
+            foreach (VideoSource source in unitySources)
             {
                 Transform sourceRoot = source.gameObject.transform;
-                Transform template = sourceRoot.Find("AudioTemplates");
                 Transform resources = sourceRoot.Find("AudioResources");
                 if (!resources)
                 {
-                    resources = Instantiate(new GameObject("AudioResources"), sourceRoot).transform;
-                    resources.name = "AudioResources";
+                    resources = new GameObject("AudioResources").transform;
+                    resources.parent = sourceRoot;
                 }
 
                 source.audioGroups = new VideoSourceAudioGroup[groups.Length];
@@ -242,13 +262,58 @@ namespace Texel
                     if (groupRoot)
                         DestroyImmediate(groupRoot.gameObject);
 
-                    groupRoot = Instantiate(new GameObject(), resources).transform;
-                    groupRoot.name = group.groupName;
+                    groupRoot = new GameObject(group.groupName).transform;
+                    groupRoot.parent = resources;
+
+                    VideoSourceAudioGroup audioGroup = groupRoot.gameObject.AddUdonSharpComponent<VideoSourceAudioGroup>();
+                    audioGroup.groupName = group.groupName;
+                    audioGroup.channelAudio = new AudioSource[1];
+                    audioGroup.channelReference = new AudioChannel[1];
+
+                    source.audioGroups[g] = audioGroup;
+
+                    AudioSource unityAudioSource = null;
+                    Transform unityAudio = sourceRoot.Find("AudioSource");
+                    if (unityAudio)
+                        unityAudioSource = unityAudio.GetComponent<AudioSource>();
+
+                    audioGroup.channelAudio[0] = unityAudioSource;
+                    audioGroup.channelReference[0] = group.unityChannel;
+                }
+
+                PrefabUtility.RecordPrefabInstancePropertyModifications(source);
+            }
+
+            // AVPro Audio Groups
+            foreach (VideoSource source in avproSources)
+            {
+                Transform sourceRoot = source.gameObject.transform;
+                Transform template = sourceRoot.Find("AudioTemplates");
+                Transform resources = sourceRoot.Find("AudioResources");
+                if (!resources)
+                {
+                    resources = new GameObject("AudioResources").transform;
+                    resources.parent = sourceRoot;
+                }
+
+                List<Transform> existingResources = new List<Transform>();
+                for (int i = 0; i < resources.childCount; i++)
+                    existingResources.Add(resources.GetChild(i));
+
+                foreach (Transform child in existingResources)
+                    DestroyImmediate(child.gameObject);
+
+                source.audioGroups = new VideoSourceAudioGroup[groups.Length];
+
+                for (int g = 0; g < groups.Length; g++)
+                {
+                    AudioChannelGroup group = groups[g];
+                    Transform groupRoot = new GameObject(group.groupName).transform;
+                    groupRoot.parent = resources;
 
                     VideoSourceAudioGroup audioGroup = groupRoot.gameObject.AddUdonSharpComponent<VideoSourceAudioGroup>();
                     audioGroup.groupName = group.groupName;
                     audioGroup.channelAudio = new AudioSource[group.avproChannels.Length];
-                    audioGroup.channelName = new string[group.avproChannels.Length];
                     audioGroup.channelReference = new AudioChannel[group.avproChannels.Length];
 
                     source.audioGroups[g] = audioGroup;
@@ -269,6 +334,7 @@ namespace Texel
                             case AudioChannelTrack.THREE: templateName = "Three"; break;
                             case AudioChannelTrack.FOUR: templateName = "Four"; break;
                             case AudioChannelTrack.FIVE: templateName = "Five"; break;
+                            case AudioChannelTrack.SIX: templateName = "Six"; break;
                         }
 
                         if (templateName == null)
@@ -280,6 +346,7 @@ namespace Texel
 
                         GameObject audioResource = Instantiate(templateChannel.gameObject, groupRoot);
                         audioResource.name = channel.channelName;
+                        audioResource.SetActive(true);
 
                         VRCSpatialAudioSource sourceSpatial = channel.gameObject.GetComponent<VRCSpatialAudioSource>();
                         VRCSpatialAudioSource targetSpatial = audioResource.gameObject.GetComponent<VRCSpatialAudioSource>();
@@ -297,6 +364,7 @@ namespace Texel
                         AudioSource targetAudioSource = audioResource.gameObject.GetComponent<AudioSource>();
                         if (sourceAudioSource && targetAudioSource)
                         {
+                            targetAudioSource.enabled = false;
                             targetAudioSource.volume = sourceAudioSource.volume;
                             targetAudioSource.spatialBlend = sourceAudioSource.spatialBlend;
                             targetAudioSource.spread = sourceAudioSource.spread;
@@ -316,13 +384,13 @@ namespace Texel
                             if (sourceAudioSource.GetCustomCurve(AudioSourceCurveType.CustomRolloff) != null)
                                 targetAudioSource.SetCustomCurve(AudioSourceCurveType.CustomRolloff, sourceAudioSource.GetCustomCurve(AudioSourceCurveType.CustomRolloff));
                         }
-
-                        audioGroup.channelName[i] = channel.name;
+                        
                         audioGroup.channelAudio[i] = targetAudioSource;
                         audioGroup.channelReference[i] = channel;
                     }
                 }
-                
+
+                PrefabUtility.RecordPrefabInstancePropertyModifications(source);
             }
 
             PrefabUtility.RecordPrefabInstancePropertyModifications(videoPlayer.gameObject);
@@ -419,6 +487,18 @@ namespace Texel
                     icon = iconLow;
 
                 options.Add(new Dropdown.OptionData($"{res}p", icon));
+            }
+
+            return options;
+        }
+
+        List<Dropdown.OptionData> GetAudioGroupOptions(List<AudioChannelGroup> groups)
+        {
+            List<Dropdown.OptionData> options = new List<Dropdown.OptionData>();
+            foreach (AudioChannelGroup group in groups)
+            {
+                if (group)
+                    options.Add(new Dropdown.OptionData(group.groupName, group.groupIcon));
             }
 
             return options;

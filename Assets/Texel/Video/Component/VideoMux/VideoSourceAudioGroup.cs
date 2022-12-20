@@ -12,13 +12,8 @@ namespace Texel
         public string groupName;
 
         [Header("Channel Data")]
-        public string[] channelName;
-        public AudioSource[] channelAudio;
         public AudioChannel[] channelReference;
-
-        //public float[] channelVolume;
-        //public bool[] channelMute;
-        //public AudioFadeZone[] channelFadeZone;
+        public AudioSource[] channelAudio;
 
         void Start()
         {

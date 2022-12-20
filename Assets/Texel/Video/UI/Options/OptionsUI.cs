@@ -314,10 +314,10 @@ namespace Texel
 
         // Audio Panel
 
-        public void _OnMaster2DUpdate()
-        {
-            audioSpatialDropdown.SetValueWithoutNotify(0);
-        }
+        //public void _OnMaster2DUpdate()
+        //{
+        //    audioSpatialDropdown.SetValueWithoutNotify(0);
+        //}
 
         public void _HandleSpatialAudioChangedUI()
         {
@@ -328,6 +328,12 @@ namespace Texel
         {
             if (!audioManager)
                 return;
+
+            AudioChannelGroup[] groups = audioManager.channelGroups;
+            if (mode < 0 || mode >= groups.Length)
+                return;
+
+            audioManager._SelectChannelGroup(groups[mode]);
 
             //audioManager._SetMaster2D(mode == 1);
         }

@@ -89,10 +89,13 @@ namespace Texel
 
             foreach (AudioChannelGroup group in channelGroups)
             {
-                foreach (AudioChannel channel in group.unityChannels)
-                    channel._SetAudioManager(this);
+                if (group.unityChannel)
+                    group.unityChannel._SetAudioManager(this);
                 foreach (AudioChannel channel in group.avproChannels)
-                    channel._SetAudioManager(this);
+                {
+                    if (channel)
+                        channel._SetAudioManager(this);
+                }
             }
 
             foreach (AudioChannelGroup group in channelGroups)
@@ -170,7 +173,6 @@ namespace Texel
 
             channelCount = 0;
             activeAudioGroup = null;
-            AudioChannel[] channelData = null;
 
             if (!selectedChannelGroup || !selectedVideoSource)
             {
@@ -179,19 +181,20 @@ namespace Texel
                 return;
             }
 
-            if (selectedVideoSource.VideoSourceType == VideoSource.VIDEO_SOURCE_UNITY)
-                channelData = selectedChannelGroup.unityChannels;
-            else if (selectedVideoSource.VideoSourceType == VideoSource.VIDEO_SOURCE_AVPRO)
-                channelData = selectedChannelGroup.avproChannels;
-
-            if (channelData == null)
+            switch (selectedVideoSource.VideoSourceType)
             {
-                _UpdateAll();
-                _UpdateAudioLink(null);
-                return;
+                case VideoSource.VIDEO_SOURCE_UNITY:
+                    channelCount = 1;
+                    break;
+                case VideoSource.VIDEO_SOURCE_AVPRO:
+                    channelCount = selectedChannelGroup.avproChannels.Length;
+                    break;
+                case VideoSource.VIDEO_SOURCE_NONE:
+                    _UpdateAll();
+                    _UpdateAudioLink(null);
+                    return;
             }
-
-            channelCount = channelData.Length;
+            
             foreach (var audioGroup in selectedVideoSource.audioGroups)
             {
                 if (!audioGroup || audioGroup.groupName != selectedChannelGroup.groupName)
@@ -211,39 +214,66 @@ namespace Texel
             if (!group)
                 return;
 
-            for (int i = 0; i < group.channelAudio.Length; i++)
+            // Unity
+            if (selectedVideoSource.VideoSourceType == VideoSource.VIDEO_SOURCE_UNITY)
             {
-                if (group.channelAudio[i])
+                if (enabled)
                 {
-                    group.channelAudio[i].enabled = enabled;
-                    group.channelAudio[i].gameObject.SetActive(enabled);
+                    for (int i = 0; i < group.channelAudio.Length; i++)
+                    {
+                        if (group.channelAudio[i])
+                        {
+                            group.channelAudio[i].enabled = true;
+                            if (group.channelReference[i])
+                            {
+                                _CopyAudioSourceProperties(group.channelReference[i].audioSourceTemplate, group.channelAudio[i]);
+                                group.channelReference[i]._BindSource(group.channelAudio[i]);
+                            }
+                        }
+                    }
                 }
+            }
 
-                if (enabled && group.channelReference[i])
-                    group.channelReference[i]._BindSource(group.channelAudio[i]);
+            // AVPro
+            if (selectedVideoSource.VideoSourceType == VideoSource.VIDEO_SOURCE_AVPRO)
+            {
+                for (int i = 0; i < group.channelAudio.Length; i++)
+                {
+                    if (group.channelAudio[i])
+                        group.channelAudio[i].enabled = enabled;
+
+                    if (enabled && group.channelReference[i])
+                        group.channelReference[i]._BindSource(group.channelAudio[i]);
+                }
             }
         }
 
-        /*
-        void _LoadChannels()
+        void _CopyAudioSourceProperties(AudioSource source, AudioSource target)
         {
-            channelCount = 0;
-            if (!activeAudioGroup)
+            if (!source || !target)
                 return;
 
-            channelCount = activeAudioGroup.channelAudio.Length;
-            channelAudio = (AudioSource[]) UtilityTxl.ArrayMinSize(channelAudio, channelCount, typeof(AudioSource));
-            channelNames = (string[]) UtilityTxl.ArrayMinSize(channelNames, channelCount, typeof(string));
-            channelVolume = (float[]) UtilityTxl.ArrayMinSize(channelVolume, channelCount, typeof(float));
-            channelMute = (bool[]) UtilityTxl.ArrayMinSize(channelMute, channelCount, typeof(bool));
-            channelFadeZone = (AudioFadeZone[]) UtilityTxl.ArrayMinSize(channelFade, channelCount, typeof(AudioFadeZone));
+            // Do not copy volume, mute
 
-            for (int i = 0; i < channelCount; i++) {
-                channelAudio[i] = activeAudioGroup.channelAudio[i];
-                channelNames[i] = activeAudioGroup.channelName[i];
-            }
+            target.spatialBlend = source.spatialBlend;
+            target.spread = source.spread;
+            target.minDistance = source.minDistance;
+            target.maxDistance = source.maxDistance;
+            target.spatialize = source.spatialize;
+            target.rolloffMode = source.rolloffMode;
+            target.reverbZoneMix = source.reverbZoneMix;
+            target.dopplerLevel = source.dopplerLevel;
+
+            
+            if (source.GetCustomCurve(AudioSourceCurveType.SpatialBlend) != null)
+                target.SetCustomCurve(AudioSourceCurveType.SpatialBlend, source.GetCustomCurve(AudioSourceCurveType.SpatialBlend));
+            if (source.GetCustomCurve(AudioSourceCurveType.Spread) != null)
+                target.SetCustomCurve(AudioSourceCurveType.Spread, source.GetCustomCurve(AudioSourceCurveType.Spread));
+            if (source.GetCustomCurve(AudioSourceCurveType.ReverbZoneMix) != null)
+                target.SetCustomCurve(AudioSourceCurveType.ReverbZoneMix, source.GetCustomCurve(AudioSourceCurveType.ReverbZoneMix));
+            if (source.GetCustomCurve(AudioSourceCurveType.CustomRolloff) != null)
+                target.SetCustomCurve(AudioSourceCurveType.CustomRolloff, source.GetCustomCurve(AudioSourceCurveType.CustomRolloff));
         }
-        */
 
         public void _RegisterControls(Component controls)
         {
@@ -549,11 +579,14 @@ namespace Texel
                     AudioSource channelSource = activeAudioGroup.channelAudio[i];
                     if (channelSource)
                     {
-                        if (!source || channel.audioLinkSource)
+                        if (channel.audioLinkSource)
                             source = channelSource;
                     }
                 }
             }
+
+            if (!source)
+                source = selectedVideoSource.avproReservedChannel;
 
             _UpdateAudioLink(source);
         }
