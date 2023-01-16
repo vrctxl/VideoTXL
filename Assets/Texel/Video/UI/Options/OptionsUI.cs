@@ -34,7 +34,7 @@ namespace Texel
         public Dropdown videoFitDropdown;
         public Dropdown videoResolutionDropdown;
         public Dropdown videoLatencyDropdown;
-        public Dropdown audioSpatialDropdown;
+        public Dropdown audioProfileDropdown;
 
         public Text infoMasterText;
         public Text infoInstanceOwnerText;
@@ -80,6 +80,13 @@ namespace Texel
                 if (videoFitDropdown)
                     videoFitDropdown.transform.parent.gameObject.SetActive(false);
             }
+
+            if (optionsInfoNav && !optionsInfoNav.activeSelf)
+                infoPanel = false;
+            if (optionsVideoNav && !optionsVideoNav.activeSelf)
+                videoPanel = false;
+            if (optionsAudioNav && !optionsAudioNav.activeSelf)
+                audioPanel = false;
         }
 
         public void _SetControls(PlayerControls controls)
@@ -105,10 +112,10 @@ namespace Texel
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, "_OnVideoInfoUpdate");
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
 
-                VideoMux mux = videoPlayer.videoMux;
+                VideoManager mux = videoPlayer.videoMux;
                 if (mux)
                 {
-                    mux._Register(VideoMux.SETTINGS_CHANGE_EVENT, this, "_OnMuxSettingsChange");
+                    mux._Register(VideoManager.SETTINGS_CHANGE_EVENT, this, "_OnMuxSettingsChange");
                     _OnMuxSettingsChange();
                 }
             }
@@ -116,7 +123,7 @@ namespace Texel
             if (audioManager && !registeredAudio)
             {
                 registeredAudio = true;
-                // audioManager._Register(AudioManager.EVENT_MASTER_2D_UPDATE, this, "_OnMaster2DUpdate");
+                audioManager._Register(AudioManager.EVENT_CHANNEL_GROUP_CHANGED, this, "_OnChannelGroupChanged");
             }
         }
 
@@ -171,7 +178,7 @@ namespace Texel
 
         public void _OnMuxSettingsChange()
         {
-            videoModeDropdown.SetValueWithoutNotify(videoPlayer.videoMux.VideoType);
+            // videoModeDropdown.SetValueWithoutNotify(videoPlayer.videoMux.VideoType);
             videoLatencyDropdown.SetValueWithoutNotify(videoPlayer.videoMux.Latency);
             videoResolutionDropdown.SetValueWithoutNotify(videoPlayer.videoMux.ResolutionIndex);
         }
@@ -179,6 +186,7 @@ namespace Texel
         public void _OnVideoStateUpdate()
         {
             videoFitDropdown.SetValueWithoutNotify(videoPlayer.screenFit);
+            videoModeDropdown.SetValueWithoutNotify(videoPlayer.playerSourceOverride);
         }
 
         // Info Panel
@@ -314,28 +322,36 @@ namespace Texel
 
         // Audio Panel
 
-        //public void _OnMaster2DUpdate()
-        //{
-        //    audioSpatialDropdown.SetValueWithoutNotify(0);
-        //}
-
-        public void _HandleSpatialAudioChangedUI()
+        public void _OnChannelGroupChanged()
         {
-            _UpdateSpatialAudio(audioSpatialDropdown.value);
+            int channelGroup = 0;
+            for (int i = 0; i < audioManager.channelGroups.Length; i++)
+            {
+                if (audioManager.channelGroups[i] == audioManager.SelectedChannelGroup)
+                {
+                    channelGroup = i;
+                    break;
+                }
+            }
+
+            audioProfileDropdown.SetValueWithoutNotify(channelGroup);
         }
 
-        void _UpdateSpatialAudio(int mode)
+        public void _HandleAudioProfileChangedUI()
+        {
+            _UpdateAudioProfile(audioProfileDropdown.value);
+        }
+
+        void _UpdateAudioProfile(int profile)
         {
             if (!audioManager)
                 return;
 
             AudioChannelGroup[] groups = audioManager.channelGroups;
-            if (mode < 0 || mode >= groups.Length)
+            if (profile < 0 || profile >= groups.Length)
                 return;
 
-            audioManager._SelectChannelGroup(groups[mode]);
-
-            //audioManager._SetMaster2D(mode == 1);
+            audioManager._SelectChannelGroup(groups[profile]);
         }
     }
 }

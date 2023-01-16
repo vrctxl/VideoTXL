@@ -163,6 +163,9 @@ namespace Texel
 
         public void _InterpolateZoneFadeLoop()
         {
+            if (!active)
+                return;
+
             _InterpolateZoneFade();
             SendCustomEventDelayedSeconds("_InterpolateZoneFadeLoop", updateRate);
         }

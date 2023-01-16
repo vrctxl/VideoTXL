@@ -137,11 +137,11 @@ namespace Texel
             if (Utilities.IsValid(urlRemapper))
                 urlRemapper._SetGameMode(IsQuest ? UrlRemapper.GAME_MODE_QUEST : UrlRemapper.GAME_MODE_PC);
 
-            videoMux._Register(VideoMux.VIDEO_READY_EVENT, this, "_OnVideoReady");
-            videoMux._Register(VideoMux.VIDEO_START_EVENT, this, "_OnVideoStart");
-            videoMux._Register(VideoMux.VIDEO_END_EVENT, this, "_OnVideoEnd");
-            videoMux._Register(VideoMux.VIDEO_ERROR_EVENT, this, "_OnVideoError");
-            videoMux._Register(VideoMux.SOURCE_CHANGE_EVENT, this, "_OnSourceChange");
+            videoMux._Register(VideoManager.VIDEO_READY_EVENT, this, "_OnVideoReady");
+            videoMux._Register(VideoManager.VIDEO_START_EVENT, this, "_OnVideoStart");
+            videoMux._Register(VideoManager.VIDEO_END_EVENT, this, "_OnVideoEnd");
+            videoMux._Register(VideoManager.VIDEO_ERROR_EVENT, this, "_OnVideoError");
+            videoMux._Register(VideoManager.SOURCE_CHANGE_EVENT, this, "_OnSourceChange");
 
             videoMux._UpdateLowLatency(VideoSource.LOW_LATENCY_ENABLE);
 
@@ -511,10 +511,18 @@ namespace Texel
             _syncVideoSource = _syncVideoSourceOverride;
             if (_syncVideoSource == VideoSource.VIDEO_SOURCE_NONE)
             {
-                if (_IsAutoVideoSource(urlStr))
+                if (_IsAutoVideoSource(urlStr) && videoMux.SupportsUnity)
                     _syncVideoSource = VideoSource.VIDEO_SOURCE_UNITY;
-                else
+                else if (videoMux.SupportsAVPro)
                     _syncVideoSource = VideoSource.VIDEO_SOURCE_AVPRO;
+
+                if (_syncVideoSource == VideoSource.VIDEO_SOURCE_NONE)
+                {
+                    if (videoMux.SupportsUnity)
+                        _syncVideoSource = VideoSource.VIDEO_SOURCE_UNITY;
+                    else if (videoMux.SupportsAVPro)
+                        _syncVideoSource = VideoSource.VIDEO_SOURCE_AVPRO;
+                }
             }
 
             _suppressSourceUpdate = true;
@@ -611,7 +619,7 @@ namespace Texel
                 return true;
 
             // VRCDN sources are always stream
-            if (urlStr.Contains("vrcdn"))
+            if (urlStr.Contains("vrcdn.live"))
                 return false;
 
             if (urlStr.EndsWith("mp4", StringComparison.CurrentCultureIgnoreCase))

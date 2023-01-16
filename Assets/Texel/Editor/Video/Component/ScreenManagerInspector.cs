@@ -120,6 +120,10 @@ namespace Texel
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
 
+            if (GUILayout.Button("Screen Manager Documentation"))
+                Application.OpenURL("https://github.com/jaquadro/VideoTXL/wiki/Configuration:-Screen-Manager");
+
+            EditorGUILayout.Space();
             EditorGUILayout.PropertyField(videoPlayerProperty);
 
             EditorGUILayout.Space();
@@ -142,7 +146,7 @@ namespace Texel
 
                 EditorGUILayout.PropertyField(logoMaterialProperty);
                 EditorGUILayout.PropertyField(loadingMaterialProperty);
-                EditorGUILayout.PropertyField(syncMaterialProperty);
+                // EditorGUILayout.PropertyField(syncMaterialProperty);
                 EditorGUILayout.PropertyField(audioMaterialProperty);
                 EditorGUILayout.PropertyField(errorMaterialProperty);
 
@@ -170,7 +174,7 @@ namespace Texel
                 EditorGUILayout.Space();
                 EditorGUILayout.PropertyField(logoTextureProperty);
                 EditorGUILayout.PropertyField(loadingTextureProperty);
-                EditorGUILayout.PropertyField(syncTextureProperty);
+                // EditorGUILayout.PropertyField(syncTextureProperty);
                 EditorGUILayout.PropertyField(audioTextureProperty);
                 EditorGUILayout.PropertyField(errorTextureProperty);
 

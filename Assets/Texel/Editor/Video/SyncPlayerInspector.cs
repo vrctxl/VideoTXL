@@ -2,13 +2,7 @@
 
 using UnityEditor;
 using UdonSharpEditor;
-using System.Collections.Generic;
-using UnityEngine.UI;
-using System.Collections;
-using UnityEditor.SceneManagement;
-using VRC.SDK3.Video.Components.AVPro;
-using VRC.SDK3.Video.Components;
-using VRC.SDK3.Components;
+using UnityEditor.Experimental.SceneManagement;
 
 namespace Texel
 {
@@ -17,6 +11,8 @@ namespace Texel
     {
         SerializedProperty videoMuxProperty;
         SerializedProperty audioManagerProperty;
+
+        SerializedProperty prefabInitializedProperty;
 
         SerializedProperty playlistPoperty;
         SerializedProperty remapperProperty;
@@ -37,15 +33,13 @@ namespace Texel
         SerializedProperty autoAVSyncProperty;
 
         SerializedProperty defaultVideoModeProperty;
-        //SerializedProperty useUnityVideoProperty;
-        //SerializedProperty useAVProProperty;
-        //SerializedProperty unityVideoProperty;
-        //SerializedProperty avProVideoProperty;
 
         private void OnEnable()
         {
             videoMuxProperty = serializedObject.FindProperty(nameof(SyncPlayer.videoMux));
             audioManagerProperty = serializedObject.FindProperty(nameof(SyncPlayer.audioManager));
+
+            prefabInitializedProperty = serializedObject.FindProperty(nameof(SyncPlayer.prefabInitialized));
 
             playlistPoperty = serializedObject.FindProperty(nameof(SyncPlayer.playlist));
             remapperProperty = serializedObject.FindProperty(nameof(SyncPlayer.urlRemapper));
@@ -66,10 +60,18 @@ namespace Texel
             autoAVSyncProperty = serializedObject.FindProperty(nameof(SyncPlayer.autoInternalAVSync));
 
             defaultVideoModeProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultVideoSource));
-            //useUnityVideoProperty = serializedObject.FindProperty(nameof(SyncPlayer.useUnityVideo));
-            //useAVProProperty = serializedObject.FindProperty(nameof(SyncPlayer.useAVPro));
-            //unityVideoProperty = serializedObject.FindProperty(nameof(SyncPlayer.unityVideo));
-            //avProVideoProperty = serializedObject.FindProperty(nameof(SyncPlayer.avProVideo));
+
+            // Automatically generate resources and update components when prefab is dropped into the scene
+            // The hidden prefabInitizlied property is set false on the shipped video player variants
+            PrefabStage stage = PrefabStageUtility.GetCurrentPrefabStage();
+            if (stage == null && !prefabInitializedProperty.boolValue)
+            {
+                serializedObject.Update();
+                prefabInitializedProperty.boolValue = true;
+                serializedObject.ApplyModifiedProperties();
+
+                VideoComponentUpdater.UpdateComponents((TXLVideoPlayer)serializedObject.targetObject);
+            }
         }
 
         public override void OnInspectorGUI()
@@ -88,7 +90,7 @@ namespace Texel
             EditorGUILayout.PropertyField(playlistPoperty, new GUIContent("Playlist", "Pre-populated playlist to iterate through.  If default URL is set, the playlist will be disabled by default, otherwise it will auto-play."));
             EditorGUILayout.PropertyField(remapperProperty, new GUIContent("URL Remapper", "Set of input URLs to remap to alternate URLs on a per-platform basis."));
             EditorGUILayout.PropertyField(accessControlProperty, new GUIContent("Access Control", "Control access to player controls based on player type or whitelist."));
-            
+
             EditorGUILayout.PropertyField(playbackZoneProperty, new GUIContent("Playback Zone Membership", "Optional zone membership object tied to a trigger zone the player must be in to sustain playback.  Disables playing audio on world load."));
 
             EditorGUILayout.Space();
@@ -108,22 +110,9 @@ namespace Texel
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Video Sources", EditorStyles.boldLabel);
 
-            /*EditorGUILayout.PropertyField(useAVProProperty, new GUIContent("Use AVPro", "Whether AVPro is a supported video source for this player.  Disabling this component also disables source selection."));
-            if (useAVProProperty.boolValue)
-                EditorGUILayout.PropertyField(avProVideoProperty, new GUIContent("AVPro Video Source", "AVPro video player component"));
-
             EditorGUILayout.Space();
-            EditorGUILayout.PropertyField(useUnityVideoProperty, new GUIContent("Use Unity Video", "Whether Unity video is a supported video source for this player.  Disabling this component also disables source selection."));
-            if (useUnityVideoProperty.boolValue)
-                EditorGUILayout.PropertyField(unityVideoProperty, new GUIContent("Unity Video Source", "Unity video player component"));
-            */
-
-            //if (useAVProProperty.boolValue && useUnityVideoProperty.boolValue)
-            //{
-                EditorGUILayout.Space();
-                GUIContent desc = new GUIContent("Default Video Source", "The video source that should be active by default, or auto to let the player determine on a per-URL basis.");
-                defaultVideoModeProperty.intValue = EditorGUILayout.Popup(desc, defaultVideoModeProperty.intValue, new string[] { "Auto", "AVPro", "Unity Video" });
-            //}
+            GUIContent desc = new GUIContent("Default Video Source", "The video source that should be active by default, or auto to let the player determine on a per-URL basis.");
+            defaultVideoModeProperty.intValue = EditorGUILayout.Popup(desc, defaultVideoModeProperty.intValue, new string[] { "Auto", "AVPro", "Unity Video" });
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Debug Options", EditorStyles.boldLabel);
@@ -137,371 +126,7 @@ namespace Texel
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Update", EditorStyles.boldLabel);
             if (GUILayout.Button("Update Connected Components", GUILayout.Width(EditorGUIUtility.labelWidth)))
-                UpdateComponents();
-        }
-
-        void UpdateComponents()
-        {
-            if (EditorApplication.isPlaying)
-                return;
-
-            SyncPlayer videoPlayer = (SyncPlayer)serializedObject.targetObject;
-            if (!videoPlayer)
-                return;
-
-            List<int> resolutions = GetResolutions(videoPlayer.videoMux);
-            List<int> latencies = GetLatencies(videoPlayer.videoMux);
-            List<int> videoModes = GetTypes(videoPlayer.videoMux);
-
-            AudioChannelGroup[] groups = videoPlayer.audioManager.channelGroups;
-
-            OptionsUI[] list = FindObjectsOfType<OptionsUI>();
-            foreach (var item in list)
-            {
-                if (!item.mainControls || item.mainControls.videoPlayer != serializedObject.targetObject)
-                    continue;
-
-                Debug.Log($"Found {item}");
-
-                if (resolutions.Count <= 1)
-                {
-                    GameObject row = item.videoResolutionDropdown.transform.parent.gameObject;
-                    Undo.RecordObject(row, "Update Connected Components");
-                    row.SetActive(false);
-                    PrefabUtility.RecordPrefabInstancePropertyModifications(row);
-                }
-                else
-                {
-                    Dropdown template = null;
-                    Transform templateObj = item.videoResolutionDropdown.transform.Find("IconTemplate");
-                    if (templateObj)
-                        template = templateObj.GetComponent<Dropdown>();
-
-                    Undo.RecordObject(item.videoResolutionDropdown, "Update Connected Components");
-
-                    item.videoResolutionDropdown.ClearOptions();
-                    item.videoResolutionDropdown.AddOptions(GetResolutionOptions(resolutions, template));
-
-                    PrefabUtility.RecordPrefabInstancePropertyModifications(item.videoResolutionDropdown);
-                }
-
-                if (latencies.Count <= 1)
-                {
-                    GameObject row = item.videoLatencyDropdown.transform.parent.gameObject;
-                    Undo.RecordObject(row, "Update Connected Components");
-                    row.SetActive(false);
-                    PrefabUtility.RecordPrefabInstancePropertyModifications(row);
-                }
-
-                if (videoModes.Count <= 1)
-                {
-                    GameObject row = item.videoModeDropdown.transform.parent.gameObject;
-                    Undo.RecordObject(row, "Update Connected Components");
-                    row.SetActive(false);
-                    PrefabUtility.RecordPrefabInstancePropertyModifications(row);
-                }
-
-                if (groups.Length <= 1)
-                {
-                    GameObject row = item.audioSpatialDropdown.transform.parent.gameObject;
-                    Undo.RecordObject(row, "Update Connected Components");
-                    row.SetActive(false);
-                    PrefabUtility.RecordPrefabInstancePropertyModifications(row);
-                } else
-                {
-                    Dropdown template = null;
-                    Transform templateObj = item.audioSpatialDropdown.transform.Find("IconTemplate");
-                    if (templateObj)
-                        template = templateObj.GetComponent<Dropdown>();
-
-                    Undo.RecordObject(item.audioSpatialDropdown, "Update Connected Components");
-
-                    item.audioSpatialDropdown.ClearOptions();
-                    item.audioSpatialDropdown.AddOptions(GetAudioGroupOptions(new List<AudioChannelGroup>(groups)));
-
-                    PrefabUtility.RecordPrefabInstancePropertyModifications(item.audioSpatialDropdown);
-                }
-            }
-
-            Undo.RecordObject(videoPlayer.gameObject, "Update Audio Setup");
-
-            // Enumerate video sources
-            List<VideoSource> unitySources = new List<VideoSource>();
-            List<VideoSource> avproSources = new List<VideoSource>();
-
-            foreach (VideoSource source in videoPlayer.videoMux.sources)
-            {
-                if (!source)
-                    continue;
-
-                if (source.gameObject.GetComponent<VRCAVProVideoPlayer>())
-                    avproSources.Add(source);
-                else if (source.gameObject.GetComponent<VRCUnityVideoPlayer>())
-                    unitySources.Add(source);
-            }
-
-            // Unity audios sources must be copied as settings
-
-            // Unity Audio Groups
-            foreach (VideoSource source in unitySources)
-            {
-                Transform sourceRoot = source.gameObject.transform;
-                Transform resources = sourceRoot.Find("AudioResources");
-                if (!resources)
-                {
-                    resources = new GameObject("AudioResources").transform;
-                    resources.parent = sourceRoot;
-                }
-
-                source.audioGroups = new VideoSourceAudioGroup[groups.Length];
-
-                for (int g = 0; g < groups.Length; g++)
-                {
-                    AudioChannelGroup group = groups[g];
-                    Transform groupRoot = resources.Find(group.groupName);
-                    if (groupRoot)
-                        DestroyImmediate(groupRoot.gameObject);
-
-                    groupRoot = new GameObject(group.groupName).transform;
-                    groupRoot.parent = resources;
-
-                    VideoSourceAudioGroup audioGroup = groupRoot.gameObject.AddUdonSharpComponent<VideoSourceAudioGroup>();
-                    audioGroup.groupName = group.groupName;
-                    audioGroup.channelAudio = new AudioSource[1];
-                    audioGroup.channelReference = new AudioChannel[1];
-
-                    source.audioGroups[g] = audioGroup;
-
-                    AudioSource unityAudioSource = null;
-                    Transform unityAudio = sourceRoot.Find("AudioSource");
-                    if (unityAudio)
-                        unityAudioSource = unityAudio.GetComponent<AudioSource>();
-
-                    audioGroup.channelAudio[0] = unityAudioSource;
-                    audioGroup.channelReference[0] = group.unityChannel;
-                }
-
-                PrefabUtility.RecordPrefabInstancePropertyModifications(source);
-            }
-
-            // AVPro Audio Groups
-            foreach (VideoSource source in avproSources)
-            {
-                Transform sourceRoot = source.gameObject.transform;
-                Transform template = sourceRoot.Find("AudioTemplates");
-                Transform resources = sourceRoot.Find("AudioResources");
-                if (!resources)
-                {
-                    resources = new GameObject("AudioResources").transform;
-                    resources.parent = sourceRoot;
-                }
-
-                List<Transform> existingResources = new List<Transform>();
-                for (int i = 0; i < resources.childCount; i++)
-                    existingResources.Add(resources.GetChild(i));
-
-                foreach (Transform child in existingResources)
-                    DestroyImmediate(child.gameObject);
-
-                source.audioGroups = new VideoSourceAudioGroup[groups.Length];
-
-                for (int g = 0; g < groups.Length; g++)
-                {
-                    AudioChannelGroup group = groups[g];
-                    Transform groupRoot = new GameObject(group.groupName).transform;
-                    groupRoot.parent = resources;
-
-                    VideoSourceAudioGroup audioGroup = groupRoot.gameObject.AddUdonSharpComponent<VideoSourceAudioGroup>();
-                    audioGroup.groupName = group.groupName;
-                    audioGroup.channelAudio = new AudioSource[group.avproChannels.Length];
-                    audioGroup.channelReference = new AudioChannel[group.avproChannels.Length];
-
-                    source.audioGroups[g] = audioGroup;
-
-                    for (int i = 0; i < group.avproChannels.Length; i++)
-                    {
-                        AudioChannel channel = group.avproChannels[i];
-                        Transform existingChannel = groupRoot.Find(channel.channelName);
-                        if (existingChannel)
-                            DestroyImmediate(existingChannel.gameObject);
-
-                        string templateName = null;
-                        switch (channel.track)
-                        {
-                            case AudioChannelTrack.STEREO: templateName = "StereoMix"; break;
-                            case AudioChannelTrack.LEFT: templateName = "MonoLeft"; break;
-                            case AudioChannelTrack.RIGHT: templateName = "MonoRight"; break;
-                            case AudioChannelTrack.THREE: templateName = "Three"; break;
-                            case AudioChannelTrack.FOUR: templateName = "Four"; break;
-                            case AudioChannelTrack.FIVE: templateName = "Five"; break;
-                            case AudioChannelTrack.SIX: templateName = "Six"; break;
-                        }
-
-                        if (templateName == null)
-                            continue;
-
-                        Transform templateChannel = template.Find(templateName);
-                        if (!templateChannel)
-                            continue;
-
-                        GameObject audioResource = Instantiate(templateChannel.gameObject, groupRoot);
-                        audioResource.name = channel.channelName;
-                        audioResource.SetActive(true);
-
-                        VRCSpatialAudioSource sourceSpatial = channel.gameObject.GetComponent<VRCSpatialAudioSource>();
-                        VRCSpatialAudioSource targetSpatial = audioResource.gameObject.GetComponent<VRCSpatialAudioSource>();
-                        if (sourceSpatial && targetSpatial)
-                        {
-                            targetSpatial.Gain = sourceSpatial.Gain;
-                            targetSpatial.Far = sourceSpatial.Far;
-                            targetSpatial.Near = sourceSpatial.Near;
-                            targetSpatial.VolumetricRadius = sourceSpatial.VolumetricRadius;
-                            targetSpatial.EnableSpatialization = sourceSpatial.EnableSpatialization;
-                            targetSpatial.UseAudioSourceVolumeCurve = sourceSpatial.UseAudioSourceVolumeCurve;
-                        }
-
-                        AudioSource sourceAudioSource = channel.gameObject.GetComponent<AudioSource>();
-                        AudioSource targetAudioSource = audioResource.gameObject.GetComponent<AudioSource>();
-                        if (sourceAudioSource && targetAudioSource)
-                        {
-                            targetAudioSource.enabled = false;
-                            targetAudioSource.volume = sourceAudioSource.volume;
-                            targetAudioSource.spatialBlend = sourceAudioSource.spatialBlend;
-                            targetAudioSource.spread = sourceAudioSource.spread;
-                            targetAudioSource.minDistance = sourceAudioSource.minDistance;
-                            targetAudioSource.maxDistance = sourceAudioSource.maxDistance;
-                            targetAudioSource.spatialize = sourceAudioSource.spatialize;
-                            targetAudioSource.rolloffMode = sourceAudioSource.rolloffMode;
-                            targetAudioSource.reverbZoneMix = sourceAudioSource.reverbZoneMix;
-                            targetAudioSource.dopplerLevel = sourceAudioSource.dopplerLevel;
-
-                            if (sourceAudioSource.GetCustomCurve(AudioSourceCurveType.SpatialBlend) != null)
-                                targetAudioSource.SetCustomCurve(AudioSourceCurveType.SpatialBlend, sourceAudioSource.GetCustomCurve(AudioSourceCurveType.SpatialBlend));
-                            if (sourceAudioSource.GetCustomCurve(AudioSourceCurveType.Spread) != null)
-                                targetAudioSource.SetCustomCurve(AudioSourceCurveType.Spread, sourceAudioSource.GetCustomCurve(AudioSourceCurveType.Spread));
-                            if (sourceAudioSource.GetCustomCurve(AudioSourceCurveType.ReverbZoneMix) != null)
-                                targetAudioSource.SetCustomCurve(AudioSourceCurveType.ReverbZoneMix, sourceAudioSource.GetCustomCurve(AudioSourceCurveType.ReverbZoneMix));
-                            if (sourceAudioSource.GetCustomCurve(AudioSourceCurveType.CustomRolloff) != null)
-                                targetAudioSource.SetCustomCurve(AudioSourceCurveType.CustomRolloff, sourceAudioSource.GetCustomCurve(AudioSourceCurveType.CustomRolloff));
-                        }
-                        
-                        audioGroup.channelAudio[i] = targetAudioSource;
-                        audioGroup.channelReference[i] = channel;
-                    }
-                }
-
-                PrefabUtility.RecordPrefabInstancePropertyModifications(source);
-            }
-
-            PrefabUtility.RecordPrefabInstancePropertyModifications(videoPlayer.gameObject);
-        }
-
-        List<int> GetResolutions(VideoMux mux)
-        {
-            List<int> resolutions = new List<int>();
-            if (!mux)
-                return resolutions;
-
-            foreach (VideoSource source in mux.sources)
-            {
-                if (!source)
-                    continue;
-                if (resolutions.IndexOf(source.maxResolution) < 0)
-                    resolutions.Add(source.maxResolution);
-            }
-
-            return resolutions;
-        }
-
-        List<int> GetLatencies(VideoMux mux)
-        {
-            List<int> latencies = new List<int>();
-            if (!mux)
-                return latencies;
-
-            foreach (VideoSource source in mux.sources)
-            {
-                if (!source)
-                    continue;
-                int value = source.lowLatency ? VideoSource.LOW_LATENCY_ENABLE : VideoSource.LOW_LATENCY_DISABLE;
-                if (latencies.IndexOf(value) < 0)
-                    latencies.Add(value);
-            }
-
-            return latencies;
-        }
-
-        List<int> GetTypes(VideoMux mux)
-        {
-            List<int> types = new List<int>();
-            if (!mux)
-                return types;
-
-            foreach (VideoSource source in mux.sources)
-            {
-                if (!source)
-                    continue;
-
-                int value = -1;
-                if (source.gameObject.GetComponent<VRCAVProVideoPlayer>())
-                    value = VideoSource.VIDEO_SOURCE_AVPRO;
-                else if (source.gameObject.GetComponent<VRCUnityVideoPlayer>())
-                    value = VideoSource.VIDEO_SOURCE_UNITY;
-
-                if (value >= 0 && types.IndexOf(value) < 0)
-                    types.Add(value);
-            }
-
-            return types;
-        }
-
-        List<Dropdown.OptionData> GetResolutionOptions(List<int> resolutions, Dropdown iconTemplate)
-        {
-            List<int> sorted = new List<int>(resolutions);
-            sorted.Sort();
-            sorted.Reverse();
-
-            Sprite iconLow = null;
-            Sprite iconMid = null;
-            Sprite iconHigh = null;
-            if (iconTemplate)
-            {
-                foreach (var entry in iconTemplate.options)
-                {
-                    if (entry.text == "low")
-                        iconLow = entry.image;
-                    else if (entry.text == "mid")
-                        iconMid = entry.image;
-                    else if (entry.text == "high")
-                        iconHigh = entry.image;
-                }
-            }
-
-            List<Dropdown.OptionData> options = new List<Dropdown.OptionData>();
-            foreach (int res in sorted)
-            {
-                Sprite icon = iconHigh;
-                if (res < 1080)
-                    icon = iconMid;
-                if (res < 480)
-                    icon = iconLow;
-
-                options.Add(new Dropdown.OptionData($"{res}p", icon));
-            }
-
-            return options;
-        }
-
-        List<Dropdown.OptionData> GetAudioGroupOptions(List<AudioChannelGroup> groups)
-        {
-            List<Dropdown.OptionData> options = new List<Dropdown.OptionData>();
-            foreach (AudioChannelGroup group in groups)
-            {
-                if (group)
-                    options.Add(new Dropdown.OptionData(group.groupName, group.groupIcon));
-            }
-
-            return options;
+                VideoComponentUpdater.UpdateComponents((TXLVideoPlayer)serializedObject.targetObject);
         }
     }
 }

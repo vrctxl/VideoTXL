@@ -51,6 +51,7 @@ namespace Texel
 
         public const int EVENT_MASTER_VOLUME_UPDATE = 0;
         public const int EVENT_MASTER_MUTE_UPDATE = 1;
+        public const int EVENT_CHANNEL_GROUP_CHANGED = 2;
         //public const int EVENT_MASTER_2D_UPDATE = 2;
         //public const int EVENT_CHANNEL_VOLUME_UPDATE = 3;
         //public const int EVENT_CHANNEL_MUTE_UPDATE = 4;
@@ -69,7 +70,7 @@ namespace Texel
         //bool hasSync = false;
         //bool ovrMasterMute = false;
         //bool ovrMasterVolume = false;
-        //bool ovrMaster2D = false;
+        bool ovrMaster2D = false;
         bool videoMute = false;
 
         const int UNITY = 0;
@@ -142,8 +143,13 @@ namespace Texel
             {
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
                 if (videoPlayer.videoMux)
-                    videoPlayer.videoMux._Register(VideoMux.SOURCE_CHANGE_EVENT, this, "_OnVideoSourceChange");
+                    videoPlayer.videoMux._Register(VideoManager.SOURCE_CHANGE_EVENT, this, "_OnVideoSourceChange");
             }
+        }
+
+        public AudioChannelGroup SelectedChannelGroup
+        {
+            get { return selectedChannelGroup; }
         }
 
         public void _SelectChannelGroup(AudioChannelGroup group)
@@ -155,6 +161,8 @@ namespace Texel
             _DebugLog($"Selected Audio Channel Group {group.groupName}");
 
             _UpdateActiveAudioGroup();
+
+            _UpdateHandlers(EVENT_CHANNEL_GROUP_CHANGED);
         }
 
         public void _SelectVideoSource(VideoSource source)
@@ -172,6 +180,7 @@ namespace Texel
             _SetVideoAudioGroupState(activeAudioGroup, false);
 
             channelCount = 0;
+            
             activeAudioGroup = null;
 
             if (!selectedChannelGroup || !selectedVideoSource)
@@ -217,18 +226,18 @@ namespace Texel
             // Unity
             if (selectedVideoSource.VideoSourceType == VideoSource.VIDEO_SOURCE_UNITY)
             {
-                if (enabled)
+                for (int i = 0; i < group.channelAudio.Length; i++)
                 {
-                    for (int i = 0; i < group.channelAudio.Length; i++)
+                    if (group.channelReference[i])
+                        group.channelReference[i]._SetActive(enabled);
+
+                    if (enabled && group.channelAudio[i])
                     {
-                        if (group.channelAudio[i])
+                        group.channelAudio[i].enabled = true;
+                        if (group.channelReference[i])
                         {
-                            group.channelAudio[i].enabled = true;
-                            if (group.channelReference[i])
-                            {
-                                _CopyAudioSourceProperties(group.channelReference[i].audioSourceTemplate, group.channelAudio[i]);
-                                group.channelReference[i]._BindSource(group.channelAudio[i]);
-                            }
+                            _CopyAudioSourceProperties(group.channelReference[i].audioSourceTemplate, group.channelAudio[i]);
+                            group.channelReference[i]._BindSource(group.channelAudio[i]);
                         }
                     }
                 }
@@ -242,8 +251,13 @@ namespace Texel
                     if (group.channelAudio[i])
                         group.channelAudio[i].enabled = enabled;
 
-                    if (enabled && group.channelReference[i])
-                        group.channelReference[i]._BindSource(group.channelAudio[i]);
+                    if (group.channelReference[i])
+                    {
+                        if (enabled)
+                            group.channelReference[i]._BindSource(group.channelAudio[i]);
+
+                        group.channelReference[i]._SetActive(enabled);
+                    }
                 }
             }
         }
@@ -351,6 +365,15 @@ namespace Texel
             _UpdateHandlers(EVENT_MASTER_MUTE_UPDATE);
         }
 
+        /*public void _SetMaster2D(bool state)
+        {
+            ovrMaster2D = true;
+            master2D = state;
+
+            _UpdateAll();
+            _UpdateHandlers(EVENT_MASTER_2D_UPDATE);
+        }*/
+
         /*
         public void _SetChannelFade(int channel, float fade)
         {
@@ -407,27 +430,27 @@ namespace Texel
         }
         */
 
-            /*
-        int _GetChannelIndex(string channel)
+        /*
+    int _GetChannelIndex(string channel)
+    {
+        int index = -1;
+        if (channel == null || channel == "")
+            index = 0;
+        else
         {
-            int index = -1;
-            if (channel == null || channel == "")
-                index = 0;
-            else
+            for (int i = 0; i < channelCount; i++)
             {
-                for (int i = 0; i < channelCount; i++)
+                if (channelData[i].channelName == channel)
                 {
-                    if (channelData[i].channelName == channel)
-                    {
-                        index = i;
-                        break;
-                    }
+                    index = i;
+                    break;
                 }
             }
-
-            return index;
         }
-        */
+
+        return index;
+    }
+    */
 
         /*
         public void _ClearChannelSources()
@@ -516,6 +539,11 @@ namespace Texel
             return _InputMute() || _MasterMute();
         }
 
+        /*public bool _Base2D()
+        {
+            return _Master2D();
+        }*/
+
         void _UpdateAudioControls()
         {
             foreach (var control in audioControls)
@@ -551,6 +579,11 @@ namespace Texel
         {
             return /*(hasSync && !ovrMasterVolume) ? syncAudioManager.syncMasterVolume :*/ masterVolume;
         }
+
+        /*bool _Master2D()
+        {
+            return master2D;
+        }*/
 
         //bool _ChannelMute(int channel)
         //{

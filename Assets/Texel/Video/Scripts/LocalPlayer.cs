@@ -88,11 +88,11 @@ namespace Texel
             else
                 _urlSourceType = SOURCE_TYPE_URL;
 
-            videoMux._Register(VideoMux.VIDEO_READY_EVENT, this, "_OnVideoReady");
-            videoMux._Register(VideoMux.VIDEO_START_EVENT, this, "_OnVideoStart");
-            videoMux._Register(VideoMux.VIDEO_END_EVENT, this, "_OnVideoEnd");
-            videoMux._Register(VideoMux.VIDEO_ERROR_EVENT, this, "_OnVideoError");
-            videoMux._Register(VideoMux.SOURCE_CHANGE_EVENT, this, "_OnSourceChange");
+            videoMux._Register(VideoManager.VIDEO_READY_EVENT, this, "_OnVideoReady");
+            videoMux._Register(VideoManager.VIDEO_START_EVENT, this, "_OnVideoStart");
+            videoMux._Register(VideoManager.VIDEO_END_EVENT, this, "_OnVideoEnd");
+            videoMux._Register(VideoManager.VIDEO_ERROR_EVENT, this, "_OnVideoError");
+            videoMux._Register(VideoManager.SOURCE_CHANGE_EVENT, this, "_OnSourceChange");
 
             if (videoMux.SupportsAVPro)
                 videoMux._UpdateVideoSource(VideoSource.VIDEO_SOURCE_AVPRO);
@@ -113,6 +113,7 @@ namespace Texel
 
         public void _TriggerStop()
         {
+            DebugLog("Trigger Stop");
             _StopVideo();
         }
 
@@ -131,12 +132,14 @@ namespace Texel
 
         public void _PlaybackZoneExit()
         {
+            DebugLog("Playback Zone Exit");
             _inSustainZone = false;
             _TriggerStop();
         }
 
         public override void _Resync()
         {
+            DebugLog("Resync");
             if (playerState == VIDEO_STATE_STOPPED)
                 return;
 

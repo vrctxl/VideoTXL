@@ -146,8 +146,9 @@ namespace Texel
             {
                 if (videoPlayer.videoMux)
                 {
-                    videoPlayer.videoMux._Register(VideoMux.SOURCE_CHANGE_EVENT, this, "_OnSourceChanged");
+                    videoPlayer.videoMux._Register(VideoManager.SOURCE_CHANGE_EVENT, this, "_OnSourceChanged");
                     captureRenderer = videoPlayer.videoMux.CaptureRenderer;
+                    _OnSourceChanged();
                 }
 
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");

@@ -702,7 +702,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2671140061533333331}
   m_Layer: 5
-  m_Name: Spatial Mode
+  m_Name: Profile
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -808,7 +808,7 @@ MonoBehaviour:
   videoFitDropdown: {fileID: 8165256583070440936}
   videoResolutionDropdown: {fileID: 7074479927176548512}
   videoLatencyDropdown: {fileID: 1552408648952944948}
-  audioSpatialDropdown: {fileID: 4380898884301081215}
+  audioProfileDropdown: {fileID: 4380898884301081215}
   infoMasterText: {fileID: 8757986893447328547}
   infoInstanceOwnerText: {fileID: 5057703882872648899}
   infoObjectOwnerText: {fileID: 2603932740897487229}
@@ -1467,9 +1467,6 @@ MonoBehaviour:
     - m_Text: Default
       m_Image: {fileID: 3275640847614604383, guid: ba1d53f153b56ac4ca4eaa6ba39a8ee4,
         type: 3}
-    - m_Text: Global
-      m_Image: {fileID: -221049930767326314, guid: ba1d53f153b56ac4ca4eaa6ba39a8ee4,
-        type: 3}
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls:
@@ -1481,7 +1478,7 @@ MonoBehaviour:
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
-          m_StringArgument: _HandleSpatialAudioChangedUI
+          m_StringArgument: _HandleAudioProfileChangedUI
           m_BoolArgument: 0
         m_CallState: 2
   m_AlphaFadeSpeed: 0.15
@@ -1846,7 +1843,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Spatial Mode
+  m_Text: Profile
 --- !u!1 &2157062804756125850
 GameObject:
   m_ObjectHideFlags: 0
@@ -3514,8 +3511,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 71.9}
-  m_SizeDelta: {x: 260, y: 120}
+  m_AnchoredPosition: {x: 0, y: 93.89}
+  m_SizeDelta: {x: 260, y: 163.97992}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!223 &475304760121185566
 Canvas:
@@ -3600,7 +3597,7 @@ BoxCollider:
   m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
-  m_Size: {x: 260, y: 120, z: 1}
+  m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &3345869533140280659
 GameObject:
