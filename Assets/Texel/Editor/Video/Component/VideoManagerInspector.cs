@@ -5,6 +5,7 @@ using VRC.Udon;
 using UnityEditor;
 using UdonSharpEditor;
 using System;
+using System.Collections.Generic;
 
 namespace Texel
 {
@@ -60,6 +61,11 @@ namespace Texel
 
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(sourcesProperty, new GUIContent("Sources", "The list of available video sources."));
+
+            List<VideoSource> unitySources = VideoComponentUpdater.GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_UNITY);
+            List<VideoSource> avproSources = VideoComponentUpdater.GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_AVPRO);
+            if (unitySources.Count == 0 && avproSources.Count == 0)
+                EditorGUILayout.HelpBox("No video sources are defined.  Video playback will not work until at least one video source is added.  Check documentation linked above for information on adding new video sources, or use another version of the video player prefab that includes sources.", MessageType.Warning);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Audio", EditorStyles.boldLabel);

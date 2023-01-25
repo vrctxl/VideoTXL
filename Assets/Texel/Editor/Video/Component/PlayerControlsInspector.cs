@@ -292,127 +292,40 @@ namespace Texel
             GameObject root = pc.gameObject;
 
             List<Object> pendingUpdate = new List<Object>();
-            CollectObjects<Image>(pendingUpdate, root, backgroundImagePaths);
-            CollectObjects<Image>(pendingUpdate, root, backgroundTitleImagePaths);
-            CollectObjects<Image>(pendingUpdate, root, buttonBgImagePaths);
-            CollectObjects<Image>(pendingUpdate, root, sliderBgImagePaths);
-            CollectObjects<Image>(pendingUpdate, root, volumeFillBgPaths);
-            CollectObjects<Image>(pendingUpdate, root, volumeHandleBgPaths);
-            CollectObjects<Image>(pendingUpdate, root, trackerFillBgPaths);
-            CollectObjects<Image>(pendingUpdate, root, trackerHandleBgPaths);
-            CollectObjects<Image>(pendingUpdate, root, buttonIconImagePaths);
-            CollectObjects<Image>(pendingUpdate, root, subTextIconPaths);
-            CollectObjects<Text>(pendingUpdate, root, generalTextPaths);
-            CollectObjects<Text>(pendingUpdate, root, mainTextPaths);
-            CollectObjects<Text>(pendingUpdate, root, subTextPaths);
+            ControlUtils.CollectObjects<Image>(pendingUpdate, root, backgroundImagePaths);
+            ControlUtils.CollectObjects<Image>(pendingUpdate, root, backgroundTitleImagePaths);
+            ControlUtils.CollectObjects<Image>(pendingUpdate, root, buttonBgImagePaths);
+            ControlUtils.CollectObjects<Image>(pendingUpdate, root, sliderBgImagePaths);
+            ControlUtils.CollectObjects<Image>(pendingUpdate, root, volumeFillBgPaths);
+            ControlUtils.CollectObjects<Image>(pendingUpdate, root, volumeHandleBgPaths);
+            ControlUtils.CollectObjects<Image>(pendingUpdate, root, trackerFillBgPaths);
+            ControlUtils.CollectObjects<Image>(pendingUpdate, root, trackerHandleBgPaths);
+            ControlUtils.CollectObjects<Image>(pendingUpdate, root, buttonIconImagePaths);
+            ControlUtils.CollectObjects<Image>(pendingUpdate, root, subTextIconPaths);
+            ControlUtils.CollectObjects<Text>(pendingUpdate, root, generalTextPaths);
+            ControlUtils.CollectObjects<Text>(pendingUpdate, root, mainTextPaths);
+            ControlUtils.CollectObjects<Text>(pendingUpdate, root, subTextPaths);
 
             Undo.RecordObjects(pendingUpdate.ToArray(), "Update colors");
 
             ControlColorProfile colorProfile = pc.colorProfile;
 
-            UpdateImages(root, backgroundImagePaths, colorProfile.backgroundColor);
-            UpdateImages(root, backgroundTitleImagePaths, colorProfile.backgroundTitleColor);
-            UpdateImages(root, buttonBgImagePaths, colorProfile.buttonBackgroundColor);
-            UpdateImages(root, sliderBgImagePaths, colorProfile.sliderBackgroundColor);
-            UpdateImages(root, volumeFillBgPaths, colorProfile.volumeFillColor);
-            UpdateImages(root, volumeHandleBgPaths, colorProfile.volumeHandleColor);
-            UpdateImages(root, trackerFillBgPaths, colorProfile.trackerFillColor);
-            UpdateImages(root, trackerHandleBgPaths, colorProfile.trackerHandleColor);
-            UpdateImages(root, buttonIconImagePaths, colorProfile.normalColor);
-            UpdateImages(root, subTextIconPaths, colorProfile.subTextColor);
-            UpdateTexts(root, generalTextPaths, colorProfile.generalTextColor);
-            UpdateTexts(root, mainTextPaths, colorProfile.mainTextColor);
-            UpdateTexts(root, subTextPaths, colorProfile.subTextColor);
+            ControlUtils.UpdateImages(root, backgroundImagePaths, colorProfile.backgroundColor);
+            ControlUtils.UpdateImages(root, backgroundTitleImagePaths, colorProfile.backgroundTitleColor);
+            ControlUtils.UpdateImages(root, buttonBgImagePaths, colorProfile.buttonBackgroundColor);
+            ControlUtils.UpdateImages(root, sliderBgImagePaths, colorProfile.sliderBackgroundColor);
+            ControlUtils.UpdateImages(root, volumeFillBgPaths, colorProfile.volumeFillColor);
+            ControlUtils.UpdateImages(root, volumeHandleBgPaths, colorProfile.volumeHandleColor);
+            ControlUtils.UpdateImages(root, trackerFillBgPaths, colorProfile.trackerFillColor);
+            ControlUtils.UpdateImages(root, trackerHandleBgPaths, colorProfile.trackerHandleColor);
+            ControlUtils.UpdateImages(root, buttonIconImagePaths, colorProfile.normalColor);
+            ControlUtils.UpdateImages(root, subTextIconPaths, colorProfile.subTextColor);
+            ControlUtils.UpdateTexts(root, generalTextPaths, colorProfile.generalTextColor);
+            ControlUtils.UpdateTexts(root, mainTextPaths, colorProfile.mainTextColor);
+            ControlUtils.UpdateTexts(root, subTextPaths, colorProfile.subTextColor);
 
             foreach (Object obj in pendingUpdate)
                 PrefabUtility.RecordPrefabInstancePropertyModifications(obj);
-        }
-
-        void CollectObjects<T>(List<Object> list, GameObject root, string[] paths) where T : Object
-        {
-            foreach (string path in paths)
-            {
-                Transform t = root.transform.Find(path);
-                if (t == null)
-                    continue;
-
-                T component = t.GetComponent<T>();
-                if (component == null)
-                    continue;
-
-                list.Add(component);
-            }
-        }
-
-        void UpdateImages(GameObject root, string[] paths, Color color)
-        {
-            foreach (string path in paths)
-            {
-                Transform t = root.transform.Find(path);
-                if (t == null)
-                    continue;
-
-                Image image = t.GetComponent<Image>();
-                if (image == null)
-                    continue;
-
-                image.color = color;
-            }
-        }
-
-        void UpdateTexts(GameObject root, string[] paths, Color color)
-        {
-            foreach (string path in paths)
-            {
-                Transform t = root.transform.Find(path);
-                if (t == null)
-                    continue;
-
-                Text text = t.GetComponent<Text>();
-                if (text == null)
-                    continue;
-
-                text.color = color;
-            }
-        }
-
-        void Repair()
-        {
-            FieldInfo iconField = GetType().GetField("stopIconProperty", BindingFlags.NonPublic | BindingFlags.Instance);
-            foreach (var x in System.Attribute.GetCustomAttributes(iconField))
-            {
-                if (x is ObjectPathAttribute)
-                {
-                    //Component c = FindComponent(serializedObject.(x as ObjectPathAttribute).path)
-                }
-            }
-        }
-
-        GameObject FindGameObject(GameObject root, string path)
-        {
-            while (path.StartsWith(".."))
-            {
-                if (root.transform.parent == null)
-                    return null;
-
-                root = root.transform.parent.gameObject;
-                path = Regex.Replace(path, "^../?", "");
-            }
-
-            Transform t = root.transform.Find(path);
-            if (t == null)
-                return null;
-
-            return t.gameObject;
-        }
-
-        Component FindComponent(GameObject root, string path, System.Type type)
-        {
-            GameObject obj = FindGameObject(root, path);
-            if (obj == null)
-                return null;
-
-            return obj.transform.GetComponent(type);
         }
     }
 }

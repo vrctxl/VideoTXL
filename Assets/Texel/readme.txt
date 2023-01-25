@@ -4,6 +4,17 @@ A collection of video player and A/V support prefabs for local or sync video pla
 See project readme on GitHub for more information.
 https://github.com/jaquadro/VideoTXL
 
+For more information on the VideoTXL video player specifically, check the README
+file under the Video folder.  The default video player prefabs are also located
+under the Video folder.
+
+If you're planning to only use the video players and are looking to trim the 
+nonessential components from this package, preserve the following folders:
+- Common
+- Video
+- Editor/Common
+- Editor/Video
+
 MIT License
 
 Copyright (c) 2021 Texelsaur

@@ -216,16 +216,19 @@ namespace Texel
                     resources.parent = sourceRoot;
                 }
 
+                List<Transform> existingResources = new List<Transform>();
+                for (int i = 0; i < resources.childCount; i++)
+                    existingResources.Add(resources.GetChild(i));
+
+                foreach (Transform child in existingResources)
+                    GameObject.DestroyImmediate(child.gameObject);
+
                 source.audioGroups = new VideoSourceAudioGroup[groups.Length];
 
                 for (int g = 0; g < groups.Length; g++)
                 {
                     AudioChannelGroup group = groups[g];
-                    Transform groupRoot = resources.Find(group.groupName);
-                    if (groupRoot)
-                        GameObject.DestroyImmediate(groupRoot.gameObject);
-
-                    groupRoot = new GameObject(group.groupName).transform;
+                    Transform groupRoot = new GameObject(group.groupName).transform;
                     groupRoot.parent = resources;
 
                     VideoSourceAudioGroup audioGroup = groupRoot.gameObject.AddUdonSharpComponent<VideoSourceAudioGroup>();
@@ -431,12 +434,26 @@ namespace Texel
             return copy as T;
         }
 
-        static AudioChannelGroup[] GetAudioGroups(AudioManager manager)
+        public static AudioChannelGroup[] GetAudioGroups(AudioManager manager)
         {
             if (!manager)
                 return new AudioChannelGroup[0];
 
             return manager.channelGroups;
+        }
+
+        public static List<AudioChannelGroup> GetValidAudioGroups(AudioManager manager)
+        {
+            AudioChannelGroup[] groups = GetAudioGroups(manager);
+            List<AudioChannelGroup> list = new List<AudioChannelGroup>();
+
+            foreach (AudioChannelGroup group in groups)
+            {
+                if (group)
+                    list.Add(group);
+            }
+
+            return list;
         }
 
         static List<int> GetResolutions(VideoManager mux)
@@ -479,7 +496,7 @@ namespace Texel
             return latencies;
         }
 
-        static List<int> GetVideoTypes(VideoManager mux)
+        public static List<int> GetVideoTypes(VideoManager mux)
         {
             List<int> types = new List<int>();
             if (!mux)
@@ -498,7 +515,7 @@ namespace Texel
             return types;
         }
 
-        static int GetVideoType(VideoSource source)
+        public static int GetVideoType(VideoSource source)
         {
             int value = -1;
             VRCAVProVideoPlayer avp = (VRCAVProVideoPlayer)source.gameObject.GetComponent("VRC.SDK3.Video.Components.AVPro.VRCAVProVideoPlayer");
@@ -512,7 +529,7 @@ namespace Texel
             return value;
         }
 
-        static List<VideoSource> GetVideoSources(VideoManager videoMux, int videoType)
+        public static List<VideoSource> GetVideoSources(VideoManager videoMux, int videoType)
         {
             List<VideoSource> list = new List<VideoSource>();
             if (!videoMux)

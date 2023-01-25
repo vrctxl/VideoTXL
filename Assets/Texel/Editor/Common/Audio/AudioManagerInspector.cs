@@ -5,6 +5,7 @@ using VRC.Udon;
 using UnityEditor;
 using UdonSharpEditor;
 using System;
+using System.Collections.Generic;
 
 namespace Texel
 {
@@ -127,6 +128,7 @@ namespace Texel
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Audio Channel Groups", EditorStyles.boldLabel);
+            
             if (!audioValid)
                 EditorGUILayout.HelpBox("Video player audio is out of sync with the audio groups defined below.  Audio channel groups are a template, and the video player's audio components must be refreshed when the templates are changed.", MessageType.Warning, true);
 
@@ -138,6 +140,10 @@ namespace Texel
             }
 
             EditorGUILayout.PropertyField(channelGroupsProperty, new GUIContent("Groups", "Channel groups recognized by the video player"));
+
+            List<AudioChannelGroup> groups = VideoComponentUpdater.GetValidAudioGroups((AudioManager)serializedObject.targetObject);
+            if (groups.Count == 0)
+                EditorGUILayout.HelpBox("No audio channel groups are defined.  There will be no audio during video playback.  Check documentation linked above for information on adding new audio groups, or use another version of the video player prefab that includes audio groups.", MessageType.Warning);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("AudioLink", EditorStyles.boldLabel);

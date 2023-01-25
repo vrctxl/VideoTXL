@@ -3,6 +3,7 @@
 using UnityEditor;
 using UdonSharpEditor;
 using UnityEditor.Experimental.SceneManagement;
+using System.Collections.Generic;
 
 namespace Texel
 {
@@ -79,6 +80,25 @@ namespace Texel
             serializedObject.Update();
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
+
+            TXLVideoPlayer videoPlayer = (TXLVideoPlayer)serializedObject.targetObject;
+
+            List<VideoSource> unitySources = VideoComponentUpdater.GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_UNITY);
+            List<VideoSource> avproSources = VideoComponentUpdater.GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_AVPRO);
+            if (unitySources.Count == 0 && avproSources.Count == 0)
+            {
+                EditorGUILayout.HelpBox("No video sources are defined.  Video playback will not work until at least one video source is added.  Check documentation for information on adding new video sources, or use another version of the video player prefab that includes sources.", MessageType.Warning);
+                if (GUILayout.Button("Video Manager Documentation"))
+                    Application.OpenURL("https://github.com/jaquadro/VideoTXL/wiki/Configuration:-Video-Manager");
+            }
+
+            List<AudioChannelGroup> groups = VideoComponentUpdater.GetValidAudioGroups(videoPlayer.audioManager);
+            if (groups.Count == 0)
+            {
+                EditorGUILayout.HelpBox("No audio channel groups are defined.  There will be no audio during video playback.  Check documentation for information on adding new audio groups, or use another version of the video player prefab that includes audio groups.", MessageType.Warning);
+                if (GUILayout.Button("Audio Manager Documentation"))
+                    Application.OpenURL("https://github.com/jaquadro/VideoTXL/wiki/Configuration:-Audio-Manager");
+            }
 
             EditorGUI.BeginChangeCheck();
 

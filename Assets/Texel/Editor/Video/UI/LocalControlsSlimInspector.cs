@@ -3,6 +3,7 @@
 using UnityEditor;
 using UdonSharpEditor;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 namespace Texel
 {
@@ -23,6 +24,8 @@ namespace Texel
         {
             "ControlArea/VolumeGroup/MuteButton",
             "ControlArea/VolumeGroup/ResyncButton",
+            "ControlArea/VolumeGroup/ResyncButton",
+            "ControlArea/VolumeGroup/OptionsButton",
         };
 
         string[] buttonIconImagePaths = new string[]
@@ -30,6 +33,7 @@ namespace Texel
             "ControlArea/VolumeGroup/MuteButton/IconMuted",
             "ControlArea/VolumeGroup/MuteButton/IconVolume",
             "ControlArea/VolumeGroup/ResyncButton/IconResync",
+            "ControlArea/VolumeGroup/OptionsButton/IconOptions",
         };
 
         string[] sliderBgImagePaths = new string[] {
@@ -97,27 +101,26 @@ namespace Texel
             }
 
             GameObject root = pc.gameObject;
-            UpdateImages(root, buttonBgImagePaths, pc.colorProfile.buttonBackgroundColor);
-            UpdateImages(root, sliderBgImagePaths, pc.colorProfile.sliderBackgroundColor);
-            UpdateImages(root, volumeFillBgPaths, pc.colorProfile.volumeFillColor);
-            UpdateImages(root, volumeHandleBgPaths, pc.colorProfile.volumeHandleColor);
-            UpdateImages(root, buttonIconImagePaths, pc.colorProfile.normalColor);
-        }
 
-        void UpdateImages(GameObject root, string[] paths, Color color)
-        {
-            foreach (string path in paths)
-            {
-                Transform t = root.transform.Find(path);
-                if (t == null)
-                    continue;
+            List<Object> pendingUpdate = new List<Object>();
+            ControlUtils.CollectObjects<Image>(pendingUpdate, root, buttonBgImagePaths);
+            ControlUtils.CollectObjects<Image>(pendingUpdate, root, sliderBgImagePaths);
+            ControlUtils.CollectObjects<Image>(pendingUpdate, root, volumeFillBgPaths);
+            ControlUtils.CollectObjects<Image>(pendingUpdate, root, volumeHandleBgPaths);
+            ControlUtils.CollectObjects<Image>(pendingUpdate, root, buttonIconImagePaths);
 
-                Image image = t.GetComponent<Image>();
-                if (image == null)
-                    continue;
+            Undo.RecordObjects(pendingUpdate.ToArray(), "Update colors");
 
-                image.color = color;
-            }
+            ControlColorProfile colorProfile = pc.colorProfile;
+
+            ControlUtils.UpdateImages(root, buttonBgImagePaths, colorProfile.buttonBackgroundColor);
+            ControlUtils.UpdateImages(root, sliderBgImagePaths, colorProfile.sliderBackgroundColor);
+            ControlUtils.UpdateImages(root, volumeFillBgPaths, colorProfile.volumeFillColor);
+            ControlUtils.UpdateImages(root, volumeHandleBgPaths, colorProfile.volumeHandleColor);
+            ControlUtils.UpdateImages(root, buttonIconImagePaths, colorProfile.normalColor);
+
+            foreach (Object obj in pendingUpdate)
+                PrefabUtility.RecordPrefabInstancePropertyModifications(obj);
         }
     }
 }
