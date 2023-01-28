@@ -11,6 +11,10 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class MicController : UdonSharpBehaviour
     {
+        [Tooltip("ACL for the control box settings")]
+        public AccessControl controlAccess;
+        [Tooltip("ACL for using and holding the microphone, overwrites any ACL set directly on the microphone PickupTrigger script")]
+        public AccessControl micAccess;
         public PickupTrigger microphone;
         public AudioPlayerOverrideList overrideList;
         public Collider[] microphoneCollider;
@@ -164,10 +168,10 @@ namespace Texel
                 }
             }
 
-            targetControlLocal = (bool[])_EnforceArrayLength(targetControlLocal, targetZones);
-            targetControlDefault = (bool[])_EnforceArrayLength(targetControlDefault, targetZones);
-            targetControlLinkBase = (bool[])_EnforceArrayLength(targetControlLinkBase, targetZones);
-            targetControlLinkAOE = (bool[])_EnforceArrayLength(targetControlLinkAOE, targetZones);
+            targetControlLocal = (bool[])_EnforceArrayLength(targetControlLocal, targetZones, typeof(bool));
+            targetControlDefault = (bool[])_EnforceArrayLength(targetControlDefault, targetZones, typeof(bool));
+            targetControlLinkBase = (bool[])_EnforceArrayLength(targetControlLinkBase, targetZones, typeof(bool));
+            targetControlLinkAOE = (bool[])_EnforceArrayLength(targetControlLinkAOE, targetZones, typeof(bool));
 
             targetLinkCaptureProfile = new AudioOverrideSettings[targetLinkDest.Length];
             for (int i = 0; i < targetLinkDest.Length; i++)
@@ -175,6 +179,11 @@ namespace Texel
                 if (targetLinkDest[i])
                     targetLinkCaptureProfile[i] = targetLinkDest[i]._GetLinkedZoneSettings(targetLinkSource[i]);
             }
+
+            if (controlAccess)
+                controlAccess._RegisterValidateHandler(this, "_ValidateAccess");
+            else
+                _SetButton(UI_BUTTON_LOCK, false);
 
             if (Utilities.IsValid(microphone))
             {
@@ -187,20 +196,17 @@ namespace Texel
                 microphone._Register(PickupTrigger.EVENT_TRIGGER_OFF, this, "_OnTriggerOff");
                 overrideList._Register(AudioPlayerOverrideList.EVENT_BOUND_PLAYER_CHANGED, this, "_OnBoundPlayerChanged");
 
+                if (micAccess)
+                    microphone.accessControl = micAccess;
+
                 if (Networking.IsOwner(gameObject) && microphone.TriggerOnUse)
                 {
                     PTTEnabled = true;
                     RequestSerialization();
                 }
 
-                if (Utilities.IsValid(microphone.accessControl))
-                {
-                    microphone.accessControl._RegisterValidateHandler(this, "_ValidateAccess");
-                }
-                else
-                    _SetButton(UI_BUTTON_LOCK, false);
-
-                _ValidateAccess();
+                //if (!controlAccess && microphone.accessControl)
+                //    microphone.accessControl._RegisterValidateHandler(this, "_ValidateAccess");
 
                 if (Networking.IsOwner(gameObject))
                 {
@@ -215,15 +221,17 @@ namespace Texel
                     RequestSerialization();
                 }
             }
+
+            _ValidateAccess();
         }
 
-        Array _EnforceArrayLength(Array arr, Array reference)
+        Array _EnforceArrayLength(Array arr, Array reference, Type type)
         {
             int length = reference.Length;
             if (arr != null && arr.Length == length)
                 return arr;
 
-            Array copy = Array.CreateInstance(arr.GetType(), length);
+            Array copy = Array.CreateInstance(type, length);
             if (arr != null)
                 Array.Copy(arr, copy, Math.Min(arr.Length, length));
 
@@ -256,8 +264,16 @@ namespace Texel
             {
                 syncLocked = value;
 
-                microphone.enforceACL = syncLocked;
-                microphone._ValidateACL();
+                //microphone.enforceACL = syncLocked;
+                //microphone._ValidateACL();
+
+                if (controlAccess)
+                {
+                    controlAccess.enforce = syncLocked;
+                    controlAccess._Validate();
+                }
+                else
+                    syncLocked = false;
 
                 _SetButton(UI_BUTTON_LOCK, syncLocked);
                 _ValidateAccess();
@@ -395,7 +411,7 @@ namespace Texel
 
         public void _OnPickup()
         {
-            if (!_AccessCheck())
+            if (!_MicAccessCheck())
                 return;
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
@@ -406,7 +422,7 @@ namespace Texel
 
         public void _OnDrop()
         {
-            if (!_AccessCheck())
+            if (!_MicAccessCheck())
                 return;
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
@@ -446,7 +462,7 @@ namespace Texel
             if (!_AccessCheck())
                 return;
 
-            AccessControl acl = microphone.accessControl;
+            AccessControl acl = controlAccess;
             if (acl && acl._LocalHasAccess())
             {
                 if (!Networking.IsOwner(gameObject))
@@ -649,14 +665,25 @@ namespace Texel
 
         bool _AccessCheck()
         {
+            if (!Locked)
+                return true;
+
+            if (!Utilities.IsValid(controlAccess))
+                return true;
+
+            return controlAccess._LocalHasAccess();
+        }
+
+        bool _MicAccessCheck()
+        {
+            if (!Locked)
+                return true;
+
             if (!Utilities.IsValid(microphone))
                 return true;
 
             AccessControl acl = microphone.accessControl;
             if (!Utilities.IsValid(acl))
-                return true;
-
-            if (!Locked)
                 return true;
 
             return acl._LocalHasAccess();
