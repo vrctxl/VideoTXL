@@ -33,6 +33,8 @@ namespace Texel
         [Tooltip("A list of admin users who have access when allow whitelist is enabled")]
         public string[] userWhitelist;
 
+        public AccessControlUserList[] groupWhitelist;
+
         public const int RESULT_ALLOW = 1;
         public const int RESULT_PASS = 0;
         public const int RESULT_DENY = -1;
@@ -125,14 +127,29 @@ namespace Texel
 
         public bool _PlayerWhitelisted(VRCPlayerApi player)
         {
-            if (!Utilities.IsValid(userWhitelist))
-                return false;
-
             string playerName = player.displayName;
-            foreach (string user in userWhitelist)
+            if (Utilities.IsValid(userWhitelist))
             {
-                if (playerName == user)
-                    return true;
+                foreach (string user in userWhitelist)
+                {
+                    if (playerName == user)
+                        return true;
+                }
+            }
+
+            if (Utilities.IsValid(groupWhitelist))
+            {
+                foreach (AccessControlUserList group in groupWhitelist)
+                {
+                    if (!Utilities.IsValid(group))
+                        continue;
+
+                    foreach (string user in group.userList)
+                    {
+                        if (playerName == user)
+                            return true;
+                    }
+                }
             }
 
             return false;
