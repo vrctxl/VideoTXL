@@ -34,6 +34,7 @@ namespace Texel
         SerializedProperty autoAVSyncProperty;
 
         SerializedProperty defaultVideoModeProperty;
+        SerializedProperty defaultScreenFitProperty;
 
         private void OnEnable()
         {
@@ -61,6 +62,7 @@ namespace Texel
             autoAVSyncProperty = serializedObject.FindProperty(nameof(SyncPlayer.autoInternalAVSync));
 
             defaultVideoModeProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultVideoSource));
+            defaultScreenFitProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultScreenFit));
 
             // Automatically generate resources and update components when prefab is dropped into the scene
             // The hidden prefabInitizlied property is set false on the shipped video player variants
@@ -133,6 +135,7 @@ namespace Texel
             EditorGUILayout.Space();
             GUIContent desc = new GUIContent("Default Video Source", "The video source that should be active by default, or auto to let the player determine on a per-URL basis.");
             defaultVideoModeProperty.intValue = EditorGUILayout.Popup(desc, defaultVideoModeProperty.intValue, new string[] { "Auto", "AVPro", "Unity Video" });
+            EditorGUILayout.PropertyField(defaultScreenFitProperty, new GUIContent("Default Screen Fit", "How content not matching a screen's aspect ratio should be fit by default."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Debug Options", EditorStyles.boldLabel);

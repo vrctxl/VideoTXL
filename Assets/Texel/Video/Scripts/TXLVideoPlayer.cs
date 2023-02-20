@@ -8,6 +8,14 @@ using VRC.Udon;
 
 namespace Texel
 {
+    public enum TXLScreenFit : short
+    {
+        Fit,
+        FitHeight,
+        FitWidth,
+        Stretch,
+    }
+
     public abstract class TXLVideoPlayer : EventBase
     {
         public const int EVENT_VIDEO_STATE_UPDATE = 0;
@@ -32,6 +40,7 @@ namespace Texel
         public VideoManager videoMux;
         public AudioManager audioManager;
 
+        [HideInInspector]
         public bool prefabInitialized = true;
 
         [NonSerialized]

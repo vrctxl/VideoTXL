@@ -41,6 +41,8 @@ namespace Texel
         SerializedProperty screenMatIndexListProperty;
 
         SerializedProperty useTextureOverrideProperty;
+        SerializedProperty overrideAspectRatioProperty;
+        SerializedProperty aspectRatioProperty;
         SerializedProperty logoTextureProperty;
         SerializedProperty loadingTextureProperty;
         SerializedProperty syncTextureProperty;
@@ -90,6 +92,8 @@ namespace Texel
             screenMatIndexListProperty = serializedObject.FindProperty(nameof(ScreenManager.screenMaterialIndex));
 
             useTextureOverrideProperty = serializedObject.FindProperty(nameof(ScreenManager.useTextureOverrides));
+            overrideAspectRatioProperty = serializedObject.FindProperty(nameof(ScreenManager.overrideAspectRatio));
+            aspectRatioProperty = serializedObject.FindProperty(nameof(ScreenManager.aspectRatio));
             logoTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.logoTexture));
             loadingTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.loadingTexture));
             syncTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.syncTexture));
@@ -172,6 +176,11 @@ namespace Texel
             if (useTextureOverrideProperty.boolValue)
             {
                 EditorGUILayout.Space();
+                EditorGUILayout.PropertyField(overrideAspectRatioProperty);
+                if (overrideAspectRatioProperty.boolValue)
+                    EditorGUILayout.PropertyField(aspectRatioProperty);
+
+                EditorGUILayout.Space();
                 EditorGUILayout.PropertyField(logoTextureProperty);
                 EditorGUILayout.PropertyField(loadingTextureProperty);
                 // EditorGUILayout.PropertyField(syncTextureProperty);
@@ -203,6 +212,8 @@ namespace Texel
                     EditorGUILayout.PropertyField(outputCRTProperty);
                     EditorGUILayout.PropertyField(outputMaterialPropertiesProperty);
                 }
+                else
+                    EditorGUILayout.HelpBox("Enabling the Render Texture Output is the easiest way to supply a video texture to other shaders and materials.  For the most control and performance, use Material or Material Property Block overrides.", MessageType.Info);
             }
 
             serializedObject.ApplyModifiedProperties();

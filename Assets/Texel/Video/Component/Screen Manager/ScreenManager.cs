@@ -52,6 +52,11 @@ namespace Texel
         [Tooltip("Whether to update textures properties on a set of shared material objects")]
         public bool useTextureOverrides = false;
 
+        [Tooltip("Whether the aspect ratio for placeholder textures should be overridden by a specific value.  Use this to supply the original aspect ratio for textures that have been rescaled to powers-of-2.")]
+        public bool overrideAspectRatio = true;
+        [Tooltip("The aspect ratio that should be used for placeholder textures, ignoring their native unity value.")]
+        public float aspectRatio = 1.777f;
+
         [Tooltip("The screen texture to apply when no video is playing or loading.")]
         public Texture logoTexture;
         [Tooltip("The screen texture to apply when a video is being loaded.  Falls back to Logo Texture.")]
@@ -78,6 +83,7 @@ namespace Texel
         public string[] materialInvertList;
         public string[] materialGammaList;
         public string[] materialFitList;
+        public string[] materialAspectRatioList;
 
         public MeshRenderer[] propMeshList;
         public int[] propMaterialOverrideList;
@@ -88,6 +94,7 @@ namespace Texel
         public string[] propInvertList;
         public string[] propGammaList;
         public string[] propFitList;
+        public string[] propAspectRatioList;
 
         [Tooltip("Blit the source video or placeholder image to a specified custom render texture (CRT).  Each copy of the video player that writes to a CRT and could play concurrently must have its own CRT asset and associated material.")]
         public bool useRenderOut = false;
@@ -120,6 +127,7 @@ namespace Texel
         bool currentInvert;
         bool currentGamma;
         int currentFit;
+        float currentAspectRatio;
         bool currentValid = false;
 
         const int EVENT_UPDATE = 0;
@@ -189,6 +197,11 @@ namespace Texel
             get { return currentFit; }
         }
 
+        public float CurrentAspectRatioOverride
+        {
+            get { return currentAspectRatio; }
+        }
+
         void _InitMaterialOverrides()
         {
             if (!useMaterialOverrides)
@@ -241,6 +254,7 @@ namespace Texel
             materialInvertList = new string[materialUpdateList.Length];
             materialGammaList = new string[materialUpdateList.Length];
             materialFitList = new string[materialUpdateList.Length];
+            materialAspectRatioList = new string[materialUpdateList.Length];
 
             // Material Props
             for (int i = 0; i < materialUpdateList.Length; i++)
@@ -256,6 +270,7 @@ namespace Texel
                     materialInvertList[i] = map.invertY;
                     materialGammaList[i] = map.applyGamma;
                     materialFitList[i] = map.screenFit;
+                    materialAspectRatioList[i] = map.aspectRatio;
                 }
             }
 
@@ -264,6 +279,7 @@ namespace Texel
             propInvertList = new string[propMeshList.Length];
             propGammaList = new string[propMeshList.Length];
             propFitList = new string[propMeshList.Length];
+            propAspectRatioList = new string[propMeshList.Length];
 
             // Property Block Props
             for (int i = 0; i < propMeshList.Length; i++)
@@ -279,6 +295,7 @@ namespace Texel
                     propInvertList[i] = map.invertY;
                     propGammaList[i] = map.applyGamma;
                     propFitList[i] = map.screenFit;
+                    propAspectRatioList[i] = map.aspectRatio;
                 }
             }
 
@@ -573,6 +590,7 @@ namespace Texel
             currentInvert = false;
             currentGamma = false;
             currentFit = videoPlayer.screenFit;
+            currentAspectRatio = 0;
         }
 
         void _UpdateCaptureData(Texture replacementTex, Texture captureTex)
@@ -603,6 +621,8 @@ namespace Texel
 
             if (lastTex != currentTexture)
                 _UpdateHandlers(EVENT_UPDATE);
+
+            currentAspectRatio = (overrideAspectRatio && _screenMode != SCREEN_MODE_NORMAL) ? aspectRatio : 0;
         }
 
         void _UpdateObjects(Material replacementMat)
@@ -643,6 +663,7 @@ namespace Texel
                 _SetMatIntProperty(mat, materialGammaList[i], currentGamma ? 1 : 0);
                 _SetMatIntProperty(mat, materialInvertList[i], currentInvert ? 1 : 0);
                 _SetMatIntProperty(mat, materialFitList[i], videoPlayer.screenFit);
+                _SetMatFloatProperty(mat, materialAspectRatioList[i], currentAspectRatio);
             }
 
             if (useRenderOut && Utilities.IsValid(outputCRT))
@@ -658,6 +679,7 @@ namespace Texel
                         _SetMatIntProperty(mat, outputMaterialProperties.applyGamma, currentGamma ? 1 : 0);
                         _SetMatIntProperty(mat, outputMaterialProperties.invertY, currentInvert ? 1 : 0);
                         _SetMatIntProperty(mat, outputMaterialProperties.screenFit, videoPlayer.screenFit);
+                        _SetMatFloatProperty(mat, outputMaterialProperties.aspectRatio, currentAspectRatio);
                     }
                     else
                         mat.SetTexture("_MainTex", currentTexture);
@@ -694,6 +716,7 @@ namespace Texel
                 _SetIntProperty(propGammaList[i], currentGamma ? 1 : 0);
                 _SetIntProperty(propInvertList[i], currentInvert ? 1 : 0);
                 _SetIntProperty(propFitList[i], videoPlayer.screenFit);
+                _SetFloatProperty(propAspectRatioList[i], currentAspectRatio);
 
                 if (useMatIndex)
                     renderer.SetPropertyBlock(block, propMaterialIndexList[i]);
@@ -708,10 +731,22 @@ namespace Texel
                 block.SetInt(prop, value);
         }
 
+        void _SetFloatProperty(string prop, float value)
+        {
+            if (prop != null && prop.Length > 0)
+                block.SetFloat(prop, value);
+        }
+
         void _SetMatIntProperty(Material mat, string prop, int value)
         {
             if (prop != null && prop.Length > 0)
                 mat.SetInt(prop, value);
+        }
+
+        void _SetMatFloatProperty(Material mat, string prop, float value)
+        {
+            if (prop != null && prop.Length > 0)
+                mat.SetFloat(prop, value);
         }
 
         Material _GetPlaybackMaterial(int meshIndex)

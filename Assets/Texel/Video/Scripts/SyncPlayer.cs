@@ -17,7 +17,6 @@ namespace Texel
         public UrlRemapper urlRemapper;
         public AccessControl accessControl;
 
-        [HideInInspector]
         public CompoundZoneTrigger playbackZone;
         public ZoneMembership playbackZoneMembership;
 
@@ -31,7 +30,7 @@ namespace Texel
         public float syncThreshold = 1;
         public bool autoInternalAVSync = false;
 
-        [SerializeField]
+        public TXLScreenFit defaultScreenFit = TXLScreenFit.Fit;
         public short defaultVideoSource = VideoSource.VIDEO_SOURCE_NONE;
 
         public bool debugLogging = true;
@@ -159,8 +158,10 @@ namespace Texel
             {
                 _syncLocked = defaultLocked;
                 _syncRepeatPlaylist = loop;
+                _syncScreenFit = (short)defaultScreenFit;
                 _UpdateLockState(_syncLocked);
                 _UpdateRepeatMode(_syncRepeatPlaylist);
+                _UpdateScreenFit(_syncScreenFit);
                 RequestSerialization();
 
                 if (Utilities.IsValid(playlist))

@@ -21,6 +21,8 @@ namespace Texel
         public string applyGamma;
         [Tooltip("The name of the shader property that sets the screen fit enum value (0=fit, 1=fit-h, 2=fit-w, 3=stretch)")]
         public string screenFit;
+        [Tooltip("The name of the shader property that indicates the intended aspect ratio of the screen texture, overriding ratio calculated from the actual texture dimensions.")]
+        public string aspectRatio;
 
         private void Start()
         {

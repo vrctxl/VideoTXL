@@ -2,6 +2,7 @@
 #define VIDEOTXL_INCLUDED
 
 uniform float _AspectRatio;
+uniform float _TexAspectRatio;
 uniform int _FitMode;
 
 float2 TXL_ComputeScreenCorrection(float2 res) {
@@ -36,6 +37,11 @@ bool TXL_ShouldApplyScreenCorrection(float2 res) {
 
 void TXL_ComputeScreenFit(float2 uv, float2 res, out float2 uvFit, out float visibility) {
 	visibility = 1;
+
+	if (_TexAspectRatio > 0) {
+		float actualRatio = res.x / res.y;
+		res.y *= actualRatio / _TexAspectRatio;
+	}
 
 	if (TXL_ShouldApplyScreenCorrection(res)) {
 		float2 correction = TXL_ComputeScreenCorrection(res);

@@ -26,6 +26,7 @@ namespace Texel
         [Header("Default Options")]
         public StaticUrlSource staticUrlSource;
         public VRCUrl streamUrl;
+        public TXLScreenFit defaultScreenFit = TXLScreenFit.Fit;
 
         [Tooltip("Write out video player events to VRChat log")]
         public bool debugLogging = true;
@@ -88,6 +89,7 @@ namespace Texel
             else
                 _urlSourceType = SOURCE_TYPE_URL;
 
+            videoMux._EnsureInit();
             videoMux._Register(VideoManager.VIDEO_READY_EVENT, this, "_OnVideoReady");
             videoMux._Register(VideoManager.VIDEO_START_EVENT, this, "_OnVideoStart");
             videoMux._Register(VideoManager.VIDEO_END_EVENT, this, "_OnVideoEnd");
@@ -98,6 +100,8 @@ namespace Texel
                 videoMux._UpdateVideoSource(VideoSource.VIDEO_SOURCE_AVPRO);
             else if (videoMux.SupportsUnity)
                 videoMux._UpdateVideoSource(VideoSource.VIDEO_SOURCE_UNITY);
+
+            _SetScreenFit((int)defaultScreenFit);
 
             _UpdatePlayerState(VIDEO_STATE_STOPPED);
         }
