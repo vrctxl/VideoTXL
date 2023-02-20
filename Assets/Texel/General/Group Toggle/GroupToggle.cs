@@ -11,6 +11,9 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
     public class GroupToggle : UdonSharpBehaviour
     {
+        [Header("Access Control")]
+        public AccessControl accessControl;
+
         [Header("Default State")]
         public bool defaultVR = true;
         public bool defaultDesktop = true;
@@ -23,11 +26,15 @@ namespace Texel
         [Header("Toggle Attributes")]
         public bool toggleGameObject = true;
         public bool toggleColliders = false;
+        public bool toggleRenderers = false;
 
         bool state = false;
 
         Collider[] onColliders;
         Collider[] offColliders;
+
+        MeshRenderer[] onRenderers;
+        MeshRenderer[] offRenderers;
 
         Component[] handlers;
         int handlerCount = 0;
@@ -41,6 +48,12 @@ namespace Texel
                 offColliders = _BuildColliderList(offStateObjects);
             }
 
+            if (toggleRenderers)
+            {
+                onRenderers = _BuildRendererList(onStateObjects);
+                offRenderers = _BuildRendererList(offStateObjects);
+            }
+
             bool defaultState = defaultDesktop;
             if (Networking.LocalPlayer.IsUserInVR())
                 defaultState = defaultVR;
@@ -50,6 +63,9 @@ namespace Texel
 #endif
 
             state = defaultState;
+            if (accessControl && !accessControl._LocalHasAccess())
+                state = false;
+
             _ToggleInternal(state);
         }
 
@@ -78,6 +94,34 @@ namespace Texel
             }
 
             return colliders;
+        }
+
+        MeshRenderer[] _BuildRendererList(GameObject[] objects)
+        {
+            int count = 0;
+            MeshRenderer[] rlist = new MeshRenderer[objects.Length];
+            for (int i = 0; i < objects.Length; i++)
+            {
+                GameObject obj = objects[i];
+                if (Utilities.IsValid(obj))
+                {
+                    rlist[i] = obj.GetComponent<MeshRenderer>();
+                    count += 1;
+                }
+            }
+
+            int index = 0;
+            MeshRenderer[] renderers = new MeshRenderer[count];
+            for (int i = 0; i < rlist.Length; i++)
+            {
+                if (rlist[i])
+                {
+                    renderers[index] = rlist[i];
+                    index += 1;
+                }
+            }
+
+            return renderers;
         }
 
         public bool State
@@ -118,6 +162,14 @@ namespace Texel
                     collider.enabled = state;
                 foreach (var collider in offColliders)
                     collider.enabled = !state;
+            }
+
+            if (toggleRenderers)
+            {
+                foreach (var renderer in onRenderers)
+                    renderer.enabled = state;
+                foreach (var renderer in offRenderers)
+                    renderer.enabled = !state;
             }
 
             if (toggleGameObject)
