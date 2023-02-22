@@ -12,7 +12,7 @@ namespace Texel
         SerializedProperty userListProperty;
 
         string bulkText = "";
-        static bool showUserFoldout = true;
+        // static bool showUserFoldout = true;
 
         private void OnEnable()
         {

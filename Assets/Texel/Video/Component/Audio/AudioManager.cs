@@ -27,8 +27,10 @@ namespace Texel
 
         public AudioChannelGroup[] channelGroups;
 
-        public bool debugLogging = true;
+        public bool debugLogging = false;
+        public bool debugEvents = false;
         public DebugLog debugLog;
+        public DebugState debugState;
 
         //public AudioSource[] channelAudio;
         //public string[] channelNames;
@@ -85,6 +87,11 @@ namespace Texel
 
         protected override void _Init()
         {
+            _DebugEvent("Init");
+
+            if (Utilities.IsValid(debugState))
+                debugState._Regsiter(this, "_UpdateDebugState", "AudioOverrideManager");
+
             if (!Utilities.IsValid(audioControls))
                 audioControls = new Component[0];
 
@@ -145,7 +152,8 @@ namespace Texel
                 if (videoPlayer.videoMux)
                 {
                     videoPlayer.videoMux._Register(VideoManager.SOURCE_CHANGE_EVENT, this, "_OnVideoSourceChange");
-                    _SelectVideoSource(videoPlayer.videoMux.ActiveSource);
+                    if (videoPlayer.videoMux.ActiveSource && videoPlayer.videoMux.ActiveSource.VideoSourceType != VideoSource.VIDEO_SOURCE_NONE)
+                        _SelectVideoSource(videoPlayer.videoMux.ActiveSource);
                 }
             }
         }
@@ -183,7 +191,7 @@ namespace Texel
             _SetVideoAudioGroupState(activeAudioGroup, false);
 
             channelCount = 0;
-            
+
             activeAudioGroup = null;
 
             if (!selectedChannelGroup || !selectedVideoSource)
@@ -206,7 +214,7 @@ namespace Texel
                     _UpdateAudioLink(null);
                     return;
             }
-            
+
             foreach (var audioGroup in selectedVideoSource.audioGroups)
             {
                 if (!audioGroup || audioGroup.groupName != selectedChannelGroup.groupName)
@@ -281,7 +289,7 @@ namespace Texel
             target.reverbZoneMix = source.reverbZoneMix;
             target.dopplerLevel = source.dopplerLevel;
 
-            
+
             if (source.GetCustomCurve(AudioSourceCurveType.SpatialBlend) != null)
                 target.SetCustomCurve(AudioSourceCurveType.SpatialBlend, source.GetCustomCurve(AudioSourceCurveType.SpatialBlend));
             if (source.GetCustomCurve(AudioSourceCurveType.Spread) != null)
@@ -319,6 +327,7 @@ namespace Texel
 
         public void _OnVideoStateUpdate()
         {
+            _DebugEvent("Event OnVideoStateUpdate");
             if (!muteSourceForInactiveVideo)
                 return;
 
@@ -337,6 +346,7 @@ namespace Texel
 
         public void _OnVideoSourceChange()
         {
+            _DebugEvent("Event OnVideoSourceChange");
             _SelectVideoSource(videoPlayer.videoMux.ActiveSource);
         }
 
@@ -641,6 +651,29 @@ namespace Texel
                 Debug.Log("[VideoTXL:AudioManager] " + message);
             if (Utilities.IsValid(debugLog))
                 debugLog._Write("AudioManager", message);
+        }
+
+        void _DebugEvent(string message)
+        {
+            if (debugEvents)
+                _DebugLog(message);
+        }
+
+        public void _UpdateDebugState()
+        {
+            VRCPlayerApi owner = Networking.GetOwner(gameObject);
+            debugState._SetValue("muteSourceForInactiveVideo", muteSourceForInactiveVideo.ToString());
+            debugState._SetValue("inputVolume", inputVolume.ToString());
+            debugState._SetValue("inputMute", inputMute.ToString());
+            debugState._SetValue("masterVolume", masterVolume.ToString());
+            debugState._SetValue("masterMute", masterMute.ToString());
+            debugState._SetValue("selectedChannelGroup", selectedChannelGroup ? selectedChannelGroup.groupName : "--");
+            debugState._SetValue("selectedVideoSource", selectedVideoSource ? $"{selectedVideoSource.ID} ({selectedVideoSource._FormattedAttributes()})" : "--");
+            debugState._SetValue("activeAudioGroup", activeAudioGroup ? activeAudioGroup.groupName : "--");
+            debugState._SetValue("initialized", initialized.ToString());
+            debugState._SetValue("channelCount", channelCount.ToString());
+            debugState._SetValue("ovrMaster2D", ovrMaster2D.ToString());
+            debugState._SetValue("videoMute", videoMute.ToString());
         }
     }
 }

@@ -27,7 +27,9 @@ namespace Texel
         SerializedProperty channelGroupsProperty;
 
         SerializedProperty debugLogProperty;
+        SerializedProperty debugStateProperty;
         SerializedProperty debugLoggingProperty;
+        SerializedProperty debugEventsProperty;
 
         //SerializedProperty channelAudioListProperty;
         //SerializedProperty channelNameListProperty;
@@ -43,16 +45,15 @@ namespace Texel
 
         SerializedProperty audioLinkProperty;
         //SerializedProperty audioLinkChannelProperty;
-
-        DateTime lastValidate;
+        
         bool audioValid = true;
         bool audioLinkOutsideLinked = false;
         UdonBehaviour audioLinkCache;
+        
+        bool expandDebug = false;
 
         private void OnEnable()
         {
-            lastValidate = DateTime.Now;
-
             videoPlayerProperty = serializedObject.FindProperty(nameof(AudioManager.videoPlayer));
             muteSourcePropertyProperty = serializedObject.FindProperty(nameof(AudioManager.muteSourceForInactiveVideo));
 
@@ -77,7 +78,9 @@ namespace Texel
             //audioLinkChannelProperty = serializedObject.FindProperty(nameof(AudioManager.audioLinkChannel));
 
             debugLogProperty = serializedObject.FindProperty(nameof(AudioManager.debugLog));
+            debugStateProperty = serializedObject.FindProperty(nameof(AudioManager.debugState));
             debugLoggingProperty = serializedObject.FindProperty(nameof(AudioManager.debugLogging));
+            debugEventsProperty = serializedObject.FindProperty(nameof(AudioManager.debugEvents));
 
             Revalidate();
         }
@@ -99,12 +102,8 @@ namespace Texel
 
             TXLVideoPlayer videoPlayer = (TXLVideoPlayer)videoPlayerProperty.objectReferenceValue;
 
-            TimeSpan time = DateTime.Now.Subtract(lastValidate);
-            if (time.TotalMilliseconds > 1000)
-            {
-                lastValidate = DateTime.Now;
-                Revalidate();
-            }
+            GUIStyle boldFoldoutStyle = new GUIStyle(EditorStyles.foldout);
+            boldFoldoutStyle.fontStyle = FontStyle.Bold;
 
             if (GUILayout.Button("Audio Manager Documentation"))
                 Application.OpenURL("https://github.com/jaquadro/VideoTXL/wiki/Configuration:-Audio-Manager");
@@ -139,7 +138,10 @@ namespace Texel
                 audioValid = VideoComponentUpdater.ValidateUnityAudioSources(videoPlayer);
             }
 
+            EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(channelGroupsProperty, new GUIContent("Groups", "Channel groups recognized by the video player"));
+            if (EditorGUI.EndChangeCheck())
+                Revalidate();
 
             List<AudioChannelGroup> groups = VideoComponentUpdater.GetValidAudioGroups((AudioManager)serializedObject.targetObject);
             if (groups.Count == 0)
@@ -163,9 +165,15 @@ namespace Texel
                 LinkAudioLink();
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Debug Options", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
-            EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
+            expandDebug = EditorGUILayout.Foldout(expandDebug, "Debug Options", true, boldFoldoutStyle);
+            if (expandDebug)
+            {
+                //EditorGUILayout.LabelField("Debug Options", EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
+                EditorGUILayout.PropertyField(debugStateProperty, new GUIContent("Debug State", "Log debug statements to a world object"));
+                EditorGUILayout.PropertyField(debugEventsProperty, new GUIContent("Include Events", "Include additional event traffic in debug log"));
+                EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
+            }
 
             serializedObject.ApplyModifiedProperties();
         }
@@ -192,7 +200,6 @@ namespace Texel
                 if (!behaviour.programSource)
                     continue;
 
-                var program = behaviour.programSource.SerializedProgramAsset.RetrieveProgram();
                 if (behaviour.programSource.name != "AudioLink")
                     continue;
 

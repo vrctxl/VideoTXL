@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 1841769248869241684}
   - component: {fileID: 3594371719317068777}
   m_Layer: 0
-  m_Name: Audio Manager 1Ch
+  m_Name: Audio Manager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -54,32 +54,16 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 3594371719317068777}
-  syncAudioManager: {fileID: 0}
-  useSync: 0
   videoPlayer: {fileID: 0}
   muteSourceForInactiveVideo: 0
   audioLinkSystem: {fileID: 0}
-  audioLinkChannel: 
   inputVolume: 1
   inputMute: 0
   masterVolume: 0.9
   masterMute: 0
-  master2D: 0
-  channelAudio:
-  - {fileID: 0}
-  channelNames:
-  - Global
-  channelVolume:
-  - 1
-  channelMute: 00
-  channel2D: 00
-  channelFadeZone:
-  - {fileID: 0}
-  channelDisableFade2D: 00
-  channelMute2D: 00
-  channelSeparateVolume2D: 00
-  channelVolume2D:
-  - 0
+  channelGroups: []
+  debugLogging: 0
+  debugLog: {fileID: 0}
 --- !u!114 &3594371719317068777
 MonoBehaviour:
   m_ObjectHideFlags: 0
