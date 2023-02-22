@@ -309,7 +309,7 @@ namespace Texel
                 return;
             }
 
-            videoPlayer._SetScreenFit((short)videoFitDropdown.value);
+            videoPlayer._SetScreenFit((TXLScreenFit)videoFitDropdown.value);
         }
 
         public void _HandleResolutionChangedUI()

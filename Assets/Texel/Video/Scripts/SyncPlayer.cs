@@ -46,7 +46,7 @@ namespace Texel
         [UdonSynced]
         short _syncVideoSourceOverride = VideoSource.VIDEO_SOURCE_NONE;
         [UdonSynced]
-        short _syncScreenFit = SCREEN_FIT;
+        byte _syncScreenFit = SCREEN_FIT;
 
         [UdonSynced]
         VRCUrl _syncUrl = VRCUrl.Empty;
@@ -158,7 +158,7 @@ namespace Texel
             {
                 _syncLocked = defaultLocked;
                 _syncRepeatPlaylist = loop;
-                _syncScreenFit = (short)defaultScreenFit;
+                _syncScreenFit = (byte)defaultScreenFit;
                 _UpdateLockState(_syncLocked);
                 _UpdateRepeatMode(_syncRepeatPlaylist);
                 _UpdateScreenFit(_syncScreenFit);
@@ -374,12 +374,12 @@ namespace Texel
             videoMux._UpdatePreferredResolution(res);
         }
 
-        public override void _SetScreenFit(int fit)
+        public override void _SetScreenFit(TXLScreenFit fit)
         {
             if (_syncLocked && !_CanTakeControl())
                 return;
 
-            _syncScreenFit = (short)fit;
+            _syncScreenFit = (byte)fit;
             _UpdateScreenFit(_syncScreenFit);
 
             RequestSerialization();
@@ -1232,7 +1232,7 @@ namespace Texel
                 _StartVideoLoad();
         }
 
-        void _UpdateScreenFit(short mode)
+        void _UpdateScreenFit(byte mode)
         {
             if (mode != screenFit)
             {

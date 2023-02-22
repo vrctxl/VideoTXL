@@ -436,7 +436,7 @@ namespace Texel
 
         public static AudioChannelGroup[] GetAudioGroups(AudioManager manager)
         {
-            if (!manager)
+            if (!manager || manager.channelGroups == null)
                 return new AudioChannelGroup[0];
 
             return manager.channelGroups;

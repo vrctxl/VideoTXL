@@ -8,7 +8,7 @@ using VRC.Udon;
 
 namespace Texel
 {
-    public enum TXLScreenFit : short
+    public enum TXLScreenFit : byte
     {
         Fit,
         FitHeight,
@@ -48,7 +48,7 @@ namespace Texel
         [NonSerialized]
         public short playerSourceOverride;
         [NonSerialized]
-        public short screenFit;
+        public byte screenFit;
         [NonSerialized]
         public int playerState;
         [NonSerialized]
@@ -114,6 +114,6 @@ namespace Texel
 
         public virtual void _SetSourceResolution(int res) { }
 
-        public virtual void _SetScreenFit(int fit) { }
+        public virtual void _SetScreenFit(TXLScreenFit fit) { }
     }
 }

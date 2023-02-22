@@ -135,7 +135,7 @@ namespace Texel
             EditorGUILayout.Space();
             GUIContent desc = new GUIContent("Default Video Source", "The video source that should be active by default, or auto to let the player determine on a per-URL basis.");
             defaultVideoModeProperty.intValue = EditorGUILayout.Popup(desc, defaultVideoModeProperty.intValue, new string[] { "Auto", "AVPro", "Unity Video" });
-            EditorGUILayout.PropertyField(defaultScreenFitProperty, new GUIContent("Default Screen Fit", "How content not matching a screen's aspect ratio should be fit by default."));
+            EditorGUILayout.PropertyField(defaultScreenFitProperty, new GUIContent("Default Screen Fit", "How content not matching a screen's aspect ratio should be fit by default.  Affects the output CRT and materials with the screen fit property mapped."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Debug Options", EditorStyles.boldLabel);

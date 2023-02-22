@@ -22,10 +22,13 @@ namespace Texel
         public ZoneTrigger playbackZone;
         [Tooltip("Optional trigger zone that will start playback if player enters.")]
         public ZoneTrigger triggerZone;
+        [Tooltip("Starts playback when player joins world.  Any defined playback zone will come into effect once the player enters it.")]
+        public bool playOnJoin = false;
 
         [Header("Default Options")]
         public StaticUrlSource staticUrlSource;
         public VRCUrl streamUrl;
+        [Tooltip("How content not matching a screen's aspect ratio should be fit by default.  Affects the output CRT and materials with the screen fit property mapped.")]
         public TXLScreenFit defaultScreenFit = TXLScreenFit.Fit;
 
         [Tooltip("Write out video player events to VRChat log")]
@@ -101,14 +104,20 @@ namespace Texel
             else if (videoMux.SupportsUnity)
                 videoMux._UpdateVideoSource(VideoSource.VIDEO_SOURCE_UNITY);
 
-            _SetScreenFit((int)defaultScreenFit);
+            _SetScreenFit(defaultScreenFit);
 
             _UpdatePlayerState(VIDEO_STATE_STOPPED);
+
+            if (playOnJoin)
+            {
+                _inSustainZone = true;
+                _TriggerPlay();
+            }
         }
 
         public void _TriggerPlay()
         {
-            Debug.Log("[VideoTXL:ZonedStreamPlayer] Trigger play");
+            DebugLog("Trigger play");
             if (playAt > 0 || playerState == VIDEO_STATE_PLAYING || playerState == VIDEO_STATE_LOADING)
                 return;
 
@@ -190,9 +199,9 @@ namespace Texel
             videoMux._UpdatePreferredResolution(res);
         }
 
-        public override void _SetScreenFit(int fit)
+        public override void _SetScreenFit(TXLScreenFit fit)
         {
-            screenFit = (short)fit;
+            screenFit = (byte)fit;
             _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
         }
 
