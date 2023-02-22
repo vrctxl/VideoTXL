@@ -20,6 +20,7 @@ namespace Texel
         SerializedProperty accessControlProperty;
         SerializedProperty debugLogProperty;
         SerializedProperty debugStageProperty;
+        SerializedProperty eventLoggingProperty;
         SerializedProperty playbackZoneProperty;
 
         SerializedProperty defaultUrlProperty;
@@ -36,6 +37,8 @@ namespace Texel
         SerializedProperty defaultVideoModeProperty;
         SerializedProperty defaultScreenFitProperty;
 
+        bool expandDebug = false;
+
         private void OnEnable()
         {
             videoMuxProperty = serializedObject.FindProperty(nameof(SyncPlayer.videoMux));
@@ -48,6 +51,7 @@ namespace Texel
             accessControlProperty = serializedObject.FindProperty(nameof(SyncPlayer.accessControl));
             debugLogProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugLog));
             debugStageProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugState));
+            eventLoggingProperty = serializedObject.FindProperty(nameof(SyncPlayer.eventLogging));
             playbackZoneProperty = serializedObject.FindProperty(nameof(SyncPlayer.playbackZoneMembership));
 
             defaultUrlProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultUrl));
@@ -82,6 +86,9 @@ namespace Texel
             serializedObject.Update();
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
+
+            GUIStyle boldFoldoutStyle = new GUIStyle(EditorStyles.foldout);
+            boldFoldoutStyle.fontStyle = FontStyle.Bold;
 
             TXLVideoPlayer videoPlayer = (TXLVideoPlayer)serializedObject.targetObject;
 
@@ -138,18 +145,22 @@ namespace Texel
             EditorGUILayout.PropertyField(defaultScreenFitProperty, new GUIContent("Default Screen Fit", "How content not matching a screen's aspect ratio should be fit by default.  Affects the output CRT and materials with the screen fit property mapped."));
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Debug Options", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
-            EditorGUILayout.PropertyField(debugStageProperty, new GUIContent("Debug State", "Periodically refresh internal object state on a world object"));
-            EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
+            EditorGUILayout.LabelField("Update", EditorStyles.boldLabel);
+            if (GUILayout.Button("Update Connected Components"))
+                VideoComponentUpdater.UpdateComponents((TXLVideoPlayer)serializedObject.targetObject);
+
+            EditorGUILayout.Space();
+            expandDebug = EditorGUILayout.Foldout(expandDebug, "Debug Options", true, boldFoldoutStyle);
+            if (expandDebug)
+            {
+                EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
+                EditorGUILayout.PropertyField(debugStageProperty, new GUIContent("Debug State", "Log debug statements to a world object"));
+                EditorGUILayout.PropertyField(eventLoggingProperty, new GUIContent("Include Events", "Include additional event traffic in debug log"));
+                EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
+            }
 
             if (EditorGUI.EndChangeCheck())
                 serializedObject.ApplyModifiedProperties();
-
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Update", EditorStyles.boldLabel);
-            if (GUILayout.Button("Update Connected Components", GUILayout.Width(EditorGUIUtility.labelWidth)))
-                VideoComponentUpdater.UpdateComponents((TXLVideoPlayer)serializedObject.targetObject);
         }
     }
 }

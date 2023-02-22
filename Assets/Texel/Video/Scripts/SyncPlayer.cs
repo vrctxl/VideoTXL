@@ -36,6 +36,7 @@ namespace Texel
         public bool debugLogging = true;
         public DebugLog debugLog;
         public DebugState debugState;
+        public bool eventLogging = false;
 
         float retryTimeout = 6;
         //float loadWaitTime = 2;
@@ -110,7 +111,7 @@ namespace Texel
 
         protected override void _Init()
         {
-            base._Init();
+            DebugEvent("Init");
 
             if (IsQuest)
                 DebugLog("Detected Quest platform");
@@ -126,8 +127,8 @@ namespace Texel
             {
                 if (Utilities.IsValid(Networking.LocalPlayer))
                     _inSustainZone = playbackZoneMembership._ContainsPlayer(Networking.LocalPlayer);
-                playbackZoneMembership._RegisterAddPlayer(this, "_PlaybackZoneEnter", "playerArg");
-                playbackZoneMembership._RegisterRemovePlayer(this, "_PlaybackZoneExit", "playerArg");
+                playbackZoneMembership._RegisterAddPlayer(this, "_OnPlaybackZoneEnter", "playerArg");
+                playbackZoneMembership._RegisterRemovePlayer(this, "_OnPlaybackZoneExit", "playerArg");
                 //playbackZone._Register((UdonBehaviour)(Component)this, "_PlaybackZoneEnter", "_PlaybackZoneExit", null);
             }
             else
@@ -200,8 +201,10 @@ namespace Texel
             }
         }
 
-        public void _PlaybackZoneEnter()
+        public void _OnPlaybackZoneEnter()
         {
+            DebugEvent("Event OnPlaybackZoneEnter");
+
             if (playerArg == Networking.LocalPlayer)
             {
                 _inSustainZone = true;
@@ -238,8 +241,10 @@ namespace Texel
             }
         }
 
-        public void _PlaybackZoneExit()
+        public void _OnPlaybackZoneExit()
         {
+            DebugEvent("Event OnPlaybackZoneExit");
+
             if (playerArg == Networking.LocalPlayer)
             {
                 _inSustainZone = false;
@@ -261,7 +266,7 @@ namespace Texel
 
         public void _OnPlaylistListChange()
         {
-            DebugLog("Playlist track list changed");
+            DebugEvent("Event OnPlaylistListChange");
             _UpdateHandlers(EVENT_VIDEO_PLAYLIST_UPDATE);
 
             if (Networking.IsOwner(gameObject))
@@ -731,6 +736,8 @@ namespace Texel
 
         public void _OnVideoReady()
         {
+            DebugEvent("Event OnVideoReady");
+
             float position = videoMux.VideoTime;
             float duration = videoMux.VideoDuration;
             DebugLog("Video ready, duration: " + duration + ", position: " + position);
@@ -764,6 +771,7 @@ namespace Texel
 
         public void _OnVideoStart()
         {
+            DebugEvent("Event OnVideoStart");
             //DebugLog("Video start");
 
             if (Networking.IsOwner(gameObject))
@@ -813,6 +821,7 @@ namespace Texel
 
         public void _OnVideoEnd()
         {
+            DebugEvent("Event OnVideoEnd");
             if (!seekableSource && Time.time - _playStartTime < 1)
             {
                 Debug.Log("Video end encountered at start of stream, ignoring");
@@ -869,6 +878,7 @@ namespace Texel
         // AVPro sends loop event but does not auto-loop, and setting time sometimes deadlocks player *sigh*
         public void _OnVideoLoop()
         {
+            DebugEvent("Event OnVideoLoop");
             /*
             float current = _currentPlayer.GetTime();
             float duration = _currentPlayer.GetDuration();
@@ -886,6 +896,7 @@ namespace Texel
 
         public void _OnVideoError()
         {
+            DebugEvent($"Event OnVideoError");
             if (playerState == VIDEO_STATE_STOPPED)
                 return;
 
@@ -947,12 +958,13 @@ namespace Texel
 
         public void _OnSourceChange()
         {
-            DebugLog($"ONSOURCECHANGE {videoMux.ActiveSourceType}");
+            DebugEvent($"Event OnSourceChange activeSourceType={videoMux.ActiveSourceType}");
+
             playerSource = (short)videoMux.ActiveSourceType;
             _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
             //dataProxy._EmitStateUpdate();
 
-            if (!_suppressSourceUpdate)
+            if (!_suppressSourceUpdate && _inSustainZone)
                 _ForceResync(true);
         }
 
@@ -1348,6 +1360,12 @@ namespace Texel
                 Debug.Log("[VideoTXL:SyncPlayer] " + message);
             if (Utilities.IsValid(debugLog))
                 debugLog._Write("SyncPlayer", message);
+        }
+
+        void DebugEvent(string message)
+        {
+            if (eventLogging)
+                DebugLog(message);
         }
 
         public void _UpdateDebugState()
