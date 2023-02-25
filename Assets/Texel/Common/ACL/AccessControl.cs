@@ -7,10 +7,9 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [AddComponentMenu("Texel/Access Control")]
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     [DefaultExecutionOrder(-1)]
-    public class AccessControl : UdonSharpBehaviour
+    public class AccessControl : EventBase
     {
         [Header("Optional Components")]
         [Tooltip("Log debug statements to a world object")]
@@ -32,8 +31,8 @@ namespace Texel
         [Header("Access Whitelist")]
         [Tooltip("A list of admin users who have access when allow whitelist is enabled")]
         public string[] userWhitelist;
-
-        public AccessControlUserList[] groupWhitelist;
+        [Tooltip("A list of user sources to check for whitelisted players")]
+        public AccessControlUserSource[] whitelistSources;
 
         public const int RESULT_ALLOW = 1;
         public const int RESULT_PASS = 0;
@@ -54,11 +53,18 @@ namespace Texel
         string[] accessHandlerParams;
         string[] accessHandlerResults;
 
-        Component[] validateHandlers;
-        int validateHandlerCount = 0;
-        string[] validateHandlerEvents;
+        public const int EVENT_VALIDATE = 0;
+        public const int EVENT_ENFORCE_UPDATE = 1;
+        public const int EVENT_COUNT = 2;
 
         void Start()
+        {
+            _EnsureInit();
+        }
+
+        protected override int EventCount => EVENT_COUNT;
+
+        protected override void _Init()
         {
             VRCPlayerApi player = Networking.LocalPlayer;
             if (Utilities.IsValid(player))
@@ -69,13 +75,6 @@ namespace Texel
                 _localPlayerMaster = player.isMaster;
                 _localPlayerInstanceOwner = player.isInstanceOwner;
             }
-
-            if (allowInstanceOwner && _localPlayerInstanceOwner)
-                _localCalculatedAccess = true;
-            if (allowWhitelist && _localPlayerWhitelisted)
-                _localCalculatedAccess = true;
-            if (allowAnyone)
-                _localCalculatedAccess = true;
 
             DebugLog("Setting up access");
             if (allowInstanceOwner)
@@ -88,18 +87,39 @@ namespace Texel
                 DebugLog($"Anyone: True");
 
             _SearchInstanceOwner();
+
+            if (Utilities.IsValid(whitelistSources))
+            {
+                foreach (AccessControlUserSource source in whitelistSources)
+                {
+                    if (Utilities.IsValid(source))
+                        source._Register(AccessControlUserSource.EVENT_REVALIDATE, this, nameof(_RefreshWhitelistCheck));
+                }
+            }
+        }
+
+        void _CalculateLocalAccess()
+        {
+            _localCalculatedAccess = false;
+
+            if (allowInstanceOwner && _localPlayerInstanceOwner)
+                _localCalculatedAccess = true;
+            if (allowWhitelist && _localPlayerWhitelisted)
+                _localCalculatedAccess = true;
+            if (allowAnyone)
+                _localCalculatedAccess = true;
         }
 
         public override void OnPlayerJoined(VRCPlayerApi player)
         {
             _SearchInstanceOwner();
-            _CallValidateHandlers();
+            _UpdateHandlers(EVENT_VALIDATE);
         }
 
         public override void OnPlayerLeft(VRCPlayerApi player)
         {
             _SearchInstanceOwner();
-            _CallValidateHandlers();
+            _UpdateHandlers(EVENT_VALIDATE);
         }
 
         void _SearchInstanceOwner()
@@ -122,7 +142,22 @@ namespace Texel
         public void _Enforce(bool state)
         {
             enforce = state;
-            _CallValidateHandlers();
+            
+            _UpdateHandlers(EVENT_VALIDATE);
+            _UpdateHandlers(EVENT_ENFORCE_UPDATE);
+        }
+
+        public void _RefreshWhitelistCheck()
+        {
+            VRCPlayerApi player = Networking.LocalPlayer;
+            if (Utilities.IsValid(player))
+            {
+                _localPlayerWhitelisted = _PlayerWhitelisted(player);
+                _CalculateLocalAccess();
+            }
+
+            DebugLog($"Refresh whitelist local={_localPlayerWhitelisted}");
+            _UpdateHandlers(EVENT_VALIDATE);
         }
 
         public bool _PlayerWhitelisted(VRCPlayerApi player)
@@ -137,18 +172,15 @@ namespace Texel
                 }
             }
 
-            if (Utilities.IsValid(groupWhitelist))
+            if (Utilities.IsValid(whitelistSources))
             {
-                foreach (AccessControlUserList group in groupWhitelist)
+                foreach (AccessControlUserSource source in whitelistSources)
                 {
-                    if (!Utilities.IsValid(group))
+                    if (!Utilities.IsValid(source))
                         continue;
 
-                    foreach (string user in group.userList)
-                    {
-                        if (playerName == user)
-                            return true;
-                    }
+                    if (source._ContainsName(playerName))
+                        return true;
                 }
             }
 
@@ -202,10 +234,10 @@ namespace Texel
                     return;
             }
 
-            accessHandlers = (Component[])_AddElement(accessHandlers, handler, typeof(Component));
-            accessHandlerEvents = (string[])_AddElement(accessHandlerEvents, eventName, typeof(string));
-            accessHandlerParams = (string[])_AddElement(accessHandlerParams, playerParamVar, typeof(string));
-            accessHandlerResults = (string[])_AddElement(accessHandlerResults, resultVar, typeof(string));
+            accessHandlers = (Component[])UtilityTxl.ArrayAddElement(accessHandlers, handler, typeof(Component));
+            accessHandlerEvents = (string[])UtilityTxl.ArrayAddElement(accessHandlerEvents, eventName, typeof(string));
+            accessHandlerParams = (string[])UtilityTxl.ArrayAddElement(accessHandlerParams, playerParamVar, typeof(string));
+            accessHandlerResults = (string[])UtilityTxl.ArrayAddElement(accessHandlerResults, resultVar, typeof(string));
 
             DebugLog($"Registered access handler {eventName}");
 
@@ -214,31 +246,15 @@ namespace Texel
             accessHandlerCount += 1;
         }
 
-        // Validate handlers are called when access controller thinks permissions may have changed.  Can be caused by
-        // change in master/owner, whitelist, or request from external source
-
+        [Obsolete("Use _Register(AccessControl.EVENT_VALIDATE, ...)")]
         public void _RegisterValidateHandler(Component handler, string eventName)
         {
-            if (!Utilities.IsValid(handler))
-                return;
-
-            for (int i = 0; i < validateHandlerCount; i++)
-            {
-                if (validateHandlers[i] == handler)
-                    return;
-            }
-
-            validateHandlers = (Component[])_AddElement(validateHandlers, handler, typeof(Component));
-            validateHandlerEvents = (string[])_AddElement(validateHandlerEvents, eventName, typeof(string));
-
-            DebugLog($"Registered validate handler {eventName}");
-
-            validateHandlerCount += 1;
+            _Register(EVENT_VALIDATE, handler, eventName);
         }
 
         public void _Validate()
         {
-            _CallValidateHandlers();
+            _UpdateHandlers(EVENT_VALIDATE);
         }
 
         int _CheckAccessHandlerAccess(VRCPlayerApi player)
@@ -273,36 +289,6 @@ namespace Texel
             }
 
             return RESULT_PASS;
-        }
-
-        void _CallValidateHandlers()
-        {
-            for (int i = 0; i < validateHandlerCount; i++)
-            {
-                UdonBehaviour script = (UdonBehaviour)validateHandlers[i];
-                if (!Utilities.IsValid(script))
-                    continue;
-
-                script.SendCustomEvent(validateHandlerEvents[i]);
-            }
-        }
-
-        Array _AddElement(Array arr, object elem, Type type)
-        {
-            Array newArr;
-            int count = 0;
-
-            if (Utilities.IsValid(arr))
-            {
-                count = arr.Length;
-                newArr = Array.CreateInstance(type, count + 1);
-                Array.Copy(arr, newArr, count);
-            }
-            else
-                newArr = Array.CreateInstance(type, 1);
-
-            newArr.SetValue(elem, count);
-            return newArr;
         }
 
         void DebugLog(string message)

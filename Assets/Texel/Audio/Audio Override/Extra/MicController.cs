@@ -181,7 +181,7 @@ namespace Texel
             }
 
             if (controlAccess)
-                controlAccess._RegisterValidateHandler(this, "_ValidateAccess");
+                controlAccess._Register(AccessControl.EVENT_VALIDATE, this, "_ValidateAccess");
             else
                 _SetButton(UI_BUTTON_LOCK, false);
 

@@ -111,6 +111,9 @@ namespace Texel
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_PLAYLIST_UPDATE, this, "_VideoPlaylistUpdate");
 
                 unlockedIcon.color = normalColor;
+
+                if (Utilities.IsValid(videoPlayer.accessControl))
+                    videoPlayer.accessControl._Register(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateAccess));
             }
 
             if (Utilities.IsValid(playlistPanel))
@@ -824,6 +827,12 @@ namespace Texel
                     muteToggleOff.SetActive(!audioManager.masterMute);
                 }
             }
+        }
+
+        public void _ValidateAccess()
+        {
+            _RefreshPlayerAccessIcon();
+            _UpdateAll();
         }
 
         public void _RefreshPlayerAccessIcon()

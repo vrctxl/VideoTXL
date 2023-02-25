@@ -40,7 +40,7 @@ namespace Texel
 
             if (hasAccessControl)
             {
-                accessControl._RegisterValidateHandler(this, "_ValidateACL");
+                accessControl._Register(AccessControl.EVENT_VALIDATE, this, "_ValidateACL");
                 _ValidateACL();
             }
         }

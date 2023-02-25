@@ -31,7 +31,7 @@ namespace Texel
                 microphone._Register(PickupTrigger.EVENT_DROP, this, "_OnDrop");
 
                 if (Utilities.IsValid(microphone.accessControl))
-                    microphone.accessControl._RegisterValidateHandler(this, "_OnValidateAccess");
+                    microphone.accessControl._Register(AccessControl.EVENT_VALIDATE, this, "_OnValidateAccess");
 
                 _UpdateTrigger();
             }
