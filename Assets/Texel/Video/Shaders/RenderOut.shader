@@ -5,6 +5,7 @@ Shader "VideoTXL/RenderOut" {
 		[Toggle] _ApplyGamma("Apply Gamma", Int) = 0
 		[Toggle] _FlipY("Flip Y", Int) = 0
 		_AspectRatio("Aspect Ratio", Float) = 1.777777
+		_TexAspectRatio("Aspect Ratio Override", Float) = 0
 		[Enum(Fit,0,Fit Height,1,Fit Width,2,Stretch,3)] _FitMode("Fit Mode", Int) = 0
 	}
 
