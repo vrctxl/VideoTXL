@@ -9,6 +9,18 @@ using VRC.SDKBase;
 
 namespace Texel
 {
+    public enum VideoSourceBackend
+    {
+        AVPro = 1,
+        Unity = 2,
+    }
+
+    public enum VideoSourceLatency
+    {
+        Standard = 1,
+        LowLatency = 2,
+    }
+
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class VideoSource : UdonSharpBehaviour
     {
