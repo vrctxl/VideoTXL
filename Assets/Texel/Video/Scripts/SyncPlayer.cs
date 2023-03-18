@@ -21,6 +21,7 @@ namespace Texel
         public ZoneMembership playbackZoneMembership;
 
         public VRCUrl defaultUrl;
+        public VRCUrl defaultQuestUrl;
         public bool defaultLocked = false;
         public bool loop = false;
         public bool retryOnError = true;
@@ -46,6 +47,8 @@ namespace Texel
         short _syncVideoSource = VideoSource.VIDEO_SOURCE_NONE;
         [UdonSynced]
         short _syncVideoSourceOverride = VideoSource.VIDEO_SOURCE_NONE;
+        short fallbackSourceOverride = VideoSource.VIDEO_SOURCE_NONE;
+
         [UdonSynced]
         byte _syncScreenFit = SCREEN_FIT;
 
@@ -55,6 +58,9 @@ namespace Texel
         VRCUrl _syncQueuedUrl = VRCUrl.Empty;
         [UdonSynced]
         VRCUrl _syncQuestUrl = VRCUrl.Empty;
+
+        VRCUrl _preResolvedUrl = VRCUrl.Empty;
+        VRCUrl _resolvedUrl = VRCUrl.Empty;
 
         [UdonSynced]
         int _syncVideoNumber;
@@ -111,6 +117,7 @@ namespace Texel
 
         protected override void _Init()
         {
+            base._Init();
             DebugEvent("Init");
 
             if (IsQuest)
@@ -134,8 +141,7 @@ namespace Texel
             else
                 _inSustainZone = true;
 
-            if (Utilities.IsValid(urlRemapper))
-                urlRemapper._SetGameMode(IsQuest ? UrlRemapper.GAME_MODE_QUEST : UrlRemapper.GAME_MODE_PC);
+            
 
             videoMux._Register(VideoManager.VIDEO_READY_EVENT, this, "_OnVideoReady");
             videoMux._Register(VideoManager.VIDEO_START_EVENT, this, "_OnVideoStart");
@@ -145,10 +151,14 @@ namespace Texel
 
             videoMux._UpdateLowLatency(VideoSource.LOW_LATENCY_ENABLE);
 
-            _suppressSourceUpdate = true;
             _UpdateVideoSourceOverride(defaultVideoSource);
-            videoMux._UpdateVideoSource(videoMux.ActiveSourceType);
-            _suppressSourceUpdate = false;
+            _UpdateVideoManagerSourceNoResync(videoMux.ActiveSourceType);
+
+            if (audioManager)
+                audioManager._Register(AudioManager.EVENT_CHANNEL_GROUP_CHANGED, this, "_OnAudioProfileChanged");
+
+            if (Utilities.IsValid(urlRemapper))
+                urlRemapper._SetPlatform(IsQuest ? GamePlatform.Quest : GamePlatform.PC);
 
             _UpdatePlayerState(VIDEO_STATE_STOPPED);
 
@@ -176,13 +186,13 @@ namespace Texel
                     if (_IsUrlValid(defaultUrl))
                     {
                         playlist._SetEnabled(false);
-                        _PlayVideoAfter(defaultUrl, 3);
+                        _PlayVideoAfterFallback(defaultUrl, defaultQuestUrl, 3);
                     }
                     else
                         SendCustomEventDelayedFrames("_PlayPlaylistUrl", 3);
                 }
                 else
-                    _PlayVideoAfter(defaultUrl, 3);
+                    _PlayVideoAfterFallback(defaultUrl, defaultQuestUrl, 3);
             }
 
             if (autoInternalAVSync)
@@ -531,9 +541,14 @@ namespace Texel
                 }
             }
 
-            _suppressSourceUpdate = true;
-            videoMux._UpdateVideoSource(_syncVideoSource);
-            _suppressSourceUpdate = false;
+            // If fallback trigger is set, override source type this one time
+            if (fallbackSourceOverride != VideoSource.VIDEO_SOURCE_NONE)
+            {
+                _syncVideoSource = fallbackSourceOverride;
+                fallbackSourceOverride = VideoSource.VIDEO_SOURCE_NONE;
+            }
+
+            _UpdateVideoManagerSourceNoResync(_syncVideoSource);
 
             _syncUrl = url;
             _syncQuestUrl = questUrl;
@@ -699,13 +714,17 @@ namespace Texel
                 url = _syncQuestUrl;
                 DebugLog("Loading Quest URL variant");
             }
-            else if (Utilities.IsValid(urlRemapper))
+
+            _preResolvedUrl = url;
+
+            if (Utilities.IsValid(urlRemapper))
             {
                 url = urlRemapper._Remap(url);
                 if (Utilities.IsValid(url) && _syncUrl.Get() != url.Get())
                     DebugLog("Remapped URL");
             }
 
+            _resolvedUrl = url;
             videoMux._VideoLoadURL(url);
         }
 
@@ -917,7 +936,11 @@ namespace Texel
             DebugLog("Error code: " + code);
 
             // Try to fall back to AVPro if auto video failed (the youtube livestream problem)
-            bool shouldFallback = autoFailbackToAVPro && videoError == VideoError.PlayerError && _syncVideoSourceOverride == VideoSource.VIDEO_SOURCE_NONE && _syncVideoSource == VideoSource.VIDEO_SOURCE_UNITY;
+            bool shouldFallback = autoFailbackToAVPro &&
+                videoError == VideoError.PlayerError &&
+                videoMux.SupportsAVPro &&
+                _syncVideoSourceOverride == VideoSource.VIDEO_SOURCE_NONE &&
+                _syncVideoSource == VideoSource.VIDEO_SOURCE_UNITY;
 
             _UpdatePlayerStateError(videoError);
             if (shouldFallback)
@@ -929,11 +952,8 @@ namespace Texel
                 {
                     DebugLog("Retrying URL in stream mode");
 
-                    // TODO: What if we don't have AVPro?
-                    videoMux._UpdateVideoSource(VideoSource.VIDEO_SOURCE_AVPRO);
-                    RequestSerialization();
-
-                    _StartVideoLoadDelay(retryTimeout);
+                    fallbackSourceOverride = VideoSource.VIDEO_SOURCE_AVPRO;
+                    _PlayVideoAfterFallback(_syncUrl, _syncQuestUrl, retryTimeout);
                     return;
                 }
 
@@ -952,7 +972,8 @@ namespace Texel
             }
             else
             {
-                _StartVideoLoadDelay(retryTimeout);
+                if (!shouldFallback && retryOnError)
+                    _StartVideoLoadDelay(retryTimeout);
             }
         }
 
@@ -960,12 +981,31 @@ namespace Texel
         {
             DebugEvent($"Event OnSourceChange activeSourceType={videoMux.ActiveSourceType}");
 
+            if (urlRemapper)
+                urlRemapper._SetVideoSource(videoMux.ActiveSource);
+
             playerSource = (short)videoMux.ActiveSourceType;
             _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
-            //dataProxy._EmitStateUpdate();
 
             if (!_suppressSourceUpdate && _inSustainZone)
                 _ForceResync(true);
+        }
+
+        public void _OnAudioProfileChanged()
+        {
+            string groupName = "none";
+            if (audioManager.SelectedChannelGroup)
+                groupName = audioManager.SelectedChannelGroup.groupName;
+
+            DebugEvent($"Event OnAudioProfileChanged channelGroup={groupName}");
+
+            if (urlRemapper)
+            {
+                urlRemapper._SetAudioProfile(audioManager.SelectedChannelGroup);
+
+                if (!_suppressSourceUpdate && _inSustainZone && urlRemapper._ValidRemapped(_preResolvedUrl, _resolvedUrl))
+                    _ForceResync(false);                    
+            }
         }
 
         public bool _IsAdmin()
@@ -1022,7 +1062,7 @@ namespace Texel
 
             _initDeserialize = true;
 
-            videoMux._UpdateVideoSource(_syncVideoSource);
+            _UpdateVideoManagerSourceNoResync(_syncVideoSource);
             _UpdateScreenFit(_syncScreenFit);
             _UpdateLockState(_syncLocked);
             _UpdateRepeatMode(_syncRepeatPlaylist);
@@ -1242,6 +1282,13 @@ namespace Texel
             videoMux._VideoStop();
             if (_syncOwnerPlaying)
                 _StartVideoLoad();
+        }
+
+        void _UpdateVideoManagerSourceNoResync(int sourceType)
+        {
+            _suppressSourceUpdate = true;
+            videoMux._UpdateVideoSource(sourceType);
+            _suppressSourceUpdate = false;
         }
 
         void _UpdateScreenFit(byte mode)
