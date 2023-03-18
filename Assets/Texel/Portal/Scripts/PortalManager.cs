@@ -32,22 +32,41 @@ namespace Texel
 
         public void _Init()
         {
-            bool botAccess = botAcl._LocalHasAccess();
-            foreach (GameObject obj in botObjects)
-                obj.SetActive(botAccess);
-            foreach (GameObject obj in botDisableObjects)
-                obj.SetActive(!botAccess);
-
-            bool modAccess = modAcl._LocalHasAccess();
-            foreach (GameObject obj in modObjects)
-                obj.SetActive(modAccess);
+            if (botAcl)
+            {
+                botAcl._Register(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateBotACL));
+                _ValidateBotACL();
+            }
+            
+            if (modAcl)
+            {
+                modAcl._Register(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateModACL));
+                _ValidateModACL();
+            }
 
             botCamBox.SetActive(false);
 
             _UpdateBotActiveState();
+        }
 
-            if (!botAccess || !Utilities.IsValid(station))
-                return;
+        public void _ValidateBotACL()
+        {
+            bool botAccess = botAcl._LocalHasAccess();
+
+            foreach (GameObject obj in botObjects)
+                obj.SetActive(botAccess);
+            foreach (GameObject obj in botDisableObjects)
+                obj.SetActive(!botAccess);
+        }
+
+        public void _ValidateModACL()
+        {
+            bool modAccess = modAcl._LocalHasAccess();
+
+            foreach (GameObject obj in modObjects)
+                obj.SetActive(modAccess);
+
+            _ValidateBotACL();
         }
 
         public bool BotActive
@@ -117,8 +136,16 @@ namespace Texel
 
         public void _TryEnterStation()
         {
-            if (botAcl._LocalHasAccess())
-                station.UseStation(Networking.LocalPlayer);
+            if (!botAcl._LocalHasAccess())
+                return;
+
+            Networking.LocalPlayer.TeleportTo(station.transform.position, station.transform.rotation);
+            SendCustomEventDelayedFrames(nameof(_TryEnterStationDelay), 3);
+        }
+
+        public void _TryEnterStationDelay()
+        {
+            station.UseStation(Networking.LocalPlayer);
         }
 
         void _UpdateBotActiveState()

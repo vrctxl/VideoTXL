@@ -6,6 +6,11 @@ using UdonSharpEditor;
 
 namespace Texel
 {
+    // TODO: Checks on overrides
+    // [ ] Do all overrides have a mapping profile selected?
+    // [ ] Do property override objects have material with CRT set?  That is probably a mixup
+    // [X] Update CRT at edittime for logo?
+
     [CustomEditor(typeof(ScreenManager))]
     internal class ScreenManagerInspector : Editor
     {
@@ -117,6 +122,9 @@ namespace Texel
             useRenderOutProperty = serializedObject.FindProperty(nameof(ScreenManager.useRenderOut));
             outputCRTProperty = serializedObject.FindProperty(nameof(ScreenManager.outputCRT));
             outputMaterialPropertiesProperty = serializedObject.FindProperty(nameof(ScreenManager.outputMaterialProperties));
+
+            // CRT texture
+            UpdateEditorState();
         }
 
         public override void OnInspectorGUI()
@@ -171,7 +179,7 @@ namespace Texel
             }
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Material Texture Overrides", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Material Texture Updates and Overrides", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(useTextureOverrideProperty);
             if (useTextureOverrideProperty.boolValue)
             {
@@ -211,12 +219,19 @@ namespace Texel
                 {
                     EditorGUILayout.PropertyField(outputCRTProperty);
                     EditorGUILayout.PropertyField(outputMaterialPropertiesProperty);
+
+                    if (outputMaterialPropertiesProperty.objectReferenceValue == null)
+                        EditorGUILayout.HelpBox($"No property map set. The screen manager will not be able to update properties on the CRT material.", MessageType.Error);
                 }
                 else
                     EditorGUILayout.HelpBox("Enabling the Render Texture Output is the easiest way to supply a video texture to other shaders and materials.  For the most control and performance, use Material or Material Property Block overrides.", MessageType.Info);
             }
 
-            serializedObject.ApplyModifiedProperties();
+            if (serializedObject.hasModifiedProperties)
+            {
+                serializedObject.ApplyModifiedProperties();
+                UpdateEditorState();
+            }
         }
 
         private void ScreenFoldout()
@@ -253,7 +268,7 @@ namespace Texel
         private void MaterialFoldout()
         {
             int count = materialUpdateListProperty.arraySize;
-            _showMaterialListFoldout = EditorGUILayout.Foldout(_showMaterialListFoldout, $"Video Screen Materials ({count})");
+            _showMaterialListFoldout = EditorGUILayout.Foldout(_showMaterialListFoldout, $"Shared Material Updates ({count})");
             if (_showMaterialListFoldout)
             {
                 EditorGUI.indentLevel++;
@@ -281,6 +296,10 @@ namespace Texel
                 }
                 EditorGUI.indentLevel--;
             }
+
+            int missingMapCount = MissingMapCount(materialPropertyListProperty);
+            if (missingMapCount > 0)
+                EditorGUILayout.HelpBox($"{missingMapCount} materials have no property map set. The screen manager will not be able to update properties on those materials.", MessageType.Error);
         }
 
         private void PropBlockFoldout()
@@ -319,6 +338,143 @@ namespace Texel
                     }
                 }
                 EditorGUI.indentLevel--;
+            }
+
+            int missingMapCount = MissingMapCount(propPropertyListProperty);
+            if (missingMapCount > 0)
+                EditorGUILayout.HelpBox($"{missingMapCount} override(s) have no property map set. The screen manager will not be able to update material properties on those objects.", MessageType.Error);
+        }
+
+        private int MissingMapCount(SerializedProperty propArray)
+        {
+            int missingMapCount = 0;
+
+            for (int i = 0; i < propArray.arraySize; i++)
+            {
+                SerializedProperty matProperties = propArray.GetArrayElementAtIndex(i);
+                ScreenPropertyMap map = (ScreenPropertyMap)matProperties.objectReferenceValue;
+
+                if (map == null)
+                    missingMapCount += 1;
+            }
+
+            return missingMapCount;
+        }
+
+        private void UpdateEditorState()
+        {
+            UpdateEditorCRT();
+            UpdateEditorSharedMaterials();
+            UpdateEditorMaterialBlocks();
+        }
+
+        private void UpdateEditorSharedMaterials()
+        {
+            for (int i = 0; i < materialUpdateListProperty.arraySize; i++)
+            {
+                SerializedProperty matUpdate = materialUpdateListProperty.GetArrayElementAtIndex(i);
+                SerializedProperty matProperties = materialPropertyListProperty.GetArrayElementAtIndex(i);
+
+                if (matUpdate == null || matProperties == null)
+                    continue;
+
+                Material mat = (Material)matUpdate.objectReferenceValue;
+                ScreenPropertyMap map = (ScreenPropertyMap)matProperties.objectReferenceValue;
+
+                UpdateSharedMaterial(mat, map);
+            }
+        }
+
+        private void UpdateEditorMaterialBlocks()
+        {
+            MaterialPropertyBlock block = new MaterialPropertyBlock();
+
+            SyncPlayer videoPlayer = (SyncPlayer)videoPlayerProperty.objectReferenceValue;
+            Texture2D logoTex = (Texture2D)editorTextureProperty.objectReferenceValue;
+            if (logoTex == null)
+                logoTex = (Texture2D)logoTextureProperty.objectReferenceValue;
+
+            for (int i = 0; i < propRenderListProperty.arraySize; i++)
+            {
+                SerializedProperty meshProp = propRenderListProperty.GetArrayElementAtIndex(i);
+                SerializedProperty useMatOverride = propMaterialOverrideListProperty.GetArrayElementAtIndex(i);
+                SerializedProperty matIndex = propMaterialIndexListProperty.GetArrayElementAtIndex(i);
+                SerializedProperty matProperties = propPropertyListProperty.GetArrayElementAtIndex(i);
+
+                if (meshProp == null || matProperties == null || useMatOverride == null || matIndex == null)
+                    continue;
+
+                MeshRenderer mesh = (MeshRenderer)meshProp.objectReferenceValue;
+                ScreenPropertyMap map = (ScreenPropertyMap)matProperties.objectReferenceValue;
+
+                if (!mesh || !map)
+                    continue;
+
+                if (useMatOverride.boolValue)
+                    mesh.GetPropertyBlock(block, matIndex.intValue);
+                else
+                    mesh.GetPropertyBlock(block);
+
+                if (map.screenTexture != "" && logoTex)
+                    block.SetTexture(map.screenTexture, logoTex);
+                if (map.avProCheck != "")
+                    block.SetInt(map.avProCheck, 0);
+                if (map.applyGamma != "")
+                    block.SetInt(map.applyGamma, 0);
+                if (map.invertY != "")
+                    block.SetInt(map.invertY, 0);
+                if (map.screenFit != "" && videoPlayer)
+                    block.SetInt(map.screenFit, (int)videoPlayer.defaultScreenFit);
+
+                bool overrideAspectRatio = overrideAspectRatioProperty.boolValue;
+                float aspectRatio = aspectRatioProperty.floatValue;
+                if (map.aspectRatio != "")
+                    block.SetFloat(map.aspectRatio, overrideAspectRatio && logoTex ? aspectRatio : 0);
+
+                if (useMatOverride.boolValue)
+                    mesh.SetPropertyBlock(block, matIndex.intValue);
+                else
+                    mesh.SetPropertyBlock(block);
+            }
+        }
+
+        private void UpdateEditorCRT()
+        {
+            CustomRenderTexture crt = (CustomRenderTexture)outputCRTProperty.objectReferenceValue;
+            if (crt)
+            {
+                Material crtMat = crt.material;
+                ScreenPropertyMap map = (ScreenPropertyMap)outputMaterialPropertiesProperty.objectReferenceValue;
+
+                UpdateSharedMaterial(crtMat, map);
+            }
+        }
+
+        private void UpdateSharedMaterial(Material mat, ScreenPropertyMap map)
+        {
+            Texture2D logoTex = (Texture2D)editorTextureProperty.objectReferenceValue;
+            if (logoTex == null)
+                logoTex = (Texture2D)logoTextureProperty.objectReferenceValue;
+
+            if (mat && map)
+            {
+                if (map.screenTexture != "" && logoTex)
+                    mat.SetTexture(map.screenTexture, logoTex);
+                if (map.avProCheck != "")
+                    mat.SetInt(map.avProCheck, 0);
+                if (map.applyGamma != "")
+                    mat.SetInt(map.applyGamma, 0);
+                if (map.invertY != "")
+                    mat.SetInt(map.invertY, 0);
+
+                SyncPlayer videoPlayer = (SyncPlayer)videoPlayerProperty.objectReferenceValue;
+                if (map.screenFit != "" && videoPlayer)
+                    mat.SetInt(map.screenFit, (int)videoPlayer.defaultScreenFit);
+
+                bool overrideAspectRatio = overrideAspectRatioProperty.boolValue;
+                float aspectRatio = aspectRatioProperty.floatValue;
+                if (map.aspectRatio != "")
+                    mat.SetFloat(map.aspectRatio, overrideAspectRatio && logoTex ? aspectRatio : 0);
             }
         }
     }
