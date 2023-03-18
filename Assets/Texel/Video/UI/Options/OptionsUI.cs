@@ -178,8 +178,14 @@ namespace Texel
 
         public void _OnMuxSettingsChange()
         {
-            // videoModeDropdown.SetValueWithoutNotify(videoPlayer.videoMux.VideoType);
-            videoLatencyDropdown.SetValueWithoutNotify(videoPlayer.videoMux.Latency);
+            int latency = videoPlayer.videoMux.Latency;
+            if (latency == VideoSource.LOW_LATENCY_ENABLE)
+                latency = 0;
+            else if (latency == VideoSource.LOW_LATENCY_DISABLE)
+                latency = 1;
+
+            //videoModeDropdown.SetValueWithoutNotify(videoPlayer.videoMux.VideoType);
+            videoLatencyDropdown.SetValueWithoutNotify(latency);
             videoResolutionDropdown.SetValueWithoutNotify(videoPlayer.videoMux.ResolutionIndex);
         }
 
