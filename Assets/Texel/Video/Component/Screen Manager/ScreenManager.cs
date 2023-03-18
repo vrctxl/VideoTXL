@@ -17,6 +17,9 @@ namespace Texel
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
 
+        [Tooltip("Prevent screen state from cycling between loading and error placeholders.")]
+        public bool latchErrorState = true;
+
         [Tooltip("Whether to update material assignments on a set of video screen objects")]
         public bool useMaterialOverrides = false;
         [Tooltip("Use separate playback materials for Unity and AVPro player modes.  This may be necessary for some shaders that can't be configured with an AVPro flag.")]
@@ -118,9 +121,11 @@ namespace Texel
         int _screenSource = VideoSource.VIDEO_SOURCE_UNITY;
         int _screenMode = SCREEN_MODE_UNINITIALIZED;
         int _screenFit = 0;
+        bool _inError = false;
         VideoError _lastErrorCode = 0;
         int _checkFrameCount = 0;
         MaterialPropertyBlock block;
+        int pendingUpdates = 0;
 
         Texture currentTexture;
         bool currentAVPro;
@@ -350,49 +355,67 @@ namespace Texel
             }
         }
 
+        public void _UpdateVideoError(VideoError error)
+        {
+            _lastErrorCode = error;
+        }
+
         public void _OnVideoStateUpdate()
         {
             switch (videoPlayer.playerState)
             {
                 case TXLVideoPlayer.VIDEO_STATE_STOPPED:
+                    _inError = false;
                     _UpdateScreenMaterial(SCREEN_MODE_LOGO);
                     break;
                 case TXLVideoPlayer.VIDEO_STATE_LOADING:
                     _UpdateScreenMaterial(SCREEN_MODE_LOADING);
                     break;
                 case TXLVideoPlayer.VIDEO_STATE_PLAYING:
+                    _inError = false;
                     _UpdateScreenMaterial(videoPlayer.syncing ? SCREEN_MODE_SYNC : SCREEN_MODE_NORMAL);
                     break;
                 case TXLVideoPlayer.VIDEO_STATE_ERROR:
+                    _inError = true;
                     _lastErrorCode = videoPlayer.lastErrorCode;
                     _UpdateScreenMaterial(SCREEN_MODE_ERROR);
                     break;
             }
         }
 
-        public void _UpdateVideoError(VideoError error)
-        {
-            _lastErrorCode = error;
-        }
-
-        public void _UpdateScreenSource(int source)
-        {
-            _screenSource = source;
-        }
-
         public void _OnSourceChanged()
         {
-            Debug.Log("SCREENMAN SOURCE CHANGED");
             captureRenderer = videoPlayer.videoMux.CaptureRenderer;
-            int source = videoPlayer.videoMux.ActiveSourceType;
+            _screenSource = videoPlayer.videoMux.ActiveSourceType;
 
-            _UpdateScreenSource(source);
+            _ResetCheckScreenMaterial();
+        }
+
+        Material _GetReplacementMaterialVideoStandin(bool captureValid)
+        {
+            Material replacementMat = null;
+            if (!currentValid)
+            {
+                if (loadingMaterial != null && _checkFrameCount < 50)
+                    replacementMat = loadingMaterial;
+                else if (audioMaterial != null && _checkFrameCount >= 50)
+                    replacementMat = audioMaterial;
+                else if (logoMaterial != null)
+                    replacementMat = logoMaterial;
+            }
+
+            return replacementMat;
         }
 
         Material _GetReplacementMaterial(bool captureValid)
         {
             Material replacementMat = null;
-            switch (_screenMode)
+            int mode = _screenMode;
+
+            if (latchErrorState && _inError)
+                mode = SCREEN_MODE_ERROR;
+
+            switch (mode)
             {
                 case SCREEN_MODE_LOGO:
                     replacementMat = logoMaterial;
@@ -416,24 +439,38 @@ namespace Texel
                     break;
                 case SCREEN_MODE_NORMAL:
                 default:
-                    replacementMat = null;
+                    replacementMat = _GetReplacementMaterialVideoStandin(captureValid);
                     break;
-            }
-
-            // Try to detect audio-only source
-            if (replacementMat == null && !captureValid)
-            {
-                // Will fill in with audio material on future check cycle
-                replacementMat = loadingMaterial;
             }
 
             return replacementMat;
         }
 
+        Texture _GetReplacementTextureVideoStandin(bool captureValid)
+        {
+            Texture replacementTex = null;
+            if (!captureValid)
+            {
+                if (loadingTexture != null && _checkFrameCount < 50)
+                    replacementTex = loadingTexture;
+                else if (audioTexture != null && _checkFrameCount >= 50)
+                    replacementTex = audioTexture;
+                else if (logoTexture != null)
+                    replacementTex = logoTexture;
+            }
+
+            return replacementTex;
+        }
+
         Texture _GetReplacemenTexture(bool captureValid)
         {
             Texture replacementTex = null;
-            switch (_screenMode)
+            int mode = _screenMode;
+
+            if (latchErrorState && _inError)
+                mode = SCREEN_MODE_ERROR;
+
+            switch (mode)
             {
                 case SCREEN_MODE_LOGO:
                     replacementTex = logoTexture;
@@ -457,15 +494,8 @@ namespace Texel
                     break;
                 case SCREEN_MODE_NORMAL:
                 default:
-                    replacementTex = null;
+                    replacementTex = _GetReplacementTextureVideoStandin(captureValid);
                     break;
-            }
-
-            // Try to detect audio-only source
-            if (replacementTex == null && !captureValid)
-            {
-                // Will fill in with audio material on future check cycle
-                replacementTex = loadingTexture;
             }
 
             return replacementTex;
@@ -473,13 +503,19 @@ namespace Texel
 
         public void _UpdateScreenMaterial(int screenMode)
         {
-            _EnsureInit();
-
             if (_screenMode == screenMode && _screenFit == videoPlayer.screenFit)
                 return;
 
             _screenMode = screenMode;
             _screenFit = videoPlayer.screenFit;
+
+            _ResetCheckScreenMaterial();
+        }
+
+        public void _ResetCheckScreenMaterial()
+        {
+            _EnsureInit();
+
             _checkFrameCount = 0;
 
             _ResetCaptureData();
@@ -487,46 +523,61 @@ namespace Texel
 
             Texture captureTex = CaptureValid();
             currentValid = Utilities.IsValid(captureTex);
-            bool usingVideoSource = _screenMode == SCREEN_MODE_NORMAL;
 
             if (useMaterialOverrides)
             {
                 Material replacementMat = _GetReplacementMaterial(currentValid);
-                usingVideoSource |= replacementMat == null;
-
                 _UpdateObjects(replacementMat);
             }
 
             if (useTextureOverrides)
             {
                 Texture replacementTex = _GetReplacemenTexture(currentValid);
-                usingVideoSource |= replacementTex == null;
-
                 _UpdateCaptureData(replacementTex, captureTex);
                 _UpdateMaterials();
                 _UpdatePropertyBlocks();
             }
-
-            //#if !UNITY_EDITOR
-            if (usingVideoSource)
+            
+            if (!currentValid)
+                _QueueUpdateCheckFrames(1);
+            else
             {
-                if (!currentValid)
-                    SendCustomEventDelayedFrames("_CheckUpdateScreenMaterial", 1);
-                else
-                {
-                    DebugLog("Capture valid");
-                    _UpdateHandlers(EVENT_CAPTURE_VALID);
-                    SendCustomEventDelayedFrames("_CheckUpdateScreenMaterial", 2);
-                }
+                DebugLog("Capture valid");
+                _UpdateHandlers(EVENT_CAPTURE_VALID);
+                _QueueUpdateCheckIfNoPending(2);
             }
-            //#endif
+        }
+
+        void _QueueUpdateCheck(float delay)
+        {
+            pendingUpdates += 1;
+            SendCustomEventDelayedSeconds(nameof(_CheckUpdateScreenMaterial), delay);
+        }
+
+        void _QueueUpdateCheckIfNoPending(float delay)
+        {
+            if (pendingUpdates > 0)
+                return;
+            _QueueUpdateCheck(delay);
+        }
+
+        void _QueueUpdateCheckFrames(int frames)
+        {
+            pendingUpdates += 1;
+            SendCustomEventDelayedFrames(nameof(_CheckUpdateScreenMaterial), frames);
         }
 
         public void _CheckUpdateScreenMaterial()
         {
-            _EnsureInit();
+            pendingUpdates -= 1;
+
             if (_screenMode != SCREEN_MODE_NORMAL)
+            {
+                _QueueUpdateCheckIfNoPending(2);
                 return;
+            }
+
+            _EnsureInit();
 
             Texture captureTex = CaptureValid();
             bool prevValid = currentValid;
@@ -534,33 +585,13 @@ namespace Texel
 
             if (useMaterialOverrides)
             {
-                Material replacementMat = null;
-                if (!currentValid)
-                {
-                    if (loadingMaterial != null && _checkFrameCount < 10)
-                        replacementMat = loadingMaterial;
-                    else if (audioMaterial != null && _checkFrameCount >= 10)
-                        replacementMat = audioMaterial;
-                    else if (logoMaterial != null)
-                        replacementMat = logoMaterial;
-                }
-
+                Material replacementMat = _GetReplacementMaterialVideoStandin(currentValid);
                 _UpdateObjects(replacementMat);
             }
 
             if (useTextureOverrides)
             {
-                Texture replacementTex = null;
-                if (!currentValid)
-                {
-                    if (loadingTexture != null && _checkFrameCount < 10)
-                        replacementTex = loadingTexture;
-                    else if (audioTexture != null && _checkFrameCount >= 10)
-                        replacementTex = audioTexture;
-                    else if (logoTexture != null)
-                        replacementTex = logoTexture;
-                }
-
+                Texture replacementTex = _GetReplacementTextureVideoStandin(currentValid);
                 _UpdateCaptureData(replacementTex, captureTex);
                 _UpdateMaterials();
                 _UpdatePropertyBlocks();
@@ -569,8 +600,7 @@ namespace Texel
             if (!currentValid)
             {
                 _checkFrameCount += 1;
-                int delay = _checkFrameCount < 100 ? 1 : 10;
-                SendCustomEventDelayedFrames("_CheckUpdateScreenMaterial", delay);
+                _QueueUpdateCheckFrames(_checkFrameCount < 100 ? 1 : 10);
             }
             else
             {
@@ -579,7 +609,7 @@ namespace Texel
                     DebugLog("Capture valid");
                     _UpdateHandlers(EVENT_CAPTURE_VALID);
                 }
-                SendCustomEventDelayedSeconds("_CheckUpdateScreenMaterial", 2);
+                _QueueUpdateCheckIfNoPending(2);
             }
         }
 
