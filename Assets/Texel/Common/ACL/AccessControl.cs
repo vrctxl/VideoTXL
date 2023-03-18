@@ -87,6 +87,7 @@ namespace Texel
                 DebugLog($"Anyone: True");
 
             _SearchInstanceOwner();
+            _CalculateLocalAccess();
 
             if (Utilities.IsValid(whitelistSources))
             {
@@ -113,12 +114,16 @@ namespace Texel
         public override void OnPlayerJoined(VRCPlayerApi player)
         {
             _SearchInstanceOwner();
+            _CalculateLocalAccess();
+
             _UpdateHandlers(EVENT_VALIDATE);
         }
 
         public override void OnPlayerLeft(VRCPlayerApi player)
         {
             _SearchInstanceOwner();
+            _CalculateLocalAccess();
+
             _UpdateHandlers(EVENT_VALIDATE);
         }
 
