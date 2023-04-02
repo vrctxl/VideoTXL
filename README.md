@@ -1,6 +1,8 @@
 # VideoTXL
 Prefabs for video players and A/V support.  Sync and local-only flavors of the video player are available, with multiple shared plugin components.
 
+Support discord: https://discord.gg/cWKeenfsuq
+
 ![Main video player controls](Docs/Images/main_controls.png)
 
 ## Sync Video Player
