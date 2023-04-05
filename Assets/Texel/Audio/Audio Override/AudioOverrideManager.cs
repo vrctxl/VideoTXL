@@ -45,6 +45,15 @@ namespace Texel
             _UpdateZoneData();
         }
 
+        public void _SetDebugState(AudioOverrideDebug state)
+        {
+            debugState = state;
+            if (debugState)
+                debugState._SetManager(this);
+
+            _UpdateZoneData();
+        }
+
         public void _UpdateZoneData()
         {
             if (debugState)

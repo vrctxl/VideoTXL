@@ -6,6 +6,10 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Reflection;
+using VRC.SDK3.Components;
+using UnityEngine.Events;
+using VRC.Udon;
+using UnityEditor.Events;
 
 namespace Texel
 {
@@ -211,6 +215,8 @@ namespace Texel
             optionsPanelProperty = serializedObject.FindProperty(nameof(PlayerControls.optionsPanel));
 
             playlistPanelProperty = serializedObject.FindProperty(nameof(PlayerControls.playlistPanel));
+
+            CheckRepairUrlInput();
         }
 
         public override void OnInspectorGUI()
@@ -226,6 +232,8 @@ namespace Texel
                 UpdateColors();
 
             EditorGUILayout.Space();
+
+            CheckUrlInputValid();
 
             _showObjectFoldout = EditorGUILayout.Foldout(_showObjectFoldout, "Internal Object References");
             if (_showObjectFoldout)
@@ -270,8 +278,92 @@ namespace Texel
             }
             EditorGUILayout.Space();
 
+            Debug.Log(urlInputProperty.prefabOverride);
+            Debug.Log(urlInputProperty.type);
+            Debug.Log(urlInputProperty.objectReferenceValue);
+            Debug.Log(urlInputProperty.objectReferenceInstanceIDValue);
+
             if (serializedObject.hasModifiedProperties)
+            {
+                CheckRepairUrlInput();
                 serializedObject.ApplyModifiedProperties();
+            }
+        }
+
+        void CheckUrlInputValid()
+        {
+            if (urlInputProperty.objectReferenceInstanceIDValue == 0)
+            {
+                EditorGUILayout.HelpBox("URL Input field is not set", MessageType.Error);
+                return;
+            }
+
+            if (urlInputProperty.objectReferenceValue == null)
+            {
+                EditorGUILayout.HelpBox("URL Input field reference is invalid.  Your VRC SDK may be broken.\nTry reimporting the object 'VRChat SDK - Worlds/Runtime/VRCSDK/Plugins/VRCSDK3', then check this object again to attempt a self-repair.", MessageType.Error);
+                return;
+            }
+        }
+
+        void CheckRepairUrlInput()
+        {
+            PlayerControls self = (PlayerControls)serializedObject.targetObject;
+            UdonBehaviour behaviour = UdonSharpEditorUtility.CreateBehaviourForProxy(self);
+
+            if (urlInputProperty.objectReferenceInstanceIDValue == 0)
+            {
+                GameObject obj = (GameObject)urlInputControlProperty.objectReferenceValue;
+                if (obj != null)
+                {
+                    VRCUrlInputField component = obj.GetComponent<VRCUrlInputField>();
+                    if (component == null)
+                        return;
+
+                    urlInputProperty.objectReferenceInstanceIDValue = component.GetInstanceID();
+                }
+            }
+
+            VRCUrlInputField vrcInput = (VRCUrlInputField)urlInputProperty.objectReferenceValue;
+            if (vrcInput == null)
+                return;
+
+            bool needsUpdate = vrcInput.textComponent == null ||
+                vrcInput.placeholder == null ||
+                vrcInput.onValueChanged.GetPersistentEventCount() == 0 ||
+                vrcInput.onEndEdit.GetPersistentEventCount() == 0 ||
+                vrcInput.navigation.mode != Navigation.Mode.None;
+
+            if (!needsUpdate)
+                return;
+
+            Undo.RecordObject(vrcInput, "Repair Video Player URL Input");
+
+            Transform mask = vrcInput.transform.Find("TextMask");
+            if (vrcInput.textComponent == null && mask != null)
+            {
+                Transform obj = mask.Find("Text");
+                if (obj != null)
+                    vrcInput.textComponent = obj.GetComponent<Text>();
+            }
+
+            if (vrcInput.placeholder == null && mask != null)
+            {
+                Transform obj = mask.Find("Placeholder");
+                if (obj != null)
+                    vrcInput.placeholder = obj.GetComponent<Text>();
+            }
+
+            Navigation nav = vrcInput.navigation;
+            nav.mode = Navigation.Mode.None;
+            vrcInput.navigation = nav;
+
+            if (vrcInput.onValueChanged.GetPersistentEventCount() == 0)
+                UnityEventTools.AddStringPersistentListener(vrcInput.onValueChanged, behaviour.SendCustomEvent, "_HandleUrlInputChange");
+
+            if (vrcInput.onEndEdit.GetPersistentEventCount() == 0)
+                UnityEventTools.AddStringPersistentListener(vrcInput.onEndEdit, behaviour.SendCustomEvent, "_HandleUrlInput");
+
+            PrefabUtility.RecordPrefabInstancePropertyModifications(vrcInput);
         }
 
         void UpdateColors()

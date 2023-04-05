@@ -15,6 +15,7 @@ namespace Texel
         public bool muteSourceForInactiveVideo = true;
 
         public UdonBehaviour audioLinkSystem;
+        public UdonBehaviour vrslAudioDMXRuntime;
         //public string audioLinkChannel;
 
         [Range(0, 1)]
@@ -75,6 +76,8 @@ namespace Texel
         bool ovrMaster2D = false;
         bool videoMute = false;
 
+        AudioSource vrslNullSource = null;
+
         const int UNITY = 0;
         const int AVPRO = 1;
 
@@ -94,6 +97,27 @@ namespace Texel
 
             if (!Utilities.IsValid(audioControls))
                 audioControls = new Component[0];
+
+            if (vrslAudioDMXRuntime)
+            {
+                vrslNullSource = (AudioSource)vrslAudioDMXRuntime.GetProgramVariable("source");
+                if (!vrslNullSource)
+                    vrslNullSource = vrslAudioDMXRuntime.GetComponent<AudioSource>();
+            }
+
+            channelGroups = new AudioChannelGroup[transform.childCount];
+            for (int i = 0; i < channelGroups.Length; i++)
+            {
+                GameObject obj = transform.GetChild(i).gameObject;
+                if (!obj.activeSelf)
+                    continue;
+
+                channelGroups[i] = obj.GetComponent<AudioChannelGroup>();
+            }
+
+            channelGroups = (AudioChannelGroup[])UtilityTxl.ArrayCompact(channelGroups);
+            if (channelGroups == null)
+                channelGroups = new AudioChannelGroup[0];
 
             foreach (AudioChannelGroup group in channelGroups)
             {
@@ -144,7 +168,7 @@ namespace Texel
             initialized = true;
 
             _UpdateAll();
-            _UpdateAudioLink();
+            _UpdateExternal();
 
             if (videoPlayer)
             {
@@ -197,7 +221,7 @@ namespace Texel
             if (!selectedChannelGroup || !selectedVideoSource)
             {
                 _UpdateAll();
-                _UpdateAudioLink(null);
+                _ClearExternal();
                 return;
             }
 
@@ -211,7 +235,7 @@ namespace Texel
                     break;
                 case VideoSource.VIDEO_SOURCE_NONE:
                     _UpdateAll();
-                    _UpdateAudioLink(null);
+                    _ClearExternal();
                     return;
             }
 
@@ -226,7 +250,7 @@ namespace Texel
             }
 
             _UpdateAll();
-            _UpdateAudioLink();
+            _UpdateExternal();
         }
 
         void _SetVideoAudioGroupState(VideoSourceAudioGroup group, bool enabled)
@@ -608,15 +632,17 @@ namespace Texel
         //    return /*hasSync ? syncAudioManager.syncChannelVolumes[channel] :*/ channelData[channel].volume;
         //}
 
-        void _UpdateAudioLink()
+        void _UpdateExternal()
         {
-            if (!audioLinkSystem || !activeAudioGroup)
+            if (!activeAudioGroup)
             {
-                _UpdateAudioLink(null);
+                _ClearExternal();
                 return;
             }
 
-            AudioSource source = null;
+            AudioSource audioLinkSource = null;
+            AudioSource vrslSource = null;
+
             for (int i = 0; i < activeAudioGroup.channelReference.Length; i++)
             {
                 AudioChannel channel = activeAudioGroup.channelReference[i];
@@ -626,23 +652,45 @@ namespace Texel
                     if (channelSource)
                     {
                         if (channel.audioLinkSource)
-                            source = channelSource;
+                            audioLinkSource = channelSource;
+                        if (channel.vrslAudioDMXSource)
+                            vrslSource = channelSource;
                     }
                 }
             }
 
-            if (!source)
-                source = selectedVideoSource.avproReservedChannel;
+            if (!audioLinkSource)
+                audioLinkSource = selectedVideoSource.avproReservedChannel;
 
-            _UpdateAudioLink(source);
+            _UpdateAudioLink(audioLinkSource);
+            _UpdateVRSL(vrslSource);
+        }
+
+        void _ClearExternal()
+        {
+            _UpdateAudioLink(null);
+            _UpdateVRSL(null);
         }
 
         void _UpdateAudioLink(AudioSource source)
         {
-            if (!audioLinkSystem)
+            _UpdateExternal(audioLinkSystem, "audioSource", source);
+        }
+
+        void _UpdateVRSL(AudioSource source)
+        {
+            if (!source)
+                source = vrslNullSource;
+
+            _UpdateExternal(vrslAudioDMXRuntime, "source", source);
+        }
+
+        void _UpdateExternal(UdonBehaviour externalSystem, string audioVar, AudioSource source)
+        {
+            if (!externalSystem)
                 return;
 
-            audioLinkSystem.SetProgramVariable("audioSource", source);
+            externalSystem.SetProgramVariable(audioVar, source);
         }
 
         void _DebugLog(string message)

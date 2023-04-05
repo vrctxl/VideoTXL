@@ -38,10 +38,15 @@ namespace Texel
         Text[] buttonText;
         int[] buttonColorIndex;
 
+        Slider[] sliders;
+        InputField[] inputFields;
+
         bool init = false;
         bool controlsInit = false;
 
         protected virtual int ButtonCount { get; }
+        protected virtual int SliderCount { get; }
+        protected virtual int InputFieldCount { get; }
 
         public void _EnsureInit()
         {
@@ -55,7 +60,8 @@ namespace Texel
 
         protected virtual void _Init() { }
 
-        protected void _InitControls() {
+        protected void _InitControls()
+        {
             if (controlsInit)
                 return;
 
@@ -74,6 +80,9 @@ namespace Texel
             buttonBackground = new Image[ButtonCount];
             buttonIcon = new Image[ButtonCount];
             buttonText = new Text[ButtonCount];
+
+            sliders = new Slider[SliderCount];
+            inputFields = new InputField[InputFieldCount];
         }
 
         protected void _DiscoverButton(int index, GameObject button, int colorIndex)
@@ -113,6 +122,48 @@ namespace Texel
             Text text = buttonText[buttonIndex];
             if (text)
                 text.color = state ? colorLookupActiveLabel[colorIndex] : colorLookupInactiveLabel[colorIndex];
+        }
+
+        protected void _SetButtonText(int buttonIndex, string value)
+        {
+            if (buttonIndex < 0 || buttonIndex >= ButtonCount)
+                return;
+
+            Text text = buttonText[buttonIndex];
+            if (text)
+                text.text = value;
+        }
+
+        protected void _DiscoverSlider(int index, GameObject slider)
+        {
+            if (!slider)
+                return;
+
+            sliders[index] = slider.GetComponent<Slider>();
+        }
+
+        protected Slider _GetSlider(int sliderIndex)
+        {
+            if (sliderIndex < 0 || sliderIndex >= SliderCount)
+                return null;
+
+            return sliders[sliderIndex];
+        }
+
+        protected void _DiscoverInputField(int index, GameObject inputField)
+        {
+            if (!inputField)
+                return;
+
+            inputFields[index] = inputField.GetComponent<InputField>();
+        }
+
+        protected InputField _GetInputField(int index)
+        {
+            if (index < 0 || index >= InputFieldCount)
+                return null;
+
+            return inputFields[index];
         }
     }
 }

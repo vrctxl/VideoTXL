@@ -233,7 +233,10 @@ namespace Texel
                 syncCatalogueIndex = value;
 
                 if (!Utilities.IsValid(playlistCatalog) || value < 0 || value >= playlistCatalog.PlaylistCount)
+                {
+                    _LoadDataLow(null);
                     return;
+                }
 
                 _LoadDataLow(playlistCatalog.playlists[value]);
             }

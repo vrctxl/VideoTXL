@@ -258,8 +258,14 @@ namespace Texel
             //Debug.Log($"{name} hasLocal={hasLocal} enabled={localZoneEnabled} contains={_ContainsPlayer(player)}");
             if (hasLocal && localZoneEnabled && _ContainsPlayer(player))
             {
-                localZoneSettings._Apply(player);
-                DebugAO(player, $"{name} [local]", localZoneSettings.name);
+                if (localZoneSettings)
+                {
+                    localZoneSettings._Apply(player);
+                    DebugAO(player, $"{name} [local]", localZoneSettings.name);
+                }
+                else
+                    DebugAO(player, $"{name} [local]", "[invalid]");
+
                 return true;
             }
 
@@ -270,8 +276,14 @@ namespace Texel
                 //Debug.Log($"{name} link={zone.name} enabled={zoneEnabled} contains={zone._ContainsPlayer(player)}");
                 if (zoneEnabled && zone._ContainsPlayer(player))
                 {
-                    linkedZoneSettings[i]._Apply(player);
-                    DebugAO(player, $"{name} <- {zone.name}", linkedZoneSettings[i].name);
+                    if (linkedZoneSettings[i])
+                    {
+                        linkedZoneSettings[i]._Apply(player);
+                        DebugAO(player, $"{name} <- {zone.name}", linkedZoneSettings[i].name);
+                    }
+                    else
+                        DebugAO(player, $"{name} <- {zone.name}", "[invalid]");
+
                     return true;
                 }
             }
@@ -279,8 +291,14 @@ namespace Texel
             //Debug.Log($"{name} hasDefault={hasDefault} enabled={defaultEnabled}");
             if (hasDefault && defaultEnabled)
             {
-                defaultSettings._Apply(player);
-                DebugAO(player, $"{name} [default]", defaultSettings.name);
+                if (defaultSettings)
+                {
+                    defaultSettings._Apply(player);
+                    DebugAO(player, $"{name} [default]", defaultSettings.name);
+                }
+                else
+                    DebugAO(player, $"{name} [default]", "[invalid]");
+
                 return true;
             }
 

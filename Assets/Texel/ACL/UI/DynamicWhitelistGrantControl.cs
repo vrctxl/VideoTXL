@@ -135,7 +135,12 @@ namespace Texel
 
             bool playerInList = false;
             if (whitelistGrant.dynamicList)
-                playerInList = whitelistGrant.dynamicList._ContainsName(Networking.LocalPlayer.displayName);
+            {
+                if (Networking.LocalPlayer != null)
+                    playerInList = whitelistGrant.dynamicList._ContainsName(Networking.LocalPlayer.displayName);
+                else
+                    playerInList = false;
+            }
 
             bool requestButtonState = !playerInList && (!latchRequest || !activeRequest) && (!admin || whitelistGrant.grantUsersCanRequest);
             _SetButton(UI_BUTTON_REQUEST, requestButtonState);

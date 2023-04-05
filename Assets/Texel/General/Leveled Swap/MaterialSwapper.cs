@@ -55,7 +55,7 @@ namespace Texel
             if (defaultQuest)
                 SendCustomEventDelayedFrames("_Apply", 1);
 #else
-            if (Networking.LocalPlayer.IsUserInVR())
+            if (Networking.LocalPlayer != null && Networking.LocalPlayer.IsUserInVR())
             {
                 if (defaultVR)
                     SendCustomEventDelayedFrames("_Apply", 1);

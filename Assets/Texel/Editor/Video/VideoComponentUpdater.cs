@@ -436,10 +436,23 @@ namespace Texel
 
         public static AudioChannelGroup[] GetAudioGroups(AudioManager manager)
         {
-            if (!manager || manager.channelGroups == null)
+            if (!manager)
                 return new AudioChannelGroup[0];
 
-            return manager.channelGroups;
+            List<AudioChannelGroup> groups = new List<AudioChannelGroup>();
+            int nodeCount = manager.transform.childCount;
+            for (int i = 0; i < nodeCount; i++)
+            {
+                GameObject obj = manager.transform.GetChild(i).gameObject;
+                if (!obj.activeSelf)
+                    continue;
+
+                AudioChannelGroup group = obj.GetComponent<AudioChannelGroup>();
+                if (group)
+                    groups.Add(group);
+            }
+
+            return groups.ToArray();
         }
 
         public static List<AudioChannelGroup> GetValidAudioGroups(AudioManager manager)

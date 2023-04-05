@@ -37,7 +37,7 @@ namespace Texel
                 botAcl._Register(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateBotACL));
                 _ValidateBotACL();
             }
-            
+
             if (modAcl)
             {
                 modAcl._Register(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateModACL));
@@ -54,9 +54,15 @@ namespace Texel
             bool botAccess = botAcl._LocalHasAccess();
 
             foreach (GameObject obj in botObjects)
-                obj.SetActive(botAccess);
+            {
+                if (obj)
+                    obj.SetActive(botAccess);
+            }
             foreach (GameObject obj in botDisableObjects)
-                obj.SetActive(!botAccess);
+            {
+                if (obj)
+                    obj.SetActive(!botAccess);
+            }
         }
 
         public void _ValidateModACL()
@@ -64,7 +70,10 @@ namespace Texel
             bool modAccess = modAcl._LocalHasAccess();
 
             foreach (GameObject obj in modObjects)
-                obj.SetActive(modAccess);
+            {
+                if (obj)
+                    obj.SetActive(modAccess);
+            }
 
             _ValidateBotACL();
         }
@@ -152,9 +161,22 @@ namespace Texel
         {
             bool active = BotActive;
             foreach (GameObject obj in botActiveObjects)
-                obj.SetActive(active);
+            {
+                if (obj)
+                    obj.SetActive(active);
+            }
             foreach (GameObject obj in botInactiveObjects)
-                obj.SetActive(!active);
+            {
+                if (obj)
+                    obj.SetActive(!active);
+            }
+
+            if (botAudioZone)
+            {
+                Collider collider = botAudioZone.GetComponent<Collider>();
+                if (collider)
+                    collider.enabled = active;
+            }
         }
     }
 }

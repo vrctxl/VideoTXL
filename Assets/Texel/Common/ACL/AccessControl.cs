@@ -14,6 +14,7 @@ namespace Texel
         [Header("Optional Components")]
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
+        public DebugState debugState;
 
         [Header("Access Options")]
         public bool allowInstanceOwner = true;
@@ -46,6 +47,11 @@ namespace Texel
         bool _worldHasOwner = false;
         VRCPlayerApi[] _playerBuffer = new VRCPlayerApi[100];
 
+        VRCPlayerApi foundMaster = null;
+        VRCPlayerApi foundInstanceOwner = null;
+        int foundMasterCount = 0;
+        int foundInstanceOwnerCount = 0;
+
         UdonBehaviour cachedAccessHandler;
         Component[] accessHandlers;
         int accessHandlerCount = 0;
@@ -76,6 +82,9 @@ namespace Texel
                 _localPlayerInstanceOwner = player.isInstanceOwner;
             }
 
+            if (Utilities.IsValid(debugState))
+                debugState._Regsiter(this, "_UpdateDebugState", "AccessControl");
+
             DebugLog("Setting up access");
             if (allowInstanceOwner)
                 DebugLog($"Instance Owner: {_localPlayerInstanceOwner}");
@@ -97,6 +106,21 @@ namespace Texel
                         source._Register(AccessControlUserSource.EVENT_REVALIDATE, this, nameof(_RefreshWhitelistCheck));
                 }
             }
+        }
+
+        public void _AddUserSource(AccessControlUserSource source)
+        {
+            if (!source)
+                return;
+
+            foreach (var existing in whitelistSources)
+            {
+                if (existing == source)
+                    return;
+            }
+
+            whitelistSources = (AccessControlUserSource[])UtilityTxl.ArrayAddElement(whitelistSources, source, source.GetType());
+            source._Register(AccessControlUserSource.EVENT_REVALIDATE, this, nameof(_RefreshWhitelistCheck));
         }
 
         void _CalculateLocalAccess()
@@ -133,21 +157,38 @@ namespace Texel
             _playerBuffer = VRCPlayerApi.GetPlayers(_playerBuffer);
 
             _worldHasOwner = false;
+            foundInstanceOwner = null;
+            foundInstanceOwnerCount = 0;
+            foundMaster = null;
+            foundMasterCount = 0;
+
             for (int i = 0; i < playerCount; i++)
             {
                 VRCPlayerApi player = _playerBuffer[i];
-                if (Utilities.IsValid(player) && player.IsValid() && player.isInstanceOwner)
+                if (!Utilities.IsValid(player) || !player.IsValid())
+                    continue;
+
+                if (player.isInstanceOwner)
                 {
-                    _worldHasOwner = true;
-                    break;
+                    foundInstanceOwner = player;
+                    foundInstanceOwnerCount += 1;
+                }
+
+                if (player.isMaster)
+                {
+                    foundMaster = player;
+                    foundMasterCount += 1;
                 }
             }
+
+            if (foundInstanceOwnerCount > 0)
+                _worldHasOwner = true;
         }
 
         public void _Enforce(bool state)
         {
             enforce = state;
-            
+
             _UpdateHandlers(EVENT_VALIDATE);
             _UpdateHandlers(EVENT_ENFORCE_UPDATE);
         }
@@ -202,7 +243,38 @@ namespace Texel
             if (!enforce)
                 return true;
 
-            bool isMaster = Utilities.IsValid(player) ? player.isMaster : false;
+            if (player == Networking.LocalPlayer)
+                return _LocalHasAccess();
+
+            if (!Utilities.IsValid(player))
+                return false;
+
+            int handlerResult = _CheckAccessHandlerAccess(player);
+            if (handlerResult == RESULT_DENY)
+                return false;
+            if (handlerResult == RESULT_ALLOW)
+                return true;
+
+            if (allowAnyone)
+                return true;
+            if (allowInstanceOwner && player.isInstanceOwner)
+                return true;
+            if (allowMaster && player.isMaster && (!restrictMasterIfOwnerPresent || !_worldHasOwner))
+                return true;
+            if (allowWhitelist && _PlayerWhitelisted(player))
+                return true;
+
+            return false;
+        }
+
+        public bool _LocalHasAccess()
+        {
+            if (!enforce)
+                return true;
+
+            VRCPlayerApi player = Networking.LocalPlayer;
+            if (!Utilities.IsValid(player))
+                return false;
 
             int handlerResult = _CheckAccessHandlerAccess(player);
             if (handlerResult == RESULT_DENY)
@@ -212,16 +284,10 @@ namespace Texel
 
             if (_localCalculatedAccess)
                 return true;
-
-            if (allowMaster && isMaster)
-                return !restrictMasterIfOwnerPresent || !_worldHasOwner;
+            if (allowMaster && player.isMaster && (!restrictMasterIfOwnerPresent || !_worldHasOwner))
+                return true;
 
             return false;
-        }
-
-        public bool _LocalHasAccess()
-        {
-            return _HasAccess(Networking.LocalPlayer);
         }
 
         // One or more registered access handlers have a chance to force-allow or force-deny access for a player.
@@ -302,6 +368,24 @@ namespace Texel
                 Debug.Log("[Texel:AccessControl] " + message);
             if (Utilities.IsValid(debugLog))
                 debugLog._Write("AccessControl", message);
+        }
+
+        public void _UpdateDebugState()
+        {
+            debugState._SetValue("localMaster", _localPlayerMaster.ToString());
+            debugState._SetValue("localInstanceOwner", _localPlayerInstanceOwner.ToString());
+            debugState._SetValue("localWhitelisted", _localPlayerWhitelisted.ToString());
+            debugState._SetValue("localCalculated", _localCalculatedAccess.ToString());
+            debugState._SetValue("allowMaster", allowMaster.ToString());
+            debugState._SetValue("allowInstanceOwner", allowInstanceOwner.ToString());
+            debugState._SetValue("allowWhitelist", allowWhitelist.ToString());
+            debugState._SetValue("allowAnyone", allowAnyone.ToString());
+            debugState._SetValue("restrictMaster", restrictMasterIfOwnerPresent.ToString());
+            debugState._SetValue("enforce", enforce.ToString());
+            debugState._SetValue("instanceOwner", Utilities.IsValid(foundInstanceOwner) ? foundInstanceOwner.displayName : "--");
+            debugState._SetValue("instanceOwnerCount", foundInstanceOwnerCount.ToString());
+            debugState._SetValue("master", Utilities.IsValid(foundMaster) ? foundMaster.displayName : "--");
+            debugState._SetValue("masterCount", foundMasterCount.ToString());
         }
     }
 }

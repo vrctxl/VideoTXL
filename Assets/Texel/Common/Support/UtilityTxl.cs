@@ -58,5 +58,43 @@ namespace Texel
 
             return arr;
         }
+
+        public static Array ArrayCompact(Array arr)
+        {
+            if (!Utilities.IsValid(arr))
+                return null;
+
+            int size = arr.Length;
+            int valid = 0;
+            Type type = null;
+
+            for (int i = 0; i < size; i++)
+            {
+                object val = arr.GetValue(i);
+                if (val != null)
+                {
+                    valid += 1;
+                    type = val.GetType();
+                }
+            }
+
+            if (size == valid)
+                return arr;
+
+            if (valid == 0)
+                return null;
+
+            Array newArr = Array.CreateInstance(type, valid);
+            valid = 0;
+
+            for (int i = 0; i < size; i++)
+            {
+                object val = arr.GetValue(i);
+                if (val != null)
+                    newArr.SetValue(val, valid++);
+            }
+
+            return newArr;
+        }
     }
 }

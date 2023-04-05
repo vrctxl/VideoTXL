@@ -38,6 +38,8 @@ namespace Texel
         public AudioChannelTrack track;
         [Tooltip("Whether this channel should be used as the AudioLink source.  If no channel is selected, the first channel in the group will be used.")]
         public bool audioLinkSource = false;
+        [Tooltip("Whether this channel should be used as the VRSL Audio DMX source.  If no channel is selected, audio will be unlinked from VRSL.")]
+        public bool vrslAudioDMXSource = false;
         [Tooltip("An audio source that serves as a reference for copying settings to the live audio source used by the video player.")]
         public AudioSource audioSourceTemplate;
 
