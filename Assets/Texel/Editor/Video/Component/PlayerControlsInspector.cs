@@ -10,6 +10,7 @@ using VRC.SDK3.Components;
 using UnityEngine.Events;
 using VRC.Udon;
 using UnityEditor.Events;
+using UnityEditor.SceneManagement;
 
 namespace Texel
 {
@@ -103,6 +104,8 @@ namespace Texel
         string[] sliderBgImagePaths = new string[] {
             "MainPanel/UpperRow/VolumeGroup/Background",
             "MainPanel/LowerRow/InputProgress/Background",
+            "InfoPanel/Fields/CurrentVideo/InputField",
+            "InfoPanel/Fields/LastVideo/InputField",
         };
         string[] volumeFillBgPaths = new string[] {
             "MainPanel/UpperRow/VolumeGroup/Slider/Fill Area/Fill",
@@ -129,6 +132,15 @@ namespace Texel
             "MainPanel/UpperRow/ButtonGroup/InfoButton",
             "MainPanel/LowerRow/InputProgress/LoadButton",
             "MainPanel/LowerRow/InputProgress/MasterLockButton",
+            "InfoPanel/Fields/Mode/ButtonModeAuto",
+            "InfoPanel/Fields/Mode/ButtonModeStream",
+            "InfoPanel/Fields/Mode/ButtonModeVideo",
+            "InfoPanel/Fields/ScreenFit/ButtonScreenFit",
+            "InfoPanel/Fields/ScreenFit/ButtonScreenFitHeight",
+            "InfoPanel/Fields/ScreenFit/ButtonScreenFitWidth",
+            "InfoPanel/Fields/ScreenFit/ButtonScreenStretch",
+            "InfoPanel/Fields/CurrentVideo/InputField/PlayButton",
+            "InfoPanel/Fields/LastVideo/InputField/PlayButton",
         };
         string[] buttonIconImagePaths = new string[]
         {
@@ -145,6 +157,8 @@ namespace Texel
             "MainPanel/LowerRow/InputProgress/LoadButton/IconLoad",
             "MainPanel/LowerRow/InputProgress/MasterLockButton/IconLocked",
             "MainPanel/LowerRow/InputProgress/MasterLockButton/IconUnlocked",
+            "InfoPanel/Fields/CurrentVideo/InputField/PlayButton/IconPlay",
+            "InfoPanel/Fields/LastVideo/InputField/PlayButton/IconPlay",
         };
         string[] generalTextPaths = new string[]
         {
@@ -336,7 +350,11 @@ namespace Texel
             if (!needsUpdate)
                 return;
 
-            Undo.RecordObject(vrcInput, "Repair Video Player URL Input");
+            GameObject recordRoot = PrefabUtility.GetOutermostPrefabInstanceRoot(vrcInput);
+            if (!recordRoot)
+                recordRoot = vrcInput.gameObject;
+
+            Undo.RecordObject(recordRoot, "Repair Video Player URL Input");
 
             Transform mask = vrcInput.transform.Find("TextMask");
             if (vrcInput.textComponent == null && mask != null)
@@ -363,7 +381,8 @@ namespace Texel
             if (vrcInput.onEndEdit.GetPersistentEventCount() == 0)
                 UnityEventTools.AddStringPersistentListener(vrcInput.onEndEdit, behaviour.SendCustomEvent, "_HandleUrlInput");
 
-            PrefabUtility.RecordPrefabInstancePropertyModifications(vrcInput);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(recordRoot);
+            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         }
 
         void UpdateColors()

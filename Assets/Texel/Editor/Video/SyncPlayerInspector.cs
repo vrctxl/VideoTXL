@@ -92,8 +92,9 @@ namespace Texel
 
             TXLVideoPlayer videoPlayer = (TXLVideoPlayer)serializedObject.targetObject;
 
-            if (CheckIntegrity())
-                EditorGUILayout.HelpBox("Creating a prefab variant of your finished video player setup is highly recommended to be able to revert any prefab instance corruption in the future.", MessageType.Info);
+            CheckIntegrity();
+            //if (CheckIntegrity())
+            //    EditorGUILayout.HelpBox("Creating a prefab variant of your finished video player setup is highly recommended to be able to revert any prefab instance corruption in the future.", MessageType.Info);
 
             List<VideoSource> unitySources = VideoComponentUpdater.GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_UNITY);
             List<VideoSource> avproSources = VideoComponentUpdater.GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_AVPRO);
