@@ -109,6 +109,7 @@ namespace Texel
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_TRACKING_UPDATE, this, "_VideoTrackingUpdate");
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, "_OnVideoInfoUpdate");
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_PLAYLIST_UPDATE, this, "_VideoPlaylistUpdate");
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_READY, this, "_VideoStateUpdate");
 
                 unlockedIcon.color = normalColor;
 
@@ -637,7 +638,7 @@ namespace Texel
 
                     if (!loadActive)
                     {
-                        SetPlaceholderText(videoPlayer.heldReady ? "Ready" : "Loading...");
+                        SetPlaceholderText(videoPlayer._syncHoldVideos && videoPlayer._videoReady ? "Ready" : "Loading...");
                         urlInput.readOnly = true;
                         SetStatusText("");
                     }

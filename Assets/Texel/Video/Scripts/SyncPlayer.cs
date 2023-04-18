@@ -65,6 +65,8 @@ namespace Texel
         [UdonSynced]
         int _syncVideoNumber;
         int _loadedVideoNumber;
+        [UdonSynced]
+        int _syncPlaybackNumber;
 
         [UdonSynced, NonSerialized]
         public bool _syncOwnerPlaying;
@@ -84,6 +86,9 @@ namespace Texel
         [UdonSynced]
         bool _syncRepeatPlaylist;
 
+        [UdonSynced]
+        public bool _syncHoldVideos = false;
+
         //[NonSerialized]
         //public int localPlayerState = VIDEO_STATE_STOPPED;
         //[NonSerialized]
@@ -102,6 +107,7 @@ namespace Texel
         float _playStartTime = 0;
         bool _overrideLock = false;
         bool _suppressSourceUpdate = false;
+        public bool _videoReady = false;
 
         float _pendingLoadTime = 0;
 
@@ -423,18 +429,49 @@ namespace Texel
             _PlayVideoFallback(url, questUrl);
         }
 
+        public void _SetHoldMode(bool holdState)
+        {
+            if (_syncLocked && !_TakeControl())
+                return;
+
+            _syncHoldVideos = holdState;
+            RequestSerialization();
+
+            _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
+        }
+
         public void _HoldNextVideo()
         {
-            DebugLog("Holding next video");
-            _UpdatePlayerHold(true, _heldVideoReady);
+            //DebugLog("Holding next video");
+            //_UpdatePlayerHold(true, _heldVideoReady);
         }
 
         public void _ReleaseHold()
         {
-            if (_heldVideoReady && Networking.IsOwner(gameObject))
-                videoMux._VideoPlay();
+            if (_syncLocked && !_TakeControl())
+                return;
 
-            _UpdatePlayerHold(false, false);
+            //if (Networking.IsOwner(gameObject))
+            //{
+                if (_syncPlaybackNumber < _syncVideoNumber)
+                {
+                    _syncPlaybackNumber = _syncVideoNumber;
+                    RequestSerialization();
+
+                    if (_videoReady)
+                        videoMux._VideoPlay();
+                }
+            //}
+            //if (_heldVideoReady && Networking.IsOwner(gameObject))
+            //    videoMux._VideoPlay();
+
+            //_UpdatePlayerHold(false, false);
+        }
+
+        public void _CancelHold()
+        {
+            _StopVideo();
+            //_UpdatePlayerHold(false, false);
         }
 
         public void _SkipNextAdvance()
@@ -558,6 +595,9 @@ namespace Texel
             _syncOwnerPaused = false;
             _skipAdvanceNextTrack = false;
 
+            if (!_syncHoldVideos)
+                _syncPlaybackNumber = _syncVideoNumber;
+
             _syncVideoStartNetworkTime = float.MaxValue;
             _syncVideoExpectedEndTime = 0;
             RequestSerialization();
@@ -575,6 +615,10 @@ namespace Texel
                 if (remaining > 2)
                     videoMux._VideoStop();
             }
+            else if (playerState == VIDEO_STATE_LOADING)
+                videoMux._VideoStop();
+
+            _UpdatePlayerState(VIDEO_STATE_STOPPED);
 
             _StartVideoLoadDelay(delay);
         }
@@ -700,6 +744,7 @@ namespace Texel
         void _StartVideoLoad()
         {
             _pendingLoadTime = 0;
+            _videoReady = false;
 
             if (_syncUrl == null || _syncUrl.Get() == "")
                 return;
@@ -741,6 +786,7 @@ namespace Texel
             _videoTargetTime = 0;
             _pendingLoadTime = 0;
             _playStartTime = 0;
+            _videoReady = false;
 
             if (Networking.IsOwner(gameObject))
             {
@@ -765,18 +811,22 @@ namespace Texel
             seekableSource = !float.IsInfinity(duration) && !float.IsNaN(duration) && duration > 1;
             _UpdateTracking(position, position, duration);
 
+            _videoReady = true;
+
             // If player is owner: play video
             // If Player is remote:
             //   - If owner playing state is already synced, play video
             //   - Otherwise, wait until owner playing state is synced and play later in update()
             //   TODO: Streamline by always doing this in update instead?
 
+            _UpdateHandlers(EVENT_VIDEO_READY);
+
             if (Networking.IsOwner(gameObject))
             {
-                if (!_holdReadyState)
+                if (_syncPlaybackNumber == _syncVideoNumber)
                     videoMux._VideoPlay();
-                else
-                    _UpdatePlayerHold(true, true);
+                //else
+                //    _UpdatePlayerHold(true, true);
             }
             else
             {
@@ -792,6 +842,8 @@ namespace Texel
         {
             DebugEvent("Event OnVideoStart");
             //DebugLog("Video start");
+
+            _videoReady = false;
 
             if (Networking.IsOwner(gameObject))
             {
@@ -840,6 +892,8 @@ namespace Texel
 
         public void _OnVideoEnd()
         {
+            _videoReady = false;
+
             DebugEvent("Event OnVideoEnd");
             if (!seekableSource && Time.time - _playStartTime < 1)
             {
@@ -915,6 +969,8 @@ namespace Texel
 
         public void _OnVideoError()
         {
+            _videoReady = false;
+
             DebugEvent($"Event OnVideoError");
             if (playerState == VIDEO_STATE_STOPPED)
                 return;
@@ -1070,6 +1126,9 @@ namespace Texel
 
             if (_syncVideoNumber == _loadedVideoNumber)
             {
+                if (_syncPlaybackNumber == _syncVideoNumber && _videoReady)
+                    _waitForSync = true;
+
                 if (_inSustainZone)
                 {
                     if (playerState == VIDEO_STATE_PLAYING && !_syncOwnerPlaying)
@@ -1320,8 +1379,8 @@ namespace Texel
                 syncing = false;
             }
 
-            if (state == VIDEO_STATE_PLAYING || state == VIDEO_STATE_STOPPED)
-                _UpdatePlayerHold(false, false);
+            //if (state == VIDEO_STATE_PLAYING || state == VIDEO_STATE_STOPPED)
+            //    _UpdatePlayerHold(false, false);
 
             _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
         }
@@ -1426,11 +1485,13 @@ namespace Texel
             debugState._SetValue("syncQueuedUrl", _syncQueuedUrl.ToString());
             debugState._SetValue("syncVideoNumber", _syncVideoNumber.ToString());
             debugState._SetValue("loadedVideoNumber", _loadedVideoNumber.ToString());
+            debugState._SetValue("syncPlaybackNumber", _syncPlaybackNumber.ToString());
             debugState._SetValue("syncOwnerPlaying", _syncOwnerPlaying.ToString());
             debugState._SetValue("syncOwnerPaused", _syncOwnerPaused.ToString());
             debugState._SetValue("syncVideoStartNetworkTime", _syncVideoStartNetworkTime.ToString());
             debugState._SetValue("syncVideoExpectedEndTime", _syncVideoExpectedEndTime.ToString());
             debugState._SetValue("syncLocked", _syncLocked.ToString());
+            debugState._SetValue("syncHoldVideos", _syncHoldVideos.ToString());
             debugState._SetValue("overrideLock", _overrideLock.ToString());
             debugState._SetValue("playerState", playerState.ToString());
             debugState._SetValue("lastErrorCode", lastErrorCode.ToString());
