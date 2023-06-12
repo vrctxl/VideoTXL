@@ -182,6 +182,7 @@ MonoBehaviour:
   latchUntilLeave: 0
   latchUntilEnter: 0
   forceColliderCheck: 0
+  recalcCollidersOnStart: 0
   debugLog: {fileID: 0}
   vrcLog: 0
 --- !u!114 &597199020
@@ -406,6 +407,7 @@ MonoBehaviour:
   latchUntilLeave: 0
   latchUntilEnter: 0
   forceColliderCheck: 0
+  recalcCollidersOnStart: 0
   debugLog: {fileID: 0}
   vrcLog: 0
 --- !u!114 &1109406368
@@ -596,7 +598,7 @@ PrefabInstance:
         type: 3}
       propertyPath: defaultSettings
       value: 
-      objectReference: {fileID: 6936761045539031545}
+      objectReference: {fileID: 3905870036544527889}
     - target: {fileID: 3007664974650541541, guid: 1be939802a20d1c4ca157f1b5f24dfca,
         type: 3}
       propertyPath: suppressSettings
@@ -606,7 +608,7 @@ PrefabInstance:
         type: 3}
       propertyPath: broadcastSettings
       value: 
-      objectReference: {fileID: 3051063492183314932}
+      objectReference: {fileID: 7344808365514674116}
     - target: {fileID: 3007664974650541541, guid: 1be939802a20d1c4ca157f1b5f24dfca,
         type: 3}
       propertyPath: microphoneCollider
@@ -752,6 +754,12 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 965895283372127055, guid: f25aacf7798aa4c408971d4dcc6fd3f8,
         type: 3}
+    - target: {fileID: 2019718553408395437, guid: f25aacf7798aa4c408971d4dcc6fd3f8,
+        type: 3}
+      propertyPath: serializationData.Prefab
+      value: 
+      objectReference: {fileID: 2019718553408395437, guid: f25aacf7798aa4c408971d4dcc6fd3f8,
+        type: 3}
     - target: {fileID: 4413224436629847966, guid: f25aacf7798aa4c408971d4dcc6fd3f8,
         type: 3}
       propertyPath: linkedZones.Array.size
@@ -787,12 +795,12 @@ PrefabInstance:
         type: 3}
       propertyPath: linkedZoneSettings.Array.data[0]
       value: 
-      objectReference: {fileID: 3051063492183314932}
+      objectReference: {fileID: 7344808365514674116}
     - target: {fileID: 4413224436629847966, guid: f25aacf7798aa4c408971d4dcc6fd3f8,
         type: 3}
       propertyPath: linkedZoneSettings.Array.data[1]
       value: 
-      objectReference: {fileID: 3051063492183314932}
+      objectReference: {fileID: 7344808365514674116}
     - target: {fileID: 4484394045766945285, guid: f25aacf7798aa4c408971d4dcc6fd3f8,
         type: 3}
       propertyPath: m_Name
@@ -869,6 +877,12 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 5365854390297513797, guid: f25aacf7798aa4c408971d4dcc6fd3f8,
         type: 3}
+    - target: {fileID: 5754768007048563064, guid: f25aacf7798aa4c408971d4dcc6fd3f8,
+        type: 3}
+      propertyPath: serializationData.Prefab
+      value: 
+      objectReference: {fileID: 5754768007048563064, guid: f25aacf7798aa4c408971d4dcc6fd3f8,
+        type: 3}
     - target: {fileID: 5877616545339690876, guid: f25aacf7798aa4c408971d4dcc6fd3f8,
         type: 3}
       propertyPath: serializationData.Prefab
@@ -913,9 +927,9 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 3040786579036063420}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &6936761045539031545 stripped
+--- !u!114 &3905870036544527889 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 5365854390297513797, guid: f25aacf7798aa4c408971d4dcc6fd3f8,
+  m_CorrespondingSourceObject: {fileID: 2019718553408395437, guid: f25aacf7798aa4c408971d4dcc6fd3f8,
     type: 3}
   m_PrefabInstance: {fileID: 3040786579036063420}
   m_PrefabAsset: {fileID: 0}
@@ -925,9 +939,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c7ef8090b3a40341b290ae4529d8375, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &3051063492183314932 stripped
+--- !u!114 &7344808365514674116 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 28294131604756296, guid: f25aacf7798aa4c408971d4dcc6fd3f8,
+  m_CorrespondingSourceObject: {fileID: 5754768007048563064, guid: f25aacf7798aa4c408971d4dcc6fd3f8,
     type: 3}
   m_PrefabInstance: {fileID: 3040786579036063420}
   m_PrefabAsset: {fileID: 0}
