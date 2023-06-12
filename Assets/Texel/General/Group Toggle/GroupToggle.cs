@@ -7,9 +7,8 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [AddComponentMenu("Texel/State/Group Toggle")]
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-    public class GroupToggle : UdonSharpBehaviour
+    public class GroupToggle : EventBase
     {
         [Header("Access Control")]
         [Tooltip("Optional.  Enables default-on states for local user only if they have access via the referenced ACL at world load.")]
@@ -42,12 +41,20 @@ namespace Texel
         MeshRenderer[] onRenderers;
         MeshRenderer[] offRenderers;
 
-        Component[] handlers;
-        int handlerCount = 0;
-        string[] handlerEvents;
+        public const int EVENT_TOGGLED = 0;
+        const int EVENT_COUNT = 1;
 
-        void Start()
+        private void Start()
         {
+            _EnsureInit();
+        }
+
+        protected override int EventCount => EVENT_COUNT;
+
+        protected override void _Init()
+        {
+            base._Init();
+
             if (toggleColliders)
             {
                 onColliders = _BuildColliderList(onStateObjects);
@@ -232,51 +239,7 @@ namespace Texel
                 }
             }
 
-            _UpdateHandlers();
-        }
-
-        public void _Regsiter(Component handler, string eventName)
-        {
-            if (!Utilities.IsValid(handler) || !Utilities.IsValid(eventName))
-                return;
-
-            for (int i = 0; i < handlerCount; i++)
-            {
-                if (handlers[i] == handler)
-                    return;
-            }
-
-            handlers = (Component[])_AddElement(handlers, handler, typeof(Component));
-            handlerEvents = (string[])_AddElement(handlerEvents, eventName, typeof(string));
-
-            handlerCount += 1;
-        }
-
-        void _UpdateHandlers()
-        {
-            for (int i = 0; i < handlerCount; i++)
-            {
-                UdonBehaviour script = (UdonBehaviour)handlers[i];
-                script.SendCustomEvent(handlerEvents[i]);
-            }
-        }
-
-        Array _AddElement(Array arr, object elem, Type type)
-        {
-            Array newArr;
-            int count = 0;
-
-            if (Utilities.IsValid(arr))
-            {
-                count = arr.Length;
-                newArr = Array.CreateInstance(type, count + 1);
-                Array.Copy(arr, newArr, count);
-            }
-            else
-                newArr = Array.CreateInstance(type, 1);
-
-            newArr.SetValue(elem, count);
-            return newArr;
+            _UpdateHandlers(EVENT_TOGGLED);
         }
     }
 }
