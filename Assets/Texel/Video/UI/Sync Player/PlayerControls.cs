@@ -638,7 +638,7 @@ namespace Texel
 
                     if (!loadActive)
                     {
-                        SetPlaceholderText(videoPlayer._syncHoldVideos && videoPlayer._videoReady ? "Ready" : "Loading...");
+                        SetPlaceholderText(videoPlayer.HoldVideos && videoPlayer._videoReady ? "Ready" : "Loading...");
                         urlInput.readOnly = true;
                         SetStatusText("");
                     }

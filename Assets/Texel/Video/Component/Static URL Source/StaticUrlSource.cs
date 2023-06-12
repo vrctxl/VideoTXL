@@ -17,17 +17,26 @@ namespace Texel
     {
         [Tooltip("If enabled, specify separate URLs for 720 and 1080 video sources")]
         public bool multipleResolutions;
-        public int defaultResolution; 
+        public int defaultResolution;
 
         public VRCUrl staticUrl;
         public VRCUrl staticUrl720;
         public VRCUrl staticUrl1080;
         public VRCUrl staticUrlAudio;
 
+        public VRCUrl fallbackUrl;
+        public VRCUrl fallbackUrl720;
+        public VRCUrl fallbackUrl1080;
+        public VRCUrl fallbackUrlAudio;
+
+        public int fallbackErrorThreshold = 3;
+
         UdonBehaviour _videoPlayer;
         Component[] _controls;
 
         int _selectedResolution = 0;
+        int _errorCount = 0;
+        bool _useFallback = false;
 
         const int RESOLUTION_720 = 0;
         const int RESOLUTION_1080 = 1;
@@ -70,8 +79,30 @@ namespace Texel
             Debug.Log("[VideoTXL:StaticUrlSource] registering new controls set");
         }
 
+        public void _RecordError()
+        {
+            _errorCount += 1;
+        }
+
+        public void _ResetError()
+        {
+            _errorCount = 0;
+        }
+
+        public void _PreferFallback(bool state)
+        {
+            _useFallback = state;
+        }
+
         public VRCUrl _GetUrl()
         {
+            if (_useFallback || (_errorCount > fallbackErrorThreshold && fallbackErrorThreshold > 0))
+            {
+                VRCUrl url = _GetFallbackUrl();
+                if (url != VRCUrl.Empty)
+                    return url;
+            }
+
             if (!multipleResolutions)
                 return staticUrl;
 
@@ -81,6 +112,21 @@ namespace Texel
                 return staticUrl1080;
             if (_selectedResolution == RESOLUTION_AUDIO)
                 return staticUrlAudio;
+
+            return VRCUrl.Empty;
+        }
+
+        public VRCUrl _GetFallbackUrl()
+        {
+            if (!multipleResolutions)
+                return fallbackUrl;
+
+            if (_selectedResolution == RESOLUTION_720)
+                return fallbackUrl720;
+            if (_selectedResolution == RESOLUTION_1080)
+                return fallbackUrl1080;
+            if (_selectedResolution == RESOLUTION_AUDIO)
+                return fallbackUrlAudio;
 
             return VRCUrl.Empty;
         }

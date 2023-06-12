@@ -29,6 +29,7 @@ namespace Texel
         SerializedProperty loopProperty;
         SerializedProperty retryOnErrorProperty;
         SerializedProperty autoFailbackAVProProperty;
+        SerializedProperty holdLoadedVideosProperty;
 
         SerializedProperty syncFrequencyProperty;
         SerializedProperty syncThresholdProperty;
@@ -60,6 +61,7 @@ namespace Texel
             loopProperty = serializedObject.FindProperty(nameof(SyncPlayer.loop));
             retryOnErrorProperty = serializedObject.FindProperty(nameof(SyncPlayer.retryOnError));
             autoFailbackAVProProperty = serializedObject.FindProperty(nameof(SyncPlayer.autoFailbackToAVPro));
+            holdLoadedVideosProperty = serializedObject.FindProperty(nameof(SyncPlayer.holdLoadedVideos));
 
             syncFrequencyProperty = serializedObject.FindProperty(nameof(SyncPlayer.syncFrequency));
             syncThresholdProperty = serializedObject.FindProperty(nameof(SyncPlayer.syncThreshold));
@@ -133,6 +135,7 @@ namespace Texel
             EditorGUILayout.PropertyField(loopProperty, new GUIContent("Loop", "Automatically loop track when finished."));
             EditorGUILayout.PropertyField(retryOnErrorProperty, new GUIContent("Retry on Error", "Whether to keep playing the same URL if an error occurs."));
             EditorGUILayout.PropertyField(autoFailbackAVProProperty, new GUIContent("Auto Failover to AVPro", "If AVPro component is available and enabled, automatically fail back to AVPro when auto mode failed under certain conditions to play in video mode."));
+            EditorGUILayout.PropertyField(holdLoadedVideosProperty, new GUIContent("Hold Loaded Videos", "Preload videos, but do not start playing them until prompted by an external signal."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Sync Options", EditorStyles.boldLabel);

@@ -21,6 +21,7 @@ namespace Texel
         SerializedProperty leaveSetModeProperty;
         SerializedProperty latchUntilEnterProperty;
         SerializedProperty latchUntilLeaveProperty;
+        SerializedProperty recalcCollidersOnStartProperty;
         SerializedProperty forceColliderCheckProperty;
         SerializedProperty debugLogProperty;
         SerializedProperty vrcLogProperty;
@@ -37,6 +38,7 @@ namespace Texel
             leaveSetModeProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.leaveSetMode));
             latchUntilEnterProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.latchUntilEnter));
             latchUntilLeaveProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.latchUntilLeave));
+            recalcCollidersOnStartProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.recalcCollidersOnStart));
             forceColliderCheckProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.forceColliderCheck));
             debugLogProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.debugLog));
             vrcLogProperty = serializedObject.FindProperty(nameof(CompoundZoneTrigger.vrcLog));
@@ -82,6 +84,7 @@ namespace Texel
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Extra", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(forceColliderCheckProperty);
+            EditorGUILayout.PropertyField(recalcCollidersOnStartProperty);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);

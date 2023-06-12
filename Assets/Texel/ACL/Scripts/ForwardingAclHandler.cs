@@ -8,6 +8,7 @@ using VRC.Udon;
 namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+    [DefaultExecutionOrder(-1)]
     public class ForwardingAclHandler : UdonSharpBehaviour
     {
         public AccessControl acl;

@@ -24,7 +24,7 @@ namespace Texel
         public const int EVENT_VIDEO_LOCK_UPDATE = 3;
         public const int EVENT_VIDEO_PLAYLIST_UPDATE = 4;
         public const int EVENT_VIDEO_READY = 5;
-        const int EVENT_COUNT = 6;
+        protected const int EVENT_COUNT = 6;
 
         public const int VIDEO_STATE_STOPPED = 0;
         public const int VIDEO_STATE_LOADING = 1;

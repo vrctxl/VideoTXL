@@ -350,6 +350,8 @@ namespace Texel
             if (!needsUpdate)
                 return;
 
+            Debug.LogError("VRCUrlInputField needs to be repaired");
+
             GameObject recordRoot = PrefabUtility.GetOutermostPrefabInstanceRoot(vrcInput);
             if (!recordRoot)
                 recordRoot = vrcInput.gameObject;
@@ -371,6 +373,27 @@ namespace Texel
                     vrcInput.placeholder = obj.GetComponent<Text>();
             }
 
+            // LayoutElement seems to always be added at runtime (except when it's not .. rip)
+
+            /*
+            LayoutElement element = mask.GetComponentInChildren<LayoutElement>();
+            if (!element)
+            {
+                Transform caret = mask.Find("InputField Input Caret");
+                if (!caret)
+                {
+                    GameObject caretObj = new GameObject("InputField Input Caret");
+                    caretObj.transform.parent = mask;
+
+                    element = caretObj.AddComponent<LayoutElement>();
+                    element.ignoreLayout = true;
+                    element.layoutPriority = 1;
+
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(caretObj);
+                }
+            }
+            */
+
             Navigation nav = vrcInput.navigation;
             nav.mode = Navigation.Mode.None;
             vrcInput.navigation = nav;
@@ -381,6 +404,7 @@ namespace Texel
             if (vrcInput.onEndEdit.GetPersistentEventCount() == 0)
                 UnityEventTools.AddStringPersistentListener(vrcInput.onEndEdit, behaviour.SendCustomEvent, "_HandleUrlInput");
 
+            PrefabUtility.RecordPrefabInstancePropertyModifications(vrcInput);
             PrefabUtility.RecordPrefabInstancePropertyModifications(recordRoot);
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         }

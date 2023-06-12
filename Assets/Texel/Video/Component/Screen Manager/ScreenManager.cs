@@ -117,6 +117,21 @@ namespace Texel
         public const int SCREEN_MODE_AUDIO = 4;
         public const int SCREEN_MODE_SYNC = 5;
 
+        const int SCREEN_INDEX_PLAYBACK = 0;
+        const int SCREEN_INDEX_LOGO = 1;
+        const int SCREEN_INDEX_LOADING = 2;
+        const int SCREEN_INDEX_SYNC = 3;
+        const int SCREEN_INDEX_AUDIO = 4;
+        const int SCREEN_INDEX_ERROR = 5;
+        const int SCREEN_INDEX_ERROR_INVALID = 6;
+        const int SCREEN_INDEX_ERROR_RATE = 7;
+        const int SCREEN_INDEX_ERROR_BLOCKED = 8;
+        const int SCREEN_INDEX_EDITOR = 9;
+        const int SCREEN_INDEX_COUNT = 10;
+
+        Material[] replacementMaterials;
+        Texture[] replacementTextures;
+
         MeshRenderer captureRenderer;
         int _screenSource = VideoSource.VIDEO_SOURCE_UNITY;
         int _screenMode = SCREEN_MODE_UNINITIALIZED;
@@ -149,6 +164,30 @@ namespace Texel
         protected override void _Init()
         {
             block = new MaterialPropertyBlock();
+
+            replacementMaterials = new Material[SCREEN_INDEX_COUNT];
+            replacementMaterials[SCREEN_INDEX_PLAYBACK] = null;
+            replacementMaterials[SCREEN_INDEX_LOGO] = logoMaterial;
+            replacementMaterials[SCREEN_INDEX_LOADING] = loadingMaterial ?? logoMaterial;
+            replacementMaterials[SCREEN_INDEX_SYNC] = syncMaterial ?? logoMaterial;
+            replacementMaterials[SCREEN_INDEX_AUDIO] = audioMaterial ?? logoMaterial;
+            replacementMaterials[SCREEN_INDEX_ERROR] = errorMaterial ?? logoMaterial;
+            replacementMaterials[SCREEN_INDEX_ERROR_INVALID] = errorInvalidMaterial ?? replacementMaterials[SCREEN_INDEX_ERROR];
+            replacementMaterials[SCREEN_INDEX_ERROR_RATE] = errorRateLimitedMaterial ?? replacementMaterials[SCREEN_INDEX_ERROR];
+            replacementMaterials[SCREEN_INDEX_ERROR_BLOCKED] = errorBlockedMaterial ?? replacementMaterials[SCREEN_INDEX_ERROR];
+            replacementMaterials[SCREEN_INDEX_EDITOR] = editorMaterial;
+
+            replacementTextures = new Texture[SCREEN_INDEX_COUNT];
+            replacementTextures[SCREEN_INDEX_PLAYBACK] = null;
+            replacementTextures[SCREEN_INDEX_LOGO] = logoTexture;
+            replacementTextures[SCREEN_INDEX_LOADING] = loadingTexture ?? logoTexture;
+            replacementTextures[SCREEN_INDEX_SYNC] = syncTexture ?? logoTexture;
+            replacementTextures[SCREEN_INDEX_AUDIO] = audioTexture ?? logoTexture;
+            replacementTextures[SCREEN_INDEX_ERROR] = errorTexture ?? logoTexture;
+            replacementTextures[SCREEN_INDEX_ERROR_INVALID] = errorInvalidTexture ?? replacementTextures[SCREEN_INDEX_ERROR];
+            replacementTextures[SCREEN_INDEX_ERROR_RATE] = errorRateLimitedTexture ?? replacementTextures[SCREEN_INDEX_ERROR];
+            replacementTextures[SCREEN_INDEX_ERROR_BLOCKED] = errorBlockedTexture ?? replacementTextures[SCREEN_INDEX_ERROR];
+            replacementTextures[SCREEN_INDEX_EDITOR] = editorTexture;
 
 #if COMPILER_UDONSHARP
             _InitMaterialOverrides();
@@ -362,6 +401,7 @@ namespace Texel
 
         public void _OnVideoStateUpdate()
         {
+            DebugLog($"Video State: {videoPlayer.playerState}");
             switch (videoPlayer.playerState)
             {
                 case TXLVideoPlayer.VIDEO_STATE_STOPPED:
@@ -391,6 +431,7 @@ namespace Texel
             _ResetCheckScreenMaterial();
         }
 
+        /*
         Material _GetReplacementMaterialVideoStandin(bool captureValid)
         {
             Material replacementMat = null;
@@ -405,8 +446,45 @@ namespace Texel
             }
 
             return replacementMat;
+        }*/
+
+        int _CalculateScreenIndex(bool captureValid)
+        {
+            int mode = _screenMode;
+
+            if (latchErrorState && _inError)
+                mode = SCREEN_MODE_ERROR;
+
+            switch (mode)
+            {
+                case SCREEN_MODE_UNINITIALIZED: return SCREEN_INDEX_LOGO;
+                case SCREEN_MODE_LOGO: return SCREEN_INDEX_LOGO;
+                case SCREEN_MODE_LOADING: return SCREEN_INDEX_LOADING;
+                case SCREEN_MODE_SYNC: return SCREEN_INDEX_SYNC;
+                case SCREEN_MODE_ERROR:
+                    if (_lastErrorCode == VideoError.AccessDenied)
+                        return SCREEN_INDEX_ERROR_BLOCKED;
+                    else if (_lastErrorCode == VideoError.InvalidURL)
+                        return SCREEN_INDEX_ERROR_INVALID;
+                    else if (_lastErrorCode == VideoError.RateLimited)
+                        return SCREEN_INDEX_ERROR_RATE;
+                    return SCREEN_INDEX_ERROR;
+                case SCREEN_MODE_NORMAL:
+                default:
+                    if (!currentValid)
+                    {
+                        if (loadingMaterial != null && _checkFrameCount < 50)
+                            return SCREEN_INDEX_LOADING;
+                        else if (audioMaterial != null && _checkFrameCount >= 50)
+                            return SCREEN_INDEX_AUDIO;
+                        else if (logoMaterial != null)
+                            return SCREEN_INDEX_LOGO;
+                    }
+                    return SCREEN_INDEX_PLAYBACK;
+            }
         }
 
+        /*
         Material _GetReplacementMaterial(bool captureValid)
         {
             Material replacementMat = null;
@@ -444,8 +522,9 @@ namespace Texel
             }
 
             return replacementMat;
-        }
+        }*/
 
+            /*
         Texture _GetReplacementTextureVideoStandin(bool captureValid)
         {
             Texture replacementTex = null;
@@ -460,8 +539,9 @@ namespace Texel
             }
 
             return replacementTex;
-        }
+        }*/
 
+            /*
         Texture _GetReplacemenTexture(bool captureValid)
         {
             Texture replacementTex = null;
@@ -500,9 +580,11 @@ namespace Texel
 
             return replacementTex;
         }
+        */
 
         public void _UpdateScreenMaterial(int screenMode)
         {
+            DebugLog($"Set screen mode {screenMode}");
             if (_screenMode == screenMode && _screenFit == videoPlayer.screenFit)
                 return;
 
@@ -524,16 +606,15 @@ namespace Texel
             Texture captureTex = CaptureValid();
             currentValid = Utilities.IsValid(captureTex);
 
+            int screenIndex = _CalculateScreenIndex(currentValid);
+            DebugLog($"Calculated screen index [reset]: {screenIndex}, mode = {_screenMode}");
+
             if (useMaterialOverrides)
-            {
-                Material replacementMat = _GetReplacementMaterial(currentValid);
-                _UpdateObjects(replacementMat);
-            }
+                _UpdateObjects(replacementMaterials[screenIndex]);
 
             if (useTextureOverrides)
             {
-                Texture replacementTex = _GetReplacemenTexture(currentValid);
-                _UpdateCaptureData(replacementTex, captureTex);
+                _UpdateCaptureData(replacementTextures[screenIndex], captureTex);
                 _UpdateMaterials();
                 _UpdatePropertyBlocks();
             }
@@ -583,16 +664,15 @@ namespace Texel
             bool prevValid = currentValid;
             currentValid = Utilities.IsValid(captureTex);
 
+            int screenIndex = _CalculateScreenIndex(currentValid);
+            DebugLog($"Calculated screen index [update]: {screenIndex}, mode = {_screenMode}");
+
             if (useMaterialOverrides)
-            {
-                Material replacementMat = _GetReplacementMaterialVideoStandin(currentValid);
-                _UpdateObjects(replacementMat);
-            }
+                _UpdateObjects(replacementMaterials[screenIndex]);
 
             if (useTextureOverrides)
             {
-                Texture replacementTex = _GetReplacementTextureVideoStandin(currentValid);
-                _UpdateCaptureData(replacementTex, captureTex);
+                _UpdateCaptureData(replacementTextures[screenIndex], captureTex);
                 _UpdateMaterials();
                 _UpdatePropertyBlocks();
             }
@@ -631,6 +711,7 @@ namespace Texel
             if (Utilities.IsValid(replacementTex))
             {
                 currentTexture = replacementTex;
+                DebugLog($"Current texture: {currentTexture}");
             }
             else
             {

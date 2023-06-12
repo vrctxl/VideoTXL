@@ -19,6 +19,8 @@ namespace Texel
         public bool latchUntilEnter;
         [Tooltip("Force re-checking zone membership on player enter events.  May be needed in certain instances where you map can lose enter or leave events (such as stations within the zones).  You can save some performance by calling _RecalculateNextEvent yourself as needed.")]
         public bool forceColliderCheck = false;
+        [Tooltip("Recalculate collider membership on start of frame")]
+        public bool recalcCollidersOnStart = false;
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
         [Tooltip("Write debug statements to VRChat log")]
@@ -46,6 +48,9 @@ namespace Texel
 
             if (colliderCount == 0)
                 _InitColliders();
+
+            if (recalcCollidersOnStart)
+                _Recalculate();
         }
 
         void _InitColliders()

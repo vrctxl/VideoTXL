@@ -8,11 +8,16 @@ using VRC.Udon;
 namespace Texel
 {
     [AddComponentMenu("Texel/State/Group Toggle")]
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class GroupToggle : UdonSharpBehaviour
     {
         [Header("Access Control")]
+        [Tooltip("Optional.  Enables default-on states for local user only if they have access via the referenced ACL at world load.")]
         public AccessControl accessControl;
+        [Tooltip("Optional.  Enables default-on states when an ACL updates to give local user access that they did not have at world load.")]
+        public bool initOnAccessUpadte = true;
+        [Tooltip("Optional.  Disables the ability to toggle group to 'on' state if local user does not have access via the referenced ACL.")]
+        public bool enforceOnToggle = true;
 
         [Header("Default State")]
         public bool defaultVR = true;
@@ -29,6 +34,7 @@ namespace Texel
         public bool toggleRenderers = false;
 
         bool state = false;
+        bool inDefault = false;
 
         Collider[] onColliders;
         Collider[] offColliders;
@@ -54,6 +60,33 @@ namespace Texel
                 offRenderers = _BuildRendererList(offStateObjects);
             }
 
+            state = _DefaultState();
+
+            if (accessControl)
+            {
+                if (initOnAccessUpadte)
+                    accessControl._Register(AccessControl.EVENT_VALIDATE, this, nameof(_OnValidate));
+
+                if (!accessControl._LocalHasAccess())
+                    state = false;
+            }
+
+            _ToggleInternal(state);
+
+            inDefault = true;
+        }
+
+        public void _OnValidate()
+        {
+            if (inDefault && accessControl._LocalHasAccess())
+            {
+                _ToggleInternal(_DefaultState());
+                inDefault = true;
+            }
+        }
+
+        bool _DefaultState()
+        {
             bool defaultState = defaultDesktop;
             if (Networking.LocalPlayer.IsUserInVR())
                 defaultState = defaultVR;
@@ -62,11 +95,7 @@ namespace Texel
             defaultState = defaultQuest;
 #endif
 
-            state = defaultState;
-            if (accessControl && !accessControl._LocalHasAccess())
-                state = false;
-
-            _ToggleInternal(state);
+            return defaultState;
         }
 
         Collider[] _BuildColliderList(GameObject[] objects)
@@ -139,22 +168,32 @@ namespace Texel
 
         public void _Toggle()
         {
+            if (enforceOnToggle && accessControl && !accessControl._LocalHasAccess())
+                return;
+
             State = !State;
         }
 
         public void _ToggleOn()
         {
+            if (enforceOnToggle && accessControl && !accessControl._LocalHasAccess())
+                return;
+
             State = true;
         }
 
         public void _ToggleOff()
         {
+            if (enforceOnToggle && accessControl && !accessControl._LocalHasAccess())
+                return;
+
             State = false;
         }
 
         void _ToggleInternal(bool val)
         {
             state = val;
+            inDefault = false;
 
             if (toggleColliders)
             {

@@ -26,6 +26,7 @@ namespace Texel
         public bool loop = false;
         public bool retryOnError = true;
         public bool autoFailbackToAVPro = true;
+        public bool holdLoadedVideos = false;
 
         public float syncFrequency = 5;
         public float syncThreshold = 1;
@@ -86,8 +87,8 @@ namespace Texel
         [UdonSynced]
         bool _syncRepeatPlaylist;
 
-        [UdonSynced]
-        public bool _syncHoldVideos = false;
+        [UdonSynced, FieldChangeCallback(nameof(HoldVideos))]
+        bool _syncHoldVideos = false;
 
         //[NonSerialized]
         //public int localPlayerState = VIDEO_STATE_STOPPED;
@@ -176,6 +177,7 @@ namespace Texel
                 _syncLocked = defaultLocked;
                 _syncRepeatPlaylist = loop;
                 _syncScreenFit = (byte)defaultScreenFit;
+                HoldVideos = holdLoadedVideos;
                 _UpdateLockState(_syncLocked);
                 _UpdateRepeatMode(_syncRepeatPlaylist);
                 _UpdateScreenFit(_syncScreenFit);
@@ -187,7 +189,7 @@ namespace Texel
 
             if (Networking.IsOwner(gameObject))
             {
-                if (Utilities.IsValid(playlist) && playlist.trackCount > 0 && playlist.autoAdvance)
+                if (Utilities.IsValid(playlist) && playlist.trackCount > 0 && playlist.AutoAdvance)
                 {
                     if (_IsUrlValid(defaultUrl))
                     {
@@ -215,6 +217,24 @@ namespace Texel
                 DebugLog("Deserialize not received in reasonable time");
                 SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.Owner, "RequestOwnerSync");
             }
+        }
+
+        public bool HoldVideos
+        {
+            get { return _syncHoldVideos; }
+            set
+            {
+                if (!value && _videoReady)
+                    _CancelHold();
+
+                _syncHoldVideos = value;
+                _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
+            }
+        }
+
+        public bool HoldReady
+        {
+            get { return _videoReady && _syncPlaybackNumber < _syncVideoNumber; }
         }
 
         public void _OnPlaybackZoneEnter()
@@ -434,10 +454,8 @@ namespace Texel
             if (_syncLocked && !_TakeControl())
                 return;
 
-            _syncHoldVideos = holdState;
+            HoldVideos = holdState;
             RequestSerialization();
-
-            _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
         }
 
         public void _HoldNextVideo()
@@ -514,7 +532,7 @@ namespace Texel
                     SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
                     return;
                 }
-                else if (hasPlaylist && playlist.autoAdvance && playlist._MoveNext())
+                else if (hasPlaylist && playlist.AutoAdvance && playlist._MoveNext())
                 {
                     SendCustomEventDelayedFrames("_PlayPlaylistUrl", 1);
                     return;
@@ -595,7 +613,7 @@ namespace Texel
             _syncOwnerPaused = false;
             _skipAdvanceNextTrack = false;
 
-            if (!_syncHoldVideos)
+            if (!HoldVideos)
                 _syncPlaybackNumber = _syncVideoNumber;
 
             _syncVideoStartNetworkTime = float.MaxValue;
@@ -751,6 +769,9 @@ namespace Texel
             if (playerState == VIDEO_STATE_LOADING)
                 return;
 
+            if (playerState == VIDEO_STATE_PLAYING)
+                _StopVideo();
+
             _UpdatePlayerState(VIDEO_STATE_LOADING);
 
             VRCUrl url = _syncUrl;
@@ -895,7 +916,7 @@ namespace Texel
             _videoReady = false;
 
             DebugEvent("Event OnVideoEnd");
-            if (!seekableSource && Time.time - _playStartTime < 1)
+            if (!seekableSource && Time.time - _playStartTime < 10)
             {
                 Debug.Log("Video end encountered at start of stream, ignoring");
                 return;
@@ -920,7 +941,7 @@ namespace Texel
                 bool hasPlaylist = Utilities.IsValid(playlist) && playlist.PlaylistEnabled;
                 if (_IsUrlValid(_syncQueuedUrl))
                     SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
-                else if (hasPlaylist && playlist.autoAdvance)
+                else if (hasPlaylist && playlist.AutoAdvance)
                 {
                     if (_skipAdvanceNextTrack || playlist._MoveNext())
                         SendCustomEventDelayedFrames("_PlayPlaylistUrl", 1);

@@ -32,6 +32,11 @@ namespace Texel
 
         protected virtual void _Init() { }
 
+        protected bool Initialized
+        {
+            get { return init; }
+        }
+
         protected void _InitHandlers()
         {
             if (handlersInit)

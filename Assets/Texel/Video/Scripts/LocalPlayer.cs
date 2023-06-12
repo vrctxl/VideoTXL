@@ -99,6 +99,8 @@ namespace Texel
             videoMux._Register(VideoManager.VIDEO_ERROR_EVENT, this, "_OnVideoError");
             videoMux._Register(VideoManager.SOURCE_CHANGE_EVENT, this, "_OnSourceChange");
 
+            _UpdatePlayerState(VIDEO_STATE_STOPPED);
+
             if (videoMux.SupportsAVPro)
                 videoMux._UpdateVideoSource(VideoSource.VIDEO_SOURCE_AVPRO);
             else if (videoMux.SupportsUnity)
@@ -106,10 +108,9 @@ namespace Texel
 
             _SetScreenFit(defaultScreenFit);
 
-            _UpdatePlayerState(VIDEO_STATE_STOPPED);
-
             if (playOnJoin)
             {
+                DebugLog("Play on Join");
                 _inSustainZone = true;
                 _TriggerPlay();
             }
@@ -120,6 +121,18 @@ namespace Texel
             DebugLog("Trigger play");
             if (playAt > 0 || playerState == VIDEO_STATE_PLAYING || playerState == VIDEO_STATE_LOADING)
                 return;
+
+            // Conditional player stop to try and avoid piling on AVPro at end of track
+            // and maybe triggering bad things
+            if (playerState == VIDEO_STATE_PLAYING && videoMux.VideoIsPlaying && seekableSource)
+            {
+                float duration = videoMux.VideoDuration;
+                float remaining = videoMux.VideoTime;
+                if (remaining > 2)
+                    videoMux._VideoStop();
+            }
+            else if (playerState == VIDEO_STATE_LOADING)
+                videoMux._VideoStop();
 
             _PlayVideoAfter(_GetSelectedUrl(), 0);
         }
@@ -137,6 +150,7 @@ namespace Texel
 
         public void _PlaybackZoneEnter()
         {
+            DebugLog("Playback Zone Enter");
             _inSustainZone = true;
 
             if (_triggerZoneSame)

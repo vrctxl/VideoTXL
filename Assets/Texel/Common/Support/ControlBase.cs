@@ -10,22 +10,31 @@ namespace Texel
         public const int COLOR_YELLOW = 1;
         public const int COLOR_GREEN = 2;
         public const int COLOR_CYAN = 3;
+        public const int COLOR_WHTIE = 4;
 
         Color activeYellow = Color.HSVToRGB(60 / 360f, .8f, .9f);
         Color activeRed = Color.HSVToRGB(0, .7f, .9f);
         Color activeGreen = Color.HSVToRGB(100 / 360f, .8f, .9f);
+        Color activeCyan = Color.HSVToRGB(180 / 360f, .8f, .9f);
+        Color activeWhite = Color.HSVToRGB(0, 0, .9f);
 
         Color activeYellowLabel = Color.HSVToRGB(60 / 360f, .8f, .5f);
         Color activeRedLabel = Color.HSVToRGB(0, .7f, .5f);
         Color activeGreenLabel = Color.HSVToRGB(110 / 360f, .8f, .5f);
+        Color activeCyanLabel = Color.HSVToRGB(180 / 360f, .8f, .5f);
+        Color activeWhiteLabel = Color.HSVToRGB(0, 0, .5f);
 
-        Color inactiveYellow = Color.HSVToRGB(60 / 360f, .35f, .35f);
-        Color inactiveRed = Color.HSVToRGB(0, .35f, .35f);
-        Color inactiveGreen = Color.HSVToRGB(110 / 360f, .35f, .35f);
+        Color inactiveYellow = Color.HSVToRGB(60 / 360f, .35f, .5f);
+        Color inactiveRed = Color.HSVToRGB(0, .35f, .5f);
+        Color inactiveGreen = Color.HSVToRGB(110 / 360f, .35f, .5f);
+        Color inactiveCyan = Color.HSVToRGB(180 / 360f, .40f, .5f);
+        Color inactiveWhite = Color.HSVToRGB(0, 0, .5f);
 
         Color inactiveYellowLabel = Color.HSVToRGB(60 / 360f, .35f, .2f);
         Color inactiveRedLabel = Color.HSVToRGB(0, .35f, .2f);
         Color inactiveGreenLabel = Color.HSVToRGB(110 / 360f, .35f, .2f);
+        Color inactiveCyanLabel = Color.HSVToRGB(180 / 360f, .35f, .2f);
+        Color inactiveWhiteLabel = Color.HSVToRGB(0, 0, .2f);
 
         Color[] colorLookupActive;
         Color[] colorLookupInactive;
@@ -67,12 +76,12 @@ namespace Texel
 
             controlsInit = true;
 
-            colorLookupActive = new Color[] { activeRed, activeYellow, activeGreen };
-            colorLookupInactive = new Color[] { inactiveRed, inactiveYellow, inactiveGreen };
-            colorLookupDisabled = new Color[] { inactiveRed, inactiveYellow, inactiveGreen };
+            colorLookupActive = new Color[] { activeRed, activeYellow, activeGreen, activeCyan, activeWhite };
+            colorLookupInactive = new Color[] { inactiveRed, inactiveYellow, inactiveGreen, inactiveCyan, inactiveWhite };
+            colorLookupDisabled = new Color[] { inactiveRed, inactiveYellow, inactiveGreen, inactiveCyan, inactiveWhite };
 
-            colorLookupActiveLabel = new Color[] { activeRedLabel, activeYellowLabel, activeGreenLabel };
-            colorLookupInactiveLabel = new Color[] { inactiveRedLabel, inactiveYellowLabel, inactiveGreenLabel };
+            colorLookupActiveLabel = new Color[] { activeRedLabel, activeYellowLabel, activeGreenLabel, activeCyanLabel, activeWhiteLabel };
+            colorLookupInactiveLabel = new Color[] { inactiveRedLabel, inactiveYellowLabel, inactiveGreenLabel, inactiveCyanLabel, inactiveWhiteLabel };
 
             int buttonCount = ButtonCount;
 

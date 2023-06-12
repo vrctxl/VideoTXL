@@ -693,6 +693,15 @@ namespace Texel
             externalSystem.SetProgramVariable(audioVar, source);
         }
 
+        public void _BindAudioLink(UdonBehaviour audioLink)
+        {
+            if (audioLinkSystem && !audioLink)
+                _UpdateAudioLink(null);
+
+            audioLinkSystem = audioLink;
+            _UpdateExternal();
+        }
+
         void _DebugLog(string message)
         {
             if (debugLogging)

@@ -44,6 +44,8 @@ namespace Texel
         bool syncShuffle;
         [UdonSynced, FieldChangeCallback("CatalogueIndex")]
         int syncCatalogueIndex = -1;
+        [UdonSynced, FieldChangeCallback("AutoAdvance")]
+        bool syncAutoAdvance = true;
 
         [NonSerialized]
         public int trackCount;
@@ -65,7 +67,12 @@ namespace Texel
             DebugLog("Common initialization");
 
             syncShuffle = shuffle;
+            syncAutoAdvance = autoAdvance;
+
             _LoadDataLow(playlistData);
+
+            if (Networking.IsOwner(gameObject))
+                RequestSerialization();
         }
 
         public void _LoadData(PlaylistData data)
@@ -159,7 +166,7 @@ namespace Texel
                     trackNames[i] = $"Track {i + 1}";
             }
 
-            CurrentIndex = (short)((autoAdvance && !trackCatalogMode) ? 0 : -1);
+            CurrentIndex = (short)((AutoAdvance && !trackCatalogMode) ? 0 : -1);
 
             syncTrackerOrder = new byte[playlist.Length];
             if (syncShuffle)
@@ -239,6 +246,16 @@ namespace Texel
                 }
 
                 _LoadDataLow(playlistCatalog.playlists[value]);
+            }
+        }
+
+        public bool AutoAdvance
+        {
+            get { return syncAutoAdvance; }
+            set
+            {
+                syncAutoAdvance = value;
+                _UpdateHandlers(EVENT_OPTION_CHANGE);
             }
         }
 
@@ -330,11 +347,11 @@ namespace Texel
             if (index < -1 || index >= trackCount)
                 return false;
 
-            if (CurrentIndex == index)
-            {
-                if (syncEnabled)
-                    return false;
-            }
+            //if (CurrentIndex == index)
+            //{
+            //    if (syncEnabled)
+            //        return false;
+            //}
 
             syncEnabled = true;
             CurrentIndex = (short)index;
@@ -429,6 +446,19 @@ namespace Texel
                 _UpdateHandlers(EVENT_LIST_CHANGE);
             }
 
+            RequestSerialization();
+        }
+
+        public void _SetAutoAdvance(bool state)
+        {
+            if (!syncPlayer._TakeControl())
+                return;
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            DebugLog($"Set auto advance {state}");
+
+            AutoAdvance = state;
             RequestSerialization();
         }
 

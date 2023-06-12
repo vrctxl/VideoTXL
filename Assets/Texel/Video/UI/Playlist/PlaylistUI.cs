@@ -159,8 +159,8 @@ namespace Texel
             {
                 playlist._SetEnabled(true);
                 SyncPlayer videoPlayer = playlist.syncPlayer;
-                if (playlist.holdOnReady)
-                    videoPlayer._HoldNextVideo();
+                //if (playlist.holdOnReady)
+                //    videoPlayer._HoldNextVideo();
                 videoPlayer._ChangeUrlQuestFallback(playlist._GetCurrent(), playlist._GetCurrentQuest());
             }
         }
