@@ -4,7 +4,7 @@
 
 Shader "VideoTXL/RealtimeEmissiveGamma" {
 	Properties{
-		_MainTex("Emissive (RGB)", 2D) = "white" {}
+		_MainTex("Emissive (RGB)", 2D) = "black" {}
 		_MarginTex("Margin (RGB)", 2D) = "black" {}
 		_Emission("Emission Scale", Float) = 1
 		_AspectRatio("Aspect Ratio", Float) = 1.777777

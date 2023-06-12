@@ -108,6 +108,11 @@ namespace Texel
 
         Material[] _originalScreenMaterial;
         Texture[] _originalMaterialTexture;
+        int[] _originalMatAVPro;
+        int[] _originalMatInvert;
+        int[] _originalMatGamma;
+        int[] _originalMatFit;
+        float[] _originalMatAspectRatio;
 
         public const int SCREEN_MODE_UNINITIALIZED = -1;
         public const int SCREEN_MODE_NORMAL = 0;
@@ -345,6 +350,12 @@ namespace Texel
 
             // Capture original material textures
             _originalMaterialTexture = new Texture[materialUpdateList.Length];
+            _originalMatAVPro = new int[materialUpdateList.Length];
+            _originalMatInvert = new int[materialUpdateList.Length];
+            _originalMatGamma = new int[materialUpdateList.Length];
+            _originalMatFit = new int[materialUpdateList.Length];
+            _originalMatAspectRatio = new float[materialUpdateList.Length];
+
             for (int i = 0; i < materialUpdateList.Length; i++)
             {
                 if (materialUpdateList[i] == null)
@@ -355,6 +366,11 @@ namespace Texel
                     continue;
 
                 _originalMaterialTexture[i] = materialUpdateList[i].GetTexture(name);
+                _originalMatAVPro[i] = _GetMatIntProperty(materialUpdateList[i], materialAVPropertyList[i]);
+                _originalMatInvert[i] = _GetMatIntProperty(materialUpdateList[i], materialInvertList[i]);
+                _originalMatGamma[i] = _GetMatIntProperty(materialUpdateList[i], materialGammaList[i]);
+                _originalMatFit[i] = _GetMatIntProperty(materialUpdateList[i], materialFitList[i]);
+                _originalMatAspectRatio[i] = _GetMatFloatProperty(materialUpdateList[i], materialAspectRatioList[i]);
             }
         }
 
@@ -388,9 +404,15 @@ namespace Texel
                     continue;
 
                 mat.SetTexture(name, _originalMaterialTexture[i]);
-                string avProProp = materialAVPropertyList[i];
-                if (avProProp != null && avProProp.Length > 0)
-                    mat.SetInt(avProProp, 0);
+                //string avProProp = materialAVPropertyList[i];
+                //if (avProProp != null && avProProp.Length > 0)
+                //    mat.SetInt(avProProp, 0);
+
+                _SetMatIntProperty(mat, materialAVPropertyList[i], _originalMatAVPro[i]);
+                _SetMatIntProperty(mat, materialInvertList[i], _originalMatInvert[i]);
+                _SetMatIntProperty(mat, materialGammaList[i], _originalMatGamma[i]);
+                _SetMatIntProperty(mat, materialFitList[i], _originalMatFit[i]);
+                _SetMatFloatProperty(mat, materialAspectRatioList[i], _originalMatAspectRatio[i]);
             }
         }
 
@@ -401,7 +423,6 @@ namespace Texel
 
         public void _OnVideoStateUpdate()
         {
-            DebugLog($"Video State: {videoPlayer.playerState}");
             switch (videoPlayer.playerState)
             {
                 case TXLVideoPlayer.VIDEO_STATE_STOPPED:
@@ -430,23 +451,6 @@ namespace Texel
 
             _ResetCheckScreenMaterial();
         }
-
-        /*
-        Material _GetReplacementMaterialVideoStandin(bool captureValid)
-        {
-            Material replacementMat = null;
-            if (!currentValid)
-            {
-                if (loadingMaterial != null && _checkFrameCount < 50)
-                    replacementMat = loadingMaterial;
-                else if (audioMaterial != null && _checkFrameCount >= 50)
-                    replacementMat = audioMaterial;
-                else if (logoMaterial != null)
-                    replacementMat = logoMaterial;
-            }
-
-            return replacementMat;
-        }*/
 
         int _CalculateScreenIndex(bool captureValid)
         {
@@ -484,107 +488,8 @@ namespace Texel
             }
         }
 
-        /*
-        Material _GetReplacementMaterial(bool captureValid)
-        {
-            Material replacementMat = null;
-            int mode = _screenMode;
-
-            if (latchErrorState && _inError)
-                mode = SCREEN_MODE_ERROR;
-
-            switch (mode)
-            {
-                case SCREEN_MODE_LOGO:
-                    replacementMat = logoMaterial;
-                    break;
-                case SCREEN_MODE_LOADING:
-                    replacementMat = loadingMaterial;
-                    break;
-                case SCREEN_MODE_SYNC:
-                    replacementMat = syncMaterial;
-                    break;
-                case SCREEN_MODE_ERROR:
-                    if (_lastErrorCode == VideoError.AccessDenied)
-                        replacementMat = errorBlockedMaterial;
-                    else if (_lastErrorCode == VideoError.InvalidURL)
-                        replacementMat = errorInvalidMaterial;
-                    else if (_lastErrorCode == VideoError.RateLimited)
-                        replacementMat = errorRateLimitedMaterial;
-
-                    if (replacementMat == null)
-                        replacementMat = errorMaterial;
-                    break;
-                case SCREEN_MODE_NORMAL:
-                default:
-                    replacementMat = _GetReplacementMaterialVideoStandin(captureValid);
-                    break;
-            }
-
-            return replacementMat;
-        }*/
-
-            /*
-        Texture _GetReplacementTextureVideoStandin(bool captureValid)
-        {
-            Texture replacementTex = null;
-            if (!captureValid)
-            {
-                if (loadingTexture != null && _checkFrameCount < 50)
-                    replacementTex = loadingTexture;
-                else if (audioTexture != null && _checkFrameCount >= 50)
-                    replacementTex = audioTexture;
-                else if (logoTexture != null)
-                    replacementTex = logoTexture;
-            }
-
-            return replacementTex;
-        }*/
-
-            /*
-        Texture _GetReplacemenTexture(bool captureValid)
-        {
-            Texture replacementTex = null;
-            int mode = _screenMode;
-
-            if (latchErrorState && _inError)
-                mode = SCREEN_MODE_ERROR;
-
-            switch (mode)
-            {
-                case SCREEN_MODE_LOGO:
-                    replacementTex = logoTexture;
-                    break;
-                case SCREEN_MODE_LOADING:
-                    replacementTex = loadingTexture;
-                    break;
-                case SCREEN_MODE_SYNC:
-                    replacementTex = syncTexture;
-                    break;
-                case SCREEN_MODE_ERROR:
-                    if (_lastErrorCode == VideoError.AccessDenied)
-                        replacementTex = errorBlockedTexture;
-                    else if (_lastErrorCode == VideoError.InvalidURL)
-                        replacementTex = errorInvalidTexture;
-                    else if (_lastErrorCode == VideoError.RateLimited)
-                        replacementTex = errorRateLimitedTexture;
-
-                    if (replacementTex == null)
-                        replacementTex = errorTexture;
-                    break;
-                case SCREEN_MODE_NORMAL:
-                default:
-                    replacementTex = _GetReplacementTextureVideoStandin(captureValid);
-                    break;
-            }
-
-            return replacementTex;
-        }
-        */
-
         public void _UpdateScreenMaterial(int screenMode)
         {
-            DebugLog($"Set screen mode {screenMode}");
             if (_screenMode == screenMode && _screenFit == videoPlayer.screenFit)
                 return;
 
@@ -607,7 +512,6 @@ namespace Texel
             currentValid = Utilities.IsValid(captureTex);
 
             int screenIndex = _CalculateScreenIndex(currentValid);
-            DebugLog($"Calculated screen index [reset]: {screenIndex}, mode = {_screenMode}");
 
             if (useMaterialOverrides)
                 _UpdateObjects(replacementMaterials[screenIndex]);
@@ -665,7 +569,6 @@ namespace Texel
             currentValid = Utilities.IsValid(captureTex);
 
             int screenIndex = _CalculateScreenIndex(currentValid);
-            DebugLog($"Calculated screen index [update]: {screenIndex}, mode = {_screenMode}");
 
             if (useMaterialOverrides)
                 _UpdateObjects(replacementMaterials[screenIndex]);
@@ -711,7 +614,6 @@ namespace Texel
             if (Utilities.IsValid(replacementTex))
             {
                 currentTexture = replacementTex;
-                DebugLog($"Current texture: {currentTexture}");
             }
             else
             {
@@ -858,6 +760,20 @@ namespace Texel
         {
             if (prop != null && prop.Length > 0)
                 mat.SetFloat(prop, value);
+        }
+
+        int _GetMatIntProperty(Material mat, string prop)
+        {
+            if (prop != null && prop.Length > 0)
+                return mat.GetInt(prop);
+            return 0;
+        }
+
+        float _GetMatFloatProperty(Material mat, string prop)
+        {
+            if (prop != null && prop.Length > 0)
+                return mat.GetFloat(prop);
+            return 0;
         }
 
         Material _GetPlaybackMaterial(int meshIndex)
