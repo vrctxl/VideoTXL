@@ -13,7 +13,8 @@ namespace Texel
     [DefaultExecutionOrder(-1)]
     public class SyncPlayer : TXLVideoPlayer
     {
-        public Playlist playlist;
+        //public Playlist playlist;
+        public VideoUrlSource urlSource;
         public UrlRemapper urlRemapper;
         public AccessControl accessControl;
 
@@ -148,8 +149,6 @@ namespace Texel
             else
                 _inSustainZone = true;
 
-            
-
             videoMux._Register(VideoManager.VIDEO_READY_EVENT, this, "_OnVideoReady");
             videoMux._Register(VideoManager.VIDEO_START_EVENT, this, "_OnVideoStart");
             videoMux._Register(VideoManager.VIDEO_END_EVENT, this, "_OnVideoEnd");
@@ -169,8 +168,11 @@ namespace Texel
 
             _UpdatePlayerState(VIDEO_STATE_STOPPED);
 
-            if (Utilities.IsValid(playlist))
-                playlist._Register(Playlist.EVENT_LIST_CHANGE, this, "_OnPlaylistListChange");
+            //if (Utilities.IsValid(playlist))
+            //    playlist._Register(Playlist.EVENT_LIST_CHANGE, this, "_OnPlaylistListChange");
+
+            if (urlSource)
+                urlSource._SetVideoPlayer(this);
 
             if (Networking.IsOwner(gameObject))
             {
@@ -182,25 +184,14 @@ namespace Texel
                 _UpdateRepeatMode(_syncRepeatPlaylist);
                 _UpdateScreenFit(_syncScreenFit);
                 RequestSerialization();
-
-                if (Utilities.IsValid(playlist))
-                    playlist._MasterInit();
             }
 
             if (Networking.IsOwner(gameObject))
             {
-                if (Utilities.IsValid(playlist) && playlist.trackCount > 0 && playlist.AutoAdvance)
-                {
-                    if (_IsUrlValid(defaultUrl))
-                    {
-                        playlist._SetEnabled(false);
-                        _PlayVideoAfterFallback(defaultUrl, defaultQuestUrl, 3);
-                    }
-                    else
-                        SendCustomEventDelayedFrames("_PlayPlaylistUrl", 3);
-                }
-                else
+                if (_IsUrlValid(defaultUrl))
                     _PlayVideoAfterFallback(defaultUrl, defaultQuestUrl, 3);
+                else if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
+                    SendCustomEventDelayedFrames("_PlayPlaylistUrl", 3);
             }
 
             if (autoInternalAVSync)
@@ -300,7 +291,7 @@ namespace Texel
             }
         }
 
-        public void _OnPlaylistListChange()
+        /*public void _OnPlaylistListChange()
         {
             DebugEvent("Event OnPlaylistListChange");
             _UpdateHandlers(EVENT_VIDEO_PLAYLIST_UPDATE);
@@ -312,6 +303,17 @@ namespace Texel
 
                 if (playlist.PlaylistEnabled && playlist.holdOnReady)
                     _PlayPlaylistUrl();
+            }
+        }*/
+
+        public override void _ValidateVideoSources()
+        {
+            DebugLog("Validate Video Sources");
+
+            if (Networking.IsOwner(gameObject))
+            {
+                if (_syncHoldVideos && playerState == VIDEO_STATE_STOPPED)
+                    _ConditionalPlayNext();
             }
         }
 
@@ -458,38 +460,24 @@ namespace Texel
             RequestSerialization();
         }
 
-        public void _HoldNextVideo()
-        {
-            //DebugLog("Holding next video");
-            //_UpdatePlayerHold(true, _heldVideoReady);
-        }
-
         public void _ReleaseHold()
         {
             if (_syncLocked && !_TakeControl())
                 return;
 
-            //if (Networking.IsOwner(gameObject))
-            //{
-                if (_syncPlaybackNumber < _syncVideoNumber)
-                {
-                    _syncPlaybackNumber = _syncVideoNumber;
-                    RequestSerialization();
+            if (_syncPlaybackNumber < _syncVideoNumber)
+            {
+                _syncPlaybackNumber = _syncVideoNumber;
+                RequestSerialization();
 
-                    if (_videoReady)
-                        videoMux._VideoPlay();
-                }
-            //}
-            //if (_heldVideoReady && Networking.IsOwner(gameObject))
-            //    videoMux._VideoPlay();
-
-            //_UpdatePlayerHold(false, false);
+                if (_videoReady)
+                    videoMux._VideoPlay();
+            }
         }
 
         public void _CancelHold()
         {
             _StopVideo();
-            //_UpdatePlayerHold(false, false);
         }
 
         public void _SkipNextAdvance()
@@ -526,22 +514,9 @@ namespace Texel
             float duration = videoMux.VideoDuration;
             if (duration - time < 1)
             {
-                bool hasPlaylist = Utilities.IsValid(playlist) && playlist.PlaylistEnabled;
-                if (_IsUrlValid(_syncQueuedUrl))
-                {
-                    SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
+                if (_PlayNextIfAvailable())
                     return;
-                }
-                else if (hasPlaylist && playlist.AutoAdvance && playlist._MoveNext())
-                {
-                    SendCustomEventDelayedFrames("_PlayPlaylistUrl", 1);
-                    return;
-                }
-                else if (!hasPlaylist && _syncRepeatPlaylist)
-                {
-                    SendCustomEventDelayedFrames("_LoopVideo", 1);
-                    return;
-                }
+
                 time = duration - 1;
             }
 
@@ -669,16 +644,8 @@ namespace Texel
             _skipAdvanceNextTrack = false;
             _syncQueuedUrl = VRCUrl.Empty;
 
-            if (Utilities.IsValid(playlist) && Utilities.IsValid(playlist.playlistData))
-            {
-                if (!playlist.PlaylistEnabled)
-                    playlist._SetEnabled(true);
-
-                if (playlist.holdOnReady && Networking.IsOwner(gameObject))
-                    _HoldNextVideo();
-
-                _PlayVideoFallback(playlist._GetCurrent(), playlist._GetCurrentQuest());
-            }
+            if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
+                _PlayVideoFallback(urlSource._GetCurrentUrl(), urlSource._GetCurrentQuestUrl());
 
             _overrideLock = false;
         }
@@ -846,8 +813,6 @@ namespace Texel
             {
                 if (_syncPlaybackNumber == _syncVideoNumber)
                     videoMux._VideoPlay();
-                //else
-                //    _UpdatePlayerHold(true, true);
             }
             else
             {
@@ -862,7 +827,6 @@ namespace Texel
         public void _OnVideoStart()
         {
             DebugEvent("Event OnVideoStart");
-            //DebugLog("Video start");
 
             _videoReady = false;
 
@@ -925,11 +889,39 @@ namespace Texel
             seekableSource = false;
 
             _UpdatePlayerState(VIDEO_STATE_STOPPED);
-
-            //DebugLog("Video end");
             _lastVideoPosition = 0;
 
             _ConditionalPlayNext();
+        }
+
+        bool _PlayNextIfAvailable()
+        {
+            bool loadedTrack = false;
+            if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
+            {
+                if (urlSource.AutoAdvance)
+                {
+                    if (_skipAdvanceNextTrack || urlSource._MoveNext())
+                    {
+                        SendCustomEventDelayedFrames("_PlayPlaylistUrl", 1);
+                        loadedTrack = true;
+                    }
+                }
+            }
+
+            if (loadedTrack)
+            {
+                _skipAdvanceNextTrack = false;
+                return true;
+            }
+
+            if (_syncRepeatPlaylist)
+            {
+                SendCustomEventDelayedFrames("_LoopVideo", 1);
+                return true;
+            }
+
+            return false;
         }
 
         void _ConditionalPlayNext()
@@ -938,10 +930,23 @@ namespace Texel
             {
                 _overrideLock = true;
 
-                bool hasPlaylist = Utilities.IsValid(playlist) && playlist.PlaylistEnabled;
-                if (_IsUrlValid(_syncQueuedUrl))
-                    SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
-                else if (hasPlaylist && playlist.AutoAdvance)
+                if (_PlayNextIfAvailable())
+                {
+                    _overrideLock = false;
+                    return;
+                }
+
+                _syncUrl = VRCUrl.Empty;
+                _syncQuestUrl = VRCUrl.Empty;
+                _syncVideoStartNetworkTime = 0;
+                //_syncVideoExpectedEndTime = 0;
+                _syncOwnerPlaying = false;
+                RequestSerialization();
+
+                /*bool hasPlaylist = Utilities.IsValid(playlist) && playlist.PlaylistEnabled;
+                //if (_IsUrlValid(_syncQueuedUrl))
+                //    SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
+                if (hasPlaylist && playlist.autoAdvance)
                 {
                     if (_skipAdvanceNextTrack || playlist._MoveNext())
                         SendCustomEventDelayedFrames("_PlayPlaylistUrl", 1);
@@ -963,7 +968,7 @@ namespace Texel
                     //_syncVideoExpectedEndTime = 0;
                     _syncOwnerPlaying = false;
                     RequestSerialization();
-                }
+                }*/
 
                 _overrideLock = false;
             }
@@ -1111,7 +1116,7 @@ namespace Texel
             return player.isMaster || player.isInstanceOwner || !_syncLocked;
         }
 
-        public bool _TakeControl()
+        public override bool _TakeControl()
         {
             if (!_CanTakeControl())
                 return false;
@@ -1400,9 +1405,6 @@ namespace Texel
                 syncing = false;
             }
 
-            //if (state == VIDEO_STATE_PLAYING || state == VIDEO_STATE_STOPPED)
-            //    _UpdatePlayerHold(false, false);
-
             _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
         }
 
@@ -1415,15 +1417,6 @@ namespace Texel
         void _UpdatePlayerSyncing(bool syncing)
         {
             this.syncing = syncing;
-            _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
-        }
-
-        void _UpdatePlayerHold(bool holding, bool ready)
-        {
-            _holdReadyState = holding;
-            _heldVideoReady = ready;
-
-            heldReady = _heldVideoReady;
             _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
         }
 

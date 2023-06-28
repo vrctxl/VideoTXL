@@ -7,9 +7,9 @@ using VRC.SDKBase;
 namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
-    public class Playlist : EventBase
+    public class Playlist : VideoUrlSource
     {
-        public SyncPlayer syncPlayer;
+        TXLVideoPlayer videoPlayer;
 
         [Header("Optional Components")]
 
@@ -20,8 +20,6 @@ namespace Texel
         public bool shuffle;
         [Tooltip("Automatically advance to next track when finished playing")]
         public bool autoAdvance = true;
-        [Tooltip("Hold videos in ready state until released by an external input")]
-        public bool holdOnReady = false;
         [Tooltip("Treat tracks as independent, unlinked entities.  Disables normal playlist controls.")]
         public bool trackCatalogMode = false;
 
@@ -53,7 +51,8 @@ namespace Texel
         public const int EVENT_LIST_CHANGE = 0;
         public const int EVENT_TRACK_CHANGE = 1;
         public const int EVENT_OPTION_CHANGE = 2;
-        const int EVENT_COUNT = 3;
+        public const int EVENT_BIND_VIDEOPLAYER = 3;
+        const int EVENT_COUNT = 4;
 
         private void Start()
         {
@@ -64,6 +63,8 @@ namespace Texel
 
         protected override void _Init()
         {
+            base._Init();
+
             DebugLog("Common initialization");
 
             syncShuffle = shuffle;
@@ -75,12 +76,55 @@ namespace Texel
                 RequestSerialization();
         }
 
+        public override void _SetVideoPlayer(TXLVideoPlayer videoPlayer)
+        {
+            this.videoPlayer = videoPlayer;
+
+            _MasterInit();
+
+            _UpdateHandlers(EVENT_BIND_VIDEOPLAYER);
+        }
+
+        public TXLVideoPlayer VideoPlayer
+        {
+            get { return videoPlayer; }
+        }
+
+        public override bool IsEnabled
+        {
+            get { return syncEnabled; }
+        }
+
+        public override bool IsValid
+        {
+            get { return syncEnabled && trackCount > 0; }
+        }
+
+        public override bool _CanMoveNext()
+        {
+            if (trackCatalogMode || trackCount == 0)
+                return false;
+
+            return CurrentIndex < trackCount - 1 || _Repeats();
+        }
+
+        public override bool _CanMovePrev()
+        {
+            if (trackCatalogMode || trackCount == 0)
+                return false;
+
+            return CurrentIndex > 0 || _Repeats();
+        }
+
+        public override bool _CanMoveTo(int index)
+        {
+            return index >= 0 && index < trackCount;
+        }
+
         public void _LoadData(PlaylistData data)
         {
-            if (!syncPlayer._TakeControl())
+            if (!_TakeControl())
                 return;
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             _LoadDataLow(data);
 
@@ -94,10 +138,8 @@ namespace Texel
 
         public void _LoadFromCatalogueData(PlaylistData data)
         {
-            if (!syncPlayer._TakeControl())
+            if (!_TakeControl())
                 return;
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             int index = -1;
             if (Utilities.IsValid(playlistCatalog) && playlistCatalog.PlaylistCount > 0)
@@ -118,10 +160,8 @@ namespace Texel
 
         public void _LoadFromCatalogueIndex(int index)
         {
-            if (!syncPlayer._TakeControl())
+            if (!_TakeControl())
                 return;
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             if (!Utilities.IsValid(playlistCatalog) || playlistCatalog.PlaylistCount == 0)
                 index = -1;
@@ -185,18 +225,24 @@ namespace Texel
             _EnsureInit();
 
             DebugLog("Master initialization");
-            syncEnabled = true;
 
-            if (Networking.IsOwner(syncPlayer.gameObject))
+            if (videoPlayer && videoPlayer.SupportsOwnership)
             {
+                if (!Networking.IsOwner(videoPlayer.gameObject))
+                    return;
+
                 if (!Networking.IsOwner(gameObject))
                     Networking.SetOwner(Networking.LocalPlayer, gameObject);
-
-                if (syncShuffle)
-                    _Shuffle();
-
-                RequestSerialization();
             }
+            else if (!Networking.IsOwner(gameObject))
+                return;
+
+            syncEnabled = true;
+
+            if (syncShuffle)
+                _Shuffle();
+
+            RequestSerialization();
         }
 
         public short CurrentIndex
@@ -249,7 +295,7 @@ namespace Texel
             }
         }
 
-        public bool AutoAdvance
+        public override bool AutoAdvance
         {
             get { return syncAutoAdvance; }
             set
@@ -259,46 +305,14 @@ namespace Texel
             }
         }
 
-        public bool _HasNextTrack()
+        public override bool _MoveNext()
         {
-            if (trackCatalogMode)
+            if (!_TakeControl())
                 return false;
-            return CurrentIndex < trackCount - 1 || syncPlayer.repeatPlaylist;
-        }
-
-        public bool _HasPrevTrack()
-        {
-            if (trackCatalogMode)
-                return false;
-            return CurrentIndex > 0 || syncPlayer.repeatPlaylist;
-        }
-
-        public bool _MoveFirst()
-        {
-            if (!syncPlayer._TakeControl())
-                return false;
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
-
-            CurrentIndex = 0;
-
-            DebugLog($"Move first track {CurrentIndex}");
-
-            RequestSerialization();
-
-            return true;
-        }
-
-        public bool _MoveNext()
-        {
-            if (!syncPlayer._TakeControl())
-                return false;
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             if (!trackCatalogMode && CurrentIndex < playlist.Length - 1)
                 CurrentIndex += 1;
-            else if (!trackCatalogMode && syncPlayer.repeatPlaylist)
+            else if (!trackCatalogMode && _Repeats())
                 CurrentIndex = 0;
             else
                 CurrentIndex = (short)-1;
@@ -313,16 +327,14 @@ namespace Texel
             return CurrentIndex >= 0;
         }
 
-        public bool _MovePrev()
+        public override bool _MovePrev()
         {
-            if (!syncPlayer._TakeControl())
+            if (!_TakeControl())
                 return false;
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             if (!trackCatalogMode && CurrentIndex >= 0)
                 CurrentIndex -= 1;
-            else if (!trackCatalogMode && syncPlayer.repeatPlaylist)
+            else if (!trackCatalogMode && _Repeats())
                 CurrentIndex = (short)(playlist.Length - 1);
             else
                 CurrentIndex = (short)-1;
@@ -337,12 +349,10 @@ namespace Texel
             return CurrentIndex >= 0;
         }
 
-        public bool _MoveTo(int index)
+        public override bool _MoveTo(int index)
         {
-            if (!syncPlayer._TakeControl())
+            if (!_TakeControl())
                 return false;
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             if (index < -1 || index >= trackCount)
                 return false;
@@ -366,7 +376,7 @@ namespace Texel
             return CurrentIndex >= 0;
         }
 
-        public VRCUrl _GetCurrent()
+        public override VRCUrl _GetCurrentUrl()
         {
             if (CurrentIndex < 0 || !syncEnabled || CurrentIndex >= syncTrackerOrder.Length)
                 return VRCUrl.Empty;
@@ -375,7 +385,7 @@ namespace Texel
             return playlist[index];
         }
 
-        public VRCUrl _GetCurrentQuest()
+        public override VRCUrl _GetCurrentQuestUrl()
         {
             if (CurrentIndex < 0 || !syncEnabled || CurrentIndex >= syncTrackerOrder.Length)
                 return VRCUrl.Empty;
@@ -413,10 +423,8 @@ namespace Texel
 
         public void _SetEnabled(bool state)
         {
-            if (!syncPlayer._TakeControl())
+            if (!_TakeControl())
                 return;
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             DebugLog($"Set playlist enabled {state}");
 
@@ -432,10 +440,8 @@ namespace Texel
 
         public void _SetShuffle(bool state)
         {
-            if (!syncPlayer._TakeControl())
+            if (!_TakeControl())
                 return;
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             DebugLog($"Set shuffle mode {state}");
 
@@ -451,10 +457,8 @@ namespace Texel
 
         public void _SetAutoAdvance(bool state)
         {
-            if (!syncPlayer._TakeControl())
+            if (!_TakeControl())
                 return;
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             DebugLog($"Set auto advance {state}");
 
@@ -472,6 +476,25 @@ namespace Texel
             Utilities.ShuffleArray(temp);
             for (int i = 0; i < trackCount; i++)
                 syncTrackerOrder[i] = (byte)temp[i];
+        }
+
+        bool _TakeControl()
+        {
+            if (videoPlayer && videoPlayer.SupportsOwnership && !videoPlayer._TakeControl())
+                return false;
+
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            return true;
+        }
+
+        bool _Repeats()
+        {
+            if (videoPlayer)
+                return videoPlayer.repeatPlaylist;
+
+            return false;
         }
 
         void DebugLog(string message)

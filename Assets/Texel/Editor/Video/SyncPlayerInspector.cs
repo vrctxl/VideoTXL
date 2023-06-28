@@ -15,7 +15,8 @@ namespace Texel
 
         SerializedProperty prefabInitializedProperty;
 
-        SerializedProperty playlistPoperty;
+        SerializedProperty urlSourceProperty;
+        //SerializedProperty playlistPoperty;
         SerializedProperty remapperProperty;
         SerializedProperty accessControlProperty;
         SerializedProperty debugLogProperty;
@@ -47,7 +48,8 @@ namespace Texel
 
             prefabInitializedProperty = serializedObject.FindProperty(nameof(SyncPlayer.prefabInitialized));
 
-            playlistPoperty = serializedObject.FindProperty(nameof(SyncPlayer.playlist));
+            urlSourceProperty = serializedObject.FindProperty(nameof(SyncPlayer.urlSource));
+            //playlistPoperty = serializedObject.FindProperty(nameof(SyncPlayer.playlist));
             remapperProperty = serializedObject.FindProperty(nameof(SyncPlayer.urlRemapper));
             accessControlProperty = serializedObject.FindProperty(nameof(SyncPlayer.accessControl));
             debugLogProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugLog));
@@ -122,7 +124,8 @@ namespace Texel
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Optional Components", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(playlistPoperty, new GUIContent("Playlist", "Pre-populated playlist to iterate through.  If default URL is set, the playlist will be disabled by default, otherwise it will auto-play."));
+            EditorGUILayout.PropertyField(urlSourceProperty, new GUIContent("URL Sources", "Pre-populated playlist to iterate through.  If default URL is set, the playlist will be disabled by default, otherwise it will auto-play."));
+            //EditorGUILayout.PropertyField(playlistPoperty, new GUIContent("Playlist", "Pre-populated playlist to iterate through.  If default URL is set, the playlist will be disabled by default, otherwise it will auto-play."));
             EditorGUILayout.PropertyField(remapperProperty, new GUIContent("URL Remapper", "Set of input URLs to remap to alternate URLs on a per-platform basis."));
             EditorGUILayout.PropertyField(accessControlProperty, new GUIContent("Access Control", "Control access to player controls based on player type or whitelist."));
 

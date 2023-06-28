@@ -117,12 +117,12 @@ namespace Texel
                     videoPlayer.accessControl._Register(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateAccess));
             }
 
-            if (Utilities.IsValid(playlistPanel))
+            /*if (Utilities.IsValid(playlistPanel))
             {
                 PlaylistUI pui = (PlaylistUI)playlistPanel.GetComponent(typeof(UdonBehaviour));
                 if (Utilities.IsValid(pui))
-                    pui._InitFromPlayer(videoPlayer);
-            }
+                    pui._InitFromPlaylist(videoPlayer.);
+            }*/
 
 #if !UNITY_EDITOR
             instanceMaster = Networking.GetOwner(gameObject).displayName;
@@ -216,8 +216,8 @@ namespace Texel
                 return;
 
             videoPlayer._ChangeUrl(url);
-            if (Utilities.IsValid(videoPlayer.playlist))
-                videoPlayer.playlist._SetEnabled(false);
+            //if (Utilities.IsValid(videoPlayer.playlist))
+            //    videoPlayer.playlist._SetEnabled(false);
             loadActive = false;
             _UpdateAll();
         }
@@ -422,8 +422,9 @@ namespace Texel
 
         public void _HandlePlaylist()
         {
-            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.playlist))
+            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.urlSource))
                 return;
+
 
             // Toggle panel if present
             if (Utilities.IsValid(playlistPanel))
@@ -437,14 +438,14 @@ namespace Texel
             }
 
             // If no panel, legacy behavior of re-enabling playlist at current track
-            videoPlayer.playlist._SetEnabled(true);
+            /*videoPlayer.urlSource._SetEnabled(true);
             if (!videoPlayer.playlist.PlaylistEnabled)
                 return;
 
             if (videoPlayer.playlist.holdOnReady)
                 videoPlayer._HoldNextVideo();
 
-            videoPlayer._ChangeUrl(videoPlayer.playlist._GetCurrent());
+            videoPlayer._ChangeUrl(videoPlayer.playlist._GetCurrentUrl());*/
         }
 
         public void _ScrollPlaylistCurrent()
@@ -456,27 +457,27 @@ namespace Texel
 
         public void _HandlePlaylistNext()
         {
-            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.playlist))
+            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.urlSource))
                 return;
 
-            if (videoPlayer.playlist._MoveNext())
+            if (videoPlayer.urlSource._MoveNext())
             {
-                if (videoPlayer.playlist.holdOnReady)
-                    videoPlayer._HoldNextVideo();
-                videoPlayer._ChangeUrlQuestFallback(videoPlayer.playlist._GetCurrent(), videoPlayer.playlist._GetCurrentQuest());
+                //if (videoPlayer.playlist.holdOnReady)
+                //    videoPlayer._HoldNextVideo();
+                videoPlayer._ChangeUrlQuestFallback(videoPlayer.urlSource._GetCurrentUrl(), videoPlayer.urlSource._GetCurrentQuestUrl());
             }
         }
 
         public void _HandlePlaylistPrev()
         {
-            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.playlist))
+            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.urlSource))
                 return;
 
-            if (videoPlayer.playlist._MovePrev())
+            if (videoPlayer.urlSource._MovePrev())
             {
-                if (videoPlayer.playlist.holdOnReady)
-                    videoPlayer._HoldNextVideo();
-                videoPlayer._ChangeUrlQuestFallback(videoPlayer.playlist._GetCurrent(), videoPlayer.playlist._GetCurrentQuest());
+                //if (videoPlayer.playlist.holdOnReady)
+                //    videoPlayer._HoldNextVideo();
+                videoPlayer._ChangeUrlQuestFallback(videoPlayer.urlSource._GetCurrentUrl(), videoPlayer.urlSource._GetCurrentQuestUrl());
             }
         }
 
@@ -550,18 +551,19 @@ namespace Texel
             queuedText.text = (queuedUrl != "") ? "QUEUED" : "";
         }
 
+        // TODO: Genericize to url source
         public void _UpdatePlaylistInfo()
         {
             bool canControl = videoPlayer._CanTakeControl();
             bool enableControl = !videoPlayer.locked || canControl;
 
             repeatIcon.color = videoPlayer.repeatPlaylist ? activeColor : normalColor;
-            Playlist playlist = videoPlayer.playlist;
+            Playlist playlist = (Playlist)videoPlayer.urlSource;
 
             if (Utilities.IsValid(playlist) && playlist.trackCount > 0)
             {
-                nextIcon.color = (enableControl && playlist.PlaylistEnabled && playlist._HasNextTrack()) ? normalColor : disabledColor;
-                prevIcon.color = (enableControl && playlist.PlaylistEnabled && playlist._HasPrevTrack()) ? normalColor : disabledColor;
+                nextIcon.color = (enableControl && playlist.PlaylistEnabled && playlist._CanMoveNext()) ? normalColor : disabledColor;
+                prevIcon.color = (enableControl && playlist.PlaylistEnabled && playlist._CanMovePrev()) ? normalColor : disabledColor;
                 playlistIcon.color = enableControl ? normalColor : disabledColor;
 
                 bool playlistActive = playlist.PlaylistEnabled && playlist.CurrentIndex >= 0 && playlist.trackCount > 0;

@@ -100,12 +100,16 @@ namespace Texel
 
         public virtual bool SupportsLock { get; protected set; }
 
+        public virtual bool SupportsOwnership { get; protected set; }
+
         public virtual bool _CanTakeControl()
         {
             return true;
         }
 
         public virtual void _ChangeUrl(VRCUrl url) { }
+
+        public virtual void _ChangeUrl(VRCUrl url, VRCUrl questUrl) { }
 
         public virtual void _Resync() { }
 
@@ -116,5 +120,12 @@ namespace Texel
         public virtual void _SetSourceResolution(int res) { }
 
         public virtual void _SetScreenFit(TXLScreenFit fit) { }
+
+        public virtual void _ValidateVideoSources() { }
+
+        public virtual bool _TakeControl()
+        {
+            return false;
+        }
     }
 }
