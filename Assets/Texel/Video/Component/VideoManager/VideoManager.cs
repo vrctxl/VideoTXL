@@ -640,5 +640,10 @@ namespace Texel
             if (Utilities.IsValid(debugLog))
                 debugLog._Write(name, message);
         }
+
+        public void _DownstreamDebugLog(VideoSource source, string message)
+        {
+            _DebugLog(source, message);
+        }
     }
 }

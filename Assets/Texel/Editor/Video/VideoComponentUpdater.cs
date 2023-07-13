@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.Experimental.SceneManagement;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Animations;
 using UnityEngine.UI;
 using VRC.SDK3.Components;
 using VRC.SDK3.Video.Components;
@@ -230,6 +231,9 @@ namespace Texel
                     AudioChannelGroup group = groups[g];
                     Transform groupRoot = new GameObject(group.groupName).transform;
                     groupRoot.parent = resources;
+                    groupRoot.localPosition = Vector3.zero;
+                    groupRoot.localRotation = Quaternion.identity;
+                    groupRoot.localScale = Vector3.one;
 
                     VideoSourceAudioGroup audioGroup = groupRoot.gameObject.AddUdonSharpComponent<VideoSourceAudioGroup>();
                     audioGroup.groupName = group.groupName;
@@ -249,6 +253,13 @@ namespace Texel
                         ConditionalCopyComponent<AudioDistortionFilter>(group.unityChannel.gameObject, unityAudioSource.gameObject);
                         ConditionalCopyComponent<AudioEchoFilter>(group.unityChannel.gameObject, unityAudioSource.gameObject);
                         ConditionalCopyComponent<AudioChorusFilter>(group.unityChannel.gameObject, unityAudioSource.gameObject);
+
+                        ConditionalCopyConstraint<ParentConstraint>(group.unityChannel.gameObject, unityAudioSource.gameObject);
+                        ConditionalCopyConstraint<ScaleConstraint>(group.unityChannel.gameObject, unityAudioSource.gameObject);
+                        ConditionalCopyConstraint<PositionConstraint>(group.unityChannel.gameObject, unityAudioSource.gameObject);
+                        ConditionalCopyConstraint<RotationConstraint>(group.unityChannel.gameObject, unityAudioSource.gameObject);
+
+                        Debug.Log(unityAudioSource.GetComponent<PositionConstraint>());
                     }
 
                     audioGroup.channelAudio[0] = unityAudioSource;
@@ -330,6 +341,10 @@ namespace Texel
                     AudioChannelGroup group = groups[g];
                     Transform groupRoot = new GameObject(group.groupName).transform;
                     groupRoot.parent = resources;
+                    groupRoot.localPosition = Vector3.zero;
+                    groupRoot.localRotation = Quaternion.identity;
+                    groupRoot.localScale = Vector3.one;
+
                     VideoSourceAudioGroup audioGroup = groupRoot.gameObject.AddUdonSharpComponent<VideoSourceAudioGroup>();
                     audioGroup.groupName = group.groupName;
                     audioGroup.channelAudio = new AudioSource[group.avproChannels.Length];
@@ -404,6 +419,11 @@ namespace Texel
                                 targetAudioSource.SetCustomCurve(AudioSourceCurveType.CustomRolloff, sourceAudioSource.GetCustomCurve(AudioSourceCurveType.CustomRolloff));
 
                             targetAudioSource.transform.SetPositionAndRotation(sourceAudioSource.transform.position, source.transform.rotation);
+
+                            ConditionalCopyConstraint<ParentConstraint>(sourceAudioSource.gameObject, targetAudioSource.gameObject);
+                            ConditionalCopyConstraint<ScaleConstraint>(sourceAudioSource.gameObject, targetAudioSource.gameObject);
+                            ConditionalCopyConstraint<PositionConstraint>(sourceAudioSource.gameObject, targetAudioSource.gameObject);
+                            ConditionalCopyConstraint<RotationConstraint>(sourceAudioSource.gameObject, targetAudioSource.gameObject);
                         }
 
                         audioGroup.channelAudio[i] = targetAudioSource;
@@ -417,21 +437,47 @@ namespace Texel
 
         static void ConditionalCopyComponent<T>(GameObject source, GameObject dest) where T : Component
         {
+            T destComponent = dest.GetComponent<T>();
+            if (destComponent)
+                GameObject.DestroyImmediate(destComponent);
+
             T filter = source.GetComponent<T>();
-            if (filter && !dest.GetComponent<AudioLowPassFilter>())
+            if (filter)
                 CopyComponent(filter, dest);
         }
 
         static T CopyComponent<T>(T original, GameObject destination) where T : Component
         {
             System.Type type = original.GetType();
-            Component copy = destination.AddComponent(type);
+            Component copy = destination.GetComponent<T>();
+            if (!copy)
+                copy = destination.AddComponent(type);
+
             System.Reflection.FieldInfo[] fields = type.GetFields();
             foreach (System.Reflection.FieldInfo field in fields)
             {
                 field.SetValue(copy, field.GetValue(original));
             }
             return copy as T;
+        }
+
+        static void ConditionalCopyConstraint<T>(GameObject source, GameObject dest) where T : Component, IConstraint
+        {
+            T filter = source.GetComponent<T>();
+            if (filter && !dest.GetComponent<T>())
+                CopyConstraint(filter, dest);
+        }
+
+        static T CopyConstraint<T>(T original, GameObject destination) where T : Component, IConstraint
+        {
+            T derived = CopyComponent(original, destination);
+            for (int i = 0; i < original.sourceCount; i++)
+            {
+                derived.AddSource(original.GetSource(i));
+            }
+            derived.constraintActive = original.constraintActive;
+
+            return derived;
         }
 
         public static AudioChannelGroup[] GetAudioGroups(AudioManager manager)
