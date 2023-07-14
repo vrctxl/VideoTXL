@@ -737,7 +737,7 @@ namespace Texel
                 return;
 
             if (playerState == VIDEO_STATE_PLAYING)
-                _StopVideo();
+                videoMux._VideoStop();
 
             _UpdatePlayerState(VIDEO_STATE_LOADING);
 

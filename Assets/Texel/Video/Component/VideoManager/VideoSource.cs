@@ -68,8 +68,40 @@ namespace Texel
             videoMux = mux;
             id = muxId;
 
+            _CheckIntegrity();
             _AutoDetect();
             _InitVideoPlayer();
+        }
+
+        void _CheckIntegrity()
+        {
+            if (!videoMux)
+            {
+                Debug.LogError($"Video source {id} registered without a valid video manager.");
+                videoMux = gameObject.transform.parent.GetComponentInParent<VideoManager>();
+                if (videoMux)
+                    videoMux._DownstreamDebugLog(this, $"Found video manager on parent: {videoMux.gameObject.name}");
+                else
+                    Debug.LogError("Could not find parent video manager.  Video playback via this source will not work.");
+            }
+
+            // Try to repair missing required components
+            if (!captureRenderer)
+            {
+                Debug.LogError($"Video source {id} missing captureRenderer.");
+
+                captureRenderer = gameObject.GetComponentInChildren<MeshRenderer>();
+                if (videoMux)
+                {
+                    if (captureRenderer)
+                        videoMux._DownstreamDebugLog(this, $"Found child renderer on: {captureRenderer.gameObject.name}");
+                    else
+                        Debug.LogError("Could not find child renderer.  Video playback via this source will not work.");
+                }
+            }
+
+            if (audioGroups.Length == 0)
+                Debug.LogError($"Video source {id} has no audio groups.  Try updating connected components on the main video player object.");
         }
 
         void _AutoDetect()
@@ -80,6 +112,24 @@ namespace Texel
             {
                 videoPlayer = avp;
                 VideoSourceType = VIDEO_SOURCE_AVPRO;
+
+                if (!avproReservedChannel)
+                {
+                    Debug.LogError($"Video source {id} is an AVPro video source, but has no audio source set on its reserved channel.");
+
+                    Transform reserved = transform.Find("ReservedAudioSource");
+                    if (reserved)
+                    {
+                        avproReservedChannel = transform.GetComponent<AudioSource>();
+                        if (videoMux)
+                        {
+                            if (avproReservedChannel)
+                                videoMux._DownstreamDebugLog(this, $"Found suspected reserved audio source on: {reserved.name}");
+                            else
+                                videoMux._DownstreamDebugLog(this, $"Could not infer reserved audio source.  Some audio playback functions may not work correctly.");
+                        }
+                    }
+                }
                 return;
             }
 
@@ -90,6 +140,8 @@ namespace Texel
                 VideoSourceType = VIDEO_SOURCE_UNITY;
                 return;
             }
+
+            Debug.LogError($"Video source {id} has no attached VRCUnityVideoPlayer or VRCAVProVideoPlayer component.");
 
             VideoSourceType = VIDEO_SOURCE_NONE;
         }
@@ -117,54 +169,61 @@ namespace Texel
 
         public override void OnVideoReady()
         {
-            videoMux._OnVideoReady(id);
+            if (videoMux)
+                videoMux._OnVideoReady(id);
         }
 
         public override void OnVideoStart()
         {
-            videoMux._OnVideoStart(id);
+            if (videoMux)
+                videoMux._OnVideoStart(id);
         }
 
         public override void OnVideoEnd()
         {
-            videoMux._OnVideoEnd(id);
+            if (videoMux)
+                videoMux._OnVideoEnd(id);
         }
 
         public override void OnVideoError(VideoError videoError)
         {
-            videoMux._OnVideoError(id, videoError);
+            if (videoMux)
+                videoMux._OnVideoError(id, videoError);
         }
 
         public override void OnVideoLoop()
         {
-            videoMux._OnVideoLoop(id);
+            if (videoMux)
+                videoMux._OnVideoLoop(id);
         }
 
         public override void OnVideoPause()
         {
-            videoMux._OnVideoPause(id);
+            if (videoMux)
+                videoMux._OnVideoPause(id);
         }
 
         public override void OnVideoPlay()
         {
-            videoMux._OnVideoPlay(id);
+            if (videoMux)
+                videoMux._OnVideoPlay(id);
         }
 
         public void _VideoPlay()
         {
-            if (videoPlayer != null)
+            if (videoPlayer)
                 videoPlayer.Play();
         }
 
         public void _VideoPause()
         {
-            if (videoPlayer != null)
+            if (videoPlayer)
                 videoPlayer.Pause();
         }
 
         public void _VideoStop()
         {
-            if (videoPlayer != null)
+            if (videoPlayer)
                 videoPlayer.Stop();
         }
 
@@ -175,19 +234,19 @@ namespace Texel
 
         public void _VideoLoadURL(VRCUrl url)
         {
-            if (videoPlayer != null)
+            if (videoPlayer)
                 videoPlayer.LoadURL(url);
         }
 
         public void _VideoSetTime(float time)
         {
-            if (videoPlayer != null)
+            if (videoPlayer)
                 videoPlayer.SetTime(time);
         }
 
         public void _SetAVSync(bool state)
         {
-            if (videoPlayer != null)
+            if (videoPlayer)
                 videoPlayer.EnableAutomaticResync = state;
         }
     }

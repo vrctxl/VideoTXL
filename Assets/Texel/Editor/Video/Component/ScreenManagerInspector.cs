@@ -26,6 +26,9 @@ namespace Texel
         SerializedProperty videoPlayerProperty;
 
         SerializedProperty debugLogProperty;
+        SerializedProperty vrcLoggingProperty;
+        SerializedProperty lowLevelLoggingProperty;
+        SerializedProperty eventLoggingProperty;
 
         SerializedProperty useMaterialOverrideProperty;
         SerializedProperty separatePlaybackMaterialsProperty;
@@ -72,11 +75,16 @@ namespace Texel
         SerializedProperty outputCRTProperty;
         SerializedProperty outputMaterialPropertiesProperty;
 
+        static bool expandDebug = false;
+
         private void OnEnable()
         {
             videoPlayerProperty = serializedObject.FindProperty(nameof(ScreenManager.videoPlayer));
 
             debugLogProperty = serializedObject.FindProperty(nameof(ScreenManager.debugLog));
+            vrcLoggingProperty = serializedObject.FindProperty(nameof(ScreenManager.vrcLogging));
+            lowLevelLoggingProperty = serializedObject.FindProperty(nameof(ScreenManager.lowLevelLogging));
+            eventLoggingProperty = serializedObject.FindProperty(nameof(ScreenManager.eventLogging));
 
             useMaterialOverrideProperty = serializedObject.FindProperty(nameof(ScreenManager.useMaterialOverrides));
             separatePlaybackMaterialsProperty = serializedObject.FindProperty(nameof(ScreenManager.separatePlaybackMaterials));
@@ -132,15 +140,14 @@ namespace Texel
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
 
+            GUIStyle boldFoldoutStyle = new GUIStyle(EditorStyles.foldout);
+            boldFoldoutStyle.fontStyle = FontStyle.Bold;
+
             if (GUILayout.Button("Screen Manager Documentation"))
                 Application.OpenURL("https://github.com/jaquadro/VideoTXL/wiki/Configuration:-Screen-Manager");
 
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(videoPlayerProperty);
-
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Optional Components", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(debugLogProperty);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Object Material Overrides", EditorStyles.boldLabel);
@@ -225,6 +232,16 @@ namespace Texel
                 }
                 else
                     EditorGUILayout.HelpBox("Enabling the Render Texture Output is the easiest way to supply a video texture to other shaders and materials.  For the most control and performance, use Material or Material Property Block overrides.", MessageType.Info);
+            }
+
+            EditorGUILayout.Space();
+            expandDebug = EditorGUILayout.Foldout(expandDebug, "Debug Options", true, boldFoldoutStyle);
+            if (expandDebug)
+            {
+                EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
+                EditorGUILayout.PropertyField(eventLoggingProperty, new GUIContent("Include Events", "Include additional event traffic in debug log"));
+                EditorGUILayout.PropertyField(lowLevelLoggingProperty, new GUIContent("Include Low Level", "Include additional verbose messages in debug log"));
+                EditorGUILayout.PropertyField(vrcLoggingProperty, new GUIContent("VRC Logging", "Write out debug messages to VRChat log."));
             }
 
             if (serializedObject.hasModifiedProperties)
