@@ -1,5 +1,19 @@
 {
   "dependencies": {
+    "com.acchosen.vr-stage-lighting": {
+      "version": "file:com.acchosen.vr-stage-lighting",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.llealloo.audiolink": "0.3.1"
+      }
+    },
+    "com.llealloo.audiolink": {
+      "version": "file:com.llealloo.audiolink",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
       "depth": 0,
@@ -27,6 +41,15 @@
       "source": "registry",
       "dependencies": {
         "com.unity.ugui": "1.0.0"
+      },
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.burst": {
+      "version": "1.4.11",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.mathematics": "1.2.1"
       },
       "url": "https://packages.unity.com"
     },
@@ -61,7 +84,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.ide.visualstudio": {
-      "version": "2.0.11",
+      "version": "2.0.17",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -76,6 +99,22 @@
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
+    "com.unity.inputsystem": {
+      "version": "1.2.0",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.modules.uielements": "1.0.0"
+      },
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.mathematics": {
+      "version": "1.2.5",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
     "com.unity.multiplayer-hlapi": {
       "version": "1.0.8",
       "depth": 0,
@@ -83,6 +122,13 @@
       "dependencies": {
         "nuget.mono-cecil": "0.1.6-preview"
       },
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.nuget.newtonsoft-json": {
+      "version": "2.0.2",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {},
       "url": "https://packages.unity.com"
     },
     "com.unity.package-manager-ui": {
@@ -185,11 +231,48 @@
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
-    "com.vrchat.vrcsdk3": {
-      "version": "file:com.vrchat.vrcsdk3",
+    "com.vrchat.base": {
+      "version": "file:com.vrchat.base",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.burst": "1.4.11",
+        "com.unity.mathematics": "1.2.5",
+        "com.unity.nuget.newtonsoft-json": "2.0.2"
+      }
+    },
+    "com.vrchat.clientsim": {
+      "version": "file:com.vrchat.clientsim",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.xr.oculus.standalone": "2.38.4",
+        "com.unity.inputsystem": "1.2.0"
+      }
+    },
+    "com.vrchat.core.vpm-resolver": {
+      "version": "file:com.vrchat.core.vpm-resolver",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "2.0.2"
+      }
+    },
+    "com.vrchat.udonsharp": {
+      "version": "file:com.vrchat.udonsharp",
       "depth": 0,
       "source": "embedded",
       "dependencies": {}
+    },
+    "com.vrchat.worlds": {
+      "version": "file:com.vrchat.worlds",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.cinemachine": "2.8.0",
+        "com.unity.postprocessing": "3.1.1",
+        "com.unity.textmeshpro": "2.1.6"
+      }
     },
     "nuget.mono-cecil": {
       "version": "0.1.6-preview",
@@ -197,6 +280,12 @@
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
+    },
+    "vrchat.jordo.easyquestswitch": {
+      "version": "file:vrchat.jordo.easyquestswitch",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
     },
     "com.unity.modules.ai": {
       "version": "1.0.0",
