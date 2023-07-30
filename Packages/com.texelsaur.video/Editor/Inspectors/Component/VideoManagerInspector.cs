@@ -44,6 +44,7 @@ namespace Texel
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
 
+            VideoManager videoManager = (VideoManager)serializedObject.targetObject;
             TXLVideoPlayer videoPlayer = (TXLVideoPlayer)videoPlayerProperty.objectReferenceValue;
 
             TimeSpan time = DateTime.Now.Subtract(lastValidate);
@@ -62,8 +63,8 @@ namespace Texel
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(sourcesProperty, new GUIContent("Sources", "The list of available video sources."));
 
-            List<VideoSource> unitySources = VideoComponentUpdater.GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_UNITY);
-            List<VideoSource> avproSources = VideoComponentUpdater.GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_AVPRO);
+            List<VideoSource> unitySources = VideoComponentUpdater.GetVideoSources(videoManager, VideoSource.VIDEO_SOURCE_UNITY);
+            List<VideoSource> avproSources = VideoComponentUpdater.GetVideoSources(videoManager, VideoSource.VIDEO_SOURCE_AVPRO);
             if (unitySources.Count == 0 && avproSources.Count == 0)
                 EditorGUILayout.HelpBox("No video sources are defined.  Video playback will not work until at least one video source is added.  Check documentation linked above for information on adding new video sources, or use another version of the video player prefab that includes sources.", MessageType.Warning);
 

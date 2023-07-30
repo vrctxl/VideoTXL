@@ -92,6 +92,16 @@ namespace Texel
         {
             _DebugEvent("Init");
 
+            if (!videoPlayer)
+            {
+                _DebugError($"Audio manager has no associated video player.");
+                videoPlayer = gameObject.transform.parent.GetComponentInParent<TXLVideoPlayer>();
+                if (videoPlayer)
+                    _DebugLog($"Found video player on parent: {videoPlayer.gameObject.name}");
+                else
+                    _DebugError("Could not find parent video player.  Audio playback will not work.", true);
+            }
+
             if (Utilities.IsValid(debugState))
                 debugState._Regsiter(this, "_UpdateDebugState", "AudioOverrideManager");
 
@@ -171,6 +181,14 @@ namespace Texel
             _UpdateExternal();
 
             if (videoPlayer)
+                videoPlayer._SetAudioManager(this);
+
+            SendCustomEventDelayedFrames(nameof(_PostInit), 1);
+        }
+
+        public void _PostInit()
+        {
+            if (videoPlayer)
             {
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
                 if (videoPlayer.videoMux)
@@ -179,6 +197,8 @@ namespace Texel
                     if (videoPlayer.videoMux.ActiveSource && videoPlayer.videoMux.ActiveSource.VideoSourceType != VideoSource.VIDEO_SOURCE_NONE)
                         _SelectVideoSource(videoPlayer.videoMux.ActiveSource);
                 }
+
+                _OnVideoStateUpdate();
             }
         }
 
@@ -706,6 +726,14 @@ namespace Texel
         {
             if (debugLogging)
                 Debug.Log("[VideoTXL:AudioManager] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write("AudioManager", message);
+        }
+
+        void _DebugError(string message, bool force = false)
+        {
+            if (debugLogging || force)
+                Debug.LogError("[VideoTXL:AudioManager] " + message);
             if (Utilities.IsValid(debugLog))
                 debugLog._Write("AudioManager", message);
         }

@@ -26,7 +26,14 @@ namespace Texel
         {
             VideoSource[] sources = root.GetComponentsInChildren<VideoSource>(true);
             foreach (var source in sources)
+            {
+                if (!source.videoMux || !source.videoMux.videoPlayer)
+                    return;
+                if (!source.videoMux.videoPlayer.runBuildHooks)
+                    return;
+
                 CheckAndUpdateSource(source);
+            }
         }
 
         public static void CheckAndUpdateSource(VideoSource source)

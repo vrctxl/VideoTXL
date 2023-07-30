@@ -74,6 +74,16 @@ namespace Texel
 
         protected override void _Init()
         {
+            if (!videoPlayer)
+            {
+                _DebugError($"Video manager has no associated video player.");
+                videoPlayer = gameObject.transform.parent.GetComponentInParent<TXLVideoPlayer>();
+                if (videoPlayer)
+                    _DebugLog($"Found video player on parent: {videoPlayer.gameObject.name}");
+                else
+                    _DebugError("Could not find parent video player.  Video playback will not work.", true);
+            }
+
             if (sources == null)
                 sources = new VideoSource[0];
 
@@ -93,6 +103,9 @@ namespace Texel
 
             nextSourceIndex = sources.Length;
             activeSource = -1;
+
+            if (videoPlayer)
+                videoPlayer._SetVideoManager(this);
         }
 
         void _Discover()
@@ -617,9 +630,17 @@ namespace Texel
         void _DebugLog(string message)
         {
             if (debugLogging)
-                Debug.Log($"[VideoTXL:VideoMux] " + message);
+                Debug.Log($"[VideoTXL:VideoManager] " + message);
             if (Utilities.IsValid(debugLog))
-                debugLog._Write("VideoMux", message);
+                debugLog._Write("VideoManager", message);
+        }
+
+        void _DebugError(string message, bool force = false)
+        {
+            if (debugLogging || force)
+                Debug.LogError("[VideoTXL:VideoManager] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write("VideoManager", message);
         }
 
         void _DebugLog(VideoSource source, string message)

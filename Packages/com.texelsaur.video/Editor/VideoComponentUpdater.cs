@@ -95,6 +95,9 @@ namespace Texel
 
         public static void UpdateAudioUI(TXLVideoPlayer videoPlayer)
         {
+            if (!videoPlayer)
+                return;
+
             AudioChannelGroup[] groups = GetAudioGroups(videoPlayer.audioManager);
 
             OptionsUI[] list = GameObject.FindObjectsOfType<OptionsUI>();
@@ -145,6 +148,9 @@ namespace Texel
 
         public static void UpdateAudioComponents(TXLVideoPlayer videoPlayer)
         {
+            if (!videoPlayer)
+                return;
+
             Undo.RecordObject(videoPlayer.gameObject, "Update Audio Setup");
 
             UpdateUnityAudioSources(videoPlayer);
@@ -162,6 +168,9 @@ namespace Texel
 
         public static bool ValidateUnityAudioSources(TXLVideoPlayer videoPlayer)
         {
+            if (!videoPlayer)
+                return false;
+
             AudioChannelGroup[] groups = GetAudioGroups(videoPlayer.audioManager);
 
             List<AudioChannelGroup> validGroups = new List<AudioChannelGroup>();
@@ -586,6 +595,38 @@ namespace Texel
                 value = VideoSource.VIDEO_SOURCE_UNITY;
 
             return value;
+        }
+
+        public static List<VideoManager> GetVideoManagers(TXLVideoPlayer videoPlayer)
+        {
+            List<VideoManager> list = new List<VideoManager>();
+            if (!videoPlayer)
+                return list;
+
+            VideoManager[] managers = Object.FindObjectsOfType<VideoManager>();
+            foreach (VideoManager manager in managers)
+            {
+                if (manager.videoPlayer == videoPlayer)
+                    list.Add(manager);
+            }
+
+            return list;
+        }
+
+        public static List<AudioManager> GetAudioManagers(TXLVideoPlayer videoPlayer)
+        {
+            List<AudioManager> list = new List<AudioManager>();
+            if (!videoPlayer)
+                return list;
+
+            AudioManager[] managers = Object.FindObjectsOfType<AudioManager>();
+            foreach (AudioManager manager in managers)
+            {
+                if (manager.videoPlayer == videoPlayer)
+                    list.Add(manager);
+            }
+
+            return list;
         }
 
         public static List<VideoSource> GetVideoSources(VideoManager videoMux, int videoType)

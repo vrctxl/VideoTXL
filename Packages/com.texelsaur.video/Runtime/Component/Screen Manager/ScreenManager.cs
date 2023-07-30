@@ -191,6 +191,18 @@ namespace Texel
 
         protected override void _Init()
         {
+            _DebugEvent("Init");
+
+            if (!videoPlayer)
+            {
+                _DebugError($"Screen manager has no associated video player.");
+                videoPlayer = gameObject.transform.parent.GetComponentInParent<TXLVideoPlayer>();
+                if (videoPlayer)
+                    _DebugLog($"Found video player on parent: {videoPlayer.gameObject.name}");
+                else
+                    _DebugError("Could not find parent video player.  Video playback will not work.", true);
+            }
+
             block = new MaterialPropertyBlock();
 
             replacementMaterials = new Material[SCREEN_INDEX_COUNT];
@@ -222,6 +234,11 @@ namespace Texel
             _InitTextureOverrides();
 #endif
 
+            SendCustomEventDelayedFrames(nameof(_PostInit), 1);
+        }
+
+        public void _PostInit()
+        {
             if (videoPlayer)
             {
                 if (videoPlayer.videoMux)
@@ -232,6 +249,7 @@ namespace Texel
                 }
 
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
+                _OnVideoStateUpdate();
             }
         }
 
@@ -511,7 +529,7 @@ namespace Texel
 
         public void _OnVideoStateUpdate()
         {
-            DebugEvent("Event OnVideoStateUpdate");
+            _DebugEvent("Event OnVideoStateUpdate");
 
             switch (videoPlayer.playerState)
             {
@@ -536,7 +554,7 @@ namespace Texel
 
         public void _OnSourceChanged()
         {
-            DebugEvent("Event OnSourceChanged");
+            _DebugEvent("Event OnSourceChanged");
 
             captureRenderer = videoPlayer.videoMux.CaptureRenderer;
             _screenSource = videoPlayer.videoMux.ActiveSourceType;
@@ -582,7 +600,7 @@ namespace Texel
 
         public void _UpdateScreenMaterial(int screenMode)
         {
-            DebugLowLevel($"Update screen material: mode={screenMode}");
+            _DebugLowLevel($"Update screen material: mode={screenMode}");
             if (_screenMode == screenMode && _screenFit == videoPlayer.screenFit)
                 return;
 
@@ -620,7 +638,7 @@ namespace Texel
                 _QueueUpdateCheckFrames(1);
             else
             {
-                DebugLog("Capture valid");
+                _DebugLog("Capture valid");
                 _UpdateHandlers(EVENT_CAPTURE_VALID);
                 _QueueUpdateCheckIfNoPending(2);
             }
@@ -660,7 +678,7 @@ namespace Texel
             Texture captureTex = CaptureValid();
             bool prevValid = currentValid;
             currentValid = Utilities.IsValid(captureTex);
-            DebugLowLevel($"Check Update Screen Material: valid={currentValid}");
+            _DebugLowLevel($"Check Update Screen Material: valid={currentValid}");
 
             int screenIndex = _CalculateScreenIndex(currentValid);
 
@@ -683,7 +701,7 @@ namespace Texel
             {
                 if (!prevValid)
                 {
-                    DebugLog("Capture valid");
+                    _DebugLog("Capture valid");
                     _UpdateHandlers(EVENT_CAPTURE_VALID);
                 }
                 _QueueUpdateCheckIfNoPending(2);
@@ -882,7 +900,7 @@ namespace Texel
         {
             if (!Utilities.IsValid(captureRenderer))
             {
-                DebugLowLevel("No valid capture renderer");
+                _DebugLowLevel("No valid capture renderer");
                 return null;
             }
 
@@ -899,7 +917,7 @@ namespace Texel
                     return null;
 
                 if (!currentValid)
-                    DebugLog($"Resolution {tex.width} x {tex.height}");
+                    _DebugLog($"Resolution {tex.width} x {tex.height}");
                 return tex;
             }
 
@@ -913,16 +931,16 @@ namespace Texel
                     return null;
 
                 if (!currentValid)
-                    DebugLog($"Resolution {tex.width} x {tex.height}");
+                    _DebugLog($"Resolution {tex.width} x {tex.height}");
                 return tex;
             }
 
-            DebugLowLevel("No valid screen source selected");
+            _DebugLowLevel("No valid screen source selected");
 
             return null;
         }
 
-        void DebugLog(string message)
+        void _DebugLog(string message)
         {
             if (vrcLogging)
                 Debug.Log("[VideoTXL:ScreenManager] " + message);
@@ -930,16 +948,24 @@ namespace Texel
                 debugLog._Write("ScreenManager", message);
         }
 
-        void DebugEvent(string message)
+        void _DebugError(string message, bool force = false)
         {
-            if (eventLogging)
-                DebugLog(message);
+            if (vrcLogging || force)
+                Debug.LogError("[VideoTXL:ScreenManager] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write("ScreenManager", message);
         }
 
-        void DebugLowLevel(string message)
+        void _DebugEvent(string message)
+        {
+            if (eventLogging)
+                _DebugLog(message);
+        }
+
+        void _DebugLowLevel(string message)
         {
             if (lowLevelLogging)
-                DebugLog(message);
+                _DebugLog(message);
         }
     }
 }

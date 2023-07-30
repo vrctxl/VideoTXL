@@ -40,6 +40,7 @@ namespace Texel
         public DebugLog debugLog;
         public DebugState debugState;
         public bool eventLogging = false;
+        
 
         float retryTimeout = 6;
         //float loadWaitTime = 2;
@@ -128,12 +129,6 @@ namespace Texel
             base._Init();
             DebugEvent("Init");
 
-            if (!videoMux)
-            {
-                DebugError("No video manager set, aborting video player setup");
-                return;
-            }
-
             if (IsQuest)
                 DebugLog("Detected Quest platform");
             else if (Utilities.IsValid(Networking.LocalPlayer))
@@ -154,20 +149,6 @@ namespace Texel
             }
             else
                 _inSustainZone = true;
-
-            videoMux._Register(VideoManager.VIDEO_READY_EVENT, this, "_OnVideoReady");
-            videoMux._Register(VideoManager.VIDEO_START_EVENT, this, "_OnVideoStart");
-            videoMux._Register(VideoManager.VIDEO_END_EVENT, this, "_OnVideoEnd");
-            videoMux._Register(VideoManager.VIDEO_ERROR_EVENT, this, "_OnVideoError");
-            videoMux._Register(VideoManager.SOURCE_CHANGE_EVENT, this, "_OnSourceChange");
-
-            videoMux._UpdateLowLatency(VideoSource.LOW_LATENCY_ENABLE);
-
-            _UpdateVideoSourceOverride(defaultVideoSource);
-            _UpdateVideoManagerSourceNoResync(videoMux.ActiveSourceType);
-
-            if (audioManager)
-                audioManager._Register(AudioManager.EVENT_CHANNEL_GROUP_CHANGED, this, "_OnAudioProfileChanged");
 
             if (Utilities.IsValid(urlRemapper))
                 urlRemapper._SetPlatform(IsQuest ? GamePlatform.Quest : GamePlatform.PC);
@@ -192,6 +173,23 @@ namespace Texel
                 RequestSerialization();
             }
 
+            if (autoInternalAVSync)
+                SendCustomEventDelayedSeconds("_AVSyncStart", 1);
+
+            if (!Networking.IsOwner(gameObject))
+                SendCustomEventDelayedSeconds(nameof(_InitCheck), 5);
+
+            SendCustomEventDelayedFrames(nameof(_PostInit), 1);
+        }
+
+        public void _PostInit()
+        {
+            if (!videoMux)
+            {
+                DebugError("No video manager set at time of post init, skipping default playback");
+                return;
+            }
+
             if (Networking.IsOwner(gameObject))
             {
                 if (_IsUrlValid(defaultUrl))
@@ -199,12 +197,6 @@ namespace Texel
                 else if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
                     SendCustomEventDelayedFrames("_PlayPlaylistUrl", 3);
             }
-
-            if (autoInternalAVSync)
-                SendCustomEventDelayedSeconds("_AVSyncStart", 1);
-
-            if (!Networking.IsOwner(gameObject))
-                SendCustomEventDelayedSeconds("_InitCheck", 5);
         }
 
         public void _InitCheck()
@@ -214,6 +206,42 @@ namespace Texel
                 DebugLog("Deserialize not received in reasonable time");
                 SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.Owner, "RequestOwnerSync");
             }
+        }
+
+        public override void _SetVideoManager(VideoManager manager)
+        {
+            if (videoMux)
+            {
+                DebugLog("VideoManager already set");
+                return;
+            }
+
+            base._SetVideoManager(manager);
+
+            videoMux._Register(VideoManager.VIDEO_READY_EVENT, this, "_OnVideoReady");
+            videoMux._Register(VideoManager.VIDEO_START_EVENT, this, "_OnVideoStart");
+            videoMux._Register(VideoManager.VIDEO_END_EVENT, this, "_OnVideoEnd");
+            videoMux._Register(VideoManager.VIDEO_ERROR_EVENT, this, "_OnVideoError");
+            videoMux._Register(VideoManager.SOURCE_CHANGE_EVENT, this, "_OnSourceChange");
+
+            videoMux._UpdateLowLatency(VideoSource.LOW_LATENCY_ENABLE);
+
+            _UpdateVideoSourceOverride(defaultVideoSource);
+            _UpdateVideoManagerSourceNoResync(videoMux.ActiveSourceType);
+        }
+
+        public override void _SetAudioManager(AudioManager manager)
+        {
+            if (audioManager)
+            {
+                DebugLog("AudioManager already set");
+                return;
+            }
+
+            base._SetAudioManager(manager);
+
+            if (audioManager)
+                audioManager._Register(AudioManager.EVENT_CHANNEL_GROUP_CHANGED, this, "_OnAudioProfileChanged");
         }
 
         public bool HoldVideos
