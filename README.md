@@ -15,25 +15,25 @@ To download and install VideoTXL, add the following VPM repoistory to your creat
 To add the repository:
 
 * Click the repository link to open it in your browser. 
-* Press the first "Add to VCC" button to add the repo to your creator companion.
+* Press the first **Add to VCC** button to add the repo to your creator companion.
 
 Or to add manually:
 
 * Open the Packages tab on the Settings page of the creator companion.
-* Press the "Add Repository" button in the upper-right corner.
+* Press the **Add Repository** button in the upper-right corner.
 * Paste in the repo URL: https://vrctxl.github.io/VPM/index.json
 
 ### Add the package to your project
 
-* Add the "TXL - VideoTXL" package to your project from the packages list.
-* The "TXL - CommonTXL" package will also be brought in automatically as a dependency.
+* Add the **TXL - VideoTXL** package to your project from the packages list.
+* The **TXL - CommonTXL** package will also be brought in automatically as a dependency.
 * Consider adding any of the other TXL packages for things like stage microphones, advanced access control, etc.
 
 ## Upgrading from pre-VPM releases
 
 To upgrade from the **VideoTXL 2.0 betas**, you can import the VPM packages directly into an existing project.  The related
 assets in Assets/Texel will be automatically removed.  If you're on an early beta, it would be a good idea to upgrade to
-beta 9 first, reaching the release notes of each beta along the way for a few important changes the happaned along the way.
+beta 9 first, reading the release notes of each beta along the way for a few important changes the happaned.
 
 To upgrade from the **VideoTXL 1.4.x** release or earlier, there is no direct upgrade path.  You should fully remove the
 Assets/Texel folder, and recreate your video player setup.  It would be a good idea to check the project wiki for up to
@@ -48,16 +48,16 @@ old 1.4.x prefab.
 There are other video player prefabs located in `Packages/TXL - VideoTXL/Runtime/Prefabs/Other Video Players`.  These include:
 
 * Basic Sync Video Player
-** An ultra-stripped down AVPro video player with just two scripts.  This is essentially the same prefab as the AudioLinkMiniPlayer, distributed with AudioLink.
+  * An ultra-stripped down AVPro video player with just two scripts.  This is essentially the same prefab as the AudioLinkMiniPlayer, distributed with AudioLink.
 * Local Video Player AVPro
-** A fully local (not network synced) video player based on AVPro.  Supports many of the same components as the main sync video player, and can be controlled by external scripting.
-** A good choice for events that need to run a single streaming URL and want to minimize points of failure.
+  * A fully local (not network synced) video player based on AVPro.  Supports many of the same components as the main sync video player, and can be controlled by external scripting.
+  * A good choice for events that need to run a single streaming URL and want to minimize points of failure.
 * Local Video Player Unity
-** A fully local (not network synced) video player based on Unity Video.  Supports many of the same components as the main sync video player, and can be controlled by external scripting.
-** A good choice for locally triggered video playback, like exhibit pieces that play an MP4 or YouTube video when you approach or interact with them.
+  * A fully local (not network synced) video player based on Unity Video.  Supports many of the same components as the main sync video player, and can be controlled by external scripting.
+  * A good choice for locally triggered video playback, like exhibit pieces that play an MP4 or YouTube video when you approach or interact with them.
 * Sync Video Player Full
-** A variant of the Sync Video Player that supports more video source configurations (different resolutions) and audio profiles.
-** See customizing below for more information.
+  * A variant of the Sync Video Player that supports more video source configurations (different resolutions) and audio profiles.
+  * See customizing below for more information.
 
 In some cases, it may be necessary to select the video player object in the scene and press the **Update Connected Components** button
 in the inspector window.  This synchronized the audio profiles with the video sources and updates UI components that can't be controlled
