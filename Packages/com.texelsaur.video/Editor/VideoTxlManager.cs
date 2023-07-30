@@ -9,14 +9,12 @@ namespace Texel
     public class VideoTxlManager
     {
         [MenuItem("Tools/TXL/VideoTXL/Add \"Sync Video Player\" Prefab to Scene", false)]
-        [MenuItem("GameObject/TXL/VideoTXL", false, 49)]
         [MenuItem("GameObject/TXL/VideoTXL/Sync Video Player", false, 100)]
         public static void AddSyncPlayerToScene()
         {
             AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Sync Video Player.prefab");
         }
 
-        [MenuItem("GameObject/TXL/VideoTXL/Other Video Players", false, 200)]
         [MenuItem("GameObject/TXL/VideoTXL/Other Video Players/Basic Sync Video Player", false, 201)]
         public static void AddBasicSyncPlayerToScene()
         {
@@ -41,7 +39,6 @@ namespace Texel
             AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Sync Video Player Full.prefab");
         }
 
-        [MenuItem("GameObject/TXL/VideoTXL/UI", false, 210)]
         [MenuItem("GameObject/TXL/VideoTXL/UI/Sync Video Player Controls", false, 211)]
         public static void AddSyncPlayerControlsToScene()
         {

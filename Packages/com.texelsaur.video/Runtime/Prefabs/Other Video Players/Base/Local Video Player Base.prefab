@@ -93,6 +93,7 @@ MonoBehaviour:
   latchUntilLeave: 1
   latchUntilEnter: 1
   forceColliderCheck: 0
+  recalcCollidersOnStart: 0
   debugLog: {fileID: 0}
   vrcLog: 0
 --- !u!114 &2506418338176126901
@@ -228,7 +229,7 @@ GameObject:
   - component: {fileID: 8127334496668070371}
   - component: {fileID: 8038340037974609701}
   m_Layer: 0
-  m_Name: LocalPlayer Base
+  m_Name: Local Video Player Base
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -279,6 +280,7 @@ MonoBehaviour:
   videoMux: {fileID: 6599504381875534907}
   audioManager: {fileID: 463483733139237712}
   prefabInitialized: 1
+  runBuildHooks: 1
   urlRemapper: {fileID: 0}
   debugLog: {fileID: 0}
   playbackZone: {fileID: 5713258465459525213}
@@ -433,13 +435,23 @@ PrefabInstance:
         type: 3}
       propertyPath: videoPlayer
       value: 
-      objectReference: {fileID: 8127334496668070371}
+      objectReference: {fileID: 0}
     - target: {fileID: 1841769248869241684, guid: 36dc07e2ba219cb4095af6fa11c115f7,
         type: 3}
       propertyPath: serializationData.Prefab
       value: 
       objectReference: {fileID: 1841769248869241684, guid: 36dc07e2ba219cb4095af6fa11c115f7,
         type: 3}
+    - target: {fileID: 1841769248869241684, guid: 36dc07e2ba219cb4095af6fa11c115f7,
+        type: 3}
+      propertyPath: muteSourceForInactiveVideo
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3594371719317068777, guid: 36dc07e2ba219cb4095af6fa11c115f7,
+        type: 3}
+      propertyPath: serializedPublicVariablesBytesString
+      value: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABgEAAAAAAAAAAi8CAAAAAUkAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAUwB5AHMAdABlAG0ALgBJAG4AdAAzADIALAAgAG0AcwBjAG8AcgBsAGkAYgBdAF0ALAAgAFYAUgBDAC4AVQBkAG8AbgAuAEMAbwBtAG0AbwBuAAIAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAAR8AAABfAF8AXwBVAGQAbwBuAFMAaABhAHIAcABCAGUAaABhAHYAaQBvAHUAcgBWAGUAcgBzAGkAbwBuAF8AXwBfACcBBAAAAHQAeQBwAGUAARYAAABTAHkAcwB0AGUAbQAuAEkAbgB0ADMAMgAsACAAbQBzAGMAbwByAGwAaQBiABcBBQAAAFYAYQBsAHUAZQACAAAABwUHBQcF
+      objectReference: {fileID: 0}
     - target: {fileID: 5837753691170007834, guid: 36dc07e2ba219cb4095af6fa11c115f7,
         type: 3}
       propertyPath: m_RootOrder
