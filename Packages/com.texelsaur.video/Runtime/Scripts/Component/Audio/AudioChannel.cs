@@ -15,6 +15,8 @@ namespace Texel
         FOUR,
         FIVE,
         SIX,
+        SEVEN,
+        EIGHT,
     }
 
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]

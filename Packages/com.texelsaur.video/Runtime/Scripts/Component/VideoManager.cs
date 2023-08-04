@@ -84,6 +84,17 @@ namespace Texel
                     _DebugError("Could not find parent video player.  Video playback will not work.", true);
             }
 
+            sources = new VideoSource[transform.childCount];
+            for (int i = 0; i < sources.Length; i++)
+            {
+                GameObject obj = transform.GetChild(i).gameObject;
+                if (!obj.activeSelf)
+                    continue;
+
+                sources[i] = obj.GetComponent<VideoSource>();
+            }
+
+            sources = (VideoSource[])UtilityTxl.ArrayCompact(sources);
             if (sources == null)
                 sources = new VideoSource[0];
 

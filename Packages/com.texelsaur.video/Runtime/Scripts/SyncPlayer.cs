@@ -159,7 +159,10 @@ namespace Texel
             //    playlist._Register(Playlist.EVENT_LIST_CHANGE, this, "_OnPlaylistListChange");
 
             if (urlSource)
+            {
                 urlSource._SetVideoPlayer(this);
+                urlSource._Register(Playlist.EVENT_TRACK_CHANGE, this, nameof(_PlayPlaylistUrl));
+            }
 
             if (Networking.IsOwner(gameObject))
             {

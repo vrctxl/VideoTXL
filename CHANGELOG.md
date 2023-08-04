@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.1] - 07-30-23
+## [2.1.0] - 08-04-23
 
 - Added default-on option to sync video player to run build hooks
 - Moved sync video player sync options under an "Advanced" sub-section.
@@ -10,6 +10,9 @@
 - Added menu items to GameObject menu to add different VideoTXL objects to scene
 - Added repair prefab instance tool to fix some classes of problems
 - Added URL Remapper prefab
+- Added support for audio channels 7 and 8 to AVPro template
+- Fixed playlist UI from 2.0.0 release
+- Added playlist load button prefab
 
 ## [2.0.0] - 07-29-23
 

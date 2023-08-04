@@ -122,12 +122,12 @@ namespace Texel
                     videoPlayer.accessControl._Register(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateAccess));
             }
 
-            /*if (Utilities.IsValid(playlistPanel))
+            if (Utilities.IsValid(playlistPanel))
             {
                 PlaylistUI pui = (PlaylistUI)playlistPanel.GetComponent(typeof(UdonBehaviour));
                 if (Utilities.IsValid(pui))
-                    pui._InitFromPlaylist(videoPlayer.);
-            }*/
+                    pui._InitFromPlaylist((Playlist)videoPlayer.urlSource);
+            }
 
 #if !UNITY_EDITOR
             instanceMaster = Networking.GetOwner(gameObject).displayName;
@@ -465,12 +465,7 @@ namespace Texel
             if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.urlSource))
                 return;
 
-            if (videoPlayer.urlSource._MoveNext())
-            {
-                //if (videoPlayer.playlist.holdOnReady)
-                //    videoPlayer._HoldNextVideo();
-                videoPlayer._ChangeUrlQuestFallback(videoPlayer.urlSource._GetCurrentUrl(), videoPlayer.urlSource._GetCurrentQuestUrl());
-            }
+            videoPlayer.urlSource._MoveNext();
         }
 
         public void _HandlePlaylistPrev()
@@ -478,12 +473,7 @@ namespace Texel
             if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.urlSource))
                 return;
 
-            if (videoPlayer.urlSource._MovePrev())
-            {
-                //if (videoPlayer.playlist.holdOnReady)
-                //    videoPlayer._HoldNextVideo();
-                videoPlayer._ChangeUrlQuestFallback(videoPlayer.urlSource._GetCurrentUrl(), videoPlayer.urlSource._GetCurrentQuestUrl());
-            }
+            videoPlayer.urlSource._MovePrev();
         }
 
         public void _SetStatusOverride(string msg, float timeout)

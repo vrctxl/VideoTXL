@@ -291,8 +291,6 @@ namespace Texel
                         ConditionalCopyConstraint<ScaleConstraint>(group.unityChannel.gameObject, unityAudioSource.gameObject);
                         ConditionalCopyConstraint<PositionConstraint>(group.unityChannel.gameObject, unityAudioSource.gameObject);
                         ConditionalCopyConstraint<RotationConstraint>(group.unityChannel.gameObject, unityAudioSource.gameObject);
-
-                        Debug.Log(unityAudioSource.GetComponent<PositionConstraint>());
                     }
 
                     audioGroup.channelAudio[0] = unityAudioSource;
@@ -415,6 +413,8 @@ namespace Texel
                             case AudioChannelTrack.FOUR: templateName = "Four"; break;
                             case AudioChannelTrack.FIVE: templateName = "Five"; break;
                             case AudioChannelTrack.SIX: templateName = "Six"; break;
+                            case AudioChannelTrack.SEVEN: templateName = "Seven"; break;
+                            case AudioChannelTrack.EIGHT: templateName = "Eight"; break;
                         }
 
                         if (templateName == null)
@@ -666,19 +666,32 @@ namespace Texel
             return list;
         }
 
-        public static List<VideoSource> GetVideoSources(VideoManager videoMux, int videoType)
+        public static List<VideoSource> GetVideoSources(VideoManager manager, int videoType)
         {
-            List<VideoSource> list = new List<VideoSource>();
-            if (!videoMux)
-                return list;
+            if (!manager)
+                return new List<VideoSource>();
 
-            foreach (VideoSource source in videoMux.sources)
+            List<VideoSource> sources = new List<VideoSource>();
+            int nodeCount = manager.transform.childCount;
+            for (int i = 0; i < nodeCount; i++)
+            {
+                GameObject obj = manager.transform.GetChild(i).gameObject;
+                if (!obj.activeSelf)
+                    continue;
+
+                VideoSource source = obj.GetComponent<VideoSource>();
+                if (source)
+                    sources.Add(source);
+            }
+
+            List<VideoSource> list = new List<VideoSource>();
+            foreach (VideoSource source in sources)
             {
                 if (!source)
                     continue;
 
                 int type = GetVideoType(source);
-                if (type == videoType)
+                if (videoType == -1 || type == videoType)
                     list.Add(source);
             }
 
