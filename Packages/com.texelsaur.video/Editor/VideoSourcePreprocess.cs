@@ -19,14 +19,21 @@ namespace Texel
         {
             GameObject[] objects = scene.GetRootGameObjects();
             foreach (GameObject obj in objects)
-                ProcessHierarchy(obj.transform, report);
+                ProcessHierarchy(obj.transform);
         }
 
-        private void ProcessHierarchy(Transform root, BuildReport report)
+        public static void ProcessHierarchy(Transform root)
         {
             VideoSource[] sources = root.GetComponentsInChildren<VideoSource>(true);
             foreach (var source in sources)
+            {
+                if (!source.videoMux || !source.videoMux.videoPlayer)
+                    return;
+                if (!source.videoMux.videoPlayer.runBuildHooks)
+                    return;
+
                 CheckAndUpdateSource(source);
+            }
         }
 
         public static void CheckAndUpdateSource(VideoSource source)

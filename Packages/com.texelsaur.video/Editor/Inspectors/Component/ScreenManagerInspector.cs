@@ -3,6 +3,7 @@ using UnityEngine;
 
 using UnityEditor;
 using UdonSharpEditor;
+using VRC.Udon;
 
 namespace Texel
 {
@@ -73,6 +74,8 @@ namespace Texel
         SerializedProperty outputCRTProperty;
         SerializedProperty outputMaterialPropertiesProperty;
 
+        SerializedProperty _udonSharpBackingUdonBehaviourProperty;
+
         static bool expandDebug = false;
 
         private void OnEnable()
@@ -126,6 +129,8 @@ namespace Texel
             useRenderOutProperty = serializedObject.FindProperty(nameof(ScreenManager.useRenderOut));
             outputCRTProperty = serializedObject.FindProperty(nameof(ScreenManager.outputCRT));
             outputMaterialPropertiesProperty = serializedObject.FindProperty(nameof(ScreenManager.outputMaterialProperties));
+
+            _udonSharpBackingUdonBehaviourProperty = serializedObject.FindProperty("_udonSharpBackingUdonBehaviour");
 
             // CRT texture
             UpdateEditorState();
@@ -492,7 +497,7 @@ namespace Texel
         {
             MaterialPropertyBlock block = new MaterialPropertyBlock();
 
-            SyncPlayer videoPlayer = (SyncPlayer)videoPlayerProperty.objectReferenceValue;
+            TXLVideoPlayer videoPlayer = (TXLVideoPlayer)videoPlayerProperty.objectReferenceValue;
             Texture2D logoTex = (Texture2D)editorTextureProperty.objectReferenceValue;
             if (logoTex == null)
                 logoTex = (Texture2D)logoTextureProperty.objectReferenceValue;
@@ -527,7 +532,7 @@ namespace Texel
                 if (map.invertY != "")
                     block.SetInt(map.invertY, 0);
                 if (map.screenFit != "" && videoPlayer)
-                    block.SetInt(map.screenFit, (int)videoPlayer.defaultScreenFit);
+                    block.SetInt(map.screenFit, videoPlayer.screenFit);
 
                 bool overrideAspectRatio = overrideAspectRatioProperty.boolValue;
                 float aspectRatio = aspectRatioProperty.floatValue;

@@ -4,6 +4,7 @@ using UnityEditor;
 using UdonSharpEditor;
 using UnityEditor.Experimental.SceneManagement;
 using System.Collections.Generic;
+using System;
 
 namespace Texel
 {
@@ -23,6 +24,7 @@ namespace Texel
         SerializedProperty debugStageProperty;
         SerializedProperty eventLoggingProperty;
         SerializedProperty playbackZoneProperty;
+        SerializedProperty runBuildHooksProperty;
 
         SerializedProperty defaultUrlProperty;
         SerializedProperty defaultLockedProperty;
@@ -39,7 +41,12 @@ namespace Texel
         SerializedProperty defaultVideoModeProperty;
         SerializedProperty defaultScreenFitProperty;
 
-        bool expandDebug = false;
+        static bool expandDebug = false;
+        static bool expandAdvanced = false;
+
+        DateTime lastValidate;
+        List<VideoManager> cachedVideoManagers;
+        List<AudioManager> cachedAudioManagers;
 
         private void OnEnable()
         {
@@ -56,6 +63,7 @@ namespace Texel
             debugStageProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugState));
             eventLoggingProperty = serializedObject.FindProperty(nameof(SyncPlayer.eventLogging));
             playbackZoneProperty = serializedObject.FindProperty(nameof(SyncPlayer.playbackZoneMembership));
+            runBuildHooksProperty = serializedObject.FindProperty(nameof(SyncPlayer.runBuildHooks));
 
             defaultUrlProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultUrl));
             defaultLockedProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultLocked));
@@ -96,33 +104,41 @@ namespace Texel
 
             TXLVideoPlayer videoPlayer = (TXLVideoPlayer)serializedObject.targetObject;
 
-            CheckIntegrity();
-            //if (CheckIntegrity())
-            //    EditorGUILayout.HelpBox("Creating a prefab variant of your finished video player setup is highly recommended to be able to revert any prefab instance corruption in the future.", MessageType.Info);
-
-            List<VideoSource> unitySources = VideoComponentUpdater.GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_UNITY);
-            List<VideoSource> avproSources = VideoComponentUpdater.GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_AVPRO);
-            if (unitySources.Count == 0 && avproSources.Count == 0)
+            TimeSpan time = DateTime.Now.Subtract(lastValidate);
+            if (time.TotalMilliseconds > 1000)
             {
-                EditorGUILayout.HelpBox("No video sources are defined.  Video playback will not work until at least one video source is added.  Check documentation for information on adding new video sources, or use another version of the video player prefab that includes sources.", MessageType.Warning);
-                if (GUILayout.Button("Video Manager Documentation"))
-                    Application.OpenURL("https://github.com/jaquadro/VideoTXL/wiki/Configuration:-Video-Manager");
+                lastValidate = DateTime.Now;
+                CheckManagers(videoPlayer);
             }
 
-            List<AudioChannelGroup> groups = VideoComponentUpdater.GetValidAudioGroups(videoPlayer.audioManager);
-            if (groups.Count == 0)
+            CheckIntegrity();
+
+            if (cachedVideoManagers != null && cachedVideoManagers.Count > 0)
             {
-                EditorGUILayout.HelpBox("No audio channel groups are defined.  There will be no audio during video playback.  Check documentation for information on adding new audio groups, or use another version of the video player prefab that includes audio groups.", MessageType.Warning);
-                if (GUILayout.Button("Audio Manager Documentation"))
-                    Application.OpenURL("https://github.com/jaquadro/VideoTXL/wiki/Configuration:-Audio-Manager");
+                List<VideoSource> unitySources = VideoComponentUpdater.GetVideoSources(cachedVideoManagers[0], VideoSource.VIDEO_SOURCE_UNITY);
+                List<VideoSource> avproSources = VideoComponentUpdater.GetVideoSources(cachedVideoManagers[0], VideoSource.VIDEO_SOURCE_AVPRO);
+
+                if (unitySources.Count == 0 && avproSources.Count == 0)
+                {
+                    EditorGUILayout.HelpBox("No video sources are defined.  Video playback will not work until at least one video source is added.  Check documentation for information on adding new video sources, or use another version of the video player prefab that includes sources.", MessageType.Warning);
+                    if (GUILayout.Button("Video Manager Documentation"))
+                        Application.OpenURL("https://github.com/jaquadro/VideoTXL/wiki/Configuration:-Video-Manager");
+                }
+            }
+
+            if (cachedAudioManagers != null && cachedAudioManagers.Count > 0)
+            {
+                List<AudioChannelGroup> groups = VideoComponentUpdater.GetValidAudioGroups(cachedAudioManagers[0]);
+                if (groups.Count == 0)
+                {
+                    EditorGUILayout.HelpBox("No audio channel groups are defined.  There will be no audio during video playback.  Check documentation for information on adding new audio groups, or use another version of the video player prefab that includes audio groups.", MessageType.Warning);
+                    if (GUILayout.Button("Audio Manager Documentation"))
+                        Application.OpenURL("https://github.com/jaquadro/VideoTXL/wiki/Configuration:-Audio-Manager");
+                }
             }
 
             EditorGUI.BeginChangeCheck();
 
-            EditorGUILayout.PropertyField(videoMuxProperty, new GUIContent("Video Source Manager", "Internal object for multiplexing multiple video sources."));
-            EditorGUILayout.PropertyField(audioManagerProperty, new GUIContent("Audio Source Manager", "Internal object for managing multiple audio source sets against video sources."));
-
-            EditorGUILayout.Space();
             EditorGUILayout.LabelField("Optional Components", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(urlSourceProperty, new GUIContent("URL Sources", "Pre-populated playlist to iterate through.  If default URL is set, the playlist will be disabled by default, otherwise it will auto-play."));
             //EditorGUILayout.PropertyField(playlistPoperty, new GUIContent("Playlist", "Pre-populated playlist to iterate through.  If default URL is set, the playlist will be disabled by default, otherwise it will auto-play."));
@@ -141,12 +157,6 @@ namespace Texel
             EditorGUILayout.PropertyField(holdLoadedVideosProperty, new GUIContent("Hold Loaded Videos", "Preload videos, but do not start playing them until prompted by an external signal."));
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Sync Options", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(syncFrequencyProperty, new GUIContent("Sync Frequency", "How often to check if video playback has fallen out of sync."));
-            EditorGUILayout.PropertyField(syncThresholdProperty, new GUIContent("Sync Threshold", "How far video playback must have fallen out of sync to perform a correction."));
-            EditorGUILayout.PropertyField(autoAVSyncProperty, new GUIContent("Auto Internal AV Sync", "Experimental.  Video playback will periodically resync audio and video.  May cause stuttering or temporary playback failure."));
-
-            EditorGUILayout.Space();
             EditorGUILayout.LabelField("Video Sources", EditorStyles.boldLabel);
 
             EditorGUILayout.Space();
@@ -158,6 +168,18 @@ namespace Texel
             EditorGUILayout.LabelField("Update", EditorStyles.boldLabel);
             if (GUILayout.Button("Update Connected Components"))
                 VideoComponentUpdater.UpdateComponents((TXLVideoPlayer)serializedObject.targetObject);
+
+            EditorGUILayout.Space();
+            expandAdvanced = EditorGUILayout.Foldout(expandAdvanced, "Advanced Options", true, boldFoldoutStyle);
+            if (expandAdvanced)
+            {
+                EditorGUILayout.PropertyField(runBuildHooksProperty, new GUIContent("Run Build Hooks", "Checks video player object hierarchy and fixes any component that's internally out of sync at build time."));
+
+                EditorGUILayout.Space();
+                EditorGUILayout.PropertyField(syncFrequencyProperty, new GUIContent("Sync Frequency", "How often to check if video playback has fallen out of sync."));
+                EditorGUILayout.PropertyField(syncThresholdProperty, new GUIContent("Sync Threshold", "How far video playback must have fallen out of sync to perform a correction."));
+                EditorGUILayout.PropertyField(autoAVSyncProperty, new GUIContent("Auto Internal AV Sync", "Experimental.  Video playback will periodically resync audio and video.  May cause stuttering or temporary playback failure."));
+            }
 
             EditorGUILayout.Space();
             expandDebug = EditorGUILayout.Foldout(expandDebug, "Debug Options", true, boldFoldoutStyle);
@@ -173,12 +195,28 @@ namespace Texel
                 serializedObject.ApplyModifiedProperties();
         }
 
+        void CheckManagers(TXLVideoPlayer videoPlayer)
+        {
+            cachedVideoManagers = VideoComponentUpdater.GetVideoManagers(videoPlayer);
+            cachedAudioManagers = VideoComponentUpdater.GetAudioManagers(videoPlayer);
+        }
+
         bool CheckIntegrity()
         {
-            if (videoMuxProperty.objectReferenceInstanceIDValue == 0 || audioManagerProperty.objectReferenceInstanceIDValue == 0)
+            if (cachedVideoManagers != null)
             {
-                EditorGUILayout.HelpBox("Internal manager objects not set.  This prefab instance may have lost data.  Check each manager object for missing references or reverted settings.", MessageType.Error);
-                return false;
+                if (cachedVideoManagers.Count == 0)
+                    EditorGUILayout.HelpBox("No video managers found that reference this video player.  The video manager is usually a child object of the video player.", MessageType.Error);
+                else if (cachedVideoManagers.Count > 1)
+                    EditorGUILayout.HelpBox("More than one video manager found that references this video player.  Only one manager will get used at runtime.", MessageType.Warning);
+            }
+
+            if (cachedAudioManagers != null)
+            {
+                if (cachedAudioManagers.Count == 0)
+                    EditorGUILayout.HelpBox("No audio managers found that reference this video player.  The audio manager is usually a child object of the video player.", MessageType.Error);
+                else if (cachedAudioManagers.Count > 1)
+                    EditorGUILayout.HelpBox("More than one audio manager found that references this video player.  Only one manager will get used at runtime.", MessageType.Warning);
             }
 
             return true;

@@ -36,13 +36,13 @@ namespace Texel
         public const int SCREEN_FIT_WIDTH = 2;
         public const int SCREEN_STRETCH = 3;
 
-        [Header("Internal Objects")]
-        [Tooltip("Manager for multiplexing video sources")]
         public VideoManager videoMux;
         public AudioManager audioManager;
 
         [HideInInspector]
         public bool prefabInitialized = true;
+
+        public bool runBuildHooks = true;
 
         [NonSerialized]
         public short playerSource;
@@ -126,6 +126,16 @@ namespace Texel
         public virtual bool _TakeControl()
         {
             return false;
+        }
+
+        public virtual void _SetVideoManager(VideoManager manager)
+        {
+            videoMux = manager;
+        }
+
+        public virtual void _SetAudioManager(AudioManager manager)
+        {
+            audioManager = manager;
         }
     }
 }

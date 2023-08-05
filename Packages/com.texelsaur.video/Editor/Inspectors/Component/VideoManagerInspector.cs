@@ -44,6 +44,7 @@ namespace Texel
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
 
+            VideoManager videoManager = (VideoManager)serializedObject.targetObject;
             TXLVideoPlayer videoPlayer = (TXLVideoPlayer)videoPlayerProperty.objectReferenceValue;
 
             TimeSpan time = DateTime.Now.Subtract(lastValidate);
@@ -60,12 +61,29 @@ namespace Texel
             EditorGUILayout.PropertyField(videoPlayerProperty, new GUIContent("Video Player", "The video player that this manager serves."));
 
             EditorGUILayout.Space();
-            EditorGUILayout.PropertyField(sourcesProperty, new GUIContent("Sources", "The list of available video sources."));
+            EditorGUILayout.LabelField("Video Sources", EditorStyles.boldLabel);
 
-            List<VideoSource> unitySources = VideoComponentUpdater.GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_UNITY);
-            List<VideoSource> avproSources = VideoComponentUpdater.GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_AVPRO);
-            if (unitySources.Count == 0 && avproSources.Count == 0)
+            List<VideoSource> sources = VideoComponentUpdater.GetVideoSources((VideoManager)serializedObject.targetObject, -1);
+            if (sources.Count == 0)
                 EditorGUILayout.HelpBox("No video sources are defined.  Video playback will not work until at least one video source is added.  Check documentation linked above for information on adding new video sources, or use another version of the video player prefab that includes sources.", MessageType.Warning);
+            else
+            {
+                EditorGUILayout.LabelField(new GUIContent("Detected Video Sources", "Add or remove video source prefabs under the Video Manager node in the hierarchy.  Video sources can be temporarily removed by disabling them in the hierarchy.  After making any changes, run Update Audio Components."));
+                EditorGUI.indentLevel++;
+
+                foreach (VideoSource source in sources)
+                    EditorGUILayout.LabelField("• " + source.name);
+
+                EditorGUI.indentLevel--;
+            }
+
+            //EditorGUILayout.Space();
+            //EditorGUILayout.PropertyField(sourcesProperty, new GUIContent("Sources", "The list of available video sources."));
+
+            //List<VideoSource> unitySources = VideoComponentUpdater.GetVideoSources(videoManager, VideoSource.VIDEO_SOURCE_UNITY);
+            //List<VideoSource> avproSources = VideoComponentUpdater.GetVideoSources(videoManager, VideoSource.VIDEO_SOURCE_AVPRO);
+            //if (unitySources.Count == 0 && avproSources.Count == 0)
+            //    EditorGUILayout.HelpBox("No video sources are defined.  Video playback will not work until at least one video source is added.  Check documentation linked above for information on adding new video sources, or use another version of the video player prefab that includes sources.", MessageType.Warning);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Audio", EditorStyles.boldLabel);

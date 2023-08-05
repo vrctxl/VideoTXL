@@ -31,10 +31,21 @@ namespace Texel
 
         public static void UpdateVideoUI(TXLVideoPlayer videoPlayer)
         {
-            AudioChannelGroup[] groups = GetAudioGroups(videoPlayer.audioManager);
-            List<int> resolutions = GetResolutions(videoPlayer.videoMux);
-            List<int> latencies = GetLatencies(videoPlayer.videoMux);
-            List<int> videoModes = GetVideoTypes(videoPlayer.videoMux);
+            AudioChannelGroup[] groups = new AudioChannelGroup[0];
+            List<AudioManager> managers = GetAudioManagers(videoPlayer);
+            if (managers.Count > 0)
+                groups = GetAudioGroups(managers[0]);
+
+            List<int> resolutions = new List<int>();
+            List<int> latencies = new List<int>();
+            List<int> videoModes = new List<int>();
+            List<VideoManager> videoManagers = GetVideoManagers(videoPlayer);
+            if (videoManagers.Count > 0)
+            {
+                resolutions = GetResolutions(videoManagers[0]);
+                latencies = GetLatencies(videoManagers[0]);
+                videoModes = GetVideoTypes(videoManagers[0]);
+            }
 
             OptionsUI[] list = GameObject.FindObjectsOfType<OptionsUI>();
             Debug.Log($"Res count: {resolutions.Count}, latencies count: {latencies.Count}, modes count: {videoModes.Count}");
@@ -95,7 +106,13 @@ namespace Texel
 
         public static void UpdateAudioUI(TXLVideoPlayer videoPlayer)
         {
-            AudioChannelGroup[] groups = GetAudioGroups(videoPlayer.audioManager);
+            if (!videoPlayer)
+                return;
+
+            AudioChannelGroup[] groups = new AudioChannelGroup[0];
+            List<AudioManager> managers = GetAudioManagers(videoPlayer);
+            if (managers.Count > 0)
+                groups = GetAudioGroups(managers[0]);
 
             OptionsUI[] list = GameObject.FindObjectsOfType<OptionsUI>();
             foreach (var item in list)
@@ -145,6 +162,9 @@ namespace Texel
 
         public static void UpdateAudioComponents(TXLVideoPlayer videoPlayer)
         {
+            if (!videoPlayer)
+                return;
+
             Undo.RecordObject(videoPlayer.gameObject, "Update Audio Setup");
 
             UpdateUnityAudioSources(videoPlayer);
@@ -162,7 +182,13 @@ namespace Texel
 
         public static bool ValidateUnityAudioSources(TXLVideoPlayer videoPlayer)
         {
-            AudioChannelGroup[] groups = GetAudioGroups(videoPlayer.audioManager);
+            if (!videoPlayer)
+                return false;
+
+            AudioChannelGroup[] groups = new AudioChannelGroup[0];
+            List<AudioManager> managers = GetAudioManagers(videoPlayer);
+            if (managers.Count > 0)
+                groups = GetAudioGroups(managers[0]);
 
             List<AudioChannelGroup> validGroups = new List<AudioChannelGroup>();
             foreach (AudioChannelGroup group in groups)
@@ -172,7 +198,10 @@ namespace Texel
             }
 
             // Enumerate video sources
-            List<VideoSource> unitySources = GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_UNITY);
+            List<VideoSource> unitySources = new List<VideoSource>();
+            List<VideoManager> videoManagers = GetVideoManagers(videoPlayer);
+            if (videoManagers.Count > 0)
+                unitySources = GetVideoSources(videoManagers[0], VideoSource.VIDEO_SOURCE_UNITY);
 
             bool valid = true;
             foreach (VideoSource source in unitySources)
@@ -201,10 +230,17 @@ namespace Texel
 
         static void UpdateUnityAudioSources(TXLVideoPlayer videoPlayer)
         {
-            AudioChannelGroup[] groups = GetAudioGroups(videoPlayer.audioManager);
+            AudioChannelGroup[] groups = new AudioChannelGroup[0];
+            List<VideoSource> unitySources = new List<VideoSource>();
+
+            List<AudioManager> managers = GetAudioManagers(videoPlayer);
+            if (managers.Count > 0)
+                groups = GetAudioGroups(managers[0]);
 
             // Enumerate video sources
-            List<VideoSource> unitySources = GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_UNITY);
+            List<VideoManager> videoManagers = GetVideoManagers(videoPlayer);
+            if (videoManagers.Count > 0)
+                unitySources = GetVideoSources(videoManagers[0], VideoSource.VIDEO_SOURCE_UNITY);
 
             // Unity audios sources must be copied as settings
             foreach (VideoSource source in unitySources)
@@ -258,8 +294,6 @@ namespace Texel
                         ConditionalCopyConstraint<ScaleConstraint>(group.unityChannel.gameObject, unityAudioSource.gameObject);
                         ConditionalCopyConstraint<PositionConstraint>(group.unityChannel.gameObject, unityAudioSource.gameObject);
                         ConditionalCopyConstraint<RotationConstraint>(group.unityChannel.gameObject, unityAudioSource.gameObject);
-
-                        Debug.Log(unityAudioSource.GetComponent<PositionConstraint>());
                     }
 
                     audioGroup.channelAudio[0] = unityAudioSource;
@@ -272,7 +306,10 @@ namespace Texel
 
         public static bool ValidateAVProAudioSources(TXLVideoPlayer videoPlayer)
         {
-            AudioChannelGroup[] groups = GetAudioGroups(videoPlayer.audioManager);
+            AudioChannelGroup[] groups = new AudioChannelGroup[0];
+            List<AudioManager> managers = GetAudioManagers(videoPlayer);
+            if (managers.Count > 0)
+                groups = GetAudioGroups(managers[0]);
 
             List<AudioChannelGroup> validGroups = new List<AudioChannelGroup>();
             foreach (AudioChannelGroup group in groups)
@@ -282,10 +319,13 @@ namespace Texel
             }
 
             // Enumerate video sources
-            List<VideoSource> sources = GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_AVPRO);
+            List<VideoSource> avproSources = new List<VideoSource>();
+            List<VideoManager> videoManagers = GetVideoManagers(videoPlayer);
+            if (videoManagers.Count > 0)
+                avproSources = GetVideoSources(videoManagers[0], VideoSource.VIDEO_SOURCE_AVPRO);
 
             bool valid = true;
-            foreach (VideoSource source in sources)
+            foreach (VideoSource source in avproSources)
             {
                 List<Transform> audioResources = new List<Transform>();
 
@@ -311,10 +351,17 @@ namespace Texel
 
         static void UpdateAVProAudioSources(TXLVideoPlayer videoPlayer)
         {
-            AudioChannelGroup[] groups = GetAudioGroups(videoPlayer.audioManager);
+            AudioChannelGroup[] groups = new AudioChannelGroup[0];
+            List<VideoSource> avproSources = new List<VideoSource>();
+
+            List<AudioManager> managers = GetAudioManagers(videoPlayer);
+            if (managers.Count > 0)
+                groups = GetAudioGroups(managers[0]);
 
             // Enumerate video sources
-            List<VideoSource> avproSources = GetVideoSources(videoPlayer.videoMux, VideoSource.VIDEO_SOURCE_AVPRO);
+            List<VideoManager> videoManagers = GetVideoManagers(videoPlayer);
+            if (videoManagers.Count > 0)
+                avproSources = GetVideoSources(videoManagers[0], VideoSource.VIDEO_SOURCE_AVPRO);
             
             foreach (VideoSource source in avproSources)
             {
@@ -369,6 +416,8 @@ namespace Texel
                             case AudioChannelTrack.FOUR: templateName = "Four"; break;
                             case AudioChannelTrack.FIVE: templateName = "Five"; break;
                             case AudioChannelTrack.SIX: templateName = "Six"; break;
+                            case AudioChannelTrack.SEVEN: templateName = "Seven"; break;
+                            case AudioChannelTrack.EIGHT: templateName = "Eight"; break;
                         }
 
                         if (templateName == null)
@@ -521,7 +570,8 @@ namespace Texel
             if (!mux)
                 return resolutions;
 
-            foreach (VideoSource source in mux.sources)
+            List<VideoSource> sources = GetVideoSources(mux, -1);
+            foreach (VideoSource source in sources)
             {
                 if (!source)
                     continue;
@@ -538,7 +588,8 @@ namespace Texel
             if (!mux)
                 return latencies;
 
-            foreach (VideoSource source in mux.sources)
+            List<VideoSource> sources = GetVideoSources(mux, -1);
+            foreach (VideoSource source in sources)
             {
                 if (!source)
                     continue;
@@ -561,7 +612,8 @@ namespace Texel
             if (!mux)
                 return types;
 
-            foreach (VideoSource source in mux.sources)
+            List<VideoSource> sources = GetVideoSources(mux, -1);
+            foreach (VideoSource source in sources)
             {
                 if (!source)
                     continue;
@@ -588,19 +640,64 @@ namespace Texel
             return value;
         }
 
-        public static List<VideoSource> GetVideoSources(VideoManager videoMux, int videoType)
+        public static List<VideoManager> GetVideoManagers(TXLVideoPlayer videoPlayer)
         {
-            List<VideoSource> list = new List<VideoSource>();
-            if (!videoMux)
+            List<VideoManager> list = new List<VideoManager>();
+            if (!videoPlayer)
                 return list;
 
-            foreach (VideoSource source in videoMux.sources)
+            VideoManager[] managers = Object.FindObjectsOfType<VideoManager>();
+            foreach (VideoManager manager in managers)
+            {
+                if (manager.videoPlayer == videoPlayer)
+                    list.Add(manager);
+            }
+
+            return list;
+        }
+
+        public static List<AudioManager> GetAudioManagers(TXLVideoPlayer videoPlayer)
+        {
+            List<AudioManager> list = new List<AudioManager>();
+            if (!videoPlayer)
+                return list;
+
+            AudioManager[] managers = Object.FindObjectsOfType<AudioManager>();
+            foreach (AudioManager manager in managers)
+            {
+                if (manager.videoPlayer == videoPlayer)
+                    list.Add(manager);
+            }
+
+            return list;
+        }
+
+        public static List<VideoSource> GetVideoSources(VideoManager manager, int videoType)
+        {
+            if (!manager)
+                return new List<VideoSource>();
+
+            List<VideoSource> sources = new List<VideoSource>();
+            int nodeCount = manager.transform.childCount;
+            for (int i = 0; i < nodeCount; i++)
+            {
+                GameObject obj = manager.transform.GetChild(i).gameObject;
+                if (!obj.activeSelf)
+                    continue;
+
+                VideoSource source = obj.GetComponent<VideoSource>();
+                if (source)
+                    sources.Add(source);
+            }
+
+            List<VideoSource> list = new List<VideoSource>();
+            foreach (VideoSource source in sources)
             {
                 if (!source)
                     continue;
 
                 int type = GetVideoType(source);
-                if (type == videoType)
+                if (videoType == -1 || type == videoType)
                     list.Add(source);
             }
 
