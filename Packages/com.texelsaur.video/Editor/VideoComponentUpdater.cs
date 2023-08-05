@@ -109,7 +109,10 @@ namespace Texel
             if (!videoPlayer)
                 return;
 
-            AudioChannelGroup[] groups = GetAudioGroups(videoPlayer.audioManager);
+            AudioChannelGroup[] groups = new AudioChannelGroup[0];
+            List<AudioManager> managers = GetAudioManagers(videoPlayer);
+            if (managers.Count > 0)
+                groups = GetAudioGroups(managers[0]);
 
             OptionsUI[] list = GameObject.FindObjectsOfType<OptionsUI>();
             foreach (var item in list)
@@ -567,7 +570,8 @@ namespace Texel
             if (!mux)
                 return resolutions;
 
-            foreach (VideoSource source in mux.sources)
+            List<VideoSource> sources = GetVideoSources(mux, -1);
+            foreach (VideoSource source in sources)
             {
                 if (!source)
                     continue;
@@ -584,7 +588,8 @@ namespace Texel
             if (!mux)
                 return latencies;
 
-            foreach (VideoSource source in mux.sources)
+            List<VideoSource> sources = GetVideoSources(mux, -1);
+            foreach (VideoSource source in sources)
             {
                 if (!source)
                     continue;
@@ -607,7 +612,8 @@ namespace Texel
             if (!mux)
                 return types;
 
-            foreach (VideoSource source in mux.sources)
+            List<VideoSource> sources = GetVideoSources(mux, -1);
+            foreach (VideoSource source in sources)
             {
                 if (!source)
                     continue;
