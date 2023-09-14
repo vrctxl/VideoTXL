@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.1.1] - 09-14-23
+
+- Fixed local video player not picking up error event from video manager
+
 ## [2.1.0] - 08-04-23
 
 - Added default-on option to sync video player to run build hooks
