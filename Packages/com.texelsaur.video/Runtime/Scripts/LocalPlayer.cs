@@ -350,12 +350,13 @@ namespace Texel
             // TODO: Loop for AVPro
         }
 
-        public void _OnVideoError(VideoError videoError)
+        public void _OnVideoError()
         {
             if (playerState == VIDEO_STATE_STOPPED)
                 return;
 
             videoMux._VideoStop();
+            VideoError videoError = videoMux.LastError;
 
             string code = "";
             switch (videoError)
