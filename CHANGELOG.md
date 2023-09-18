@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.1.2] - 09-18-23
+
+- Fixed currently active playlist entry not being selectable, even if video is stopped
+
 ## [2.1.1] - 09-14-23
 
 - Fixed local video player not picking up error event from video manager
