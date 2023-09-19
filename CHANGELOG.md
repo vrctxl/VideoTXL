@@ -4,6 +4,7 @@
 
 - Fixed currently active playlist entry not being selectable, even if video is stopped
 - Fixed playlist UI not honoring video player lock
+- Fixed audio fade zone not setting volume at start if lower bound set to 0
 
 ## [2.1.1] - 09-14-23
 
