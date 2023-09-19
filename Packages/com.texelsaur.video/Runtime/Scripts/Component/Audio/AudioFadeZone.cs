@@ -51,6 +51,8 @@ namespace Texel
         int triggerCount = 0;
         float zoneFadeScale;
 
+        bool fadeInit = false;
+
         public const int EVENT_FADE_UPDATE = 0;
         public const int EVENT_COUNT = 1;
 
@@ -220,8 +222,10 @@ namespace Texel
                 }
             }
 
-            if (lastFade != zoneFadeScale)
+            if (lastFade != zoneFadeScale || !fadeInit)
                 _UpdateFade();
+
+            fadeInit = true;
         }
 
         Vector3 _NearestPoint(Vector3 start, Vector3 end, Vector3 point)

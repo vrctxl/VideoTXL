@@ -275,7 +275,7 @@ namespace Texel
 
         void _SetVideoAudioGroupState(VideoSourceAudioGroup group, bool enabled)
         {
-            if (!group)
+            if (!group || !selectedVideoSource)
                 return;
 
             // Unity

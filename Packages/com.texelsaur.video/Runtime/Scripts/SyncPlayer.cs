@@ -1127,6 +1127,18 @@ namespace Texel
             }
         }
 
+        public override bool SupportsOwnership
+        {
+            get { return true; }
+            protected set { }
+        }
+
+        public override bool SupportsLock
+        {
+            get { return true; }
+            protected set { }
+        }
+
         public bool _IsAdmin()
         {
             if (_hasAccessControl)

@@ -3,6 +3,7 @@ using System;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.Udon.Common;
 
 namespace Texel
 {
@@ -34,8 +35,10 @@ namespace Texel
 
         [UdonSynced, FieldChangeCallback("PlaylistEnabled")]
         bool syncEnabled;
-        [UdonSynced, FieldChangeCallback("CurrentIndex")]
+        [UdonSynced]
         short syncCurrentIndex = -1;
+        [UdonSynced]
+        short syncCurrentIndexSerial = 0;
         [UdonSynced]
         byte[] syncTrackerOrder;
         [UdonSynced, FieldChangeCallback("ShuffleEnabled")]
@@ -44,6 +47,8 @@ namespace Texel
         int syncCatalogueIndex = -1;
         [UdonSynced, FieldChangeCallback("AutoAdvance")]
         bool syncAutoAdvance = true;
+
+        short prevCurrentIndexSerial = 0;
 
         [NonSerialized]
         public int trackCount;
@@ -207,6 +212,7 @@ namespace Texel
             }
 
             CurrentIndex = (short)((AutoAdvance && !trackCatalogMode) ? 0 : -1);
+            CurrentIndexSerial += 1;
 
             syncTrackerOrder = new byte[playlist.Length];
             if (syncShuffle)
@@ -248,13 +254,19 @@ namespace Texel
         public short CurrentIndex
         {
             get { return syncCurrentIndex; }
+            protected set
+            {
+                syncCurrentIndex = value;
+            }
+        }
+
+        protected short CurrentIndexSerial
+        {
+            get { return syncCurrentIndexSerial; }
             set
             {
-                if (syncCurrentIndex != value)
-                {
-                    syncCurrentIndex = value;
-                    _UpdateHandlers(EVENT_TRACK_CHANGE);
-                }
+                syncCurrentIndexSerial = value;
+                _UpdateHandlers(EVENT_TRACK_CHANGE);
             }
         }
 
@@ -324,6 +336,8 @@ namespace Texel
             else
                 DebugLog($"Playlist completed");
 
+            CurrentIndexSerial += 1;
+
             return CurrentIndex >= 0;
         }
 
@@ -343,6 +357,8 @@ namespace Texel
                 DebugLog($"Move previous track {CurrentIndex}");
             else
                 DebugLog($"Playlist reset");
+
+            CurrentIndexSerial += 1;
 
             RequestSerialization();
 
@@ -365,6 +381,7 @@ namespace Texel
 
             syncEnabled = true;
             CurrentIndex = (short)index;
+            CurrentIndexSerial += 1;
 
             if (CurrentIndex >= 0)
                 DebugLog($"Move track to {CurrentIndex}");
@@ -495,6 +512,17 @@ namespace Texel
                 return videoPlayer.repeatPlaylist;
 
             return false;
+        }
+
+        public override void OnDeserialization(DeserializationResult result)
+        {
+            base.OnDeserialization(result);
+
+            if (syncCurrentIndexSerial != prevCurrentIndexSerial)
+            {
+                prevCurrentIndexSerial = syncCurrentIndexSerial;
+                CurrentIndexSerial = syncCurrentIndexSerial;
+            }
         }
 
         void DebugLog(string message)

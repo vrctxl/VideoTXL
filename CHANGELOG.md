@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.2] - 09-18-23
+
+- Fixed currently active playlist entry not being selectable, even if video is stopped
+- Fixed playlist UI not honoring video player lock
+- Fixed audio fade zone not setting volume at start if lower bound set to 0
+
 ## [2.1.1] - 09-14-23
 
 - Fixed local video player not picking up error event from video manager
