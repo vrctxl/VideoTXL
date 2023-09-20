@@ -23,6 +23,8 @@ namespace Texel
         public bool autoAdvance = true;
         [Tooltip("Treat tracks as independent, unlinked entities.  Disables normal playlist controls.")]
         public bool trackCatalogMode = false;
+        [Tooltip("When loading new playlist, immediately start playing first track even if another track is currently playing.")]
+        public bool immediate = false;
 
         [Tooltip("Optional catalog to sync load playlist data from")]
         public PlaylistCatalog playlistCatalog;
@@ -212,7 +214,15 @@ namespace Texel
             }
 
             CurrentIndex = (short)((AutoAdvance && !trackCatalogMode) ? 0 : -1);
-            CurrentIndexSerial += 1;
+            if (immediate)
+                CurrentIndexSerial += 1;
+            else
+            {
+                if (videoPlayer && videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_PLAYING)
+                    CurrentIndex = -1;
+                else
+                    CurrentIndexSerial += 1;
+            }
 
             syncTrackerOrder = new byte[playlist.Length];
             if (syncShuffle)

@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.3] - 09-20-23
+
+- Fixed audio fade zone init race that could cause volume to not take effect on start
+- Added immediate option to playlist to control interrupting existing track when loading new list
+
 ## [2.1.2] - 09-18-23
 
 - Fixed currently active playlist entry not being selectable, even if video is stopped
