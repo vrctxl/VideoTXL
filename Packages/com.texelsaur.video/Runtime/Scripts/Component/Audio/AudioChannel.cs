@@ -230,7 +230,6 @@ namespace Texel
         public void _OnFadeUpdate()
         {
             fade = fadeZone.Fade;
-
             _UpdateAudioSource();
         }
 

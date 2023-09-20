@@ -177,7 +177,10 @@ namespace Texel
             if (active != state) {
                 active = state;
                 if (active)
+                {
+                    _UpdateFade();
                     _InitInterpolateZoneFadeLoop();
+                }
             }
         }
 

@@ -292,11 +292,6 @@ namespace Texel
             }
             EditorGUILayout.Space();
 
-            Debug.Log(urlInputProperty.prefabOverride);
-            Debug.Log(urlInputProperty.type);
-            Debug.Log(urlInputProperty.objectReferenceValue);
-            Debug.Log(urlInputProperty.objectReferenceInstanceIDValue);
-
             if (serializedObject.hasModifiedProperties)
             {
                 CheckRepairUrlInput();
