@@ -40,7 +40,7 @@ namespace Texel
         public DebugLog debugLog;
         public DebugState debugState;
         public bool eventLogging = false;
-        
+        public bool traceLogging = false;
 
         float retryTimeout = 6;
         //float loadWaitTime = 2;
@@ -161,7 +161,7 @@ namespace Texel
             if (urlSource)
             {
                 urlSource._SetVideoPlayer(this);
-                urlSource._Register(Playlist.EVENT_TRACK_CHANGE, this, nameof(_PlayPlaylistUrl));
+                urlSource._Register(Playlist.EVENT_TRACK_CHANGE, this, nameof(_OnTrackChange));
             }
 
             if (Networking.IsOwner(gameObject))
@@ -345,7 +345,7 @@ namespace Texel
 
         public override void _ValidateVideoSources()
         {
-            DebugLog("Validate Video Sources");
+            DebugTrace("Validate Video Sources");
 
             if (Networking.IsOwner(gameObject))
             {
@@ -356,7 +356,7 @@ namespace Texel
 
         public void _TriggerPlay()
         {
-            DebugLog("Trigger play");
+            DebugTrace("Trigger Play");
             if (playerState == VIDEO_STATE_PLAYING || playerState == VIDEO_STATE_LOADING)
                 return;
 
@@ -365,24 +365,20 @@ namespace Texel
 
         public void _TriggerStop()
         {
-            DebugLog("Trigger stop");
-            if (_syncLocked && !_CanTakeControl())
+            DebugTrace("Trigger Stop");
+            if (!_TakeControl())
                 return;
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             _StopVideo();
         }
 
         public void _TriggerPause()
         {
-            DebugLog("Trigger pause");
-            if (_syncLocked && !_CanTakeControl())
-                return;
+            DebugTrace("Trigger Pause");
             if (!seekableSource || playerState != VIDEO_STATE_PLAYING)
                 return;
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+            if (!_TakeControl())
+                return;
 
             _syncOwnerPaused = !_syncOwnerPaused;
 
@@ -404,15 +400,15 @@ namespace Texel
 
         public void _TriggerLock()
         {
+            DebugTrace("Trigger Lock");
             _SetLock(!_syncLocked);
         }
 
         public void _SetLock(bool state)
         {
-            if (!_IsAdmin())
+            DebugTrace("Set Lock");
+            if (!_IsAdmin() || !_TakeControl())
                 return;
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             _syncLocked = state;
             _UpdateLockState(_syncLocked);
@@ -421,11 +417,9 @@ namespace Texel
 
         public void _TriggerRepeatMode()
         {
-            DebugLog("Trigger repeat mode");
-            if (_syncLocked && !_CanTakeControl())
+            DebugTrace("Trigger Repeat Mode");
+            if (!_TakeControl())
                 return;
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             _syncRepeatPlaylist = !_syncRepeatPlaylist;
             _UpdateRepeatMode(_syncRepeatPlaylist);
@@ -434,7 +428,8 @@ namespace Texel
 
         public override void _SetSourceMode(int mode)
         {
-            if (_syncLocked && !_CanTakeControl())
+            DebugTrace("Set Source Mode");
+            if (!_TakeControl())
                 return;
 
             _UpdateVideoSourceOverride(mode);
@@ -446,17 +441,20 @@ namespace Texel
 
         public override void _SetSourceLatency(int latency)
         {
+            DebugTrace("Set Source latency");
             videoMux._UpdateLowLatency(latency);
         }
 
         public override void _SetSourceResolution(int res)
         {
+            DebugTrace("Set Source Resolution");
             videoMux._UpdatePreferredResolution(res);
         }
 
         public override void _SetScreenFit(TXLScreenFit fit)
         {
-            if (_syncLocked && !_CanTakeControl())
+            DebugTrace("Set Screen Fit");
+            if (!_TakeControl())
                 return;
 
             _syncScreenFit = (byte)fit;
@@ -467,12 +465,14 @@ namespace Texel
 
         public override void _Resync()
         {
+            DebugTrace("Resync");
             _ForceResync();
         }
 
         public override void _ChangeUrl(VRCUrl url)
         {
-            if (_syncLocked && !_CanTakeControl())
+            DebugTrace("Change Url");
+            if (!_TakeControl())
                 return;
 
             _syncQueuedUrl = VRCUrl.Empty;
@@ -481,7 +481,8 @@ namespace Texel
 
         public void _ChangeUrlQuestFallback(VRCUrl url, VRCUrl questUrl)
         {
-            if (_syncLocked && !_CanTakeControl())
+            DebugTrace("Change Url Quest Fallback");
+            if (!_TakeControl())
                 return;
 
             _syncQueuedUrl = VRCUrl.Empty;
@@ -490,7 +491,8 @@ namespace Texel
 
         public void _SetHoldMode(bool holdState)
         {
-            if (_syncLocked && !_TakeControl())
+            DebugTrace("Set Hold Mode");
+            if (!_TakeControl())
                 return;
 
             HoldVideos = holdState;
@@ -499,6 +501,7 @@ namespace Texel
 
         public void _ReleaseHold()
         {
+            DebugTrace("Release Hold");
             if (_syncLocked && !_TakeControl())
                 return;
 
@@ -514,21 +517,22 @@ namespace Texel
 
         public void _CancelHold()
         {
+            DebugTrace("Cancel Hold");
             _StopVideo();
         }
 
         public void _SkipNextAdvance()
         {
+            DebugTrace("Skip Next Advance");
             if (Networking.IsOwner(gameObject))
                 _skipAdvanceNextTrack = true;
         }
 
         public void _UpdateQueuedUrl(VRCUrl url)
         {
-            if (_syncLocked && !_CanTakeControl())
+            DebugTrace("Update Queued Url");
+            if (!_TakeControl())
                 return;
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             _syncQueuedUrl = url;
             _UpdateQueuedUrlData();
@@ -536,16 +540,13 @@ namespace Texel
 
         public void _SetTargetTime(float time)
         {
-            DebugLog($"Set target time: {time:N3}");
-            if (_syncLocked && !_CanTakeControl())
-                return;
+            DebugTrace($"Set target time: {time:N3}");
             if (playerState != VIDEO_STATE_PLAYING)
                 return;
             if (!seekableSource)
                 return;
-
-            if (!Networking.IsOwner(gameObject))
-                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+            if (!_TakeControl())
+                return;
 
             // Allowing AVPro to set time directly to end of track appears to trigger deadlock sometimes
             float duration = videoMux.VideoDuration;
@@ -655,6 +656,7 @@ namespace Texel
 
         public void _LoopVideo()
         {
+            DebugTrace("Loop Video");
             _overrideLock = true;
             _skipAdvanceNextTrack = false;
 
@@ -665,6 +667,7 @@ namespace Texel
 
         public void _PlayQueuedUrl()
         {
+            DebugTrace("Play Queued Url");
             _overrideLock = true;
             _skipAdvanceNextTrack = false;
 
@@ -675,8 +678,15 @@ namespace Texel
             _overrideLock = false;
         }
 
+        public void _OnTrackChange()
+        {
+            DebugEvent("Event OnTrackChange");
+            _PlayPlaylistUrl();
+        }
+
         public void _PlayPlaylistUrl()
         {
+            DebugTrace("Play Playlist Url");
             _overrideLock = true;
             _skipAdvanceNextTrack = false;
             _syncQueuedUrl = VRCUrl.Empty;
@@ -1167,6 +1177,7 @@ namespace Texel
 
         public override bool _TakeControl()
         {
+            DebugTrace("Take Control");
             if (!_CanTakeControl())
                 return false;
 
@@ -1542,6 +1553,12 @@ namespace Texel
         void DebugEvent(string message)
         {
             if (eventLogging)
+                DebugLog(message);
+        }
+
+        void DebugTrace(string message)
+        {
+            if (traceLogging)
                 DebugLog(message);
         }
 
