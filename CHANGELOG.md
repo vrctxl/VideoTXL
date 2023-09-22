@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.4] - 09-22-23
+
+- Add trace logging option to SyncPlayer for future debugging support
+- Removed UdonSharp dependency
+
 ## [2.1.3] - 09-20-23
 
 - Fixed audio fade zone init race that could cause volume to not take effect on start

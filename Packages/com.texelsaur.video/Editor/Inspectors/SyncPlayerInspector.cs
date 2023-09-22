@@ -23,6 +23,7 @@ namespace Texel
         SerializedProperty debugLogProperty;
         SerializedProperty debugStageProperty;
         SerializedProperty eventLoggingProperty;
+        SerializedProperty traceLoggingProperty;
         SerializedProperty playbackZoneProperty;
         SerializedProperty runBuildHooksProperty;
 
@@ -62,6 +63,7 @@ namespace Texel
             debugLogProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugLog));
             debugStageProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugState));
             eventLoggingProperty = serializedObject.FindProperty(nameof(SyncPlayer.eventLogging));
+            traceLoggingProperty = serializedObject.FindProperty(nameof(SyncPlayer.traceLogging));
             playbackZoneProperty = serializedObject.FindProperty(nameof(SyncPlayer.playbackZoneMembership));
             runBuildHooksProperty = serializedObject.FindProperty(nameof(SyncPlayer.runBuildHooks));
 
@@ -188,6 +190,7 @@ namespace Texel
                 EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
                 EditorGUILayout.PropertyField(debugStageProperty, new GUIContent("Debug State", "Log debug statements to a world object"));
                 EditorGUILayout.PropertyField(eventLoggingProperty, new GUIContent("Include Events", "Include additional event traffic in debug log"));
+                EditorGUILayout.PropertyField(traceLoggingProperty, new GUIContent("Include Trace", "Include significantly more function call statements in debug log"));
                 EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
             }
 
