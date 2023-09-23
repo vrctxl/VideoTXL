@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.1.6] - 09-23-23
+
+- Fixed USharp upgrade / prefab data loss when first selecting the PlayerControls object on prefab
+
 ## [2.1.5] - 09-23-23
 
 - Fixed regression from 2.1.3 causing video restart when using playlist with immediate off and player joins world
