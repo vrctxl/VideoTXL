@@ -681,7 +681,8 @@ namespace Texel
         public void _OnTrackChange()
         {
             DebugEvent("Event OnTrackChange");
-            _PlayPlaylistUrl();
+            if (Networking.IsOwner(gameObject))
+                _PlayPlaylistUrl();
         }
 
         public void _PlayPlaylistUrl()
@@ -946,7 +947,12 @@ namespace Texel
             bool loadedTrack = false;
             if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
             {
-                if (urlSource.AutoAdvance)
+                string currentUrl = _syncUrl != null ? _syncUrl.Get() : "";
+                string playlistUrl = urlSource._GetCurrentUrl() != null ? urlSource._GetCurrentUrl().Get() : "";
+                bool currentTrackFromList = currentUrl == playlistUrl;
+                bool canAdvance = ((Playlist)urlSource).resumeAfterLoad || currentTrackFromList;
+
+                if (urlSource.AutoAdvance && canAdvance)
                 {
                     if (_skipAdvanceNextTrack || urlSource._MoveNext())
                     {
