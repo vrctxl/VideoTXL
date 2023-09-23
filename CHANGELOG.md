@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.5] - 09-23-23
+
+- Fixed regression from 2.1.3 causing video restart when using playlist with immediate off and player joins world
+- Fixed shuffled playlists not syncing correctly across users
+
 ## [2.1.4] - 09-22-23
 
 - Add trace logging option to SyncPlayer for future debugging support

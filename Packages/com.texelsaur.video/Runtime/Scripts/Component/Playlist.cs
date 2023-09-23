@@ -42,15 +42,23 @@ namespace Texel
         [UdonSynced]
         short syncCurrentIndexSerial = 0;
         [UdonSynced]
+        short syncPlaylistSerial = 0;
+        [UdonSynced]
         byte[] syncTrackerOrder;
         [UdonSynced, FieldChangeCallback("ShuffleEnabled")]
         bool syncShuffle;
+        [UdonSynced]
+        short syncShuffleSerial = 0;
         [UdonSynced, FieldChangeCallback("CatalogueIndex")]
         int syncCatalogueIndex = -1;
         [UdonSynced, FieldChangeCallback("AutoAdvance")]
         bool syncAutoAdvance = true;
 
         short prevCurrentIndexSerial = 0;
+        short prevPlaylistSerial = 0;
+        short prevShuffleSerial = 0;
+
+        bool _initDeserialize = false;
 
         [NonSerialized]
         public int trackCount;
@@ -74,11 +82,58 @@ namespace Texel
 
             DebugLog("Common initialization");
 
-            syncShuffle = shuffle;
-            syncAutoAdvance = autoAdvance;
-
             _LoadDataLow(playlistData);
 
+            if (Networking.IsOwner(gameObject))
+            {
+                syncShuffle = shuffle;
+                syncAutoAdvance = autoAdvance;
+                RequestSerialization();
+            } else
+                SendCustomEventDelayedSeconds(nameof(_InitCheck), 5);
+        }
+
+        public void _MasterInit()
+        {
+            _EnsureInit();
+
+            DebugLog("Master initialization");
+
+            if (videoPlayer && videoPlayer.SupportsOwnership)
+            {
+                if (!Networking.IsOwner(videoPlayer.gameObject))
+                    return;
+
+                if (!Networking.IsOwner(gameObject))
+                    Networking.SetOwner(Networking.LocalPlayer, gameObject);
+            }
+            else if (!Networking.IsOwner(gameObject))
+                return;
+
+            syncEnabled = true;
+
+            _PostLoadShuffle();
+            syncShuffleSerial += 1;
+
+            _UpdateHandlers(EVENT_LIST_CHANGE);
+
+            _PostLoadTrack();
+
+            RequestSerialization();
+        }
+
+        public void _InitCheck()
+        {
+            if (!_initDeserialize)
+            {
+                DebugLog("Deserialize not received in reasonable time");
+                SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.Owner, "RequestOwnerSync");
+            }
+        }
+
+        public void RequestOwnerSync()
+        {
+            DebugLog("RequestOwnerSync");
             if (Networking.IsOwner(gameObject))
                 RequestSerialization();
         }
@@ -130,8 +185,8 @@ namespace Texel
 
         public void _LoadData(PlaylistData data)
         {
-            if (!_TakeControl())
-                return;
+            //if (!_TakeControl())
+            //    return;
 
             _LoadDataLow(data);
 
@@ -140,7 +195,7 @@ namespace Texel
             else
                 DebugLog("Loading empty playlist data");
 
-            RequestSerialization();
+            _UpdateHandlers(EVENT_LIST_CHANGE);
         }
 
         public void _LoadFromCatalogueData(PlaylistData data)
@@ -161,7 +216,17 @@ namespace Texel
                 }
             }
 
-            CatalogueIndex = index;
+            syncCatalogueIndex = index;
+            syncPlaylistSerial += 1;
+
+            _LoadSyncedCatalogIndex();
+            CurrentIndex = -1;
+
+            _PostLoadShuffle();
+            _UpdateHandlers(EVENT_LIST_CHANGE);
+
+            _PostLoadTrack();
+
             RequestSerialization();
         }
 
@@ -175,12 +240,23 @@ namespace Texel
             if (index < 0 || index >= playlistCatalog.PlaylistCount)
                 index = -1;
 
-            CatalogueIndex = index;
+            syncCatalogueIndex = index;
+            syncPlaylistSerial += 1;
+
+            _LoadSyncedCatalogIndex();
+            CurrentIndex = -1;
+
+            _PostLoadShuffle();
+            _UpdateHandlers(EVENT_LIST_CHANGE);
+
+            _PostLoadTrack();
+
             RequestSerialization();
         }
 
         void _LoadDataLow(PlaylistData data)
         {
+            DebugLog($"LoadDataLow trackcount={(data && data.playlist != null ? data.playlist.Length : 0)}");
             playlistData = data;
 
             if (!Utilities.IsValid(data) || !Utilities.IsValid(data.playlist))
@@ -212,53 +288,31 @@ namespace Texel
                 if (!Utilities.IsValid(trackNames[i]))
                     trackNames[i] = $"Track {i + 1}";
             }
+        }
 
+        void _PostLoadShuffle()
+        {
+            syncTrackerOrder = null;
+            if (syncShuffle)
+            {
+                syncTrackerOrder = new byte[playlist.Length];
+                _Shuffle();
+                syncShuffleSerial += 1;
+            }
+        }
+
+        void _PostLoadTrack()
+        {
             CurrentIndex = (short)((AutoAdvance && !trackCatalogMode) ? 0 : -1);
             if (immediate)
                 CurrentIndexSerial += 1;
             else
             {
-                if (videoPlayer && videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_PLAYING)
+                if (videoPlayer && (videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_PLAYING || videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_LOADING))
                     CurrentIndex = -1;
                 else
                     CurrentIndexSerial += 1;
             }
-
-            syncTrackerOrder = new byte[playlist.Length];
-            if (syncShuffle)
-                _Shuffle();
-            else
-            {
-                for (int i = 0; i < syncTrackerOrder.Length; i++)
-                    syncTrackerOrder[i] = (byte)i;
-            }
-
-            _UpdateHandlers(EVENT_LIST_CHANGE);
-        }
-
-        public void _MasterInit()
-        {
-            _EnsureInit();
-
-            DebugLog("Master initialization");
-
-            if (videoPlayer && videoPlayer.SupportsOwnership)
-            {
-                if (!Networking.IsOwner(videoPlayer.gameObject))
-                    return;
-
-                if (!Networking.IsOwner(gameObject))
-                    Networking.SetOwner(Networking.LocalPlayer, gameObject);
-            }
-            else if (!Networking.IsOwner(gameObject))
-                return;
-
-            syncEnabled = true;
-
-            if (syncShuffle)
-                _Shuffle();
-
-            RequestSerialization();
         }
 
         public short CurrentIndex
@@ -303,18 +357,6 @@ namespace Texel
         public int CatalogueIndex
         {
             get { return syncCatalogueIndex; }
-            set
-            {
-                syncCatalogueIndex = value;
-
-                if (!Utilities.IsValid(playlistCatalog) || value < 0 || value >= playlistCatalog.PlaylistCount)
-                {
-                    _LoadDataLow(null);
-                    return;
-                }
-
-                _LoadDataLow(playlistCatalog.playlists[value]);
-            }
         }
 
         public override bool AutoAdvance
@@ -405,47 +447,57 @@ namespace Texel
 
         public override VRCUrl _GetCurrentUrl()
         {
-            if (CurrentIndex < 0 || !syncEnabled || CurrentIndex >= syncTrackerOrder.Length)
+            int index = _TrackIndex(CurrentIndex);
+            if (CurrentIndex < 0 || !syncEnabled)
                 return VRCUrl.Empty;
 
-            int index = syncTrackerOrder[CurrentIndex];
             return playlist[index];
         }
 
         public override VRCUrl _GetCurrentQuestUrl()
         {
-            if (CurrentIndex < 0 || !syncEnabled || CurrentIndex >= syncTrackerOrder.Length)
+            int index = _TrackIndex(CurrentIndex);
+            if (index < 0 || !syncEnabled)
                 return VRCUrl.Empty;
 
-            int index = syncTrackerOrder[CurrentIndex];
             return questPlaylist[index];
         }
 
         public VRCUrl _GetTrackURL(int index)
         {
-            if (index < 0 || index >= trackCount || index >= syncTrackerOrder.Length)
+            index = _TrackIndex(index);
+            if (index < 0)
                 return VRCUrl.Empty;
 
-            index = syncTrackerOrder[index];
             return playlist[index];
         }
 
         public VRCUrl _GetTrackQuestURL(int index)
         {
-            if (index < 0 || index >= trackCount || index >= syncTrackerOrder.Length)
+            index = _TrackIndex(index);
+            if (index < 0)
                 return VRCUrl.Empty;
 
-            index = syncTrackerOrder[index];
             return questPlaylist[index];
         }
 
         public string _GetTrackName(int index)
         {
-            if (index < 0 || index >= trackCount || index >= syncTrackerOrder.Length)
+            index = _TrackIndex(index);
+            if (index < 0)
                 return "";
 
-            index = syncTrackerOrder[index];
             return trackNames[index];
+        }
+
+        int _TrackIndex(int index)
+        {
+            if (index < 0 || index >= trackCount)
+                return -1;
+            if (syncTrackerOrder == null)
+                return index;
+
+            return syncTrackerOrder[index];
         }
 
         public void _SetEnabled(bool state)
@@ -472,10 +524,18 @@ namespace Texel
 
             DebugLog($"Set shuffle mode {state}");
 
+            bool listChange = state != ShuffleEnabled;
+
             ShuffleEnabled = state;
             if (syncShuffle)
             {
                 _Shuffle();
+                listChange = true;
+            }
+
+            if (listChange)
+            {
+                syncShuffleSerial += 1;
                 _UpdateHandlers(EVENT_LIST_CHANGE);
             }
 
@@ -501,6 +561,9 @@ namespace Texel
                 temp[i] = i;
 
             Utilities.ShuffleArray(temp);
+            if (syncTrackerOrder == null || syncTrackerOrder.Length != trackCount)
+                syncTrackerOrder = new byte[trackCount];
+
             for (int i = 0; i < trackCount; i++)
                 syncTrackerOrder[i] = (byte)temp[i];
         }
@@ -524,9 +587,37 @@ namespace Texel
             return false;
         }
 
+        void _LoadSyncedCatalogIndex()
+        {
+            PlaylistData data = null;
+            if (playlistCatalog && syncCatalogueIndex >= 0 && syncCatalogueIndex < playlistCatalog.PlaylistCount)
+                data = playlistCatalog.playlists[syncCatalogueIndex];
+
+            _LoadDataLow(data);
+        }
+
         public override void OnDeserialization(DeserializationResult result)
         {
+            //DebugLog($"Deserialize playlist={syncPlaylistSerial}, shuffle={syncShuffleSerial}, currentIndex={syncCurrentIndexSerial}");
             base.OnDeserialization(result);
+
+            bool listChange = false;
+
+            if (syncPlaylistSerial != prevPlaylistSerial)
+            {
+                prevPlaylistSerial = syncPlaylistSerial;
+                _LoadSyncedCatalogIndex();
+                listChange = true;
+            }
+
+            if (syncShuffleSerial != prevShuffleSerial)
+            {
+                prevShuffleSerial = syncShuffleSerial;
+                listChange = true;
+            }
+
+            if (listChange)
+                _UpdateHandlers(EVENT_LIST_CHANGE);
 
             if (syncCurrentIndexSerial != prevCurrentIndexSerial)
             {

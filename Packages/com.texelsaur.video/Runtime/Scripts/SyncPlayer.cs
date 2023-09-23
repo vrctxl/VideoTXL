@@ -681,7 +681,8 @@ namespace Texel
         public void _OnTrackChange()
         {
             DebugEvent("Event OnTrackChange");
-            _PlayPlaylistUrl();
+            if (Networking.IsOwner(gameObject))
+                _PlayPlaylistUrl();
         }
 
         public void _PlayPlaylistUrl()
