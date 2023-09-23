@@ -333,7 +333,7 @@ namespace Texel
             bool hasMaterialUpdates = Utilities.IsValid(materialUpdateList) && materialUpdateList.Length > 0;
             bool hasPropupdates = Utilities.IsValid(propMeshList) && propMeshList.Length > 0;
 
-            if (!hasMaterialUpdates && !hasPropupdates)
+            if (!hasMaterialUpdates && !hasPropupdates && !useRenderOut)
             {
                 useTextureOverrides = false;
                 return;

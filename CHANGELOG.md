@@ -4,6 +4,7 @@
 
 - Fixed regression from 2.1.3 causing video restart when using playlist with immediate off and player joins world
 - Fixed shuffled playlists not syncing correctly across users
+- Fixed render out not working if no material overrides set in screen manager
 
 ## [2.1.4] - 09-22-23
 
