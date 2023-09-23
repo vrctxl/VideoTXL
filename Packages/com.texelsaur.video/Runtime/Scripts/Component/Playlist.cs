@@ -25,6 +25,8 @@ namespace Texel
         public bool trackCatalogMode = false;
         [Tooltip("When loading new playlist, immediately start playing first track even if another track is currently playing.")]
         public bool immediate = false;
+        [Tooltip("Resume playing from the playlist after a manually loaded URL is finished.")]
+        public bool resumeAfterLoad = false;
 
         [Tooltip("Optional catalog to sync load playlist data from")]
         public PlaylistCatalog playlistCatalog;
