@@ -317,7 +317,7 @@ namespace Texel
         void CheckRepairUrlInput()
         {
             PlayerControls self = (PlayerControls)serializedObject.targetObject;
-            UdonBehaviour behaviour = UdonSharpEditorUtility.CreateBehaviourForProxy(self);
+            UdonBehaviour behaviour = UdonSharpEditorUtility.GetBackingUdonBehaviour(self);
 
             if (urlInputProperty.objectReferenceInstanceIDValue == 0)
             {
