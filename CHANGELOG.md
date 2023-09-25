@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.7] - 09-25-23
+
+- Added warning if any texture overrides reference non-default textures in the Packages directory
+- When render out is first enabled, a new CRT and material will be copied into the Assets folder
+- Hid the Aspect Ratio override field on the txl shaders
+
 ## [2.1.6] - 09-23-23
 
 - Fixed USharp upgrade / prefab data loss when first selecting the PlayerControls object on prefab

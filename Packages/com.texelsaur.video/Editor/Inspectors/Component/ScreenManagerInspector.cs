@@ -4,6 +4,8 @@ using UnityEngine;
 using UnityEditor;
 using UdonSharpEditor;
 using VRC.Udon;
+using System;
+using System.Collections.Generic;
 
 namespace Texel
 {
@@ -15,6 +17,20 @@ namespace Texel
     [CustomEditor(typeof(ScreenManager))]
     internal class ScreenManagerInspector : Editor
     {
+        const string DEFAULT_CRT_PATH = "Packages/com.texelsaur.video/Runtime/RenderTextures/VideoTXLCRT.asset";
+        const string DEFAULT_CRT_MAT_PATH = "Packages/com.texelsaur.video/Runtime/Materials/StreamOutput.mat";
+
+        static readonly string[] PLACEHOLDER_IMAGE_PATHS = {
+            "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/Error.jpg",
+            "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ErrorBlocked.jpg",
+            "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ErrorInvalid.jpg",
+            "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ErrorRateLimited.jpg",
+            "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ScreenAudio.jpg",
+            "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ScreenBlack.jpg",
+            "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ScreenLoading.jpg",
+            "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ScreenSynchronizing.jpg",
+        };
+
         static bool _showErrorMatFoldout;
         static bool _showErrorTexFoldout;
         static bool _showScreenListFoldout;
@@ -150,8 +166,92 @@ namespace Texel
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(videoPlayerProperty);
 
+            // ---
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Texture Overrides", EditorStyles.boldLabel);
+
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(logoTextureProperty);
+            EditorGUILayout.PropertyField(loadingTextureProperty);
+            // EditorGUILayout.PropertyField(syncTextureProperty);
+            EditorGUILayout.PropertyField(audioTextureProperty);
+            EditorGUILayout.PropertyField(errorTextureProperty);
+
+            _showErrorTexFoldout = EditorGUILayout.Foldout(_showErrorTexFoldout, "Error Texture Overrides");
+            if (_showErrorTexFoldout)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(errorInvalidTextureProperty);
+                EditorGUILayout.PropertyField(errorBlockedTextureProperty);
+                EditorGUILayout.PropertyField(errorRateLimitedTextureProperty);
+                EditorGUI.indentLevel--;
+            }
+
+            EditorGUILayout.PropertyField(editorTextureProperty);
+
+            if (UsingNonDefaultPackageTexture())
+                EditorGUILayout.HelpBox("One or more textures are stored in the VideoTXL package folder, but are not shipped with the package.  They will be lost when the VideoTXL package is updated.", MessageType.Warning);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(overrideAspectRatioProperty);
+            if (overrideAspectRatioProperty.boolValue)
+                EditorGUILayout.PropertyField(aspectRatioProperty);
+
+            EditorGUI.indentLevel--;
+
+            // ---
+
+            bool prevRenderOut = useRenderOutProperty.boolValue;
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Render Texture Output", EditorStyles.boldLabel);
+
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(useRenderOutProperty);
+            if (useRenderOutProperty.boolValue)
+            {
+                EditorGUILayout.PropertyField(outputCRTProperty);
+                EditorGUILayout.PropertyField(outputMaterialPropertiesProperty);
+
+                CustomRenderTexture crt = (CustomRenderTexture)outputCRTProperty.objectReferenceValue;
+                if (!prevRenderOut && AssetDatabase.GetAssetPath(crt) == DEFAULT_CRT_PATH)
+                    outputCRTProperty.objectReferenceValue = CreateCRTCopy();
+
+                if (AssetDatabase.GetAssetPath(crt) == DEFAULT_CRT_PATH)
+                    EditorGUILayout.HelpBox("You're using the reference CRT object from the VideoTXL package folder.  Any customization made to the CRT or its material will be lost when the VideoTXL package is updated.", MessageType.Warning);
+
+                if (outputMaterialPropertiesProperty.objectReferenceValue == null)
+                {
+                    if (compatMaterialShader(crt))
+                        IndentedHelpBox("Default property map inferred from compatible material shader.", MessageType.None);
+                    else
+                        EditorGUILayout.HelpBox($"No property map set. The screen manager will not be able to update properties on the CRT material.", MessageType.Error);
+                }
+            }
+            else
+                EditorGUILayout.HelpBox("Enabling the Render Texture Output is the easiest way to supply a video texture to other shaders and materials.  For the most control and performance, use Material or Material Property Block overrides.", MessageType.Info);
+
+            EditorGUI.indentLevel--;
+
+            // ---
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Other Texture Overrides", EditorStyles.boldLabel);
+
+            EditorGUI.indentLevel++;
+            EditorGUILayout.Space();
+            MaterialFoldout();
+            EditorGUILayout.Space();
+            PropBlockFoldout();
+            EditorGUI.indentLevel--;
+
+            // ---
+
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Object Material Overrides", EditorStyles.boldLabel);
+
+            EditorGUI.indentLevel++;
             EditorGUILayout.PropertyField(useMaterialOverrideProperty);
             if (useMaterialOverrideProperty.boolValue)
             {
@@ -186,69 +286,20 @@ namespace Texel
                 ScreenFoldout();
             }
 
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Material Texture Updates and Overrides", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(useTextureOverrideProperty);
-            if (useTextureOverrideProperty.boolValue)
-            {
-                EditorGUILayout.Space();
-                EditorGUILayout.PropertyField(overrideAspectRatioProperty);
-                if (overrideAspectRatioProperty.boolValue)
-                    EditorGUILayout.PropertyField(aspectRatioProperty);
+            EditorGUI.indentLevel--;
 
-                EditorGUILayout.Space();
-                EditorGUILayout.PropertyField(logoTextureProperty);
-                EditorGUILayout.PropertyField(loadingTextureProperty);
-                // EditorGUILayout.PropertyField(syncTextureProperty);
-                EditorGUILayout.PropertyField(audioTextureProperty);
-                EditorGUILayout.PropertyField(errorTextureProperty);
-
-                _showErrorTexFoldout = EditorGUILayout.Foldout(_showErrorTexFoldout, "Error Texture Overrides");
-                if (_showErrorTexFoldout)
-                {
-                    EditorGUI.indentLevel++;
-                    EditorGUILayout.PropertyField(errorInvalidTextureProperty);
-                    EditorGUILayout.PropertyField(errorBlockedTextureProperty);
-                    EditorGUILayout.PropertyField(errorRateLimitedTextureProperty);
-                    EditorGUI.indentLevel--;
-                }
-
-                EditorGUILayout.PropertyField(editorTextureProperty);
-
-                EditorGUILayout.Space();
-                MaterialFoldout();
-                EditorGUILayout.Space();
-                PropBlockFoldout();
-
-                EditorGUILayout.Space();
-                EditorGUILayout.LabelField("Render Texture Output", EditorStyles.boldLabel);
-                EditorGUILayout.PropertyField(useRenderOutProperty);
-                if (useRenderOutProperty.boolValue)
-                {
-                    EditorGUILayout.PropertyField(outputCRTProperty);
-                    EditorGUILayout.PropertyField(outputMaterialPropertiesProperty);
-
-                    CustomRenderTexture crt = (CustomRenderTexture)outputCRTProperty.objectReferenceValue;
-                    if (outputMaterialPropertiesProperty.objectReferenceValue == null)
-                    {
-                        if (compatMaterialShader(crt))
-                            EditorGUILayout.HelpBox("Default property map inferred from compatible material shader.", MessageType.Info);
-                        else
-                            EditorGUILayout.HelpBox($"No property map set. The screen manager will not be able to update properties on the CRT material.", MessageType.Error);
-                    }
-                }
-                else
-                    EditorGUILayout.HelpBox("Enabling the Render Texture Output is the easiest way to supply a video texture to other shaders and materials.  For the most control and performance, use Material or Material Property Block overrides.", MessageType.Info);
-            }
+            // ---
 
             EditorGUILayout.Space();
             expandDebug = EditorGUILayout.Foldout(expandDebug, "Debug Options", true, boldFoldoutStyle);
             if (expandDebug)
             {
+                EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
                 EditorGUILayout.PropertyField(eventLoggingProperty, new GUIContent("Include Events", "Include additional event traffic in debug log"));
                 EditorGUILayout.PropertyField(lowLevelLoggingProperty, new GUIContent("Include Low Level", "Include additional verbose messages in debug log"));
                 EditorGUILayout.PropertyField(vrcLoggingProperty, new GUIContent("VRC Logging", "Write out debug messages to VRChat log."));
+                EditorGUI.indentLevel--;
             }
 
             if (serializedObject.hasModifiedProperties)
@@ -256,6 +307,13 @@ namespace Texel
                 serializedObject.ApplyModifiedProperties();
                 UpdateEditorState();
             }
+        }
+
+        private void IndentedHelpBox(string message, MessageType messageType)
+        {
+            EditorGUI.indentLevel++;
+            EditorGUILayout.HelpBox(message, messageType);
+            EditorGUI.indentLevel--;
         }
 
         private void ScreenFoldout()
@@ -315,7 +373,7 @@ namespace Texel
 
                         if (!objectRefValid(materialPropertyListProperty, i)) {
                             if (materialCompat(i))
-                                EditorGUILayout.HelpBox("Default property map inferred from compatible material shader.", MessageType.Info);
+                                IndentedHelpBox("Default property map inferred from compatible material shader.", MessageType.None);
                             else if (objectRefValid(materialUpdateListProperty, i))
                                 EditorGUILayout.HelpBox("No property map set. The screen manager will not be able to update properties on the material.", MessageType.Error);
                         } 
@@ -366,7 +424,7 @@ namespace Texel
                         if (!objectRefValid(propPropertyListProperty, i))
                         {
                             if (propOverrideCompat(i))
-                                EditorGUILayout.HelpBox("Default property map inferred from compatible material shader.", MessageType.Info);
+                                IndentedHelpBox("Default property map inferred from compatible material shader.", MessageType.None);
                             else if (objectRefValid(propRenderListProperty, i))
                                 EditorGUILayout.HelpBox("No property map set. The screen manager will not be able to update properties on the object.", MessageType.Error);
                         }
@@ -584,6 +642,122 @@ namespace Texel
                 if (map.aspectRatio != "")
                     mat.SetFloat(map.aspectRatio, overrideAspectRatio && logoTex ? aspectRatio : 0);
             }
+        }
+
+        private CustomRenderTexture CreateCRTCopy()
+        {
+            string destBasePath = "Assets/Texel/Generated/RenderOut";
+
+            if (!EnsureFolderExists(destBasePath))
+            {
+                Debug.LogError($"Could not create folder hierarchy: {destBasePath}");
+                return null;
+            }
+
+            int nextId = FindNextCrtId();
+            if (nextId < 0)
+            {
+                Debug.LogError("Could not find unused ID value to generate new CRT asset");
+                return null;
+            }
+
+            string newMatPath = $"{destBasePath}/VideoTXLCRT.{nextId}.mat";
+            if (!AssetDatabase.CopyAsset(DEFAULT_CRT_MAT_PATH, newMatPath))
+            {
+                Debug.LogError($"Could not copy CRT material to: {newMatPath}");
+                return null;
+            }
+
+            string newCrtPath = $"{destBasePath}/VideoTXLCRT.{nextId}.asset";
+            if (!AssetDatabase.CopyAsset(DEFAULT_CRT_PATH, newCrtPath))
+            {
+                Debug.LogError($"Could not copy CRT asset to: {newCrtPath}");
+                return null;
+            }
+
+            Material mat = (Material)AssetDatabase.LoadAssetAtPath(newMatPath, typeof(Material));
+            CustomRenderTexture crt = (CustomRenderTexture)AssetDatabase.LoadAssetAtPath(newCrtPath, typeof(CustomRenderTexture));
+
+            crt.material = mat;
+
+            return crt;
+        }
+
+        private bool EnsureFolderExists(string path)
+        {
+            string[] parts = path.Split('/');
+            if (parts[0] != "Assets")
+                return false;
+
+            string subpath = parts[0];
+            for (int i = 1; i < parts.Length; i++)
+            {
+                string nextfolder = $"{subpath}/{parts[i]}";
+                if (!AssetDatabase.IsValidFolder(nextfolder))
+                {
+                    string guid = AssetDatabase.CreateFolder(subpath, parts[i]);
+                    if (guid == "")
+                        return false;
+                }
+
+                subpath = nextfolder;
+            }
+
+            return true;
+        }
+
+        private int FindNextCrtId()
+        {
+            int id = 0;
+
+            HashSet<string> refCrts = new HashSet<string>();
+            ScreenManager[] managers = FindObjectsOfType<ScreenManager>();
+            foreach (var man in managers)
+            {
+                if (man.outputCRT)
+                    refCrts.Add(AssetDatabase.GetAssetPath(man.outputCRT));
+            }
+
+            string destBasePath = "Assets/Texel/Generated/RenderOut";
+            for (int i = 0; i < 10; i++)
+            {
+                string path = $"{destBasePath}/VideoTXLCRT.{i}.asset";
+                CustomRenderTexture crt = (CustomRenderTexture)AssetDatabase.LoadAssetAtPath(path, typeof(CustomRenderTexture));
+                if (crt && refCrts.Contains(path))
+                    continue;
+
+                return i;
+            }
+
+            return -1;
+        }
+
+        private bool UsingNonDefaultPackageTexture()
+        {
+            return UsingNonDefaultPackageTexture(logoTextureProperty)
+                || UsingNonDefaultPackageTexture(loadingTextureProperty)
+                || UsingNonDefaultPackageTexture(audioTextureProperty)
+                || UsingNonDefaultPackageTexture(errorTextureProperty)
+                || UsingNonDefaultPackageTexture(errorRateLimitedTextureProperty)
+                || UsingNonDefaultPackageTexture(errorInvalidTextureProperty)
+                || UsingNonDefaultPackageTexture(errorRateLimitedTextureProperty)
+                || UsingNonDefaultPackageTexture(editorTextureProperty);
+        }
+
+        private bool UsingNonDefaultPackageTexture(SerializedProperty prop)
+        {
+            if (!prop.objectReferenceValue)
+                return false;
+
+            Texture tex = (Texture)prop.objectReferenceValue;
+            if (!tex)
+                return false;
+
+            string path = AssetDatabase.GetAssetPath(tex);
+            if (path.StartsWith("Packages") && !ArrayUtility.Contains(PLACEHOLDER_IMAGE_PATHS, path))
+                return true;
+
+            return false;
         }
 
         private bool compatMaterialShader(CustomRenderTexture crt)
