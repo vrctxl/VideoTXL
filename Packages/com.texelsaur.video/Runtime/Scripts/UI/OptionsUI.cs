@@ -112,7 +112,7 @@ namespace Texel
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, "_OnVideoInfoUpdate");
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
 
-                VideoManager mux = videoPlayer.videoMux;
+                VideoManager mux = videoPlayer.VideoManager;
                 if (mux)
                 {
                     mux._Register(VideoManager.SETTINGS_CHANGE_EVENT, this, "_OnMuxSettingsChange");
@@ -178,7 +178,7 @@ namespace Texel
 
         public void _OnMuxSettingsChange()
         {
-            int latency = videoPlayer.videoMux.Latency;
+            int latency = videoPlayer.VideoManager.Latency;
             if (latency == VideoSource.LOW_LATENCY_ENABLE)
                 latency = 0;
             else if (latency == VideoSource.LOW_LATENCY_DISABLE)
@@ -186,7 +186,7 @@ namespace Texel
 
             //videoModeDropdown.SetValueWithoutNotify(videoPlayer.videoMux.VideoType);
             videoLatencyDropdown.SetValueWithoutNotify(latency);
-            videoResolutionDropdown.SetValueWithoutNotify(videoPlayer.videoMux.ResolutionIndex);
+            videoResolutionDropdown.SetValueWithoutNotify(videoPlayer.VideoManager.ResolutionIndex);
         }
 
         public void _OnVideoStateUpdate()

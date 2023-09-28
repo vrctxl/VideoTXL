@@ -221,6 +221,8 @@ namespace Texel
 
             base._SetVideoManager(manager);
 
+            DebugTrace("Setting video manager");
+
             videoMux._Register(VideoManager.VIDEO_READY_EVENT, this, "_OnVideoReady");
             videoMux._Register(VideoManager.VIDEO_START_EVENT, this, "_OnVideoStart");
             videoMux._Register(VideoManager.VIDEO_END_EVENT, this, "_OnVideoEnd");
@@ -242,6 +244,8 @@ namespace Texel
             }
 
             base._SetAudioManager(manager);
+
+            DebugTrace("Setting audio manager");
 
             if (audioManager)
                 audioManager._Register(AudioManager.EVENT_CHANNEL_GROUP_CHANGED, this, "_OnAudioProfileChanged");

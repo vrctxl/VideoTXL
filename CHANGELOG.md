@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.1.7] - 09-27-23
+
+- Fixed upgrade bug from pre-2.1.0 that could prevent correct binding to video and audio managers
+
 ## [2.1.6] - 09-23-23
 
 - Fixed USharp upgrade / prefab data loss when first selecting the PlayerControls object on prefab

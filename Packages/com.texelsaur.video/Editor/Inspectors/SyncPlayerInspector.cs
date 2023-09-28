@@ -11,9 +11,6 @@ namespace Texel
     [CustomEditor(typeof(SyncPlayer))]
     internal class SyncPlayerInspector : Editor
     {
-        SerializedProperty videoMuxProperty;
-        SerializedProperty audioManagerProperty;
-
         SerializedProperty prefabInitializedProperty;
 
         SerializedProperty urlSourceProperty;
@@ -51,9 +48,6 @@ namespace Texel
 
         private void OnEnable()
         {
-            videoMuxProperty = serializedObject.FindProperty(nameof(SyncPlayer.videoMux));
-            audioManagerProperty = serializedObject.FindProperty(nameof(SyncPlayer.audioManager));
-
             prefabInitializedProperty = serializedObject.FindProperty(nameof(SyncPlayer.prefabInitialized));
 
             urlSourceProperty = serializedObject.FindProperty(nameof(SyncPlayer.urlSource));

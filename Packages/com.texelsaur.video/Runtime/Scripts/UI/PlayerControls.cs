@@ -587,7 +587,7 @@ namespace Texel
             {
                 SetPlaceholderText("Invalid video player controls setup");
                 return;
-            } else if (!videoPlayer.videoMux)
+            } else if (!videoPlayer.VideoManager)
             {
                 SetPlaceholderText("Invalid video player setup");
                 return;
@@ -732,7 +732,7 @@ namespace Texel
             if (videoPlayer.locked)
                 lockedIcon.color = canControl ? normalColor : attentionColor;
 
-            if (!videoPlayer.videoMux.HasMultipleTypes)
+            if (!videoPlayer.VideoManager.HasMultipleTypes)
             {
                 modeText.text = "";
             }
