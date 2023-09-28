@@ -36,8 +36,8 @@ namespace Texel
         public const int SCREEN_FIT_WIDTH = 2;
         public const int SCREEN_STRETCH = 3;
 
-        public VideoManager videoMux;
-        public AudioManager audioManager;
+        protected VideoManager videoMux;
+        protected AudioManager audioManager;
 
         [HideInInspector]
         public bool prefabInitialized = true;
@@ -126,6 +126,16 @@ namespace Texel
         public virtual bool _TakeControl()
         {
             return false;
+        }
+
+        public VideoManager VideoManager
+        {
+            get { return videoMux; }
+        }
+
+        public AudioManager AudioManager
+        {
+            get { return audioManager; }
         }
 
         public virtual void _SetVideoManager(VideoManager manager)
