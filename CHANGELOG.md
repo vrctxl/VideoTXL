@@ -3,6 +3,7 @@
 ## [2.1.7] - 09-27-23
 
 - Fixed upgrade bug from pre-2.1.0 that could prevent correct binding to video and audio managers
+- Fixed editor error when sync audio profiles with no unity source defined in profile template
 
 ## [2.1.6] - 09-23-23
 

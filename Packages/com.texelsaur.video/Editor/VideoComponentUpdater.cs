@@ -214,7 +214,13 @@ namespace Texel
                 {
                     for (int i = 0; i < resources.childCount; i++)
                     {
-                        audioResources.Add(resources.GetChild(i));
+                        Transform resource = resources.GetChild(i);
+                        if (resource)
+                        {
+                            VideoSourceAudioGroup vsag = resource.GetComponent<VideoSourceAudioGroup>();
+                            if (vsag && vsag.channelAudio.Length > 0 && vsag.channelReference.Length > 0)
+                                audioResources.Add(resource);
+                        }
                     }
                 }
 
@@ -273,14 +279,13 @@ namespace Texel
 
                     VideoSourceAudioGroup audioGroup = groupRoot.gameObject.AddUdonSharpComponent<VideoSourceAudioGroup>();
                     audioGroup.groupName = group.groupName;
-                    audioGroup.channelAudio = new AudioSource[1];
-                    audioGroup.channelReference = new AudioChannel[1];
+                    
 
                     source.audioGroups[g] = audioGroup;
 
                     AudioSource unityAudioSource = null;
                     Transform unityAudio = sourceRoot.Find("AudioSource");
-                    if (unityAudio)
+                    if (unityAudio && group.unityChannel)
                     {
                         unityAudioSource = unityAudio.GetComponent<AudioSource>();
 
@@ -294,10 +299,18 @@ namespace Texel
                         ConditionalCopyConstraint<ScaleConstraint>(group.unityChannel.gameObject, unityAudioSource.gameObject);
                         ConditionalCopyConstraint<PositionConstraint>(group.unityChannel.gameObject, unityAudioSource.gameObject);
                         ConditionalCopyConstraint<RotationConstraint>(group.unityChannel.gameObject, unityAudioSource.gameObject);
-                    }
 
-                    audioGroup.channelAudio[0] = unityAudioSource;
-                    audioGroup.channelReference[0] = group.unityChannel;
+                        audioGroup.channelAudio = new AudioSource[1];
+                        audioGroup.channelReference = new AudioChannel[1];
+
+                        audioGroup.channelAudio[0] = unityAudioSource;
+                        audioGroup.channelReference[0] = group.unityChannel;
+                    }
+                    else
+                    {
+                        audioGroup.channelAudio = new AudioSource[0];
+                        audioGroup.channelReference = new AudioChannel[0];
+                    }
                 }
 
                 PrefabUtility.RecordPrefabInstancePropertyModifications(source);
