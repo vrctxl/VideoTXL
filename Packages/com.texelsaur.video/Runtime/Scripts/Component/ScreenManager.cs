@@ -109,6 +109,9 @@ namespace Texel
         [Tooltip("A map of properties to update on the CRT's material as the video player state changes.")]
         public ScreenPropertyMap outputMaterialProperties;
 
+        public CustomRenderTexture[] outputCRTList;
+        public ScreenPropertyMap[] outputMaterialPropertiesList;
+
         /*string outputMaterialMainTex = "_MainTex";
         string outputMaterialAVPro;
         string outputMaterialInvert;
@@ -117,6 +120,7 @@ namespace Texel
         string outputMaterialAspectRatio;*/
 
         int baseIndexCrt;
+        int shaderPropCrtLength;
         int baseIndexMat;
         int shaderPropMatLength;
         int baseIndexProp;
@@ -332,20 +336,34 @@ namespace Texel
 
             bool hasMaterialUpdates = Utilities.IsValid(materialUpdateList) && materialUpdateList.Length > 0;
             bool hasPropupdates = Utilities.IsValid(propMeshList) && propMeshList.Length > 0;
+            bool hasCrtUpdates = Utilities.IsValid(outputCRTList) && outputCRTList.Length > 0;
 
-            if (!hasMaterialUpdates && !hasPropupdates && !useRenderOut)
+            if (!hasMaterialUpdates && !hasPropupdates && !hasCrtUpdates)
             {
                 useTextureOverrides = false;
                 return;
             }
 
+            // Legacy upgrade
+            if (useRenderOut && !hasCrtUpdates)
+            {
+                outputCRTList = new CustomRenderTexture[1];
+                outputCRTList[0] = outputCRT;
+
+                outputMaterialPropertiesList = new ScreenPropertyMap[1];
+                outputMaterialPropertiesList[0] = outputMaterialProperties;
+
+                hasCrtUpdates = true;
+            }
+
             baseIndexCrt = 0;
-            baseIndexMat = baseIndexCrt + 1;
+            shaderPropCrtLength = outputCRTList.Length;
+            baseIndexMat = baseIndexCrt + shaderPropCrtLength;
             shaderPropMatLength = materialUpdateList.Length;
             baseIndexProp = baseIndexMat + shaderPropMatLength;
             shaderPropPropLength = propMeshList.Length;
 
-            int totalPropLength = 1 + shaderPropMatLength + shaderPropPropLength;
+            int totalPropLength = shaderPropCrtLength + shaderPropMatLength + shaderPropPropLength;
             shaderPropMainTexList = new string[totalPropLength];
             shaderPropAVProList = new string[totalPropLength];
             shaderPropInvertList = new string[totalPropLength];
@@ -354,54 +372,76 @@ namespace Texel
             shaderPropAspectRatioList = new string[totalPropLength];
 
             // Material Props
-            for (int i = 0; i < materialUpdateList.Length; i++)
+            if (hasMaterialUpdates)
             {
-                if (materialUpdateList[i] == null)
-                    continue;
+                for (int i = 0; i < materialUpdateList.Length; i++)
+                {
+                    if (materialUpdateList[i] == null)
+                        continue;
 
-                ScreenPropertyMap propMap = materialPropertyList[i];
-                if (propMap)
-                    _LoadPropertyMap(baseIndexMat + i, propMap);
-                else
-                    _TryLoadDefaultProps(baseIndexMat + i, materialUpdateList[i]);
+                    ScreenPropertyMap propMap = materialPropertyList[i];
+                    if (propMap)
+                        _LoadPropertyMap(baseIndexMat + i, propMap);
+                    else
+                        _TryLoadDefaultProps(baseIndexMat + i, materialUpdateList[i]);
+                }
             }
 
             // Property Block Props
-            for (int i = 0; i < propMeshList.Length; i++)
+            if (hasPropupdates)
             {
-                if (propMeshList[i] == null)
-                    continue;
-
-
-                ScreenPropertyMap propMap = propPropertyList[i];
-                if (propMap)
-                    _LoadPropertyMap(baseIndexProp + i, propMap);
-                else
+                for (int i = 0; i < propMeshList.Length; i++)
                 {
-                    Material[] mats = propMeshList[i].sharedMaterials;
-                    bool useMatIndex = propMaterialOverrideList[i] == 1;
-                    int matIndex = propMaterialIndexList[i];
+                    if (propMeshList[i] == null)
+                        continue;
 
-                    if (useMatIndex && matIndex < mats.Length && mats[matIndex])
-                        _TryLoadDefaultProps(baseIndexProp + i, mats[matIndex]);
-                    else if (!useMatIndex)
+
+                    ScreenPropertyMap propMap = propPropertyList[i];
+                    if (propMap)
+                        _LoadPropertyMap(baseIndexProp + i, propMap);
+                    else
                     {
-                        for (int j = 0; j < mats.Length; j++)
+                        Material[] mats = propMeshList[i].sharedMaterials;
+                        bool useMatIndex = propMaterialOverrideList[i] == 1;
+                        int matIndex = propMaterialIndexList[i];
+
+                        if (useMatIndex && matIndex < mats.Length && mats[matIndex])
+                            _TryLoadDefaultProps(baseIndexProp + i, mats[matIndex]);
+                        else if (!useMatIndex)
                         {
-                            if (_TryLoadDefaultProps(baseIndexProp + i, mats[j]))
-                                break;
+                            for (int j = 0; j < mats.Length; j++)
+                            {
+                                if (_TryLoadDefaultProps(baseIndexProp + i, mats[j]))
+                                    break;
+                            }
                         }
                     }
                 }
             }
 
             // Output Material
-            if (useRenderOut) {
+            if (hasCrtUpdates)
+            {
+                for (int i = 0; i < outputCRTList.Length; i++)
+                {
+                    if (outputCRTList[i] == null)
+                        continue;
+
+                    ScreenPropertyMap propMap = outputMaterialPropertiesList[i];
+                    if (propMap)
+                        _LoadPropertyMap(baseIndexCrt + i, propMap);
+                    else
+                        _TryLoadDefaultProps(baseIndexCrt + i, outputCRTList[i].material);
+                }
+            }
+
+            // Output Material
+            /* if (useRenderOut) {
                 if (outputMaterialProperties)
                     _LoadPropertyMap(baseIndexCrt, outputMaterialProperties);
                 else if (outputCRT)
                     _TryLoadDefaultProps(baseIndexCrt, outputCRT.material);
-            }
+            }*/
 
             // Capture original material textures
             _originalMaterialTexture = new Texture[materialUpdateList.Length];

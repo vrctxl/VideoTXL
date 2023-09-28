@@ -6,6 +6,7 @@ using UdonSharpEditor;
 using VRC.Udon;
 using System;
 using System.Collections.Generic;
+using UnityEditorInternal;
 
 namespace Texel
 {
@@ -89,8 +90,12 @@ namespace Texel
         SerializedProperty useRenderOutProperty;
         SerializedProperty outputCRTProperty;
         SerializedProperty outputMaterialPropertiesProperty;
+        SerializedProperty outputCRTListProperty;
+        SerializedProperty outputMaterialPropertiesListProperty;
 
         SerializedProperty _udonSharpBackingUdonBehaviourProperty;
+
+        ReorderableList crtOutList;
 
         static bool expandDebug = false;
 
@@ -145,17 +150,192 @@ namespace Texel
             useRenderOutProperty = serializedObject.FindProperty(nameof(ScreenManager.useRenderOut));
             outputCRTProperty = serializedObject.FindProperty(nameof(ScreenManager.outputCRT));
             outputMaterialPropertiesProperty = serializedObject.FindProperty(nameof(ScreenManager.outputMaterialProperties));
+            outputCRTListProperty = serializedObject.FindProperty(nameof(ScreenManager.outputCRTList));
+            outputMaterialPropertiesListProperty = serializedObject.FindProperty(nameof(ScreenManager.outputMaterialPropertiesList));
 
             _udonSharpBackingUdonBehaviourProperty = serializedObject.FindProperty("_udonSharpBackingUdonBehaviour");
 
+            crtOutList = new ReorderableList(serializedObject, outputCRTListProperty);
+            crtOutList.drawElementCallback = OnDrawElement;
+            crtOutList.drawHeaderCallback = OnDrawHeader;
+            crtOutList.onAddCallback = OnAdd;
+            crtOutList.onRemoveCallback = OnRemove;
+            crtOutList.elementHeightCallback = OnElementHeight;
+            crtOutList.footerHeight = -15;
+
             // CRT texture
             UpdateEditorState();
+        }
+
+        private void OnDrawElement(Rect rect, int index, bool isActive, bool isFocused)
+        {
+            ScreenManager manager = target as ScreenManager;
+
+            if (outputCRTListProperty.arraySize <= index)
+                outputCRTListProperty.arraySize = index + 1;
+            var crtProp = outputCRTListProperty.GetArrayElementAtIndex(index);
+
+            if (outputMaterialPropertiesListProperty.arraySize <= index)
+                outputMaterialPropertiesListProperty.arraySize = index + 1;
+            var matMapProp = outputMaterialPropertiesListProperty.GetArrayElementAtIndex(index);
+
+            float lineHeight = EditorGUIUtility.singleLineHeight;
+            rect.height = lineHeight;
+
+            rect.y += EditorGUIUtility.standardVerticalSpacing;
+            //EditorGUI.LabelField(rect, $"Output CRT {index}");
+
+            //rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
+            EditorGUI.PropertyField(rect, crtProp, new GUIContent("CRT"));
+
+            CustomRenderTexture crt = (CustomRenderTexture)crtProp.objectReferenceValue;
+            if (crt != null)
+            {
+                rect.x += 15;
+                rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
+
+                Rect fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("CRT Size"));
+                fieldRect.x -= 15;
+                Rect field1 = fieldRect;
+                float xwidth = 8;
+                float xpad = 5;
+                float fwidth = (fieldRect.width - xwidth - xpad * 2) / 2;
+
+                field1.width = fwidth;
+                int width = EditorGUI.DelayedIntField(field1, crt.width);
+                field1.x += fwidth + xpad;
+                field1.width = xwidth;
+                EditorGUI.LabelField(field1, "x");
+
+                field1.x += xwidth + xpad;
+                field1.width = fwidth;
+                int height = EditorGUI.DelayedIntField(field1, crt.height);
+
+                if (width != crt.width || height != crt.height)
+                {
+                    crt.Release();
+                    crt.width = width;
+                    crt.height = height;
+                    crt.Create();
+                }
+
+                Material mat = crt.material;
+                rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
+                fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("CRT Material"));
+                fieldRect.x -= 15;
+                Material newMat = (Material)EditorGUI.ObjectField(fieldRect, mat, typeof(Material), false);
+                if (newMat != mat)
+                {
+                    crt.material = newMat;
+                    mat = newMat;
+                }
+
+                if (mat != null)
+                {
+                    ScreenPropertyMap matmap = (ScreenPropertyMap)matMapProp.objectReferenceValue;
+                    rect.x += 15;
+                    rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
+                    fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Property Map"));
+                    fieldRect.x -= 30;
+                    EditorGUI.ObjectField(fieldRect, matMapProp, GUIContent.none);
+
+                    bool compat = compatMaterialShader(mat);
+                    if (compat)
+                    {
+                        float aspect = mat.GetFloat("_AspectRatio");
+                        rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
+                        fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Target Aspect Ratio"));
+                        fieldRect.x -= 30;
+                        fieldRect.width = fwidth;
+                        float newAspect = EditorGUI.DelayedFloatField(fieldRect, aspect);
+                        if (aspect != newAspect)
+                            mat.SetFloat("_AspectRatio", newAspect);
+                    }
+
+                    rect.x -= 15;
+                }
+
+                rect.x -= 15;
+            }
+        }
+
+        private void OnDrawHeader(Rect rect)
+        {
+            GUI.Label(rect, new GUIContent("Output Custom Render Textures (CRTs)", "CRTs that will be enabled during video playback and recieve view or placeholder data"));
+        }
+
+        private void OnAdd(ReorderableList list)
+        {
+            int index = list.index;
+            if (list.count == 0 || list.index < 0 || list.index >= list.count)
+                index = -1;
+
+            int end = list.count;
+            outputCRTListProperty.InsertArrayElementAtIndex(end);
+            outputMaterialPropertiesListProperty.InsertArrayElementAtIndex(end);
+
+            if (index >= 0)
+            {
+                outputCRTListProperty.MoveArrayElement(end, index);
+                outputMaterialPropertiesListProperty.MoveArrayElement(end, index);
+            }
+        }
+
+        private void OnRemove(ReorderableList list)
+        {
+            if (list.index < 0 || list.index >= list.count)
+                return;
+
+            int index = list.index;
+            outputCRTListProperty.DeleteArrayElementAtIndex(index);
+            outputMaterialPropertiesListProperty.DeleteArrayElementAtIndex(index);
+        }
+
+        private float OnElementHeight(int index)
+        {
+            int lineCount = 2;
+
+            var crtProp = outputCRTListProperty.GetArrayElementAtIndex(index);
+            CustomRenderTexture crt = (CustomRenderTexture)crtProp.objectReferenceValue;
+            if (crt != null)
+            {
+                lineCount += 2;
+
+                if (crt.material != null)
+                {
+                    lineCount += 1;
+
+                    bool compat = compatMaterialShader(crt.material);
+                    if (compat)
+                        lineCount += 1;
+                }
+            }
+
+            return (EditorGUIUtility.singleLineHeight + 2) * lineCount;
         }
 
         public override void OnInspectorGUI()
         {
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
+
+            if (useRenderOutProperty.boolValue && outputCRTProperty.objectReferenceValue != null && outputCRTListProperty.arraySize == 0)
+            {
+                //outputCRTListProperty.arraySize = 1;
+                //outputMaterialPropertiesListProperty.arraySize = 1;
+
+                outputCRTListProperty.InsertArrayElementAtIndex(0);
+                outputMaterialPropertiesListProperty.InsertArrayElementAtIndex(0);
+
+                SerializedProperty prop1 = outputCRTListProperty.GetArrayElementAtIndex(0);
+                prop1.objectReferenceValue = outputCRTProperty.objectReferenceValue;
+
+                SerializedProperty prop2 = outputMaterialPropertiesListProperty.GetArrayElementAtIndex(0);
+                prop2.objectReferenceValue = outputMaterialPropertiesProperty.objectReferenceValue;
+
+                outputCRTProperty.objectReferenceValue = null;
+                outputMaterialPropertiesProperty.objectReferenceValue = null;
+            }
 
             GUIStyle boldFoldoutStyle = new GUIStyle(EditorStyles.foldout);
             boldFoldoutStyle.fontStyle = FontStyle.Bold;
@@ -207,7 +387,7 @@ namespace Texel
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Render Texture Output", EditorStyles.boldLabel);
 
-            EditorGUI.indentLevel++;
+            /*EditorGUI.indentLevel++;
             EditorGUILayout.PropertyField(useRenderOutProperty);
             if (useRenderOutProperty.boolValue)
             {
@@ -233,6 +413,14 @@ namespace Texel
                 EditorGUILayout.HelpBox("Enabling the Render Texture Output is the easiest way to supply a video texture to other shaders and materials.  For the most control and performance, use Material or Material Property Block overrides.", MessageType.Info);
 
             EditorGUI.indentLevel--;
+            */
+
+            Rect listRect = GUILayoutUtility.GetRect(0, crtOutList.GetHeight() + 16, GUILayout.ExpandWidth(true));
+            listRect.x += 15;
+            listRect.width -= 15;
+            crtOutList.DoList(listRect);
+
+            //CrtFoldout();
 
             // ---
 
@@ -314,6 +502,71 @@ namespace Texel
             EditorGUI.indentLevel++;
             EditorGUILayout.HelpBox(message, messageType);
             EditorGUI.indentLevel--;
+        }
+
+        private void CrtFoldout()
+        {
+            EditorGUILayout.Space();
+
+            for (int i = 0; i < outputCRTListProperty.arraySize; i++)
+            {
+                EditorGUI.indentLevel++;
+                Rect row2 = EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField($"Output {i}");
+                GUILayout.Button(new GUIContent("Remove"), GUILayout.Width(60));
+                EditorGUILayout.EndHorizontal();
+
+                SerializedProperty prop = outputCRTListProperty.GetArrayElementAtIndex(i);
+                EditorGUILayout.PropertyField(prop, new GUIContent($"Output CRT"));
+
+                SerializedProperty prop2 = outputMaterialPropertiesListProperty.GetArrayElementAtIndex(i);
+                EditorGUILayout.PropertyField(prop2, new GUIContent($"Output Material Properties"));
+
+                CustomRenderTexture crt = (CustomRenderTexture)prop.objectReferenceValue;
+                if (crt)
+                {
+                    GUILayout.BeginHorizontal();
+                    EditorGUILayout.PrefixLabel("CRT Size", EditorStyles.popup);
+                    EditorGUI.indentLevel--;
+                    int width = EditorGUILayout.DelayedIntField(crt.width, GUILayout.MinWidth(40));
+                    GUILayout.Label("x");
+                    int height = EditorGUILayout.DelayedIntField(crt.height, GUILayout.MinWidth(40));
+                    EditorGUI.indentLevel++;
+                    GUILayout.FlexibleSpace();
+                    GUILayout.EndHorizontal();
+                    //Vector2Int res = new Vector2Int(crt.width, crt.height);
+                    //Vector2Int newRes = EditorGUILayout.Vector2IntField("Resolution", res);
+                    if (width != crt.width || height != crt.height)
+                    {
+                        crt.Release();
+                        crt.width = width;
+                        crt.height = height;
+                        crt.Create();
+                    }
+
+                    Material mat = crt.material;
+                    if (mat != null)
+                    {
+                        bool compat = compatMaterialShader(mat);
+                        if (compat)
+                        {
+                            float aspect = mat.GetFloat("_AspectRatio");
+                            float newAspect = EditorGUILayout.DelayedFloatField("Target Aspect Ratio", aspect);
+                            if (aspect != newAspect)
+                                mat.SetFloat("_AspectRatio", newAspect);
+                        }
+                    }
+                }
+
+                EditorGUILayout.Space();
+                EditorGUI.indentLevel--;
+
+                /*Rect row2 = EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.PropertyField(prop, new GUIContent($"Element {i}"));
+                if (GUILayout.Button(new GUIContent("X", "Remove Element"), GUILayout.Width(30)))
+                    RemoveName(i);
+                EditorGUILayout.EndHorizontal();*/
+            }
         }
 
         private void ScreenFoldout()
