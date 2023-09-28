@@ -93,12 +93,26 @@ namespace Texel
         {
             mainControls = controls;
 
-            if (mainControls)
+            PlayerControls source = controls;
+            if (!source)
+                source = transform.GetComponentInParent<PlayerControls>();
+
+            if (source)
             {
                 if (!videoPlayer)
-                    videoPlayer = mainControls.videoPlayer;
+                    videoPlayer = source.videoPlayer;
                 if (!audioManager)
-                    audioManager = mainControls.audioManager;
+                    audioManager = source.audioManager;
+            } else
+            {
+                TXLVideoPlayer source2 = transform.GetComponentInParent<TXLVideoPlayer>();
+                if (source2)
+                {
+                    if (!videoPlayer)
+                        videoPlayer = source2;
+                    if (!audioManager)
+                        audioManager = source2.AudioManager;
+                }
             }
 
             _UpdateComponents();
