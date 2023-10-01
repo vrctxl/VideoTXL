@@ -245,6 +245,15 @@ namespace Texel
 
         public void _VideoLoadURL(VRCUrl url)
         {
+#if UNITY_EDITOR
+            if (VideoSourceType == VIDEO_SOURCE_AVPRO)
+            {
+                if (videoMux)
+                    videoMux._OnVideoError(id, VideoErrorTXL.NoAVProInEditor);
+                return;
+            }
+#endif
+
             if (videoPlayer)
                 videoPlayer.LoadURL(url);
         }

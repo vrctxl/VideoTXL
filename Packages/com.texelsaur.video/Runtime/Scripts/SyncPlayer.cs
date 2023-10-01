@@ -960,7 +960,7 @@ namespace Texel
                 {
                     if (_skipAdvanceNextTrack || urlSource._MoveNext())
                     {
-                        SendCustomEventDelayedFrames("_PlayPlaylistUrl", 1);
+                        // Next track will load via event
                         loadedTrack = true;
                     }
                 }
@@ -1058,17 +1058,30 @@ namespace Texel
             if (playerState == VIDEO_STATE_STOPPED)
                 return;
 
+            VideoErrorClass videoErrorClass = videoMux.LastErrorClass;
             VideoError videoError = videoMux.LastError;
             videoMux._VideoStop();
 
             string code = "";
-            switch (videoError)
+            switch (videoErrorClass)
             {
-                case VideoError.AccessDenied: code = "Access Denied"; break;
-                case VideoError.InvalidURL: code = "Invalid URL"; break;
-                case VideoError.PlayerError: code = "Player Error"; break;
-                case VideoError.RateLimited: code = "Rate Limited"; break;
-                case VideoError.Unknown: code = "Unknown Error"; break;
+                case VideoErrorClass.VRChat:
+                    switch (videoError)
+                    {
+                        case VideoError.AccessDenied: code = "Access Denied"; break;
+                        case VideoError.InvalidURL: code = "Invalid URL"; break;
+                        case VideoError.PlayerError: code = "Player Error"; break;
+                        case VideoError.RateLimited: code = "Rate Limited"; break;
+                        case VideoError.Unknown: code = "Unknown Error"; break;
+                    }
+                    break;
+                case VideoErrorClass.TXL:
+                    switch (videoMux.LastErrorTXL)
+                    {
+                        case VideoErrorTXL.NoAVProInEditor: code = "AVPro Not Supported in Simulator"; break;
+                        case VideoErrorTXL.Unknown: code = "Unknown Error (TXL)"; break;
+                    }
+                    break;
             }
 
             DebugLog("Video stream failed: " + _syncUrl);
@@ -1076,6 +1089,7 @@ namespace Texel
 
             // Try to fall back to AVPro if auto video failed (the youtube livestream problem)
             bool shouldFallback = autoFailbackToAVPro &&
+                videoErrorClass == VideoErrorClass.VRChat &&
                 videoError == VideoError.PlayerError &&
                 videoMux.SupportsAVPro &&
                 _syncVideoSourceOverride == VideoSource.VIDEO_SOURCE_NONE &&
