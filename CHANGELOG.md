@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.8] - 10-01-23
+
+- Fixed duplicate Screen Manager component on "other" video player prefabs
+- Fixed unlinked Audio Manager reference on "other" video player prefabs
+- Video player throws explicit error when trying to play AVPro in simulator
+- Fixed playlist trying to start video twice when auto-advancing
+
 ## [2.1.7] - 09-27-23
 
 - Fixed upgrade bug from pre-2.1.0 that could prevent correct binding to video and audio managers
