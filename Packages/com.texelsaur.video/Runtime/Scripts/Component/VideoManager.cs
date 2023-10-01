@@ -10,6 +10,19 @@ using VRC.Udon;
 
 namespace Texel
 {
+    public enum VideoErrorClass
+    {
+        None,
+        VRChat,
+        TXL,
+    }
+
+    public enum VideoErrorTXL
+    {
+        Unknown,
+        NoAVProInEditor,
+    }
+
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class VideoManager : EventBase
     {
@@ -32,7 +45,9 @@ namespace Texel
         public const int SETTINGS_CHANGE_EVENT = 8;
         const int EVENT_COUNT = 9;
 
+        public VideoErrorClass LastErrorClass { get; private set; }
         public VideoError LastError { get; private set; }
+        public VideoErrorTXL LastErrorTXL { get; private set; }
 
         int activeSource;
         int prevSource;
@@ -303,7 +318,24 @@ namespace Texel
             //VideoSource source = sources[id];
             //_DebugLog(source, $"Video error event: {videoError}");
 
+            LastErrorClass = VideoErrorClass.VRChat;
             LastError = videoError;
+            LastErrorTXL = VideoErrorTXL.Unknown;
+
+            _UpdateHandlers(VIDEO_ERROR_EVENT);
+        }
+
+        public void _OnVideoError(int id, VideoErrorTXL videoError)
+        {
+            if (!_GateEvent(id, $"Video error txl event: {videoError}"))
+                return;
+            //VideoSource source = sources[id];
+            //_DebugLog(source, $"Video error event: {videoError}");
+
+            LastErrorClass = VideoErrorClass.TXL;
+            LastError = VideoError.Unknown;
+            LastErrorTXL = videoError;
+
             _UpdateHandlers(VIDEO_ERROR_EVENT);
         }
 
@@ -352,17 +384,32 @@ namespace Texel
 
         public bool VideoIsPlaying
         {
-            get { return activeVideoPlayer.IsPlaying; }
+            get
+            {
+                if (!activeVideoPlayer)
+                    return false;
+                return activeVideoPlayer.IsPlaying;
+            }
         }
 
         public float VideoTime
         {
-            get { return activeVideoPlayer.GetTime(); }
+            get
+            {
+                if (!activeVideoPlayer)
+                    return 0;
+                return activeVideoPlayer.GetTime();
+            }
         }
 
         public float VideoDuration
         {
-            get { return activeVideoPlayer.GetDuration(); }
+            get
+            {
+                if (!activeVideoPlayer)
+                    return 0;
+                return activeVideoPlayer.GetDuration();
+            }
         }
 
         public MeshRenderer CaptureRenderer
