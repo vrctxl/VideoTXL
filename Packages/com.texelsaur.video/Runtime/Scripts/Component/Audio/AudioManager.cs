@@ -191,11 +191,11 @@ namespace Texel
             if (videoPlayer)
             {
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
-                if (videoPlayer.videoMux)
+                if (videoPlayer.VideoManager)
                 {
-                    videoPlayer.videoMux._Register(VideoManager.SOURCE_CHANGE_EVENT, this, "_OnVideoSourceChange");
-                    if (videoPlayer.videoMux.ActiveSource && videoPlayer.videoMux.ActiveSource.VideoSourceType != VideoSource.VIDEO_SOURCE_NONE)
-                        _SelectVideoSource(videoPlayer.videoMux.ActiveSource);
+                    videoPlayer.VideoManager._Register(VideoManager.SOURCE_CHANGE_EVENT, this, "_OnVideoSourceChange");
+                    if (videoPlayer.VideoManager.ActiveSource && videoPlayer.VideoManager.ActiveSource.VideoSourceType != VideoSource.VIDEO_SOURCE_NONE)
+                        _SelectVideoSource(videoPlayer.VideoManager.ActiveSource);
                 }
 
                 _OnVideoStateUpdate();
@@ -391,7 +391,7 @@ namespace Texel
         public void _OnVideoSourceChange()
         {
             _DebugEvent("Event OnVideoSourceChange");
-            _SelectVideoSource(videoPlayer.videoMux.ActiveSource);
+            _SelectVideoSource(videoPlayer.VideoManager.ActiveSource);
         }
 
         public void _SetMasterVolume(float value)

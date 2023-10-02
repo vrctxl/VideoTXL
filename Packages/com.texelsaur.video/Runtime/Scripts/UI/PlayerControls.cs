@@ -587,7 +587,7 @@ namespace Texel
             {
                 SetPlaceholderText("Invalid video player controls setup");
                 return;
-            } else if (!videoPlayer.videoMux)
+            } else if (!videoPlayer.VideoManager)
             {
                 SetPlaceholderText("Invalid video player setup");
                 return;
@@ -660,23 +660,40 @@ namespace Texel
 
                     if (!loadActive)
                     {
-                        switch (videoPlayer.lastErrorCode)
+                        VideoManager manager = videoPlayer.VideoManager;
+                        switch (manager.LastErrorClass)
                         {
-                            case VideoError.RateLimited:
-                                SetPlaceholderText("Rate limited, wait and try again");
+                            case VideoErrorClass.VRChat:
+                                switch (manager.LastError)
+                                {
+                                    case VideoError.RateLimited:
+                                        SetPlaceholderText("Rate limited, wait and try again");
+                                        break;
+                                    case VideoError.PlayerError:
+                                        SetPlaceholderText("Video player error");
+                                        break;
+                                    case VideoError.InvalidURL:
+                                        SetPlaceholderText("Invalid URL or source offline");
+                                        break;
+                                    case VideoError.AccessDenied:
+                                        SetPlaceholderText("Video blocked, enable untrusted URLs");
+                                        break;
+                                    case VideoError.Unknown:
+                                    default:
+                                        SetPlaceholderText("Failed to load video");
+                                        break;
+                                }
                                 break;
-                            case VideoError.PlayerError:
-                                SetPlaceholderText("Video player error");
-                                break;
-                            case VideoError.InvalidURL:
-                                SetPlaceholderText("Invalid URL or source offline");
-                                break;
-                            case VideoError.AccessDenied:
-                                SetPlaceholderText("Video blocked, enable untrusted URLs");
-                                break;
-                            case VideoError.Unknown:
-                            default:
-                                SetPlaceholderText("Failed to load video");
+                            case VideoErrorClass.TXL:
+                                switch (manager.LastErrorTXL)
+                                {
+                                    case VideoErrorTXL.NoAVProInEditor:
+                                        SetPlaceholderText("AVPro not supported in simulator");
+                                        break;
+                                    case VideoErrorTXL.Unknown:
+                                        SetPlaceholderText("Unknown error (TXL)");
+                                        break;
+                                }
                                 break;
                         }
 
@@ -732,7 +749,7 @@ namespace Texel
             if (videoPlayer.locked)
                 lockedIcon.color = canControl ? normalColor : attentionColor;
 
-            if (!videoPlayer.videoMux.HasMultipleTypes)
+            if (!videoPlayer.VideoManager.HasMultipleTypes)
             {
                 modeText.text = "";
             }

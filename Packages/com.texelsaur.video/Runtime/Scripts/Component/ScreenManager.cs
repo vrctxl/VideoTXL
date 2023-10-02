@@ -245,10 +245,10 @@ namespace Texel
         {
             if (videoPlayer)
             {
-                if (videoPlayer.videoMux)
+                if (videoPlayer.VideoManager)
                 {
-                    videoPlayer.videoMux._Register(VideoManager.SOURCE_CHANGE_EVENT, this, "_OnSourceChanged");
-                    captureRenderer = videoPlayer.videoMux.CaptureRenderer;
+                    videoPlayer.VideoManager._Register(VideoManager.SOURCE_CHANGE_EVENT, this, "_OnSourceChanged");
+                    captureRenderer = videoPlayer.VideoManager.CaptureRenderer;
                     _OnSourceChanged();
                 }
 
@@ -596,8 +596,8 @@ namespace Texel
         {
             _DebugEvent("Event OnSourceChanged");
 
-            captureRenderer = videoPlayer.videoMux.CaptureRenderer;
-            _screenSource = videoPlayer.videoMux.ActiveSourceType;
+            captureRenderer = videoPlayer.VideoManager.CaptureRenderer;
+            _screenSource = videoPlayer.VideoManager.ActiveSourceType;
 
             _ResetCheckScreenMaterial();
         }

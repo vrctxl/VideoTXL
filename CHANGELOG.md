@@ -1,10 +1,24 @@
 # Changelog
 
-## [2.1.7] - 09-25-23
+## [2.2.0] - 10-05-23
 
 - Added warning if any texture overrides reference non-default textures in the Packages directory
 - When render out is first enabled, a new CRT and material will be copied into the Assets folder
 - Hid the Aspect Ratio override field on the txl shaders
+
+## [2.1.8] - 10-01-23
+
+- Fixed duplicate Screen Manager component on "other" video player prefabs
+- Fixed unlinked Audio Manager reference on "other" video player prefabs
+- Video player throws explicit error when trying to play AVPro in simulator
+- Fixed playlist trying to start video twice when auto-advancing
+
+## [2.1.7] - 09-27-23
+
+- Fixed upgrade bug from pre-2.1.0 that could prevent correct binding to video and audio managers
+- Fixed editor error when sync audio profiles with no unity source defined in profile template
+- OptionsUI component can automatically detect parent video player / audio manager
+- Remove hidden button from lower-right corner of trackbar to cycle video mode
 
 ## [2.1.6] - 09-23-23
 

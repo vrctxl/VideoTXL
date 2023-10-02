@@ -93,12 +93,26 @@ namespace Texel
         {
             mainControls = controls;
 
-            if (mainControls)
+            PlayerControls source = controls;
+            if (!source)
+                source = transform.GetComponentInParent<PlayerControls>();
+
+            if (source)
             {
                 if (!videoPlayer)
-                    videoPlayer = mainControls.videoPlayer;
+                    videoPlayer = source.videoPlayer;
                 if (!audioManager)
-                    audioManager = mainControls.audioManager;
+                    audioManager = source.audioManager;
+            } else
+            {
+                TXLVideoPlayer source2 = transform.GetComponentInParent<TXLVideoPlayer>();
+                if (source2)
+                {
+                    if (!videoPlayer)
+                        videoPlayer = source2;
+                    if (!audioManager)
+                        audioManager = source2.AudioManager;
+                }
             }
 
             _UpdateComponents();
@@ -112,7 +126,7 @@ namespace Texel
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, "_OnVideoInfoUpdate");
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
 
-                VideoManager mux = videoPlayer.videoMux;
+                VideoManager mux = videoPlayer.VideoManager;
                 if (mux)
                 {
                     mux._Register(VideoManager.SETTINGS_CHANGE_EVENT, this, "_OnMuxSettingsChange");
@@ -178,7 +192,7 @@ namespace Texel
 
         public void _OnMuxSettingsChange()
         {
-            int latency = videoPlayer.videoMux.Latency;
+            int latency = videoPlayer.VideoManager.Latency;
             if (latency == VideoSource.LOW_LATENCY_ENABLE)
                 latency = 0;
             else if (latency == VideoSource.LOW_LATENCY_DISABLE)
@@ -186,7 +200,7 @@ namespace Texel
 
             //videoModeDropdown.SetValueWithoutNotify(videoPlayer.videoMux.VideoType);
             videoLatencyDropdown.SetValueWithoutNotify(latency);
-            videoResolutionDropdown.SetValueWithoutNotify(videoPlayer.videoMux.ResolutionIndex);
+            videoResolutionDropdown.SetValueWithoutNotify(videoPlayer.VideoManager.ResolutionIndex);
         }
 
         public void _OnVideoStateUpdate()
