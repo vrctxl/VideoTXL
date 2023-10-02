@@ -5,6 +5,7 @@
 - Added warning if any texture overrides reference non-default textures in the Packages directory
 - When render out is first enabled, a new CRT and material will be copied into the Assets folder
 - Hid the Aspect Ratio override field on the txl shaders
+- Fixed editor texture not being applied to surfaces in editor
 
 ## [2.1.8] - 10-01-23
 

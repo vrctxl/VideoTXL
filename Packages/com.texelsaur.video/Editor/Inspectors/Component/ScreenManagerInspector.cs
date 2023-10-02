@@ -10,6 +10,68 @@ using UnityEditorInternal;
 
 namespace Texel
 {
+    internal class EditorScreenPropertyMap
+    {
+        public string screenTexture;
+        public string avProCheck;
+        public string invertY;
+        public string applyGamma;
+        public string screenFit;
+        public string aspectRatio;
+
+        public EditorScreenPropertyMap() { }
+
+        public static EditorScreenPropertyMap FromPropertyMap(ScreenPropertyMap map)
+        {
+            if (!map)
+                return null;
+
+            EditorScreenPropertyMap emap = new EditorScreenPropertyMap();
+            emap.screenTexture = map.screenTexture;
+            emap.avProCheck = map.avProCheck;
+            emap.invertY = map.invertY;
+            emap.applyGamma = map.applyGamma;
+            emap.screenFit = map.screenFit;
+            emap.aspectRatio = map.aspectRatio;
+
+            return emap;
+        }
+
+        public static EditorScreenPropertyMap FromMaterial(Material mat)
+        {
+            if (!mat)
+                return null;
+
+            return FromShader(mat.shader.name);
+        }
+
+        public static EditorScreenPropertyMap FromShader(string shaderName)
+        {
+            EditorScreenPropertyMap map = null;
+            switch (shaderName)
+            {
+                case "VideoTXL/RealtimeEmissiveGamma":
+                    map = new EditorScreenPropertyMap();
+                    map.screenTexture = "_MainTex";
+                    map.avProCheck = "_IsAVProInput";
+                    map.invertY = "_InvertAVPro";
+                    map.applyGamma = "_ApplyGammaAVPro";
+                    map.screenFit = "_FitMode";
+                    map.aspectRatio = "_TexAspectRatio";
+                    return map;
+                case "VideoTXL/RenderOut":
+                    map = new EditorScreenPropertyMap();
+                    map.screenTexture = "_MainTex";
+                    map.invertY = "_FlipY";
+                    map.applyGamma = "_ApplyGamma";
+                    map.screenFit = "_FitMode";
+                    return map;
+                default:
+                    return map;
+            }
+        }
+    }
+
     // TODO: Checks on overrides
     // [ ] Do all overrides have a mapping profile selected?
     // [ ] Do property override objects have material with CRT set?  That is probably a mixup
@@ -780,6 +842,39 @@ namespace Texel
             return compat;
         }
 
+        private EditorScreenPropertyMap GetPropertyMapForOverride(int index)
+        {
+            SerializedProperty rendererProp = propRenderListProperty.GetArrayElementAtIndex(index);
+            MeshRenderer renderer = (MeshRenderer)rendererProp.objectReferenceValue;
+            if (!renderer)
+                return null;
+
+            SerializedProperty matProperties = propPropertyListProperty.GetArrayElementAtIndex(index);
+            ScreenPropertyMap map = (ScreenPropertyMap)matProperties.objectReferenceValue;
+            if (map)
+                return EditorScreenPropertyMap.FromPropertyMap(map);
+
+            Material[] mats = renderer.sharedMaterials;
+
+            bool useMatIndex = propMaterialOverrideListProperty.GetArrayElementAtIndex(index).intValue == 1;
+            if (useMatIndex)
+            {
+                int matIndex = propMaterialIndexListProperty.GetArrayElementAtIndex(index).intValue;
+                if (matIndex >= 0 && matIndex < mats.Length)
+                    return EditorScreenPropertyMap.FromMaterial(mats[matIndex]);
+            }
+            else
+            {
+                for (int j = 0; j < mats.Length; j++)
+                {
+                    if (compatMaterialShader(mats[j]))
+                        return EditorScreenPropertyMap.FromMaterial(mats[j]);
+                }
+            }
+
+            return null;
+        }
+
         private void UpdateEditorState()
         {
             UpdateEditorCRT();
@@ -820,13 +915,13 @@ namespace Texel
                 SerializedProperty matIndex = propMaterialIndexListProperty.GetArrayElementAtIndex(i);
                 SerializedProperty matProperties = propPropertyListProperty.GetArrayElementAtIndex(i);
 
-                if (meshProp == null || matProperties == null || useMatOverride == null || matIndex == null)
+                if (meshProp == null || useMatOverride == null || matIndex == null)
                     continue;
 
                 MeshRenderer mesh = (MeshRenderer)meshProp.objectReferenceValue;
-                ScreenPropertyMap map = (ScreenPropertyMap)matProperties.objectReferenceValue;
+                EditorScreenPropertyMap map = GetPropertyMapForOverride(i);
 
-                if (!mesh || !map)
+                if (!mesh || map == null)
                     continue;
 
                 if (useMatOverride.boolValue)
@@ -859,41 +954,49 @@ namespace Texel
 
         private void UpdateEditorCRT()
         {
-            CustomRenderTexture crt = (CustomRenderTexture)outputCRTProperty.objectReferenceValue;
-            if (crt)
+            for (int i = 0; i < outputCRTListProperty.arraySize; i++)
             {
-                Material crtMat = crt.material;
-                ScreenPropertyMap map = (ScreenPropertyMap)outputMaterialPropertiesProperty.objectReferenceValue;
+                CustomRenderTexture crt = (CustomRenderTexture)outputCRTListProperty.GetArrayElementAtIndex(i).objectReferenceValue;
+                if (crt)
+                {
+                    Material crtMat = crt.material;
+                    ScreenPropertyMap map = (ScreenPropertyMap)outputMaterialPropertiesListProperty.GetArrayElementAtIndex(i).objectReferenceValue;
 
-                UpdateSharedMaterial(crtMat, map);
+                    UpdateSharedMaterial(crtMat, map);
+                }
             }
+            
         }
 
         private void UpdateSharedMaterial(Material mat, ScreenPropertyMap map)
         {
+            EditorScreenPropertyMap emap = EditorScreenPropertyMap.FromPropertyMap(map);
+            if (emap == null)
+                emap = EditorScreenPropertyMap.FromMaterial(mat);
+
             Texture2D logoTex = (Texture2D)editorTextureProperty.objectReferenceValue;
             if (logoTex == null)
                 logoTex = (Texture2D)logoTextureProperty.objectReferenceValue;
 
-            if (mat && map)
+            if (mat && emap != null)
             {
-                if (map.screenTexture != "" && logoTex)
-                    mat.SetTexture(map.screenTexture, logoTex);
-                if (map.avProCheck != "")
-                    mat.SetInt(map.avProCheck, 0);
-                if (map.applyGamma != "")
-                    mat.SetInt(map.applyGamma, 0);
-                if (map.invertY != "")
-                    mat.SetInt(map.invertY, 0);
+                if (emap.screenTexture != "" && logoTex)
+                    mat.SetTexture(emap.screenTexture, logoTex);
+                if (emap.avProCheck != "")
+                    mat.SetInt(emap.avProCheck, 0);
+                if (emap.applyGamma != "")
+                    mat.SetInt(emap.applyGamma, 0);
+                if (emap.invertY != "")
+                    mat.SetInt(emap.invertY, 0);
 
                 SyncPlayer videoPlayer = (SyncPlayer)videoPlayerProperty.objectReferenceValue;
-                if (map.screenFit != "" && videoPlayer)
-                    mat.SetInt(map.screenFit, (int)videoPlayer.defaultScreenFit);
+                if (emap.screenFit != "" && videoPlayer)
+                    mat.SetInt(emap.screenFit, (int)videoPlayer.defaultScreenFit);
 
                 bool overrideAspectRatio = overrideAspectRatioProperty.boolValue;
                 float aspectRatio = aspectRatioProperty.floatValue;
-                if (map.aspectRatio != "")
-                    mat.SetFloat(map.aspectRatio, overrideAspectRatio && logoTex ? aspectRatio : 0);
+                if (emap.aspectRatio != "")
+                    mat.SetFloat(emap.aspectRatio, overrideAspectRatio && logoTex ? aspectRatio : 0);
             }
         }
 
