@@ -6,6 +6,7 @@
 - When render out is first enabled, a new CRT and material will be copied into the Assets folder
 - Hid the Aspect Ratio override field on the txl shaders
 - Fixed editor texture not being applied to surfaces in editor
+- Video Source script will display errors in inspector if unity video player component properties are modified (excluding max resolution)
 
 ## [2.1.8] - 10-01-23
 
