@@ -109,8 +109,12 @@ namespace Texel
         [Tooltip("A map of properties to update on the CRT's material as the video player state changes.")]
         public ScreenPropertyMap outputMaterialProperties;
 
-        public CustomRenderTexture[] outputCRTList;
-        public ScreenPropertyMap[] outputMaterialPropertiesList;
+        public CustomRenderTexture[] renderOutCrt;
+        public ScreenPropertyMap[] renderOutMatProps;
+        public Vector2Int[] renderOutSize;
+        public float[] renderOutTargetAspect;
+        public bool[] renderOutResize;
+        public bool[] renderOutExpandSize;
 
         /*string outputMaterialMainTex = "_MainTex";
         string outputMaterialAVPro;
@@ -336,7 +340,7 @@ namespace Texel
 
             bool hasMaterialUpdates = Utilities.IsValid(materialUpdateList) && materialUpdateList.Length > 0;
             bool hasPropupdates = Utilities.IsValid(propMeshList) && propMeshList.Length > 0;
-            bool hasCrtUpdates = Utilities.IsValid(outputCRTList) && outputCRTList.Length > 0;
+            bool hasCrtUpdates = Utilities.IsValid(renderOutCrt) && renderOutCrt.Length > 0;
 
             if (!hasMaterialUpdates && !hasPropupdates && !hasCrtUpdates)
             {
@@ -347,17 +351,25 @@ namespace Texel
             // Legacy upgrade
             if (useRenderOut && !hasCrtUpdates)
             {
-                outputCRTList = new CustomRenderTexture[1];
-                outputCRTList[0] = outputCRT;
+                renderOutCrt = new CustomRenderTexture[1];
+                renderOutMatProps = new ScreenPropertyMap[1];
+                renderOutSize = new Vector2Int[1];
+                renderOutTargetAspect = new float[1];
+                renderOutResize = new bool[1];
+                renderOutExpandSize = new bool[1];
 
-                outputMaterialPropertiesList = new ScreenPropertyMap[1];
-                outputMaterialPropertiesList[0] = outputMaterialProperties;
+                renderOutCrt[0] = outputCRT;
+                renderOutMatProps[0] = outputMaterialProperties;
+                renderOutSize[0] = outputCRT ? new Vector2Int(outputCRT.width, outputCRT.height) : Vector2Int.zero;
+                renderOutTargetAspect[0] = 0;
+                renderOutResize[0] = false;
+                renderOutExpandSize[0] = false;
 
                 hasCrtUpdates = true;
             }
 
             baseIndexCrt = 0;
-            shaderPropCrtLength = outputCRTList.Length;
+            shaderPropCrtLength = renderOutCrt.Length;
             baseIndexMat = baseIndexCrt + shaderPropCrtLength;
             shaderPropMatLength = materialUpdateList.Length;
             baseIndexProp = baseIndexMat + shaderPropMatLength;
@@ -422,16 +434,16 @@ namespace Texel
             // Output Material
             if (hasCrtUpdates)
             {
-                for (int i = 0; i < outputCRTList.Length; i++)
+                for (int i = 0; i < renderOutCrt.Length; i++)
                 {
-                    if (outputCRTList[i] == null)
+                    if (renderOutCrt[i] == null)
                         continue;
 
-                    ScreenPropertyMap propMap = outputMaterialPropertiesList[i];
+                    ScreenPropertyMap propMap = renderOutMatProps[i];
                     if (propMap)
                         _LoadPropertyMap(baseIndexCrt + i, propMap);
                     else
-                        _TryLoadDefaultProps(baseIndexCrt + i, outputCRTList[i].material);
+                        _TryLoadDefaultProps(baseIndexCrt + i, renderOutCrt[i].material);
                 }
             }
 
@@ -517,7 +529,7 @@ namespace Texel
             shaderPropInvertList[i] = "_FlipY";
             shaderPropGammaList[i] = "_ApplyGamma";
             shaderPropFitList[i] = "_FitMode";
-            shaderPropAspectRatioList[i] = "";
+            shaderPropAspectRatioList[i] = "_TexAspectRatio";
         }
 
         void _RestoreMaterialOverrides()
@@ -763,6 +775,9 @@ namespace Texel
             Texture lastTex = currentTexture;
 
             _ResetCaptureData();
+
+            currentAspectRatio = (overrideAspectRatio && _screenMode != SCREEN_MODE_NORMAL) ? aspectRatio : 0;
+
             if (Utilities.IsValid(replacementTex))
             {
                 currentTexture = replacementTex;
@@ -782,12 +797,51 @@ namespace Texel
                     currentInvert = !videoPlayer.IsQuest;
                     currentGamma = true;
                 }
+
+                if (currentTexture)
+                {
+                    currentAspectRatio = (float)currentTexture.width / currentTexture.height;
+
+                    for (int i = 0; i < renderOutCrt.Length; i++)
+                    {
+                        if (!renderOutResize[i])
+                            continue;
+
+                        CustomRenderTexture crt = renderOutCrt[i];
+                        if (!crt)
+                            continue;
+
+                        if (crt.width == currentTexture.width && crt.height == currentTexture.height)
+                            continue;
+
+                        float aspect = renderOutTargetAspect[i];
+                        int newWidth = currentTexture.width;
+                        int newHeight = currentTexture.height;
+
+                        if (renderOutExpandSize[i] && aspect > 0)
+                        {
+                            if (aspect > currentAspectRatio)
+                                newWidth = (int)Math.Round(newHeight * aspect);
+                            else
+                                newHeight = (int)Math.Round(newWidth / aspect);
+
+                            if (newWidth > 4096 || newHeight > 4096)
+                            {
+                                newWidth = currentTexture.width;
+                                newHeight = currentTexture.height;
+                            }
+                        }
+                        
+                        crt.Release();
+                        crt.width = newWidth;
+                        crt.height = newHeight;
+                        crt.Create();
+                    }
+                }
             }
 
             if (lastTex != currentTexture)
                 _UpdateHandlers(EVENT_UPDATE);
-
-            currentAspectRatio = (overrideAspectRatio && _screenMode != SCREEN_MODE_NORMAL) ? aspectRatio : 0;
         }
 
         void _UpdateObjects(Material replacementMat)
@@ -831,9 +885,13 @@ namespace Texel
                 _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexMat + i], currentAspectRatio);
             }
 
-            if (useRenderOut && Utilities.IsValid(outputCRT))
+            for (int i = 0; i < renderOutCrt.Length; i++)
             {
-                Material mat = outputCRT.material;
+                CustomRenderTexture crt = renderOutCrt[i];
+                if (!crt)
+                    continue;
+
+                Material mat = crt.material;
                 if (Utilities.IsValid(mat))
                 {
                     mat.SetTexture(shaderPropMainTexList[baseIndexCrt], currentTexture);
@@ -844,12 +902,13 @@ namespace Texel
                     _SetMatIntProperty(mat, shaderPropFitList[baseIndexCrt], videoPlayer.screenFit);
                     _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexCrt], currentAspectRatio);
 
-                    if (_screenMode == SCREEN_MODE_NORMAL)
-                        outputCRT.updateMode = CustomRenderTextureUpdateMode.Realtime;
+                    bool isRT = currentTexture.GetType() == typeof(RenderTexture) || currentTexture.GetType() == typeof(CustomRenderTexture);
+                    if (_screenMode == SCREEN_MODE_NORMAL || isRT)
+                        crt.updateMode = CustomRenderTextureUpdateMode.Realtime;
                     else
                     {
-                        outputCRT.updateMode = CustomRenderTextureUpdateMode.OnDemand;
-                        outputCRT.Update();
+                        crt.updateMode = CustomRenderTextureUpdateMode.OnDemand;
+                        crt.Update();
                     }
                 }
             }

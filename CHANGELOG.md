@@ -2,11 +2,18 @@
 
 ## [2.2.0] - 10-05-23
 
+- Added support for multiple CRT definitions
+- Changed how CRTs are listed, surfacing more important details
 - Added warning if any texture overrides reference non-default textures in the Packages directory
-- When render out is first enabled, a new CRT and material will be copied into the Assets folder
+- When a CRT definition is first added, a new CRT and material will be copied into the Assets folder
+- If an active placeholder texture is a RenderTexture, CRTs will remain in realtime update mode
 - Hid the Aspect Ratio override field on the txl shaders
 - Fixed editor texture not being applied to surfaces in editor
+- Added Resize to Video option for CRTs, causing them to change their resolution to match the underlying video when it loads
+- Added Expand to Fit option for CRTs, modifying the resize option to expand the CRT to account for letterboxing at the target aspect ratio
 - Video Source script will display errors in inspector if unity video player component properties are modified (excluding max resolution)
+- Added support for AudioLink 1.0 media state API
+- Added event to Audio Manager when AudioLink binding changes
 
 ## [2.1.8] - 10-01-23
 
