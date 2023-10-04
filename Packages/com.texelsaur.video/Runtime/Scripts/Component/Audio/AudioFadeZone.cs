@@ -26,11 +26,14 @@ namespace Texel
         [Range(0, 1)]
         public float lowerBound = 0;
 
+        [Tooltip("Volume approaches its target value at a linear rate determined by the delay.  The larger the delay, the slower volume will be to change.")]
+        public float fadeDelay = 2;
+
         [Header("Performance")]
         [Tooltip("Whether the fade zone is active by default")]
         public bool active = true;
         [Tooltip("Interval in seconds that player position is checked for correct fade within the zones")]
-        public float updateRate = 0.25f;
+        public float updateRate = 0.2f;
         [Tooltip("Force re-checking zone membership on player enter events.  May be needed in certain instances where you map can lose enter or leave events (such as stations within the zones).  You can save some performance by calling _RecalculateNextEvent yourself as needed.")]
         public bool forceColliderCheck = true;
 
@@ -49,7 +52,8 @@ namespace Texel
         bool pendingRecalc = false;
 
         int triggerCount = 0;
-        float zoneFadeScale;
+        float targetVolume;
+        float currentVolume;
 
         bool fadeInit = false;
 
@@ -76,7 +80,7 @@ namespace Texel
 
         public float Fade
         {
-            get { return zoneFadeScale; }
+            get { return currentVolume; }
         }
 
         /*
@@ -189,11 +193,11 @@ namespace Texel
             if (forceRecalc)
                 return;
 
-            float lastFade = zoneFadeScale;
+            float lastFade = targetVolume;
             if (triggerCount == 0)
-                zoneFadeScale = lowerBound;
+                targetVolume = lowerBound;
             else if (triggerCount >= 2)
-                zoneFadeScale = upperBound;
+                targetVolume = upperBound;
             else
             {
                 VRCPlayerApi player = Networking.LocalPlayer;
@@ -204,7 +208,7 @@ namespace Texel
                     Vector3 dirVector = location - innerPoint;
                     dirVector = Vector3.Normalize(dirVector);
                     if (dirVector.magnitude < .98)
-                        zoneFadeScale = upperBound;
+                        targetVolume = upperBound;
                     else
                     {
                         float length = outerZone.bounds.size.magnitude;
@@ -220,13 +224,16 @@ namespace Texel
 
                         float zoneDist = Vector3.Distance(innerPoint, outerPoint);
                         float playerDistOuter = Vector3.Distance(locPoint, outerPoint);
-                        zoneFadeScale = Mathf.Lerp(lowerBound, upperBound, playerDistOuter / zoneDist);
+                        targetVolume = Mathf.Lerp(lowerBound, upperBound, playerDistOuter / zoneDist);
                     }
                 }
             }
 
-            if (lastFade != zoneFadeScale || !fadeInit)
+            if (lastFade != targetVolume || !fadeInit)
+            {
+                _Fade();
                 _UpdateFade();
+            }
 
             fadeInit = true;
         }
@@ -247,12 +254,61 @@ namespace Texel
         void _UpdateFade()
         {
             if (hasAudioSource)
-                audioSource.volume = zoneFadeScale;
+                audioSource.volume = currentVolume;
 
             _UpdateHandlers(EVENT_FADE_UPDATE);
 
             //if (hasAudioManager)
             //    audioManager._SetChannelFade(audioChannel, zoneFadeScale);
+        }
+
+        bool fadeScheduled = false;
+
+        void _Fade()
+        {
+            if (fadeScheduled)
+                return;
+
+            fadeScheduled = true;
+            _FadeInner();
+        }
+
+        public void _FadeInner()
+        {
+            if (_StepTarget())
+            {
+                SendCustomEventDelayedFrames("_FadeInner", 1);
+                _UpdateFade();
+            }
+            else
+                fadeScheduled = false;
+        }
+
+        bool _StepTarget()
+        {
+            if (fadeDelay <= 0)
+                currentVolume = targetVolume;
+
+            if (currentVolume == targetVolume)
+                return false;
+
+            float step = (1f / fadeDelay) * Time.deltaTime;
+            if (currentVolume > targetVolume)
+                step = 0 - step;
+
+            currentVolume = Mathf.Clamp01(currentVolume + step);
+
+            if (step > 0 && currentVolume > targetVolume)
+            {
+                currentVolume = targetVolume;
+                return false;
+            } else if (step < 0 && currentVolume < targetVolume)
+            {
+                currentVolume = targetVolume;
+                return false;
+            }
+
+            return true;
         }
 
         void DebugLog(string message)

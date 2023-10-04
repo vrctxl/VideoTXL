@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.2.0] - 10-05-23
+## [2.2.0] - 10-04-23
 
 - Added support for multiple CRT definitions
 - Changed how CRTs are listed, surfacing more important details
@@ -14,6 +14,7 @@
 - Video Source script will display errors in inspector if unity video player component properties are modified (excluding max resolution)
 - Added support for AudioLink 1.0 media state API
 - Added event to Audio Manager when AudioLink binding changes
+- Added Fade Delay option to Audio Fade Zone to smooth out changes in volume
 
 ## [2.1.8] - 10-01-23
 
