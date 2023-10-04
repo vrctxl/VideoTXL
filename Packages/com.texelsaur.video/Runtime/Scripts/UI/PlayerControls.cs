@@ -688,7 +688,7 @@ namespace Texel
                                 switch (manager.LastErrorTXL)
                                 {
                                     case VideoErrorTXL.NoAVProInEditor:
-                                        SetPlaceholderText("AVPro not supported in simulator");
+                                        SetPlaceholderText("AVPro (stream) not supported in simulator");
                                         break;
                                     case VideoErrorTXL.Unknown:
                                         SetPlaceholderText("Unknown error (TXL)");
