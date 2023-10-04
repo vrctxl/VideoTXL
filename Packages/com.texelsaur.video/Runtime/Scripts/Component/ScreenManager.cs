@@ -109,6 +109,13 @@ namespace Texel
         [Tooltip("A map of properties to update on the CRT's material as the video player state changes.")]
         public ScreenPropertyMap outputMaterialProperties;
 
+        public CustomRenderTexture[] renderOutCrt;
+        public ScreenPropertyMap[] renderOutMatProps;
+        public Vector2Int[] renderOutSize;
+        public float[] renderOutTargetAspect;
+        public bool[] renderOutResize;
+        public bool[] renderOutExpandSize;
+
         /*string outputMaterialMainTex = "_MainTex";
         string outputMaterialAVPro;
         string outputMaterialInvert;
@@ -117,6 +124,7 @@ namespace Texel
         string outputMaterialAspectRatio;*/
 
         int baseIndexCrt;
+        int shaderPropCrtLength;
         int baseIndexMat;
         int shaderPropMatLength;
         int baseIndexProp;
@@ -332,20 +340,42 @@ namespace Texel
 
             bool hasMaterialUpdates = Utilities.IsValid(materialUpdateList) && materialUpdateList.Length > 0;
             bool hasPropupdates = Utilities.IsValid(propMeshList) && propMeshList.Length > 0;
+            bool hasCrtUpdates = Utilities.IsValid(renderOutCrt) && renderOutCrt.Length > 0;
 
-            if (!hasMaterialUpdates && !hasPropupdates && !useRenderOut)
+            if (!hasMaterialUpdates && !hasPropupdates && !hasCrtUpdates)
             {
                 useTextureOverrides = false;
                 return;
             }
 
+            // Legacy upgrade
+            if (useRenderOut && !hasCrtUpdates)
+            {
+                renderOutCrt = new CustomRenderTexture[1];
+                renderOutMatProps = new ScreenPropertyMap[1];
+                renderOutSize = new Vector2Int[1];
+                renderOutTargetAspect = new float[1];
+                renderOutResize = new bool[1];
+                renderOutExpandSize = new bool[1];
+
+                renderOutCrt[0] = outputCRT;
+                renderOutMatProps[0] = outputMaterialProperties;
+                renderOutSize[0] = outputCRT ? new Vector2Int(outputCRT.width, outputCRT.height) : Vector2Int.zero;
+                renderOutTargetAspect[0] = 0;
+                renderOutResize[0] = false;
+                renderOutExpandSize[0] = false;
+
+                hasCrtUpdates = true;
+            }
+
             baseIndexCrt = 0;
-            baseIndexMat = baseIndexCrt + 1;
+            shaderPropCrtLength = renderOutCrt.Length;
+            baseIndexMat = baseIndexCrt + shaderPropCrtLength;
             shaderPropMatLength = materialUpdateList.Length;
             baseIndexProp = baseIndexMat + shaderPropMatLength;
             shaderPropPropLength = propMeshList.Length;
 
-            int totalPropLength = 1 + shaderPropMatLength + shaderPropPropLength;
+            int totalPropLength = shaderPropCrtLength + shaderPropMatLength + shaderPropPropLength;
             shaderPropMainTexList = new string[totalPropLength];
             shaderPropAVProList = new string[totalPropLength];
             shaderPropInvertList = new string[totalPropLength];
@@ -354,54 +384,76 @@ namespace Texel
             shaderPropAspectRatioList = new string[totalPropLength];
 
             // Material Props
-            for (int i = 0; i < materialUpdateList.Length; i++)
+            if (hasMaterialUpdates)
             {
-                if (materialUpdateList[i] == null)
-                    continue;
+                for (int i = 0; i < materialUpdateList.Length; i++)
+                {
+                    if (materialUpdateList[i] == null)
+                        continue;
 
-                ScreenPropertyMap propMap = materialPropertyList[i];
-                if (propMap)
-                    _LoadPropertyMap(baseIndexMat + i, propMap);
-                else
-                    _TryLoadDefaultProps(baseIndexMat + i, materialUpdateList[i]);
+                    ScreenPropertyMap propMap = materialPropertyList[i];
+                    if (propMap)
+                        _LoadPropertyMap(baseIndexMat + i, propMap);
+                    else
+                        _TryLoadDefaultProps(baseIndexMat + i, materialUpdateList[i]);
+                }
             }
 
             // Property Block Props
-            for (int i = 0; i < propMeshList.Length; i++)
+            if (hasPropupdates)
             {
-                if (propMeshList[i] == null)
-                    continue;
-
-
-                ScreenPropertyMap propMap = propPropertyList[i];
-                if (propMap)
-                    _LoadPropertyMap(baseIndexProp + i, propMap);
-                else
+                for (int i = 0; i < propMeshList.Length; i++)
                 {
-                    Material[] mats = propMeshList[i].sharedMaterials;
-                    bool useMatIndex = propMaterialOverrideList[i] == 1;
-                    int matIndex = propMaterialIndexList[i];
+                    if (propMeshList[i] == null)
+                        continue;
 
-                    if (useMatIndex && matIndex < mats.Length && mats[matIndex])
-                        _TryLoadDefaultProps(baseIndexProp + i, mats[matIndex]);
-                    else if (!useMatIndex)
+
+                    ScreenPropertyMap propMap = propPropertyList[i];
+                    if (propMap)
+                        _LoadPropertyMap(baseIndexProp + i, propMap);
+                    else
                     {
-                        for (int j = 0; j < mats.Length; j++)
+                        Material[] mats = propMeshList[i].sharedMaterials;
+                        bool useMatIndex = propMaterialOverrideList[i] == 1;
+                        int matIndex = propMaterialIndexList[i];
+
+                        if (useMatIndex && matIndex < mats.Length && mats[matIndex])
+                            _TryLoadDefaultProps(baseIndexProp + i, mats[matIndex]);
+                        else if (!useMatIndex)
                         {
-                            if (_TryLoadDefaultProps(baseIndexProp + i, mats[j]))
-                                break;
+                            for (int j = 0; j < mats.Length; j++)
+                            {
+                                if (_TryLoadDefaultProps(baseIndexProp + i, mats[j]))
+                                    break;
+                            }
                         }
                     }
                 }
             }
 
             // Output Material
-            if (useRenderOut) {
+            if (hasCrtUpdates)
+            {
+                for (int i = 0; i < renderOutCrt.Length; i++)
+                {
+                    if (renderOutCrt[i] == null)
+                        continue;
+
+                    ScreenPropertyMap propMap = renderOutMatProps[i];
+                    if (propMap)
+                        _LoadPropertyMap(baseIndexCrt + i, propMap);
+                    else
+                        _TryLoadDefaultProps(baseIndexCrt + i, renderOutCrt[i].material);
+                }
+            }
+
+            // Output Material
+            /* if (useRenderOut) {
                 if (outputMaterialProperties)
                     _LoadPropertyMap(baseIndexCrt, outputMaterialProperties);
                 else if (outputCRT)
                     _TryLoadDefaultProps(baseIndexCrt, outputCRT.material);
-            }
+            }*/
 
             // Capture original material textures
             _originalMaterialTexture = new Texture[materialUpdateList.Length];
@@ -477,7 +529,7 @@ namespace Texel
             shaderPropInvertList[i] = "_FlipY";
             shaderPropGammaList[i] = "_ApplyGamma";
             shaderPropFitList[i] = "_FitMode";
-            shaderPropAspectRatioList[i] = "";
+            shaderPropAspectRatioList[i] = "_TexAspectRatio";
         }
 
         void _RestoreMaterialOverrides()
@@ -723,6 +775,9 @@ namespace Texel
             Texture lastTex = currentTexture;
 
             _ResetCaptureData();
+
+            currentAspectRatio = (overrideAspectRatio && _screenMode != SCREEN_MODE_NORMAL) ? aspectRatio : 0;
+
             if (Utilities.IsValid(replacementTex))
             {
                 currentTexture = replacementTex;
@@ -742,12 +797,51 @@ namespace Texel
                     currentInvert = !videoPlayer.IsQuest;
                     currentGamma = true;
                 }
+
+                if (currentTexture)
+                {
+                    currentAspectRatio = (float)currentTexture.width / currentTexture.height;
+
+                    for (int i = 0; i < renderOutCrt.Length; i++)
+                    {
+                        if (!renderOutResize[i])
+                            continue;
+
+                        CustomRenderTexture crt = renderOutCrt[i];
+                        if (!crt)
+                            continue;
+
+                        if (crt.width == currentTexture.width && crt.height == currentTexture.height)
+                            continue;
+
+                        float aspect = renderOutTargetAspect[i];
+                        int newWidth = currentTexture.width;
+                        int newHeight = currentTexture.height;
+
+                        if (renderOutExpandSize[i] && aspect > 0)
+                        {
+                            if (aspect > currentAspectRatio)
+                                newWidth = (int)Math.Round(newHeight * aspect);
+                            else
+                                newHeight = (int)Math.Round(newWidth / aspect);
+
+                            if (newWidth > 4096 || newHeight > 4096)
+                            {
+                                newWidth = currentTexture.width;
+                                newHeight = currentTexture.height;
+                            }
+                        }
+                        
+                        crt.Release();
+                        crt.width = newWidth;
+                        crt.height = newHeight;
+                        crt.Create();
+                    }
+                }
             }
 
             if (lastTex != currentTexture)
                 _UpdateHandlers(EVENT_UPDATE);
-
-            currentAspectRatio = (overrideAspectRatio && _screenMode != SCREEN_MODE_NORMAL) ? aspectRatio : 0;
         }
 
         void _UpdateObjects(Material replacementMat)
@@ -791,9 +885,13 @@ namespace Texel
                 _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexMat + i], currentAspectRatio);
             }
 
-            if (useRenderOut && Utilities.IsValid(outputCRT))
+            for (int i = 0; i < renderOutCrt.Length; i++)
             {
-                Material mat = outputCRT.material;
+                CustomRenderTexture crt = renderOutCrt[i];
+                if (!crt)
+                    continue;
+
+                Material mat = crt.material;
                 if (Utilities.IsValid(mat))
                 {
                     mat.SetTexture(shaderPropMainTexList[baseIndexCrt], currentTexture);
@@ -804,12 +902,13 @@ namespace Texel
                     _SetMatIntProperty(mat, shaderPropFitList[baseIndexCrt], videoPlayer.screenFit);
                     _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexCrt], currentAspectRatio);
 
-                    if (_screenMode == SCREEN_MODE_NORMAL)
-                        outputCRT.updateMode = CustomRenderTextureUpdateMode.Realtime;
+                    bool isRT = currentTexture.GetType() == typeof(RenderTexture) || currentTexture.GetType() == typeof(CustomRenderTexture);
+                    if (_screenMode == SCREEN_MODE_NORMAL || isRT)
+                        crt.updateMode = CustomRenderTextureUpdateMode.Realtime;
                     else
                     {
-                        outputCRT.updateMode = CustomRenderTextureUpdateMode.OnDemand;
-                        outputCRT.Update();
+                        crt.updateMode = CustomRenderTextureUpdateMode.OnDemand;
+                        crt.Update();
                     }
                 }
             }

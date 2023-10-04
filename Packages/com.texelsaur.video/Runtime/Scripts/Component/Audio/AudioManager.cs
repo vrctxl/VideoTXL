@@ -55,12 +55,14 @@ namespace Texel
         public const int EVENT_MASTER_VOLUME_UPDATE = 0;
         public const int EVENT_MASTER_MUTE_UPDATE = 1;
         public const int EVENT_CHANNEL_GROUP_CHANGED = 2;
+        public const int EVENT_AUDIOLINK_CHANGED = 3;
+        //public const int EVENT_AUDIODMX_CHANGED = 4;
         //public const int EVENT_MASTER_2D_UPDATE = 2;
         //public const int EVENT_CHANNEL_VOLUME_UPDATE = 3;
         //public const int EVENT_CHANNEL_MUTE_UPDATE = 4;
         //public const int EVENT_CHANNEL_2D_UPDATE = 5;
         //public const int EVENT_CHANNEL_SOURCE_UPDATE = 6;
-        const int EVENT_COUNT = 7;
+        const int EVENT_COUNT = 4;
 
         //float[] channelFade;
         //float[] spatialBlend;
@@ -720,6 +722,7 @@ namespace Texel
 
             audioLinkSystem = audioLink;
             _UpdateExternal();
+            _UpdateHandlers(EVENT_AUDIOLINK_CHANGED);
         }
 
         void _DebugLog(string message)

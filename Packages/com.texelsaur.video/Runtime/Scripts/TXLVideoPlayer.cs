@@ -6,6 +6,10 @@ using VRC.SDK3.Components.Video;
 using VRC.SDKBase;
 using VRC.Udon;
 
+#if AUDIOLINK_V1
+using AudioLink;
+#endif
+
 namespace Texel
 {
     public enum TXLScreenFit : byte
@@ -96,6 +100,10 @@ namespace Texel
 #if UNITY_ANDROID
             IsQuest = true;
 #endif
+
+#if AUDIOLINK_V1
+            _InitAudioLink();
+#endif
         }
 
         public virtual bool SupportsLock { get; protected set; }
@@ -146,6 +154,108 @@ namespace Texel
         public virtual void _SetAudioManager(AudioManager manager)
         {
             audioManager = manager;
+
+#if AUDIOLINK_V1
+            audioManager._Register(AudioManager.EVENT_MASTER_VOLUME_UPDATE, this, nameof(_AudioLinkOnMasterVolumeUpdate));
+            audioManager._Register(AudioManager.EVENT_AUDIOLINK_CHANGED, this, nameof(_AudioLinkOnBind));
+            _AudioLinkOnBind();
+#endif
         }
+
+        // AudioLink API
+
+#if AUDIOLINK_V1
+        void _InitAudioLink()
+        {
+            _Register(EVENT_VIDEO_STATE_UPDATE, this, nameof(_AudioLinkOnVideoStateUpdate));
+            _Register(EVENT_VIDEO_TRACKING_UPDATE, this, nameof(_AudioLinkOnVideoTrackingUpdate));
+            _Register(EVENT_VIDEO_PLAYLIST_UPDATE, this, nameof(_AudioLinkOnVideoPlaylistUpdate));
+
+            _AudioLinkOnVideoStateUpdate();
+            _AudioLinkOnVideoTrackingUpdate();
+            _AudioLinkOnMasterVolumeUpdate();
+        }
+
+        AudioLink.AudioLink audioLink;
+
+        public void _AudioLinkOnVideoStateUpdate()
+        {
+            if (!audioLink)
+                return;
+
+            switch (playerState)
+            {
+                case VIDEO_STATE_STOPPED:
+                    audioLink.SetMediaPlaying(MediaPlaying.Stopped);
+                    audioLink.SetMediaTime(0);
+                    break;
+                case VIDEO_STATE_LOADING:
+                    audioLink.SetMediaPlaying(MediaPlaying.Loading);
+                    audioLink.SetMediaTime(0);
+                    break;
+                case VIDEO_STATE_ERROR:
+                    audioLink.SetMediaPlaying(MediaPlaying.Error);
+                    audioLink.SetMediaTime(0);
+                    break;
+                case VIDEO_STATE_PLAYING:
+                    if (paused)
+                        audioLink.SetMediaPlaying(MediaPlaying.Paused);
+                    else if (seekableSource)
+                        audioLink.SetMediaPlaying(MediaPlaying.Playing);
+                    else
+                    {
+                        audioLink.SetMediaPlaying(MediaPlaying.Streaming);
+                        audioLink.SetMediaTime(0);
+                    }
+                    break;
+            }
+
+            if (repeatPlaylist)
+                audioLink.SetMediaLoop(MediaLoop.Loop);
+            else
+                audioLink.SetMediaLoop(MediaLoop.None);
+        }
+
+        public void _AudioLinkOnVideoTrackingUpdate()
+        {
+            if (!audioLink)
+                return;
+
+            if (!seekableSource || trackDuration == 0)
+                audioLink.SetMediaTime(0);
+            else
+                audioLink.SetMediaTime(trackPosition / trackDuration);
+        }
+
+        public void _AudioLinkOnVideoPlaylistUpdate()
+        {
+            _AudioLinkOnVideoStateUpdate();
+        }
+
+        public void _AudioLinkOnMasterVolumeUpdate()
+        {
+            if (!audioLink || !audioManager)
+                return;
+
+            audioLink.SetMediaVolume(audioManager.masterVolume);
+        }
+
+        public void _AudioLinkOnBind()
+        {
+            audioLink = null;
+            if (!audioManager)
+                return;
+
+            if (audioManager.audioLinkSystem)
+            {
+                audioLink = (AudioLink.AudioLink)(Component)audioManager.audioLinkSystem;
+                audioLink.autoSetMediaState = false;
+
+                _AudioLinkOnVideoStateUpdate();
+                _AudioLinkOnVideoTrackingUpdate();
+                _AudioLinkOnMasterVolumeUpdate();
+            }
+        }
+#endif
     }
 }
