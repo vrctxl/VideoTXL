@@ -276,7 +276,7 @@ namespace Texel
 
                 Vector2Int size = sizeProp.vector2IntValue;
 
-                Rect fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("CRT Size", "The resolution of the CRT, fetched from the underlying asset.  Changing these values will change the size on the asset itself."));
+                Rect fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("CRT Size", "The resolution of the CRT.  If the resize to video option is enabled, the specified size will be used for placeholder textures.\n\nChanges to this value will change the size of the underlying CRT asset."));
                 fieldRect.x -= 15;
                 Rect field1 = fieldRect;
                 float xwidth = 8;
@@ -305,21 +305,21 @@ namespace Texel
 
                 rect.x += 15;
                 rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
-                fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Target Aspect Ratio", "The target aspect ratio should be set to the aspect ratio of the OBJECT that this CRT's texture will be applied to, such as a main video screen.  This can be different than the aspect ratio of the CRT or source video.  This value is fetched from the CRT material; changing it will change it on the underlying material."));
+                fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Target Aspect Ratio", "The target aspect ratio should be set to the aspect ratio of the OBJECT that this CRT's texture will be applied to, such as a main video screen.  This can be different than the aspect ratio of the CRT or source video.\n\nIf the expand to fit option is enabled, the target aspect ratio will be used to calculate the expansion.\n\nIf the CRT material uses a compatible TXL shader, the aspect ratio property of the underlying material asset will be updated to match this value."));
                 fieldRect.x -= 30;
                 fieldRect.width = fwidth;
                 float newAspect = EditorGUI.DelayedFloatField(fieldRect, targetAspectProp.floatValue);
                 targetAspectProp.floatValue = newAspect;
 
                 rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
-                fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Resize to Video", "Dynamically resize the render texture to match the resolution of the video data.  When placeholder textures are displayed, the CRT's size specified above will be used."));
+                fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Resize to Video", "Dynamically resize the CRT to match the resolution of the video data.  When placeholder textures are displayed, the CRT's size specified above will be used."));
                 fieldRect.x -= 30;
                 resizeProp.boolValue = EditorGUI.Toggle(fieldRect, resizeProp.boolValue);
 
                 if (resizeProp.boolValue)
                 {
                     rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
-                    fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Enlarge to Fit", "Enlarge the dynamic size of the render texture if necessary to fit the video data within the target aspect ratio."));
+                    fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Enlarge to Fit", "Enlarge the dynamic size of the CRT if necessary to fit the video data within the target aspect ratio."));
                     fieldRect.x -= 30;
                     expandSizeProp.boolValue = EditorGUI.Toggle(fieldRect, expandSizeProp.boolValue);
                 }
@@ -327,7 +327,7 @@ namespace Texel
 
                 Material mat = crt.material;
                 rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
-                fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("CRT Material", "The material used to render the video data onto the CRT, fetched from the underlying asset.  Changing the material will change it on the asset itself.  Only change this if you know what you're doing."));
+                fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("CRT Material", "The material used to render the video data onto the CRT, fetched from the underlying asset.\n\nChanges to this value will change the material on the underlying CRT asset.  Only change this if you know what you're doing."));
                 fieldRect.x -= 15;
                 Material newMat = (Material)EditorGUI.ObjectField(fieldRect, mat, typeof(Material), false);
                 if (newMat != mat)
@@ -341,7 +341,7 @@ namespace Texel
                     ScreenPropertyMap matmap = (ScreenPropertyMap)matMapProp.objectReferenceValue;
                     rect.x += 15;
                     rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
-                    fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Property Map", "The property map tells the manager what property names to set on the shader used by the CRT's material.  A property map is required when non-TXL shaders are used."));
+                    fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Property Map", "The property map tells the manager what property names to set on the shader used by the CRT's material.\n\nA property map is required when non-TXL shaders are used.  If you aren't using a custom CRT material, this can be left empty."));
                     fieldRect.x -= 30;
                     EditorGUI.ObjectField(fieldRect, matMapProp, GUIContent.none);
 
@@ -524,34 +524,6 @@ namespace Texel
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Render Texture Output", EditorStyles.boldLabel);
 
-            /*EditorGUI.indentLevel++;
-            EditorGUILayout.PropertyField(useRenderOutProperty);
-            if (useRenderOutProperty.boolValue)
-            {
-                EditorGUILayout.PropertyField(outputCRTProperty);
-                EditorGUILayout.PropertyField(outputMaterialPropertiesProperty);
-
-                CustomRenderTexture crt = (CustomRenderTexture)outputCRTProperty.objectReferenceValue;
-                if (!prevRenderOut && AssetDatabase.GetAssetPath(crt) == DEFAULT_CRT_PATH)
-                    outputCRTProperty.objectReferenceValue = CreateCRTCopy();
-
-                if (AssetDatabase.GetAssetPath(crt) == DEFAULT_CRT_PATH)
-                    EditorGUILayout.HelpBox("You're using the reference CRT object from the VideoTXL package folder.  Any customization made to the CRT or its material will be lost when the VideoTXL package is updated.", MessageType.Warning);
-
-                if (outputMaterialPropertiesProperty.objectReferenceValue == null)
-                {
-                    if (compatMaterialShader(crt))
-                        IndentedHelpBox("Default property map inferred from compatible material shader.", MessageType.None);
-                    else
-                        EditorGUILayout.HelpBox($"No property map set. The screen manager will not be able to update properties on the CRT material.", MessageType.Error);
-                }
-            }
-            else
-                EditorGUILayout.HelpBox("Enabling the Render Texture Output is the easiest way to supply a video texture to other shaders and materials.  For the most control and performance, use Material or Material Property Block overrides.", MessageType.Info);
-
-            EditorGUI.indentLevel--;
-            */
-
             EditorGUI.indentLevel++;
             if (renderOutCrtListProperty.arraySize == 0)
                 EditorGUILayout.HelpBox("Custom Render Textures, which can be used like other Render Textures, are the easiest way to supply a video texture to different materials/shaders in your scene.  This includes feeding systems like LTCGI and AreaLit.  Add one or more CRTs to the list to get started.\n\nIf you just want to display a screen, consider using the other override options below, which will have better performance and display your video content at native resolution.", MessageType.Info);
@@ -561,6 +533,21 @@ namespace Texel
             listRect.x += 15;
             listRect.width -= 15;
             crtOutList.DoList(listRect);
+
+            bool packageCrtDetected = false;
+            for (int i = 0; i < renderOutCrtListProperty.arraySize; i++)
+            {
+                SerializedProperty prop = renderOutCrtListProperty.GetArrayElementAtIndex(i);
+                CustomRenderTexture crt = (CustomRenderTexture)prop.objectReferenceValue;
+                if (crt && AssetDatabase.GetAssetPath(crt).StartsWith("Packages/com.texelsaur.video"))
+                    packageCrtDetected = true;
+            }
+
+            if (packageCrtDetected)
+            {
+                EditorGUILayout.Space(20);
+                IndentedHelpBox("One or more referenced CRTs is within the VideoTXL package folder.  The CRT will be lost or have any changes reverted the next time VideoTXL is updated.  Creating a copy in Assets is recommended.", MessageType.Warning);
+            }
 
             // ---
 
@@ -643,72 +630,6 @@ namespace Texel
             EditorGUILayout.HelpBox(message, messageType);
             EditorGUI.indentLevel--;
         }
-
-        /*
-        private void CrtFoldout()
-        {
-            EditorGUILayout.Space();
-
-            for (int i = 0; i < renderOutCrtListProperty.arraySize; i++)
-            {
-                EditorGUI.indentLevel++;
-                Rect row2 = EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField($"Output {i}");
-                GUILayout.Button(new GUIContent("Remove"), GUILayout.Width(60));
-                EditorGUILayout.EndHorizontal();
-
-                SerializedProperty prop = renderOutCrtListProperty.GetArrayElementAtIndex(i);
-                EditorGUILayout.PropertyField(prop, new GUIContent($"Output CRT"));
-
-                SerializedProperty prop2 = renderOutMatPropsListProperty.GetArrayElementAtIndex(i);
-                EditorGUILayout.PropertyField(prop2, new GUIContent($"Output Material Properties"));
-
-                CustomRenderTexture crt = (CustomRenderTexture)prop.objectReferenceValue;
-                if (crt)
-                {
-                    GUILayout.BeginHorizontal();
-                    EditorGUILayout.PrefixLabel("CRT Size", EditorStyles.popup);
-                    EditorGUI.indentLevel--;
-                    int width = EditorGUILayout.DelayedIntField(crt.width, GUILayout.MinWidth(40));
-                    GUILayout.Label("x");
-                    int height = EditorGUILayout.DelayedIntField(crt.height, GUILayout.MinWidth(40));
-                    EditorGUI.indentLevel++;
-                    GUILayout.FlexibleSpace();
-                    GUILayout.EndHorizontal();
-                    //Vector2Int res = new Vector2Int(crt.width, crt.height);
-                    //Vector2Int newRes = EditorGUILayout.Vector2IntField("Resolution", res);
-                    if (width != crt.width || height != crt.height)
-                    {
-                        crt.Release();
-                        crt.width = width;
-                        crt.height = height;
-                        crt.Create();
-                    }
-
-                    Material mat = crt.material;
-                    if (mat != null)
-                    {
-                        bool compat = compatMaterialShader(mat);
-                        if (compat)
-                        {
-                            float aspect = mat.GetFloat("_AspectRatio");
-                            float newAspect = EditorGUILayout.DelayedFloatField("Target Aspect Ratio", aspect);
-                            if (aspect != newAspect)
-                                mat.SetFloat("_AspectRatio", newAspect);
-                        }
-                    }
-                }
-
-                EditorGUILayout.Space();
-                EditorGUI.indentLevel--;
-
-                /*Rect row2 = EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.PropertyField(prop, new GUIContent($"Element {i}"));
-                if (GUILayout.Button(new GUIContent("X", "Remove Element"), GUILayout.Width(30)))
-                    RemoveName(i);
-                EditorGUILayout.EndHorizontal();
-            }
-        }*/
 
         private void ScreenFoldout()
         {
