@@ -22,6 +22,7 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class AudioChannel : EventBase
     {
+        [Tooltip("The name of the channel.  Must be unique across all channels in the same group.")]
         public string channelName;
         [Tooltip("The base volume level of this channel.  May be scaled back by mster volume and other influences.")]
         [Range(0, 1)]

@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.2.1] - 10-08-23
+
+- Added _SetTextureOverride, _GetTextureOverride, _GetResolvedTextureOverride to ScreenManager
+
 ## [2.2.0] - 10-04-23
 
 - Added support for multiple CRT definitions
