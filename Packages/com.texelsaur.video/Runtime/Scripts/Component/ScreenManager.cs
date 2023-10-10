@@ -154,16 +154,18 @@ namespace Texel
         public const int SCREEN_MODE_SYNC = 5;
 
         const int SCREEN_INDEX_PLAYBACK = 0;
-        const int SCREEN_INDEX_LOGO = 1;
-        const int SCREEN_INDEX_LOADING = 2;
-        const int SCREEN_INDEX_SYNC = 3;
-        const int SCREEN_INDEX_AUDIO = 4;
-        const int SCREEN_INDEX_ERROR = 5;
-        const int SCREEN_INDEX_ERROR_INVALID = 6;
-        const int SCREEN_INDEX_ERROR_RATE = 7;
-        const int SCREEN_INDEX_ERROR_BLOCKED = 8;
+        public const int SCREEN_INDEX_LOGO = 1;
+        public const int SCREEN_INDEX_LOADING = 2;
+        public const int SCREEN_INDEX_SYNC = 3;
+        public const int SCREEN_INDEX_AUDIO = 4;
+        public const int SCREEN_INDEX_ERROR = 5;
+        public const int SCREEN_INDEX_ERROR_INVALID = 6;
+        public const int SCREEN_INDEX_ERROR_RATE = 7;
+        public const int SCREEN_INDEX_ERROR_BLOCKED = 8;
         const int SCREEN_INDEX_EDITOR = 9;
         const int SCREEN_INDEX_COUNT = 10;
+
+        int[] screenIndexFallbackMap;
 
         Material[] replacementMaterials;
         Texture[] replacementTextures;
@@ -213,6 +215,18 @@ namespace Texel
 
             block = new MaterialPropertyBlock();
 
+            screenIndexFallbackMap = new int[SCREEN_INDEX_COUNT];
+            screenIndexFallbackMap[SCREEN_INDEX_PLAYBACK] = -1;
+            screenIndexFallbackMap[SCREEN_INDEX_LOGO] = -1;
+            screenIndexFallbackMap[SCREEN_INDEX_LOADING] = SCREEN_INDEX_LOGO;
+            screenIndexFallbackMap[SCREEN_INDEX_SYNC] = SCREEN_INDEX_LOGO;
+            screenIndexFallbackMap[SCREEN_INDEX_AUDIO] = SCREEN_INDEX_LOGO;
+            screenIndexFallbackMap[SCREEN_INDEX_ERROR] = SCREEN_INDEX_LOGO;
+            screenIndexFallbackMap[SCREEN_INDEX_ERROR_INVALID] = SCREEN_INDEX_ERROR;
+            screenIndexFallbackMap[SCREEN_INDEX_ERROR_RATE] = SCREEN_INDEX_ERROR;
+            screenIndexFallbackMap[SCREEN_INDEX_ERROR_BLOCKED] = SCREEN_INDEX_ERROR;
+            screenIndexFallbackMap[SCREEN_INDEX_EDITOR] = -1;
+
             replacementMaterials = new Material[SCREEN_INDEX_COUNT];
             replacementMaterials[SCREEN_INDEX_PLAYBACK] = null;
             replacementMaterials[SCREEN_INDEX_LOGO] = logoMaterial;
@@ -228,13 +242,13 @@ namespace Texel
             replacementTextures = new Texture[SCREEN_INDEX_COUNT];
             replacementTextures[SCREEN_INDEX_PLAYBACK] = null;
             replacementTextures[SCREEN_INDEX_LOGO] = logoTexture;
-            replacementTextures[SCREEN_INDEX_LOADING] = loadingTexture ?? logoTexture;
-            replacementTextures[SCREEN_INDEX_SYNC] = syncTexture ?? logoTexture;
-            replacementTextures[SCREEN_INDEX_AUDIO] = audioTexture ?? logoTexture;
-            replacementTextures[SCREEN_INDEX_ERROR] = errorTexture ?? logoTexture;
-            replacementTextures[SCREEN_INDEX_ERROR_INVALID] = errorInvalidTexture ?? replacementTextures[SCREEN_INDEX_ERROR];
-            replacementTextures[SCREEN_INDEX_ERROR_RATE] = errorRateLimitedTexture ?? replacementTextures[SCREEN_INDEX_ERROR];
-            replacementTextures[SCREEN_INDEX_ERROR_BLOCKED] = errorBlockedTexture ?? replacementTextures[SCREEN_INDEX_ERROR];
+            replacementTextures[SCREEN_INDEX_LOADING] = loadingTexture;
+            replacementTextures[SCREEN_INDEX_SYNC] = syncTexture;
+            replacementTextures[SCREEN_INDEX_AUDIO] = audioTexture;
+            replacementTextures[SCREEN_INDEX_ERROR] = errorTexture;
+            replacementTextures[SCREEN_INDEX_ERROR_INVALID] = errorInvalidTexture;
+            replacementTextures[SCREEN_INDEX_ERROR_RATE] = errorRateLimitedTexture;
+            replacementTextures[SCREEN_INDEX_ERROR_BLOCKED] = errorBlockedTexture;
             replacementTextures[SCREEN_INDEX_EDITOR] = editorTexture;
 
 #if COMPILER_UDONSHARP
@@ -662,6 +676,30 @@ namespace Texel
             _ResetCheckScreenMaterial();
         }
 
+        public Texture _GetTextureOverride(int screenIndex)
+        {
+            return replacementTextures[screenIndex];
+        }
+
+        public void _SetTextureOverride(int screenIndex, Texture texture)
+        {
+            replacementTextures[screenIndex] = texture;
+        }
+
+        public Texture _GetResolvedTextureOverride(int screenIndex)
+        {
+            int resIndex = screenIndex;
+            Texture tex = replacementTextures[resIndex];
+
+            while (tex == null && screenIndexFallbackMap[resIndex] >= 0)
+            {
+                resIndex = screenIndexFallbackMap[resIndex];
+                tex = replacementTextures[resIndex];
+            }
+
+            return tex;
+        }
+
         public void _ResetCheckScreenMaterial()
         {
             _EnsureInit();
@@ -681,11 +719,12 @@ namespace Texel
 
             if (useTextureOverrides)
             {
-                _UpdateCaptureData(replacementTextures[screenIndex], captureTex);
+                Texture replacement = _GetResolvedTextureOverride(screenIndex);
+                _UpdateCaptureData(replacement, captureTex);
                 _UpdateMaterials();
                 _UpdatePropertyBlocks();
             }
-            
+
             if (!currentValid)
                 _QueueUpdateCheckFrames(1);
             else
@@ -739,7 +778,8 @@ namespace Texel
 
             if (useTextureOverrides)
             {
-                _UpdateCaptureData(replacementTextures[screenIndex], captureTex);
+                Texture replacement = _GetResolvedTextureOverride(screenIndex);
+                _UpdateCaptureData(replacement, captureTex);
                 _UpdateMaterials();
                 _UpdatePropertyBlocks();
             }
@@ -831,7 +871,7 @@ namespace Texel
                                 newHeight = currentTexture.height;
                             }
                         }
-                        
+
                         crt.Release();
                         crt.width = newWidth;
                         crt.height = newHeight;
