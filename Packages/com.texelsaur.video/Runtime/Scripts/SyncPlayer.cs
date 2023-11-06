@@ -785,10 +785,8 @@ namespace Texel
 
             if (_syncUrl == null || _syncUrl.Get() == "")
                 return;
-            if (playerState == VIDEO_STATE_LOADING)
-                return;
 
-            if (playerState == VIDEO_STATE_PLAYING)
+            if (playerState == VIDEO_STATE_PLAYING || playerState == VIDEO_STATE_LOADING)
                 videoMux._VideoStop();
 
             _UpdatePlayerState(VIDEO_STATE_LOADING);

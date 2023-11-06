@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.2.2] - 11-06-23
+
+- Fixed remote clients infinitely loading new video in some cases if they were already loading a video
+
 ## [2.2.1] - 10-10-23
 
 - Added _SetTextureOverride, _GetTextureOverride, _GetResolvedTextureOverride to ScreenManager
