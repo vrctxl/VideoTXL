@@ -3,6 +3,9 @@
 ## [2.2.2] - 11-06-23
 
 - Fixed remote clients infinitely loading new video in some cases if they were already loading a video
+- Improve error description when property map is required but not set
+- Added empty Screen Property Map prefab
+- Added button to create an empty property map at field where it's missing
 
 ## [2.2.1] - 10-10-23
 
