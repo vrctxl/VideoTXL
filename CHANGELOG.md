@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.2] - 11-06-23
+
+- Fixed remote clients infinitely loading new video in some cases if they were already loading a video
+- Improve error description when property map is required but not set
+- Added empty Screen Property Map prefab
+- Added button to create an empty property map at field where it's missing
+- Added default audio profile field to Audio Manager inspector
+- Changed presentation of URL Source to select between Playlists / Custom
+- Fixed resources not auto-initializing when first selecting sync player object
+
 ## [2.2.1] - 10-10-23
 
 - Added _SetTextureOverride, _GetTextureOverride, _GetResolvedTextureOverride to ScreenManager

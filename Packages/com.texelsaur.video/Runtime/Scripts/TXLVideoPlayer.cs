@@ -44,7 +44,7 @@ namespace Texel
         protected AudioManager audioManager;
 
         [HideInInspector]
-        public bool prefabInitialized = true;
+        public bool prefabInitialized = false;
 
         public bool runBuildHooks = true;
 

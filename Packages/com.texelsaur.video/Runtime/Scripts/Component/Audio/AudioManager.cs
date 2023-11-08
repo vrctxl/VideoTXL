@@ -27,6 +27,7 @@ namespace Texel
         //public bool master2D = false;
 
         public AudioChannelGroup[] channelGroups;
+        public AudioChannelGroup defaultChannelGroup;
 
         public bool debugLogging = false;
         public bool debugEvents = false;
@@ -131,10 +132,15 @@ namespace Texel
             if (channelGroups == null)
                 channelGroups = new AudioChannelGroup[0];
 
+            bool defaultIsValid = false;
             foreach (AudioChannelGroup group in channelGroups)
             {
+                if (group == defaultChannelGroup)
+                    defaultIsValid = true;
+
                 if (group.unityChannel)
                     group.unityChannel._SetAudioManager(this);
+
                 foreach (AudioChannel channel in group.avproChannels)
                 {
                     if (channel)
@@ -142,12 +148,17 @@ namespace Texel
                 }
             }
 
-            foreach (AudioChannelGroup group in channelGroups)
+            if (defaultIsValid)
+                _SelectChannelGroup(defaultChannelGroup);
+            else
             {
-                if (group)
+                foreach (AudioChannelGroup group in channelGroups)
                 {
-                    _SelectChannelGroup(group);
-                    break;
+                    if (group)
+                    {
+                        _SelectChannelGroup(group);
+                        break;
+                    }
                 }
             }
 

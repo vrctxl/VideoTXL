@@ -13,6 +13,8 @@ namespace Texel
     [DefaultExecutionOrder(-1)]
     public class SyncPlayer : TXLVideoPlayer
     {
+        [SerializeField] UrlSourceType defaultUrlSourceType = UrlSourceType.None;
+
         //public Playlist playlist;
         public VideoUrlSource urlSource;
         public UrlRemapper urlRemapper;
@@ -785,10 +787,8 @@ namespace Texel
 
             if (_syncUrl == null || _syncUrl.Get() == "")
                 return;
-            if (playerState == VIDEO_STATE_LOADING)
-                return;
 
-            if (playerState == VIDEO_STATE_PLAYING)
+            if (playerState == VIDEO_STATE_PLAYING || playerState == VIDEO_STATE_LOADING)
                 videoMux._VideoStop();
 
             _UpdatePlayerState(VIDEO_STATE_LOADING);

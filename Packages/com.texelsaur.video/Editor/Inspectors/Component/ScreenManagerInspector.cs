@@ -690,7 +690,18 @@ namespace Texel
                             if (materialCompat(i))
                                 IndentedHelpBox("Default property map inferred from compatible material shader.", MessageType.None);
                             else if (objectRefValid(materialUpdateListProperty, i))
-                                EditorGUILayout.HelpBox("No property map set. The screen manager will not be able to update properties on the material.", MessageType.Error);
+                            {
+                                GUILayout.BeginHorizontal();
+                                GUILayout.FlexibleSpace();
+                                if (GUILayout.Button(new GUIContent("Create Property Map", "Create an empty Screen Property Map object under the screen manager and asign it.  The new map will need to be filled out."), GUILayout.Width(150)))
+                                {
+                                    GameObject propMap = CreateEmptyPropertyMap((Material)matUpdate.objectReferenceValue);
+                                    matProperties.objectReferenceValue = propMap.GetComponent<ScreenPropertyMap>();
+                                    Selection.activeObject = propMap;
+                                }
+                                GUILayout.EndHorizontal();
+                                EditorGUILayout.HelpBox("No property map set.  The screen manager will not be able to update properties on the material.  A property map tells the screen manager the names of a material's shader properties such as main texture, flipping, gamma correction, etc.", MessageType.Error);
+                            }
                         } 
 
                         EditorGUI.indentLevel--;
@@ -741,7 +752,18 @@ namespace Texel
                             if (propOverrideCompat(i))
                                 IndentedHelpBox("Default property map inferred from compatible material shader.", MessageType.None);
                             else if (objectRefValid(propRenderListProperty, i))
-                                EditorGUILayout.HelpBox("No property map set. The screen manager will not be able to update properties on the object.", MessageType.Error);
+                            {
+                                GUILayout.BeginHorizontal();
+                                GUILayout.FlexibleSpace();
+                                if (GUILayout.Button(new GUIContent("Create Property Map", "Create an empty Screen Property Map object under the screen manager and asign it.  The new map will need to be filled out."), GUILayout.Width(150)))
+                                {
+                                    GameObject propMap = CreateEmptyPropertyMap(null);
+                                    matProperties.objectReferenceValue = propMap.GetComponent<ScreenPropertyMap>();
+                                    Selection.activeObject = propMap;
+                                }
+                                GUILayout.EndHorizontal();
+                                EditorGUILayout.HelpBox("No property map set. The screen manager will not be able to update properties on the object.  A property map tells the screen manager the names of a material's shader properties such as main texture, flipping, gamma correction, etc.", MessageType.Error);
+                            }
                         }
 
                         EditorGUI.indentLevel--;
@@ -807,6 +829,14 @@ namespace Texel
             Material mat = (Material)matProp.objectReferenceValue;
 
             return compatMaterialShader(mat);
+        }
+
+        private Material materialOverride(int index)
+        {
+            SerializedProperty matProp = materialUpdateListProperty.GetArrayElementAtIndex(index);
+            Material mat = (Material)matProp.objectReferenceValue;
+
+            return mat;
         }
 
         private bool propOverrideCompat(int index)
@@ -1149,6 +1179,35 @@ namespace Texel
                 default:
                     return false;
             }
+        }
+
+        private GameObject CreateEmptyPropertyMap(Material mat)
+        {
+            ScreenManager man = (ScreenManager)serializedObject.targetObject;
+
+            GameObject map = VideoTxlManager.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Property Maps/PropertyMap.prefab", man.transform);
+            ScreenPropertyMap propMap = map.GetComponent<ScreenPropertyMap>();
+            if (mat)
+            {
+                if (propMap)
+                {
+                    string[] texProps = mat.GetTexturePropertyNames();
+                    for (int i = 0; i < texProps.Length; i++)
+                    {
+                        if (texProps[i] == "_MainTex" || texProps[i] == "_EmissionMap")
+                        {
+                            propMap.screenTexture = texProps[i];
+                            break;
+                        }
+                    }
+                }
+
+                map.name = mat.name + " Map";
+            }
+            else
+                map.name = "Property Map";
+
+            return map;
         }
     }
 }
