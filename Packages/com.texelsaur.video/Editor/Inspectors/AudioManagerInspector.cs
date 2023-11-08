@@ -29,6 +29,7 @@ namespace Texel
         //SerializedProperty master2DProperty;
 
         SerializedProperty channelGroupsProperty;
+        SerializedProperty defaultChannelGroupProperty;
 
         SerializedProperty debugLogProperty;
         SerializedProperty debugStateProperty;
@@ -79,6 +80,7 @@ namespace Texel
             //master2DProperty = serializedObject.FindProperty(nameof(AudioManager.master2D));
 
             channelGroupsProperty = serializedObject.FindProperty(nameof(AudioManager.channelGroups));
+            defaultChannelGroupProperty = serializedObject.FindProperty(nameof(AudioManager.defaultChannelGroup));
 
             //channelAudioListProperty = serializedObject.FindProperty(nameof(AudioManager.channelAudio));
             //channelNameListProperty = serializedObject.FindProperty(nameof(AudioManager.channelNames));
@@ -166,9 +168,26 @@ namespace Texel
 
             List<AudioChannelGroup> groups = VideoComponentUpdater.GetValidAudioGroups((AudioManager)serializedObject.targetObject);
             if (groups.Count == 0)
+            {
+                defaultChannelGroupProperty.objectReferenceValue = null;
                 EditorGUILayout.HelpBox("No audio profiles are defined.  There will be no audio during video playback.  Check documentation linked above for information on adding new audio groups, or use another version of the video player prefab that includes audio groups.", MessageType.Warning);
+            }
             else
             {
+                AudioChannelGroup currentGroup = (AudioChannelGroup)defaultChannelGroupProperty.objectReferenceValue;
+                int currentGroupIndex = 0;
+
+                string[] groupNames = new string[groups.Count];
+                for (int i = 0; i < groups.Count; i++)
+                {
+                    groupNames[i] = groups[i].groupName;
+                    if (currentGroup == groups[i])
+                        currentGroupIndex = i;
+                }
+
+                int selectedDefault = EditorGUILayout.Popup(new GUIContent("Default Audio Profile"), currentGroupIndex, groupNames);
+                defaultChannelGroupProperty.objectReferenceValue = groups[selectedDefault];
+
                 EditorGUILayout.LabelField(new GUIContent("Detected Audio Profiles", "Add or remove audio profile prefabs under the Audio Manager node in the hierarchy.  Audio profiles can be temporarily removed by disabling them in the hierarchy.  After making any changes, run Update Audio Components."));
                 EditorGUI.indentLevel++;
 

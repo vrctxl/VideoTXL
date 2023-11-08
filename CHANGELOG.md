@@ -6,6 +6,7 @@
 - Improve error description when property map is required but not set
 - Added empty Screen Property Map prefab
 - Added button to create an empty property map at field where it's missing
+- Added default audio profile field to Audio Manager inspector
 
 ## [2.2.1] - 10-10-23
 
