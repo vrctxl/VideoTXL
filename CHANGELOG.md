@@ -7,6 +7,8 @@
 - Added empty Screen Property Map prefab
 - Added button to create an empty property map at field where it's missing
 - Added default audio profile field to Audio Manager inspector
+- Changed presentation of URL Source to select between Playlists / Custom
+- Fixed resources not auto-initializing when first selecting sync player object
 
 ## [2.2.1] - 10-10-23
 

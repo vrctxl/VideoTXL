@@ -13,6 +13,8 @@ namespace Texel
     [DefaultExecutionOrder(-1)]
     public class SyncPlayer : TXLVideoPlayer
     {
+        [SerializeField] UrlSourceType defaultUrlSourceType = UrlSourceType.None;
+
         //public Playlist playlist;
         public VideoUrlSource urlSource;
         public UrlRemapper urlRemapper;
