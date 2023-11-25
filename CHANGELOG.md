@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.3] - 11-25-23
+
+- Fixed Local Video Player not playing if it loses race with Video Manager
+- Added continuous loop support to Local Video Player when using Unity sources
+- Added experimental multi-point support to Audio Fade Zone
+
 ## [2.2.2] - 11-06-23
 
 - Fixed remote clients infinitely loading new video in some cases if they were already loading a video

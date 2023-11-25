@@ -68,7 +68,32 @@ namespace Texel
             if (Utilities.IsValid(urlRemapper))
                 urlRemapper._SetGameMode(IsQuest ? UrlRemapper.GAME_MODE_QUEST : UrlRemapper.GAME_MODE_PC);
 
+            if (Utilities.IsValid(staticUrlSource))
+            {
+                _urlSourceType = SOURCE_TYPE_STATIC;
+                staticUrlSource._RegisterPlayer((UdonBehaviour)GetComponent(typeof(UdonBehaviour)));
+            }
+            else
+                _urlSourceType = SOURCE_TYPE_URL;
+
+            _UpdatePlayerState(VIDEO_STATE_STOPPED);
+
+            SendCustomEventDelayedFrames(nameof(_PostInit), 1);
+        }
+
+        public void _PostInit()
+        {
+            if (!videoMux)
+            {
+                DebugLog("No video manager set at time of post init, skipping default playback");
+                return;
+            }
+
+            _SetScreenFit(defaultScreenFit);
+
             _hasSustainZone = Utilities.IsValid(playbackZone);
+            bool initTrigger = false;
+
             if (_hasSustainZone)
             {
                 _inSustainZone = playbackZone._LocalPlayerInZone();
@@ -82,37 +107,46 @@ namespace Texel
                     _triggerZoneSame = true;
                 else
                     triggerZone._Register(ZoneTrigger.EVENT_PLAYER_ENTER, this, "_TriggerPlay");
+
+                initTrigger = triggerZone._LocalPlayerInZone();
             }
 
-            if (Utilities.IsValid(staticUrlSource))
+            if (playOnJoin)
             {
-                _urlSourceType = SOURCE_TYPE_STATIC;
-                staticUrlSource._RegisterPlayer((UdonBehaviour)GetComponent(typeof(UdonBehaviour)));
+                DebugLog("Play on Join");
+                _inSustainZone = true;
+                initTrigger = true;
             }
-            else
-                _urlSourceType = SOURCE_TYPE_URL;
+
+            if (initTrigger)
+                _TriggerPlay();
+        }
+
+        public override void _SetVideoManager(VideoManager manager)
+        {
+            if (videoMux)
+            {
+                DebugLog("VideoManager already set");
+                return;
+            }
+
+            base._SetVideoManager(manager);
 
             videoMux._EnsureInit();
             videoMux._Register(VideoManager.VIDEO_READY_EVENT, this, "_OnVideoReady");
             videoMux._Register(VideoManager.VIDEO_START_EVENT, this, "_OnVideoStart");
             videoMux._Register(VideoManager.VIDEO_END_EVENT, this, "_OnVideoEnd");
             videoMux._Register(VideoManager.VIDEO_ERROR_EVENT, this, "_OnVideoError");
+            videoMux._Register(VideoManager.VIDEO_LOOP_EVENT, this, "_OnVideoLoop");
             videoMux._Register(VideoManager.SOURCE_CHANGE_EVENT, this, "_OnSourceChange");
-
-            _UpdatePlayerState(VIDEO_STATE_STOPPED);
 
             if (videoMux.SupportsAVPro)
                 videoMux._UpdateVideoSource(VideoSource.VIDEO_SOURCE_AVPRO);
             else if (videoMux.SupportsUnity)
-                videoMux._UpdateVideoSource(VideoSource.VIDEO_SOURCE_UNITY);
-
-            _SetScreenFit(defaultScreenFit);
-
-            if (playOnJoin)
             {
-                DebugLog("Play on Join");
-                _inSustainZone = true;
-                _TriggerPlay();
+                videoMux._UpdateVideoSource(VideoSource.VIDEO_SOURCE_UNITY);
+                if (loop)
+                    videoMux._VideoSetLoop(loop);
             }
         }
 
@@ -376,6 +410,11 @@ namespace Texel
 
             if (retryOnError)
                 _PlayVideoAfter(url, retryTimeout);
+        }
+
+        public void _OnVideoLoop()
+        {
+            // DebugLog("LOOPING!");
         }
 
         public void _OnSourceChange()

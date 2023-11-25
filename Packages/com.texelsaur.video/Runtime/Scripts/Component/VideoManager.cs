@@ -472,6 +472,17 @@ namespace Texel
             source._VideoLoadURL(url);
         }
 
+        public void _VideoSetLoop(bool state)
+        {
+            if (!_ActiveSourceValid())
+                return;
+
+            VideoSource source = sources[activeSource];
+            _DebugLog(source, $"Set Loop: {state}");
+
+            source._VideoSetLoop(state);
+        }
+
         public void _VideoSetTime(float time)
         {
             if (!_ActiveSourceValid())

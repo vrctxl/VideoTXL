@@ -264,6 +264,12 @@ namespace Texel
                 videoPlayer.SetTime(time);
         }
 
+        public void _VideoSetLoop(bool state)
+        {
+            if (videoPlayer != null)
+                videoPlayer.Loop = state;
+        }
+
         public void _SetAVSync(bool state)
         {
             if (videoPlayer)
