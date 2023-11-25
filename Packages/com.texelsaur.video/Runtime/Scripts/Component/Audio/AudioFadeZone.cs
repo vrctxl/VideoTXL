@@ -37,6 +37,11 @@ namespace Texel
         [Tooltip("Force re-checking zone membership on player enter events.  May be needed in certain instances where you map can lose enter or leave events (such as stations within the zones).  You can save some performance by calling _RecalculateNextEvent yourself as needed.")]
         public bool forceColliderCheck = true;
 
+        [Header("Experimental")]
+        public Transform[] audioSourceLocations;
+        public float[] innerRadius;
+        public float[] outerRadius;
+
         [Header("Debug")]
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
@@ -46,6 +51,7 @@ namespace Texel
         //AudioManager audioManager;
         //int audioChannel;
 
+        bool legacyCollider = true;
         bool hasAudioSource = false;
         //bool hasAudioManager = false;
         bool forceRecalc = false;
@@ -70,6 +76,9 @@ namespace Texel
         protected override void _Init()
         {
             hasAudioSource = Utilities.IsValid(audioSource);
+
+            if (!innerZone || !outerZone || audioSourceLocations.Length > 0)
+                legacyCollider = false;
 
             if (active)
             {
@@ -99,7 +108,7 @@ namespace Texel
 
         public override void OnPlayerTriggerEnter(VRCPlayerApi player)
         {
-            if (!player.isLocal)
+            if (!legacyCollider || !player.isLocal)
                 return;
 
             if ((forceColliderCheck || pendingRecalc) && triggerCount >= 1 && !forceRecalc)
@@ -116,7 +125,7 @@ namespace Texel
 
         public override void OnPlayerTriggerExit(VRCPlayerApi player)
         {
-            if (!player.isLocal)
+            if (!legacyCollider || !player.isLocal)
                 return;
 
             triggerCount -= 1;
@@ -125,6 +134,9 @@ namespace Texel
 
         public void _Recalculate()
         {
+            if (!legacyCollider)
+                return;
+
             DebugLog("Recalculate");
             if (forceRecalc)
                 return;
@@ -194,37 +206,70 @@ namespace Texel
                 return;
 
             float lastFade = targetVolume;
-            if (triggerCount == 0)
-                targetVolume = lowerBound;
-            else if (triggerCount >= 2)
-                targetVolume = upperBound;
-            else
+            if (!legacyCollider)
             {
+
                 VRCPlayerApi player = Networking.LocalPlayer;
                 if (Utilities.IsValid(player))
                 {
+                    float calcVolume = 0;
                     Vector3 location = player.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position;
-                    Vector3 innerPoint = innerZone.ClosestPoint(location);
-                    Vector3 dirVector = location - innerPoint;
-                    dirVector = Vector3.Normalize(dirVector);
-                    if (dirVector.magnitude < .98)
-                        targetVolume = upperBound;
-                    else
+
+                    for (int i = 0; i < audioSourceLocations.Length; i++)
                     {
-                        float length = outerZone.bounds.size.magnitude;
-                        Ray ray = new Ray(location, dirVector);
-                        ray.origin = ray.GetPoint(length);
-                        ray.direction = -ray.direction;
+                        Transform t = audioSourceLocations[i];
+                        if (!t)
+                            continue;
 
-                        RaycastHit hit;
-                        outerZone.Raycast(ray, out hit, length * 2);
-                        Vector3 outerPoint = hit.point;
+                        float dist = Vector3.Distance(location, t.position);
+                        if (dist < innerRadius[i])
+                            calcVolume = Mathf.Max(calcVolume, upperBound);
+                        else if (dist > outerRadius[i])
+                            calcVolume = Mathf.Max(calcVolume, lowerBound);
+                        else
+                        {
+                            float factor = (dist - innerRadius[i]) / (outerRadius[i] - innerRadius[i]);
+                            calcVolume = Mathf.Max(calcVolume, Mathf.Lerp(upperBound, lowerBound, factor));
+                        }
+                    }
 
-                        Vector3 locPoint = _NearestPoint(innerPoint, outerPoint, location);
+                    targetVolume = calcVolume;
+                }
+            }
+            else
+            {
+                if (triggerCount == 0)
+                    targetVolume = lowerBound;
+                else if (triggerCount >= 2)
+                    targetVolume = upperBound;
+                else
+                {
+                    VRCPlayerApi player = Networking.LocalPlayer;
+                    if (Utilities.IsValid(player))
+                    {
+                        Vector3 location = player.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position;
+                        Vector3 innerPoint = innerZone.ClosestPoint(location);
+                        Vector3 dirVector = location - innerPoint;
+                        dirVector = Vector3.Normalize(dirVector);
+                        if (dirVector.magnitude < .98)
+                            targetVolume = upperBound;
+                        else
+                        {
+                            float length = outerZone.bounds.size.magnitude;
+                            Ray ray = new Ray(location, dirVector);
+                            ray.origin = ray.GetPoint(length);
+                            ray.direction = -ray.direction;
 
-                        float zoneDist = Vector3.Distance(innerPoint, outerPoint);
-                        float playerDistOuter = Vector3.Distance(locPoint, outerPoint);
-                        targetVolume = Mathf.Lerp(lowerBound, upperBound, playerDistOuter / zoneDist);
+                            RaycastHit hit;
+                            outerZone.Raycast(ray, out hit, length * 2);
+                            Vector3 outerPoint = hit.point;
+
+                            Vector3 locPoint = _NearestPoint(innerPoint, outerPoint, location);
+
+                            float zoneDist = Vector3.Distance(innerPoint, outerPoint);
+                            float playerDistOuter = Vector3.Distance(locPoint, outerPoint);
+                            targetVolume = Mathf.Lerp(lowerBound, upperBound, playerDistOuter / zoneDist);
+                        }
                     }
                 }
             }
