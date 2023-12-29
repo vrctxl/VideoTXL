@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.2.4] - 12-29-23
+
+- Changed stream end timeout ignore of local player from 1s to 10s
+- Updated implementation of VideoLockAclHandler to extend from AccessControlHandler base class
+
 ## [2.2.3] - 11-25-23
 
 - Fixed Local Video Player not playing if it loses race with Video Manager

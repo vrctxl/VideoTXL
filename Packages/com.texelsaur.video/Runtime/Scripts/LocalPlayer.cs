@@ -366,7 +366,7 @@ namespace Texel
 
         public void _OnVideoEnd()
         {
-            if (!seekableSource && Time.time - playStartTime < 1)
+            if (!seekableSource && Time.time - playStartTime < 10)
             {
                 DebugLog("Video end encountered at start of stream, ignoring");
                 return;
