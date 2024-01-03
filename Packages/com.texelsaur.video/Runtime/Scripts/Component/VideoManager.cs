@@ -34,6 +34,8 @@ namespace Texel
         public bool debugLogging = true;
         public DebugLog debugLog;
 
+        [SerializeField] bool enableAVProInEditor = false;
+
         public const int VIDEO_READY_EVENT = 0;
         public const int VIDEO_START_EVENT = 1;
         public const int VIDEO_END_EVENT = 2;
@@ -279,6 +281,11 @@ namespace Texel
 
                 return sources[activeSource];
             }
+        }
+
+        public bool AVProInEditor
+        {
+            get { return enableAVProInEditor; }
         }
 
         public void _OnVideoReady(int id)

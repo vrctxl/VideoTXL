@@ -14,6 +14,7 @@ namespace Texel
     {
         SerializedProperty videoPlayerProperty;
         SerializedProperty sourcesProperty;
+        SerializedProperty enableAVProInEditorProperty;
 
         SerializedProperty debugLogProperty;
         SerializedProperty debugLoggingProperty;
@@ -25,6 +26,7 @@ namespace Texel
         {
             videoPlayerProperty = serializedObject.FindProperty(nameof(VideoManager.videoPlayer));
             sourcesProperty = serializedObject.FindProperty(nameof(VideoManager.sources));
+            enableAVProInEditorProperty = serializedObject.FindProperty("enableAVProInEditor");
 
             debugLogProperty = serializedObject.FindProperty(nameof(VideoManager.debugLog));
             debugLoggingProperty = serializedObject.FindProperty(nameof(VideoManager.debugLogging));
@@ -59,6 +61,9 @@ namespace Texel
 
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(videoPlayerProperty, new GUIContent("Video Player", "The video player that this manager serves."));
+            EditorGUILayout.PropertyField(enableAVProInEditorProperty, new GUIContent("Enable AVPro In Editor", "Enables loading videos with an AVPro video source active.  This is NOT supported in a default SDK environment.  If you know what you're doing and you've taken the necessary steps to run AVPro in your editor, enable this option."));
+            if (enableAVProInEditorProperty.boolValue)
+                EditorGUILayout.HelpBox("The above setting does NOT add AVPro playback support to your editor environment.  It will just allow the video player to attempt loading URLs on AVPro video sources.  You must take additional steps on your own to support AVPro playback in the editor.", MessageType.Warning);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Video Sources", EditorStyles.boldLabel);

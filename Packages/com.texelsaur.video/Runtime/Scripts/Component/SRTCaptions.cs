@@ -277,7 +277,6 @@ at commonsensemedia.org.
                 return;
 
             position = Time.time - positionSyncOffset;
-            Debug.Log($"Position {position} index {index}");
 
             _UpdateIndex();
             _UpdateDisplay();

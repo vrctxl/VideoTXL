@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.2.5] - 01-03-24
+
+- Added Enable AVPro In Editor option to Video Manager
+- Added double buffer support to CRT shader
+
 ## [2.2.4] - 12-29-23
 
 - Changed stream end timeout ignore of local player from 1s to 10s

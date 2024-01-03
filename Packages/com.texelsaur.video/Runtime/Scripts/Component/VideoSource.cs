@@ -248,9 +248,12 @@ namespace Texel
 #if UNITY_EDITOR
             if (VideoSourceType == VIDEO_SOURCE_AVPRO)
             {
-                if (videoMux)
-                    videoMux._OnVideoError(id, VideoErrorTXL.NoAVProInEditor);
-                return;
+                if (!videoMux || !videoMux.AVProInEditor)
+                {
+                    if (videoMux)
+                        videoMux._OnVideoError(id, VideoErrorTXL.NoAVProInEditor);
+                    return;
+                }
             }
 #endif
 
