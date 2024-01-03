@@ -7,6 +7,7 @@ Shader "VideoTXL/RenderOut" {
 		_AspectRatio("Aspect Ratio", Float) = 1.777777
 		[HideInInspector] _TexAspectRatio("Aspect Ratio Override", Float) = 0
 		[Enum(Fit,0,Fit Height,1,Fit Width,2,Stretch,3)] _FitMode("Fit Mode", Int) = 0
+		[Toggle] _DoubleBuffered ("Double Buffered", Int) = 0
 	}
 
 	SubShader {
@@ -30,6 +31,7 @@ Shader "VideoTXL/RenderOut" {
 
 			int _ApplyGamma;
 			int _FlipY;
+			int _DoubleBuffered;
 
 			float4 frag(v2f_customrendertexture i) : SV_Target {
 				float2 uv = float2(0, 0);
@@ -47,6 +49,11 @@ Shader "VideoTXL/RenderOut" {
 
 				if (_ApplyGamma)
 					color.rgb = GammaToLinearSpace(color.rgb);
+
+				if (_DoubleBuffered) {
+					float4 prev = tex2D(_SelfTexture2D, uv * _MainTex_ST.xy + _MainTex_ST.zw);
+					color.rgb = lerp(prev, color, color.a);
+				}
 
 				color = color * visibility + margin;
 
