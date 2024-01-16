@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.2.6] - 01-16-24
+
+- Added _BindVideoPlayer method to Screen Manager to link manager to a different video player at runtime
+
 ## [2.2.5] - 01-03-24
 
 - Added Enable AVPro In Editor option to Video Manager
