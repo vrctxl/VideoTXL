@@ -261,18 +261,32 @@ namespace Texel
 
         public void _PostInit()
         {
+            _BindVideoPlayer(videoPlayer);
+        }
+
+        public void _BindVideoPlayer(TXLVideoPlayer videoPlayer)
+        {
+            TXLVideoPlayer prevPlayer = this.videoPlayer;
+            if (prevPlayer)
+            {
+                prevPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, nameof(_OnVideoStateUpdate));
+                if (prevPlayer.VideoManager)
+                    prevPlayer.VideoManager._Unregister(VideoManager.SOURCE_CHANGE_EVENT, this, nameof(_OnSourceChanged));
+            }
+
+            captureRenderer = null;
+            _screenSource = VideoSource.VIDEO_SOURCE_NONE;
+
+            this.videoPlayer = videoPlayer;
             if (videoPlayer)
             {
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, nameof(_OnVideoStateUpdate));
                 if (videoPlayer.VideoManager)
-                {
-                    videoPlayer.VideoManager._Register(VideoManager.SOURCE_CHANGE_EVENT, this, "_OnSourceChanged");
-                    captureRenderer = videoPlayer.VideoManager.CaptureRenderer;
-                    _OnSourceChanged();
-                }
-
-                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_OnVideoStateUpdate");
-                _OnVideoStateUpdate();
+                    videoPlayer.VideoManager._Register(VideoManager.SOURCE_CHANGE_EVENT, this, nameof(_OnSourceChanged));
             }
+
+            _OnSourceChanged();
+            _OnVideoStateUpdate();
         }
 
         private void OnDisable()
@@ -597,6 +611,13 @@ namespace Texel
         {
             _DebugEvent("Event OnVideoStateUpdate");
 
+            if (!videoPlayer)
+            {
+                _inError = false;
+                _UpdateScreenMaterial(SCREEN_MODE_LOGO);
+                return;
+            }
+
             switch (videoPlayer.playerState)
             {
                 case TXLVideoPlayer.VIDEO_STATE_STOPPED:
@@ -622,8 +643,11 @@ namespace Texel
         {
             _DebugEvent("Event OnSourceChanged");
 
-            captureRenderer = videoPlayer.VideoManager.CaptureRenderer;
-            _screenSource = videoPlayer.VideoManager.ActiveSourceType;
+            if (videoPlayer && videoPlayer.VideoManager)
+            {
+                captureRenderer = videoPlayer.VideoManager.CaptureRenderer;
+                _screenSource = videoPlayer.VideoManager.ActiveSourceType;
+            }
 
             _ResetCheckScreenMaterial();
         }
@@ -667,11 +691,13 @@ namespace Texel
         public void _UpdateScreenMaterial(int screenMode)
         {
             _DebugLowLevel($"Update screen material: mode={screenMode}");
-            if (_screenMode == screenMode && _screenFit == videoPlayer.screenFit)
+
+            int fit = _VideoScreenFit();
+            if (_screenMode == screenMode && _screenFit == fit)
                 return;
 
             _screenMode = screenMode;
-            _screenFit = videoPlayer.screenFit;
+            _screenFit = fit;
 
             _ResetCheckScreenMaterial();
         }
@@ -800,13 +826,23 @@ namespace Texel
             }
         }
 
+        int _VideoScreenFit()
+        {
+            return videoPlayer ? videoPlayer.screenFit : TXLVideoPlayer.SCREEN_FIT;
+        }
+
+        bool _IsQuest()
+        {
+            return videoPlayer ? videoPlayer.IsQuest : false;
+        }
+
         void _ResetCaptureData()
         {
             currentTexture = null;
             currentAVPro = false;
             currentInvert = false;
             currentGamma = false;
-            currentFit = videoPlayer.screenFit;
+            currentFit = _VideoScreenFit();
             currentAspectRatio = 0;
         }
 
@@ -834,7 +870,7 @@ namespace Texel
 
                 if (currentAVPro)
                 {
-                    currentInvert = !videoPlayer.IsQuest;
+                    currentInvert = !_IsQuest();
                     currentGamma = true;
                 }
 
@@ -909,6 +945,7 @@ namespace Texel
 
         void _UpdateMaterials()
         {
+            int fit = _VideoScreenFit();
             for (int i = 0; i < materialUpdateList.Length; i++)
             {
                 Material mat = materialUpdateList[i];
@@ -921,7 +958,7 @@ namespace Texel
                 _SetMatIntProperty(mat, shaderPropAVProList[baseIndexMat + i], currentAVPro ? 1 : 0);
                 _SetMatIntProperty(mat, shaderPropInvertList[baseIndexMat + i], currentGamma ? 1 : 0);
                 _SetMatIntProperty(mat, shaderPropGammaList[baseIndexMat + i], currentInvert ? 1 : 0);
-                _SetMatIntProperty(mat, shaderPropFitList[baseIndexMat + i], videoPlayer.screenFit);
+                _SetMatIntProperty(mat, shaderPropFitList[baseIndexMat + i], fit);
                 _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexMat + i], currentAspectRatio);
             }
 
@@ -939,7 +976,7 @@ namespace Texel
                     _SetMatIntProperty(mat, shaderPropAVProList[baseIndexCrt], currentAVPro ? 1 : 0);
                     _SetMatIntProperty(mat, shaderPropGammaList[baseIndexCrt], currentGamma ? 1 : 0);
                     _SetMatIntProperty(mat, shaderPropInvertList[baseIndexCrt], currentInvert ? 1 : 0);
-                    _SetMatIntProperty(mat, shaderPropFitList[baseIndexCrt], videoPlayer.screenFit);
+                    _SetMatIntProperty(mat, shaderPropFitList[baseIndexCrt], fit);
                     _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexCrt], currentAspectRatio);
 
                     bool isRT = currentTexture.GetType() == typeof(RenderTexture) || currentTexture.GetType() == typeof(CustomRenderTexture);
@@ -956,6 +993,7 @@ namespace Texel
 
         void _UpdatePropertyBlocks()
         {
+            int fit = _VideoScreenFit();
             for (int i = 0; i < propMeshList.Length; i++)
             {
                 MeshRenderer renderer = propMeshList[i];
@@ -974,7 +1012,7 @@ namespace Texel
                 _SetIntProperty(shaderPropAVProList[baseIndexProp + i], currentAVPro ? 1 : 0);
                 _SetIntProperty(shaderPropGammaList[baseIndexProp + i], currentGamma ? 1 : 0);
                 _SetIntProperty(shaderPropInvertList[baseIndexProp + i], currentInvert ? 1 : 0);
-                _SetIntProperty(shaderPropFitList[baseIndexProp + i], videoPlayer.screenFit);
+                _SetIntProperty(shaderPropFitList[baseIndexProp + i], fit);
                 _SetFloatProperty(shaderPropAspectRatioList[baseIndexProp + i], currentAspectRatio);
 
                 if (useMatIndex)
