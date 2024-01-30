@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.7] - 01-29-24
+
+- Fixed script upgrade warnings for Unity 2022
+- Fixed ScreenManager editor texture to be applied on scene load
+- Added isQuest state to DebugState output of Sync Video Player
+- Added Global Video Tex option to CRT configurations in Screen Manager
+- Added Logo Image download option to Screen Manager
+
 ## [2.2.6] - 01-16-24
 
 - Added _BindVideoPlayer method to Screen Manager to link manager to a different video player at runtime

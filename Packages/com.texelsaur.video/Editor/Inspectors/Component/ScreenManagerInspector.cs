@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using UnityEditorInternal;
 using UnityEngine.SceneManagement;
+using UnityEditor.SceneManagement;
 
 namespace Texel
 {
@@ -79,6 +80,7 @@ namespace Texel
     // [X] Update CRT at edittime for logo?
 
     [CustomEditor(typeof(ScreenManager))]
+    [InitializeOnLoad]
     internal class ScreenManagerInspector : Editor
     {
         const string DEFAULT_CRT_PATH = "Packages/com.texelsaur.video/Runtime/RenderTextures/VideoTXLCRT.asset";
@@ -156,6 +158,10 @@ namespace Texel
         SerializedProperty renderOutTargetAspectListProperty;
         SerializedProperty renderOutResizeListProperty;
         SerializedProperty renderOutExpandSizeListProperty;
+        SerializedProperty renderOutGlobalTexListProperty;
+
+        SerializedProperty downloadLogoImageProperty;
+        SerializedProperty downloadLogoImageUrlProperty;
 
         SerializedProperty _udonSharpBackingUdonBehaviourProperty;
 
@@ -167,6 +173,41 @@ namespace Texel
         ReorderableList crtOutList;
 
         static bool expandDebug = false;
+        static List<ScreenManager> managers;
+
+        static ScreenManagerInspector()
+        {
+            EditorSceneManager.activeSceneChangedInEditMode += OnSceneLoaded;
+        }
+
+        static void OnSceneLoaded(Scene prevScene, Scene newScene)
+        {
+            ScreenManager[] found = FindObjectsOfType<ScreenManager>();
+
+            managers = new List<ScreenManager>();
+            managers.AddRange(found);
+
+            Debug.Log($"[VideoTXL] Found {managers.Count} ScreenManagers in scene");
+
+            UpdateEditorTextures();
+        }
+
+        static void UpdateEditorTextures()
+        {
+            foreach (ScreenManager manager in managers)
+            {
+                if (manager == null)
+                    continue;
+
+                UpdateEditorMaterialBlocks(manager);
+                UpdateEditorSharedMaterials(manager);
+                UpdateEditorCRT(manager);
+            }
+
+            EditorWindow view = EditorWindow.GetWindow<SceneView>();
+            if (view)
+                view.Repaint();
+        }
 
         private void OnEnable()
         {
@@ -225,6 +266,10 @@ namespace Texel
             renderOutTargetAspectListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutTargetAspect));
             renderOutResizeListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutResize));
             renderOutExpandSizeListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutExpandSize));
+            renderOutGlobalTexListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutGlobalTex));
+
+            downloadLogoImageProperty = serializedObject.FindProperty(nameof(ScreenManager.downloadLogoImage));
+            downloadLogoImageUrlProperty = serializedObject.FindProperty(nameof(ScreenManager.downloadLogoImageUrl));
 
             _udonSharpBackingUdonBehaviourProperty = serializedObject.FindProperty("_udonSharpBackingUdonBehaviour");
 
@@ -252,12 +297,16 @@ namespace Texel
         {
             ScreenManager manager = target as ScreenManager;
 
+            if (managers != null && !managers.Contains(manager))
+                managers.Add(manager);
+
             var crtProp = GetElementSafe(renderOutCrtListProperty, index);
             var matMapProp = GetElementSafe(renderOutMatPropsListProperty, index);
             var sizeProp = GetElementSafe(renderOutSizeListProperty, index);
             var targetAspectProp = GetElementSafe(renderOutTargetAspectListProperty, index);
             var resizeProp = GetElementSafe(renderOutResizeListProperty, index);
             var expandSizeProp = GetElementSafe(renderOutExpandSizeListProperty, index);
+            var globalTexProp = GetElementSafe(renderOutGlobalTexListProperty, index);
 
             float lineHeight = EditorGUIUtility.singleLineHeight;
             rect.height = lineHeight;
@@ -357,6 +406,11 @@ namespace Texel
                     rect.x -= 15;
                 }
 
+                rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
+                fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Set Global VideoTex", "Sets the _Udon_VideoTex global shader property with this texture.\n\n_Udon_VideoTex is used by some video players as a common property to provide a video texture to avatars.  Avoid trying to set this value from multiple video players at the same time."));
+                fieldRect.x -= 15;
+                globalTexProp.boolValue = EditorGUI.Toggle(fieldRect, globalTexProp.boolValue);
+
                 rect.x -= 15;
             }
         }
@@ -369,7 +423,7 @@ namespace Texel
         private void OnAdd(ReorderableList list)
         {
             int index = AddElement(renderOutCrtListProperty, renderOutMatPropsListProperty, renderOutSizeListProperty, renderOutTargetAspectListProperty,
-                renderOutResizeListProperty, renderOutExpandSizeListProperty);
+                renderOutResizeListProperty, renderOutExpandSizeListProperty, renderOutGlobalTexListProperty);
 
             list.index = index;
             CustomRenderTexture crt = CreateCRTCopy();
@@ -378,6 +432,9 @@ namespace Texel
             renderOutSizeListProperty.GetArrayElementAtIndex(index).vector2IntValue = new Vector2Int(crt.width, crt.height);
             if (compatMaterialShader(crt))
                 renderOutTargetAspectListProperty.GetArrayElementAtIndex(index).floatValue = crt.material.GetFloat("_AspectRatio");
+
+            renderOutGlobalTexListProperty.GetArrayElementAtIndex(index).boolValue = (index == 0);
+
         }
 
         private void OnRemove(ReorderableList list)
@@ -386,7 +443,7 @@ namespace Texel
                 return;
 
             RemoveElement(renderOutCrtListProperty, renderOutMatPropsListProperty, renderOutSizeListProperty, renderOutTargetAspectListProperty,
-                renderOutResizeListProperty, renderOutExpandSizeListProperty);
+                renderOutResizeListProperty, renderOutExpandSizeListProperty, renderOutGlobalTexListProperty);
 
             if (list.index == renderOutCrtListProperty.arraySize)
                 list.index--;
@@ -400,7 +457,7 @@ namespace Texel
             CustomRenderTexture crt = (CustomRenderTexture)crtProp.objectReferenceValue;
             if (crt != null)
             {
-                lineCount += 4;
+                lineCount += 5;
 
                 if (renderOutResizeListProperty.GetArrayElementAtIndex(index).boolValue)
                     lineCount += 1;
@@ -444,6 +501,7 @@ namespace Texel
                 renderOutTargetAspectListProperty.InsertArrayElementAtIndex(0);
                 renderOutResizeListProperty.InsertArrayElementAtIndex(0);
                 renderOutExpandSizeListProperty.InsertArrayElementAtIndex(0);
+                renderOutGlobalTexListProperty.InsertArrayElementAtIndex(0);
 
                 SerializedProperty prop1 = renderOutCrtListProperty.GetArrayElementAtIndex(0);
                 prop1.objectReferenceValue = outputCRTProperty.objectReferenceValue;
@@ -457,6 +515,7 @@ namespace Texel
                 SerializedProperty targetAspectProp = GetElementSafe(renderOutTargetAspectListProperty, 0);
                 SerializedProperty resizeProp = GetElementSafe(renderOutResizeListProperty, 0);
                 SerializedProperty expandSizeProp = GetElementSafe(renderOutExpandSizeListProperty, 0);
+                SerializedProperty globalTexProp = GetElementSafe(renderOutGlobalTexListProperty, 0);
 
                 crtProp.objectReferenceValue = crt;
                 matPropsProp.objectReferenceValue = outputMaterialPropertiesProperty.objectReferenceValue;
@@ -472,6 +531,7 @@ namespace Texel
 
                 outputCRTProperty.objectReferenceValue = null;
                 outputMaterialPropertiesProperty.objectReferenceValue = null;
+                globalTexProp.boolValue = false;
             }
 
             GUIStyle boldFoldoutStyle = new GUIStyle(EditorStyles.foldout);
@@ -513,7 +573,20 @@ namespace Texel
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(overrideAspectRatioProperty);
             if (overrideAspectRatioProperty.boolValue)
+            {
+                EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(aspectRatioProperty);
+                EditorGUI.indentLevel--;
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(downloadLogoImageProperty, new GUIContent("Download Logo Texture", "When enabled, attempts to download an image from a URL to use as the logo texture, replacing the existing override.  The existing override will continue to be used until the download completes or if the download fails."));
+            if (downloadLogoImageProperty.boolValue)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(downloadLogoImageUrlProperty, new GUIContent("Logo Texture URL"));
+                EditorGUI.indentLevel--;
+            }
 
             EditorGUI.indentLevel--;
 
@@ -874,22 +947,29 @@ namespace Texel
 
         private EditorScreenPropertyMap GetPropertyMapForOverride(int index)
         {
-            SerializedProperty rendererProp = propRenderListProperty.GetArrayElementAtIndex(index);
-            MeshRenderer renderer = (MeshRenderer)rendererProp.objectReferenceValue;
+            ScreenManager manager = (ScreenManager)target;
+            if (target)
+                return GetPropertyMapForOverride(manager, index);
+
+            return null;
+        }
+
+        private static EditorScreenPropertyMap GetPropertyMapForOverride(ScreenManager manager, int index)
+        {
+            MeshRenderer renderer = manager.propMeshList[index];
             if (!renderer)
                 return null;
 
-            SerializedProperty matProperties = propPropertyListProperty.GetArrayElementAtIndex(index);
-            ScreenPropertyMap map = (ScreenPropertyMap)matProperties.objectReferenceValue;
+            ScreenPropertyMap map = manager.propPropertyList[index];
             if (map)
                 return EditorScreenPropertyMap.FromPropertyMap(map);
 
             Material[] mats = renderer.sharedMaterials;
 
-            bool useMatIndex = propMaterialOverrideListProperty.GetArrayElementAtIndex(index).intValue == 1;
+            bool useMatIndex = manager.propMaterialOverrideList[index] == 1;
             if (useMatIndex)
             {
-                int matIndex = propMaterialIndexListProperty.GetArrayElementAtIndex(index).intValue;
+                int matIndex = manager.propMaterialIndexList[index];
                 if (matIndex >= 0 && matIndex < mats.Length)
                     return EditorScreenPropertyMap.FromMaterial(mats[matIndex]);
             }
@@ -907,55 +987,49 @@ namespace Texel
 
         private void UpdateEditorState()
         {
-            UpdateEditorCRT();
-            UpdateEditorSharedMaterials();
-            UpdateEditorMaterialBlocks();
+            ScreenManager manager = (ScreenManager)target;
+            if (!target)
+                return;
+
+            UpdateEditorCRT(manager);
+            UpdateEditorSharedMaterials(manager);
+            UpdateEditorMaterialBlocks(manager);
         }
 
-        private void UpdateEditorSharedMaterials()
+        private static void UpdateEditorSharedMaterials(ScreenManager manager)
         {
-            for (int i = 0; i < materialUpdateListProperty.arraySize; i++)
+            for (int i = 0; i < manager.materialUpdateList.Length; i++)
             {
-                SerializedProperty matUpdate = materialUpdateListProperty.GetArrayElementAtIndex(i);
-                SerializedProperty matProperties = materialPropertyListProperty.GetArrayElementAtIndex(i);
+                Material mat = manager.materialUpdateList[i];
+                ScreenPropertyMap map = manager.materialPropertyList[i];
 
-                if (matUpdate == null || matProperties == null)
-                    continue;
-
-                Material mat = (Material)matUpdate.objectReferenceValue;
-                ScreenPropertyMap map = (ScreenPropertyMap)matProperties.objectReferenceValue;
-
-                UpdateSharedMaterial(mat, map);
+                if (mat)
+                    UpdateSharedMaterial(manager, mat, map);
             }
         }
 
-        private void UpdateEditorMaterialBlocks()
+        private static void UpdateEditorMaterialBlocks(ScreenManager manager)
         {
             MaterialPropertyBlock block = new MaterialPropertyBlock();
 
-            TXLVideoPlayer videoPlayer = (TXLVideoPlayer)videoPlayerProperty.objectReferenceValue;
-            Texture2D logoTex = (Texture2D)editorTextureProperty.objectReferenceValue;
+            TXLVideoPlayer videoPlayer = manager.videoPlayer;
+            Texture2D logoTex = (Texture2D)manager.editorTexture;
             if (logoTex == null)
-                logoTex = (Texture2D)logoTextureProperty.objectReferenceValue;
+                logoTex = (Texture2D)manager.logoTexture;
 
-            for (int i = 0; i < propRenderListProperty.arraySize; i++)
+            for (int i = 0; i < manager.propMeshList.Length; i++)
             {
-                SerializedProperty meshProp = propRenderListProperty.GetArrayElementAtIndex(i);
-                SerializedProperty useMatOverride = propMaterialOverrideListProperty.GetArrayElementAtIndex(i);
-                SerializedProperty matIndex = propMaterialIndexListProperty.GetArrayElementAtIndex(i);
-                SerializedProperty matProperties = propPropertyListProperty.GetArrayElementAtIndex(i);
+                bool useMatOverride = manager.propMaterialOverrideList[i] == 1;
+                int matIndex = manager.propMaterialIndexList[i];
 
-                if (meshProp == null || useMatOverride == null || matIndex == null)
-                    continue;
-
-                MeshRenderer mesh = (MeshRenderer)meshProp.objectReferenceValue;
-                EditorScreenPropertyMap map = GetPropertyMapForOverride(i);
+                MeshRenderer mesh = manager.propMeshList[i];
+                EditorScreenPropertyMap map = GetPropertyMapForOverride(manager, i);
 
                 if (!mesh || map == null)
                     continue;
 
-                if (useMatOverride.boolValue)
-                    mesh.GetPropertyBlock(block, matIndex.intValue);
+                if (useMatOverride)
+                    mesh.GetPropertyBlock(block, matIndex);
                 else
                     mesh.GetPropertyBlock(block);
 
@@ -970,29 +1044,34 @@ namespace Texel
                 if (map.screenFit != "" && videoPlayer)
                     block.SetInt(map.screenFit, videoPlayer.screenFit);
 
-                bool overrideAspectRatio = overrideAspectRatioProperty.boolValue;
-                float aspectRatio = aspectRatioProperty.floatValue;
+                bool overrideAspectRatio = manager.overrideAspectRatio;
+                float aspectRatio = manager.aspectRatio;
                 if (map.aspectRatio != "")
                     block.SetFloat(map.aspectRatio, overrideAspectRatio && logoTex ? aspectRatio : 0);
 
-                if (useMatOverride.boolValue)
-                    mesh.SetPropertyBlock(block, matIndex.intValue);
+                if (useMatOverride)
+                    mesh.SetPropertyBlock(block, matIndex);
                 else
                     mesh.SetPropertyBlock(block);
             }
         }
 
-        private void UpdateEditorCRT()
+        private static void UpdateEditorCRT(ScreenManager manager)
         {
-            for (int i = 0; i < renderOutCrtListProperty.arraySize; i++)
+            if (!manager)
+                return;
+
+            for (int i = 0; i < manager.renderOutCrt.Length; i++)
             {
-                CustomRenderTexture crt = (CustomRenderTexture)renderOutCrtListProperty.GetArrayElementAtIndex(i).objectReferenceValue;
+                CustomRenderTexture crt = manager.renderOutCrt[i];
                 if (crt)
                 {
                     Material crtMat = crt.material;
-                    ScreenPropertyMap map = (ScreenPropertyMap)renderOutMatPropsListProperty.GetArrayElementAtIndex(i).objectReferenceValue;
+                    ScreenPropertyMap map = manager.renderOutMatProps[i];
 
-                    UpdateSharedMaterial(crtMat, map);
+                    UpdateSharedMaterial(manager, crtMat, map);
+
+                    crt.Update(2);
                 }
             }
             
@@ -1000,13 +1079,20 @@ namespace Texel
 
         private void UpdateSharedMaterial(Material mat, ScreenPropertyMap map)
         {
+            ScreenManager manager = (ScreenManager)target;
+            if (target)
+                UpdateSharedMaterial(manager, mat, map);
+        }
+
+        static private void UpdateSharedMaterial(ScreenManager manager, Material mat, ScreenPropertyMap map)
+        {
             EditorScreenPropertyMap emap = EditorScreenPropertyMap.FromPropertyMap(map);
             if (emap == null)
                 emap = EditorScreenPropertyMap.FromMaterial(mat);
 
-            Texture2D logoTex = (Texture2D)editorTextureProperty.objectReferenceValue;
+            Texture2D logoTex = (Texture2D)manager.editorTexture;
             if (logoTex == null)
-                logoTex = (Texture2D)logoTextureProperty.objectReferenceValue;
+                logoTex = (Texture2D)manager.logoTexture;
 
             if (mat && emap != null)
             {
@@ -1019,12 +1105,12 @@ namespace Texel
                 if (emap.invertY != "")
                     mat.SetInt(emap.invertY, 0);
 
-                SyncPlayer videoPlayer = (SyncPlayer)videoPlayerProperty.objectReferenceValue;
+                SyncPlayer videoPlayer = (SyncPlayer)manager.videoPlayer;
                 if (emap.screenFit != "" && videoPlayer)
                     mat.SetInt(emap.screenFit, (int)videoPlayer.defaultScreenFit);
 
-                bool overrideAspectRatio = overrideAspectRatioProperty.boolValue;
-                float aspectRatio = aspectRatioProperty.floatValue;
+                bool overrideAspectRatio = manager.overrideAspectRatio;
+                float aspectRatio = manager.aspectRatio;
                 if (emap.aspectRatio != "")
                     mat.SetFloat(emap.aspectRatio, overrideAspectRatio && logoTex ? aspectRatio : 0);
             }
@@ -1101,11 +1187,9 @@ namespace Texel
 
         private int FindNextCrtId(string destBasePath)
         {
-            int id = 0;
-
             HashSet<string> refCrts = new HashSet<string>();
-            ScreenManager[] managers = FindObjectsOfType<ScreenManager>();
-            foreach (var man in managers)
+            ScreenManager[] sceneManagers = FindObjectsOfType<ScreenManager>();
+            foreach (var man in sceneManagers)
             {
                 if (man.renderOutCrt == null)
                     continue;
@@ -1158,7 +1242,7 @@ namespace Texel
             return false;
         }
 
-        private bool compatMaterialShader(CustomRenderTexture crt)
+        private static bool compatMaterialShader(CustomRenderTexture crt)
         {
             if (!crt)
                 return false;
@@ -1166,7 +1250,7 @@ namespace Texel
             return compatMaterialShader(crt.material);
         }
 
-        private bool compatMaterialShader(Material mat)
+        private static bool compatMaterialShader(Material mat)
         {
             if (!mat || !mat.shader)
                 return false;

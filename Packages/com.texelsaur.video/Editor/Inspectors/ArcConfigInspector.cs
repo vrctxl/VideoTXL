@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using UdonSharpEditor;
 using UnityEditor;
-using UnityEditor.Experimental.SceneManagement;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+
+#if UNITY_2019
+using UnityEditor.Experimental.SceneManagement;
+#endif
 
 namespace Texel
 {
