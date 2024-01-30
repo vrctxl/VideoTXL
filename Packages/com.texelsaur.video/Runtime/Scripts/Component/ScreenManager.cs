@@ -1,10 +1,13 @@
 ﻿
 using System;
+using System.Runtime.CompilerServices;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components.Video;
 using VRC.SDKBase;
 using VRC.Udon;
+
+[assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
 
 namespace Texel
 {
@@ -115,6 +118,7 @@ namespace Texel
         public float[] renderOutTargetAspect;
         public bool[] renderOutResize;
         public bool[] renderOutExpandSize;
+        [SerializeField] internal bool[] renderOutGlobalTex;
 
         /*string outputMaterialMainTex = "_MainTex";
         string outputMaterialAVPro;
@@ -188,6 +192,8 @@ namespace Texel
         float currentAspectRatio;
         bool currentValid = false;
 
+        int globalTexPropertyId = -1;
+
         const int EVENT_UPDATE = 0;
         const int EVENT_CAPTURE_VALID = 1;
         const int EVENT_COUNT = 2;
@@ -255,6 +261,8 @@ namespace Texel
             _InitMaterialOverrides();
             _InitTextureOverrides();
 #endif
+
+            _InitGlobalTex();
 
             SendCustomEventDelayedFrames(nameof(_PostInit), 1);
         }
@@ -506,6 +514,24 @@ namespace Texel
                 _originalMatGamma[i] = _GetMatIntProperty(materialUpdateList[i], shaderPropGammaList[baseIndexMat + i]);
                 _originalMatFit[i] = _GetMatIntProperty(materialUpdateList[i], shaderPropFitList[baseIndexMat + i]);
                 _originalMatAspectRatio[i] = _GetMatFloatProperty(materialUpdateList[i], shaderPropAspectRatioList[baseIndexMat + i]);
+            }
+        }
+
+        void _InitGlobalTex()
+        {
+            if (renderOutCrt == null || renderOutGlobalTex == null)
+                return;
+
+            globalTexPropertyId = VRCShader.PropertyToID("_Udon_VideoTex");
+
+            int count = Math.Min(renderOutCrt.Length, renderOutGlobalTex.Length);
+            for (int i = 0; i < count; i++)
+            {
+                if (renderOutCrt[i] && renderOutGlobalTex[i])
+                {
+                    VRCShader.SetGlobalTexture(globalTexPropertyId, renderOutCrt[i]);
+                    break;
+                }
             }
         }
 

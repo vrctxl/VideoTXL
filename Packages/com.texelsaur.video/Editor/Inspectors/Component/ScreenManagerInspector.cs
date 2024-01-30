@@ -158,6 +158,7 @@ namespace Texel
         SerializedProperty renderOutTargetAspectListProperty;
         SerializedProperty renderOutResizeListProperty;
         SerializedProperty renderOutExpandSizeListProperty;
+        SerializedProperty renderOutGlobalTexListProperty;
 
         SerializedProperty _udonSharpBackingUdonBehaviourProperty;
 
@@ -262,6 +263,7 @@ namespace Texel
             renderOutTargetAspectListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutTargetAspect));
             renderOutResizeListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutResize));
             renderOutExpandSizeListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutExpandSize));
+            renderOutGlobalTexListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutGlobalTex));
 
             _udonSharpBackingUdonBehaviourProperty = serializedObject.FindProperty("_udonSharpBackingUdonBehaviour");
 
@@ -298,6 +300,7 @@ namespace Texel
             var targetAspectProp = GetElementSafe(renderOutTargetAspectListProperty, index);
             var resizeProp = GetElementSafe(renderOutResizeListProperty, index);
             var expandSizeProp = GetElementSafe(renderOutExpandSizeListProperty, index);
+            var globalTexProp = GetElementSafe(renderOutGlobalTexListProperty, index);
 
             float lineHeight = EditorGUIUtility.singleLineHeight;
             rect.height = lineHeight;
@@ -397,6 +400,11 @@ namespace Texel
                     rect.x -= 15;
                 }
 
+                rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
+                fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Set Global VideoTex", "Sets the _Udon_VideoTex global shader property with this texture.\n\n_Udon_VideoTex is used by some video players as a common property to provide a video texture to avatars.  Avoid trying to set this value from multiple video players at the same time."));
+                fieldRect.x -= 15;
+                globalTexProp.boolValue = EditorGUI.Toggle(fieldRect, globalTexProp.boolValue);
+
                 rect.x -= 15;
             }
         }
@@ -409,7 +417,7 @@ namespace Texel
         private void OnAdd(ReorderableList list)
         {
             int index = AddElement(renderOutCrtListProperty, renderOutMatPropsListProperty, renderOutSizeListProperty, renderOutTargetAspectListProperty,
-                renderOutResizeListProperty, renderOutExpandSizeListProperty);
+                renderOutResizeListProperty, renderOutExpandSizeListProperty, renderOutGlobalTexListProperty);
 
             list.index = index;
             CustomRenderTexture crt = CreateCRTCopy();
@@ -418,6 +426,9 @@ namespace Texel
             renderOutSizeListProperty.GetArrayElementAtIndex(index).vector2IntValue = new Vector2Int(crt.width, crt.height);
             if (compatMaterialShader(crt))
                 renderOutTargetAspectListProperty.GetArrayElementAtIndex(index).floatValue = crt.material.GetFloat("_AspectRatio");
+
+            renderOutGlobalTexListProperty.GetArrayElementAtIndex(index).boolValue = (index == 0);
+
         }
 
         private void OnRemove(ReorderableList list)
@@ -426,7 +437,7 @@ namespace Texel
                 return;
 
             RemoveElement(renderOutCrtListProperty, renderOutMatPropsListProperty, renderOutSizeListProperty, renderOutTargetAspectListProperty,
-                renderOutResizeListProperty, renderOutExpandSizeListProperty);
+                renderOutResizeListProperty, renderOutExpandSizeListProperty, renderOutGlobalTexListProperty);
 
             if (list.index == renderOutCrtListProperty.arraySize)
                 list.index--;
@@ -440,7 +451,7 @@ namespace Texel
             CustomRenderTexture crt = (CustomRenderTexture)crtProp.objectReferenceValue;
             if (crt != null)
             {
-                lineCount += 4;
+                lineCount += 5;
 
                 if (renderOutResizeListProperty.GetArrayElementAtIndex(index).boolValue)
                     lineCount += 1;
@@ -484,6 +495,7 @@ namespace Texel
                 renderOutTargetAspectListProperty.InsertArrayElementAtIndex(0);
                 renderOutResizeListProperty.InsertArrayElementAtIndex(0);
                 renderOutExpandSizeListProperty.InsertArrayElementAtIndex(0);
+                renderOutGlobalTexListProperty.InsertArrayElementAtIndex(0);
 
                 SerializedProperty prop1 = renderOutCrtListProperty.GetArrayElementAtIndex(0);
                 prop1.objectReferenceValue = outputCRTProperty.objectReferenceValue;
@@ -497,6 +509,7 @@ namespace Texel
                 SerializedProperty targetAspectProp = GetElementSafe(renderOutTargetAspectListProperty, 0);
                 SerializedProperty resizeProp = GetElementSafe(renderOutResizeListProperty, 0);
                 SerializedProperty expandSizeProp = GetElementSafe(renderOutExpandSizeListProperty, 0);
+                SerializedProperty globalTexProp = GetElementSafe(renderOutGlobalTexListProperty, 0);
 
                 crtProp.objectReferenceValue = crt;
                 matPropsProp.objectReferenceValue = outputMaterialPropertiesProperty.objectReferenceValue;
@@ -512,6 +525,7 @@ namespace Texel
 
                 outputCRTProperty.objectReferenceValue = null;
                 outputMaterialPropertiesProperty.objectReferenceValue = null;
+                globalTexProp.boolValue = false;
             }
 
             GUIStyle boldFoldoutStyle = new GUIStyle(EditorStyles.foldout);
