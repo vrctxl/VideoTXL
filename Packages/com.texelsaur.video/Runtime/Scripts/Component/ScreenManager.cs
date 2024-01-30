@@ -4,8 +4,10 @@ using System.Runtime.CompilerServices;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components.Video;
+using VRC.SDK3.Image;
 using VRC.SDKBase;
 using VRC.Udon;
+using VRC.Udon.Common.Interfaces;
 
 [assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
 
@@ -112,13 +114,16 @@ namespace Texel
         [Tooltip("A map of properties to update on the CRT's material as the video player state changes.")]
         public ScreenPropertyMap outputMaterialProperties;
 
-        public CustomRenderTexture[] renderOutCrt;
-        public ScreenPropertyMap[] renderOutMatProps;
-        public Vector2Int[] renderOutSize;
-        public float[] renderOutTargetAspect;
-        public bool[] renderOutResize;
-        public bool[] renderOutExpandSize;
+        [SerializeField] internal CustomRenderTexture[] renderOutCrt;
+        [SerializeField] internal ScreenPropertyMap[] renderOutMatProps;
+        [SerializeField] internal Vector2Int[] renderOutSize;
+        [SerializeField] internal float[] renderOutTargetAspect;
+        [SerializeField] internal bool[] renderOutResize;
+        [SerializeField] internal bool[] renderOutExpandSize;
         [SerializeField] internal bool[] renderOutGlobalTex;
+
+        [SerializeField] internal bool downloadLogoImage;
+        [SerializeField] internal VRCUrl downloadLogoImageUrl;
 
         /*string outputMaterialMainTex = "_MainTex";
         string outputMaterialAVPro;
@@ -194,6 +199,8 @@ namespace Texel
 
         int globalTexPropertyId = -1;
 
+        VRCImageDownloader imageDownloader;
+
         const int EVENT_UPDATE = 0;
         const int EVENT_CAPTURE_VALID = 1;
         const int EVENT_COUNT = 2;
@@ -264,6 +271,16 @@ namespace Texel
 
             _InitGlobalTex();
 
+            if (downloadLogoImage)
+            {
+                imageDownloader = new VRCImageDownloader();
+
+                TextureInfo info = new TextureInfo();
+                info.GenerateMipMaps = true;
+
+                imageDownloader.DownloadImage(downloadLogoImageUrl, null, (IUdonEventReceiver)this, info);
+            }
+
             SendCustomEventDelayedFrames(nameof(_PostInit), 1);
         }
 
@@ -297,6 +314,12 @@ namespace Texel
             _OnVideoStateUpdate();
         }
 
+        public override void OnImageLoadSuccess(IVRCImageDownload result)
+        {
+            _SetTextureOverride(SCREEN_INDEX_LOGO, result.Result);
+            _ResetCheckScreenMaterial();
+        }
+
         private void OnDisable()
         {
 
@@ -304,6 +327,15 @@ namespace Texel
             _RestoreMaterialOverrides();
             _RestoreTextureOverrides();
 #endif
+        }
+
+        private void OnDestroy()
+        {
+            if (imageDownloader != null)
+            {
+                imageDownloader.Dispose();
+                imageDownloader = null;
+            }
         }
 
         public Texture CurrentTexture

@@ -160,6 +160,9 @@ namespace Texel
         SerializedProperty renderOutExpandSizeListProperty;
         SerializedProperty renderOutGlobalTexListProperty;
 
+        SerializedProperty downloadLogoImageProperty;
+        SerializedProperty downloadLogoImageUrlProperty;
+
         SerializedProperty _udonSharpBackingUdonBehaviourProperty;
 
         // Legacy
@@ -264,6 +267,9 @@ namespace Texel
             renderOutResizeListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutResize));
             renderOutExpandSizeListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutExpandSize));
             renderOutGlobalTexListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutGlobalTex));
+
+            downloadLogoImageProperty = serializedObject.FindProperty(nameof(ScreenManager.downloadLogoImage));
+            downloadLogoImageUrlProperty = serializedObject.FindProperty(nameof(ScreenManager.downloadLogoImageUrl));
 
             _udonSharpBackingUdonBehaviourProperty = serializedObject.FindProperty("_udonSharpBackingUdonBehaviour");
 
@@ -567,7 +573,20 @@ namespace Texel
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(overrideAspectRatioProperty);
             if (overrideAspectRatioProperty.boolValue)
+            {
+                EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(aspectRatioProperty);
+                EditorGUI.indentLevel--;
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(downloadLogoImageProperty, new GUIContent("Download Logo Texture", "When enabled, attempts to download an image from a URL to use as the logo texture, replacing the existing override.  The existing override will continue to be used until the download completes or if the download fails."));
+            if (downloadLogoImageProperty.boolValue)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(downloadLogoImageUrlProperty, new GUIContent("Logo Texture URL"));
+                EditorGUI.indentLevel--;
+            }
 
             EditorGUI.indentLevel--;
 
