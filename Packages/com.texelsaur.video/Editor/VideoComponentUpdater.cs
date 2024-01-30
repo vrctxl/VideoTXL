@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using UdonSharpEditor;
 using UnityEditor;
-using UnityEditor.Experimental.SceneManagement;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Animations;
@@ -10,6 +9,10 @@ using UnityEngine.UI;
 using VRC.SDK3.Components;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
+
+#if UNITY_2019
+using UnityEditor.Experimental.SceneManagement;
+#endif
 
 namespace Texel
 {

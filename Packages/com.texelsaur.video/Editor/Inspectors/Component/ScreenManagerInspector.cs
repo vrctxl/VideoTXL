@@ -178,7 +178,7 @@ namespace Texel
 
         static void OnSceneLoaded(Scene prevScene, Scene newScene)
         {
-            ScreenManager[] found = GameObject.FindObjectsOfType<ScreenManager>();
+            ScreenManager[] found = FindObjectsOfType<ScreenManager>();
 
             managers = new List<ScreenManager>();
             managers.AddRange(found);
@@ -289,7 +289,7 @@ namespace Texel
         {
             ScreenManager manager = target as ScreenManager;
 
-            if (!managers.Contains(manager))
+            if (managers != null && !managers.Contains(manager))
                 managers.Add(manager);
 
             var crtProp = GetElementSafe(renderOutCrtListProperty, index);
@@ -1154,11 +1154,9 @@ namespace Texel
 
         private int FindNextCrtId(string destBasePath)
         {
-            int id = 0;
-
             HashSet<string> refCrts = new HashSet<string>();
-            ScreenManager[] managers = FindObjectsOfType<ScreenManager>();
-            foreach (var man in managers)
+            ScreenManager[] sceneManagers = FindObjectsOfType<ScreenManager>();
+            foreach (var man in sceneManagers)
             {
                 if (man.renderOutCrt == null)
                     continue;
