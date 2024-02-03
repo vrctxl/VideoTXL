@@ -57,8 +57,8 @@ namespace Texel
         [Tooltip("The screen material to apply in Unity's editor runtime")]
         public Material editorMaterial;
 
-        public MeshRenderer[] screenMesh;
-        public int[] screenMaterialIndex;
+        [SerializeField] internal MeshRenderer[] screenMesh;
+        [SerializeField] internal int[] screenMaterialIndex;
 
         [Tooltip("Whether to update textures properties on a set of shared material objects")]
         public bool useTextureOverrides = false;
@@ -87,25 +87,15 @@ namespace Texel
         [Tooltip("The screen texture to apply in Unity's editor runtime")]
         public Texture editorTexture;
 
-        public Material[] materialUpdateList;
-        public ScreenPropertyMap[] materialPropertyList;
-        /*public string[] materialTexPropertyList;
-        public string[] materialAVPropertyList;
-        public string[] materialInvertList;
-        public string[] materialGammaList;
-        public string[] materialFitList;
-        public string[] materialAspectRatioList;*/
+        [SerializeField] internal Material[] materialUpdateList;
+        [SerializeField] internal ScreenPropertyMap[] materialPropertyList;
 
-        public MeshRenderer[] propMeshList;
-        public int[] propMaterialOverrideList;
-        public int[] propMaterialIndexList;
-        public ScreenPropertyMap[] propPropertyList;
-        /*public string[] propMainTexList;
-        public string[] propAVProList;
-        public string[] propInvertList;
-        public string[] propGammaList;
-        public string[] propFitList;
-        public string[] propAspectRatioList;*/
+        [SerializeField] internal MeshRenderer[] propMeshList;
+        [SerializeField] internal int[] propMaterialOverrideList;
+        [SerializeField] internal int[] propMaterialIndexList;
+        [SerializeField] internal ScreenPropertyMap[] propPropertyList;
+
+        [SerializeField] internal ScreenPropertyMap[] globalPropertyList;
 
         [Tooltip("Blit the source video or placeholder image to a specified custom render texture (CRT).  Each copy of the video player that writes to a CRT and could play concurrently must have its own CRT asset and associated material.")]
         public bool useRenderOut = false;
@@ -138,6 +128,8 @@ namespace Texel
         int shaderPropMatLength;
         int baseIndexProp;
         int shaderPropPropLength;
+        int baseIndexGlobal;
+        int shaderPropGlobalLength;
 
         string[] shaderPropMainTexList;
         string[] shaderPropAVProList;
@@ -145,6 +137,13 @@ namespace Texel
         string[] shaderPropGammaList;
         string[] shaderPropFitList;
         string[] shaderPropAspectRatioList;
+
+        int[] globalPropMainTexList;
+        int[] globalPropAVProList;
+        int[] globalPropInvertList;
+        int[] globalPropGammaList;
+        int[] globalPropFitList;
+        int[] globalPropAspectRatioList;
 
         Material[] _originalScreenMaterial;
         Texture[] _originalMaterialTexture;
@@ -264,12 +263,12 @@ namespace Texel
             replacementTextures[SCREEN_INDEX_ERROR_BLOCKED] = errorBlockedTexture;
             replacementTextures[SCREEN_INDEX_EDITOR] = editorTexture;
 
+            _InitGlobalTex();
+
 #if COMPILER_UDONSHARP
             _InitMaterialOverrides();
             _InitTextureOverrides();
 #endif
-
-            _InitGlobalTex();
 
             if (downloadLogoImage)
             {
@@ -409,8 +408,9 @@ namespace Texel
             bool hasMaterialUpdates = Utilities.IsValid(materialUpdateList) && materialUpdateList.Length > 0;
             bool hasPropupdates = Utilities.IsValid(propMeshList) && propMeshList.Length > 0;
             bool hasCrtUpdates = Utilities.IsValid(renderOutCrt) && renderOutCrt.Length > 0;
+            bool hasGlobalUpdates = Utilities.IsValid(globalPropertyList) && globalPropertyList.Length > 0;
 
-            if (!hasMaterialUpdates && !hasPropupdates && !hasCrtUpdates)
+            if (!hasMaterialUpdates && !hasPropupdates && !hasCrtUpdates && !hasGlobalUpdates)
             {
                 useTextureOverrides = false;
                 return;
@@ -515,13 +515,25 @@ namespace Texel
                 }
             }
 
-            // Output Material
-            /* if (useRenderOut) {
-                if (outputMaterialProperties)
-                    _LoadPropertyMap(baseIndexCrt, outputMaterialProperties);
-                else if (outputCRT)
-                    _TryLoadDefaultProps(baseIndexCrt, outputCRT.material);
-            }*/
+            // Global Shader Props
+            int globalLength = globalPropertyList.Length;
+            globalPropMainTexList = new int[globalLength];
+            globalPropAVProList = new int[globalLength];
+            globalPropInvertList = new int[globalLength];
+            globalPropGammaList = new int[globalLength];
+            globalPropFitList = new int[globalLength];
+            globalPropAspectRatioList = new int[globalLength];
+
+            if (hasGlobalUpdates)
+            {
+                for (int i = 0; i < globalPropertyList.Length; i++)
+                {
+                    if (globalPropertyList[i] == null)
+                        continue;
+
+                    _LoadGlobalPropertyMap(i, globalPropertyList[i]);
+                }
+            }
 
             // Capture original material textures
             _originalMaterialTexture = new Texture[materialUpdateList.Length];
@@ -596,6 +608,30 @@ namespace Texel
             shaderPropGammaList[i] = propMap.applyGamma;
             shaderPropFitList[i] = propMap.screenFit;
             shaderPropAspectRatioList[i] = propMap.aspectRatio;
+        }
+
+        void _LoadGlobalPropertyMap(int i, ScreenPropertyMap propMap)
+        {
+            if (!propMap)
+                return;
+
+            _ResolvePropertyId(globalPropMainTexList, i, propMap.screenTexture);
+            _ResolvePropertyId(globalPropAVProList, i, propMap.avProCheck);
+            _ResolvePropertyId(globalPropInvertList, i, propMap.invertY);
+            _ResolvePropertyId(globalPropGammaList, i, propMap.applyGamma);
+            _ResolvePropertyId(globalPropFitList, i, propMap.screenFit);
+            _ResolvePropertyId(globalPropAspectRatioList, i, propMap.aspectRatio);
+        }
+
+        void _ResolvePropertyId(int[] idArray, int i, string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return;
+
+            if (!name.StartsWith("_Udon"))
+                name = $"_Udon{name}";
+
+            idArray[i] = VRCShader.PropertyToID(name);
         }
 
         void _LoadRealtimeEmissiveGammaProps(int i)
@@ -807,6 +843,7 @@ namespace Texel
                 _UpdateCaptureData(replacement, captureTex);
                 _UpdateMaterials();
                 _UpdatePropertyBlocks();
+                _UpdateGlobalProperties();
             }
 
             if (!currentValid)
@@ -866,6 +903,7 @@ namespace Texel
                 _UpdateCaptureData(replacement, captureTex);
                 _UpdateMaterials();
                 _UpdatePropertyBlocks();
+                _UpdateGlobalProperties();
             }
 
             if (!currentValid)
@@ -1077,6 +1115,26 @@ namespace Texel
                     renderer.SetPropertyBlock(block, propMaterialIndexList[i]);
                 else
                     renderer.SetPropertyBlock(block);
+            }
+        }
+
+        void _UpdateGlobalProperties()
+        {
+            int fit = _VideoScreenFit();
+            for (int i = 0; i < globalPropMainTexList.Length; i++)
+            {
+                if (globalPropMainTexList[i] != 0)
+                    VRCShader.SetGlobalTexture(globalPropMainTexList[i], currentTexture);
+                if (globalPropAVProList[i] != 0)
+                    VRCShader.SetGlobalInteger(globalPropAVProList[i], currentAVPro ? 1 : 0);
+                if (globalPropGammaList[i] != 0)
+                    VRCShader.SetGlobalInteger(globalPropGammaList[i], currentGamma ? 1 : 0);
+                if (globalPropInvertList[i] != 0)
+                    VRCShader.SetGlobalInteger(globalPropInvertList[i], currentInvert ? 1 : 0);
+                if (globalPropFitList[i] != 0)
+                    VRCShader.SetGlobalInteger(globalPropFitList[i], fit);
+                if (globalPropAspectRatioList[i] != 0)
+                    VRCShader.SetGlobalFloat(globalPropAspectRatioList[i], currentAspectRatio);
             }
         }
 

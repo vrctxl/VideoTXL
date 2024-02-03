@@ -97,14 +97,24 @@ namespace Texel
             "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ScreenSynchronizing.jpg",
         };
 
+        struct PropBlockEntry
+        {
+            public MeshRenderer renderer;
+            public bool useMaterialOverride;
+            public int materialIndex;
+            public ScreenPropertyMap propertyMap;
+
+            public PropBlockEntry(ScreenManager manager, int index)
+            {
+                renderer = (manager?.propMeshList?.Length ?? 0) > index ? manager.propMeshList[index] : null;
+                useMaterialOverride = (manager?.propMaterialOverrideList?.Length ?? 0) > index ? manager.propMaterialOverrideList[index] == 1 : false;
+                materialIndex = (manager?.propMaterialIndexList?.Length ?? 0) > index ? manager.propMaterialIndexList[index] : 0;
+                propertyMap = (manager?.propPropertyList?.Length ?? 0) > index ? manager.propPropertyList[index] : null;
+            }
+        }
+
         static bool _showErrorMatFoldout;
         static bool _showErrorTexFoldout;
-        static bool _showScreenListFoldout;
-        static bool[] _showScreenFoldout = new bool[0];
-        static bool _showMaterialListFoldout;
-        static bool[] _showMaterialFoldout = new bool[0];
-        static bool _showPropListFoldout;
-        static bool[] _showPropFoldout = new bool[0];
 
         SerializedProperty videoPlayerProperty;
 
@@ -127,10 +137,7 @@ namespace Texel
         SerializedProperty errorBlockedMaterialProperty;
         SerializedProperty errorRateLimitedMaterialProperty;
         SerializedProperty editorMaterialProperty;
-
-        SerializedProperty screenMeshListProperty;
-        SerializedProperty screenMatIndexListProperty;
-
+        
         SerializedProperty useTextureOverrideProperty;
         SerializedProperty overrideAspectRatioProperty;
         SerializedProperty aspectRatioProperty;
@@ -143,14 +150,6 @@ namespace Texel
         SerializedProperty errorBlockedTextureProperty;
         SerializedProperty errorRateLimitedTextureProperty;
         SerializedProperty editorTextureProperty;
-
-        SerializedProperty materialUpdateListProperty;
-        SerializedProperty materialPropertyListProperty;
-
-        SerializedProperty propRenderListProperty;
-        SerializedProperty propMaterialOverrideListProperty;
-        SerializedProperty propMaterialIndexListProperty;
-        SerializedProperty propPropertyListProperty;
 
         SerializedProperty renderOutCrtListProperty;
         SerializedProperty renderOutMatPropsListProperty;
@@ -169,11 +168,22 @@ namespace Texel
         SerializedProperty useRenderOutProperty;
         SerializedProperty outputCRTProperty;
         SerializedProperty outputMaterialPropertiesProperty;
+        
+        CrtListDisplay crtList;
+        SharedMaterialListDisplay sharedMaterialList;
+        PropBlockListDisplay propBlockList;
+        ObjectOverrideListDisplay objectOverrideList;
+        GlobalPropertyListDisplay globalPropList;
 
-        ReorderableList crtOutList;
-
+        static bool expandTextures = true;
+        static bool expandObjectOverrides = false;
         static bool expandDebug = false;
         static List<ScreenManager> managers;
+
+        static string mainHelpUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager";
+        static string textureOverridesUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#texture-overrides";
+        static string objectMaterialsUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#object-materials";
+        static string debugOptionsUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#debug-options";
 
         static ScreenManagerInspector()
         {
@@ -233,9 +243,6 @@ namespace Texel
             errorRateLimitedMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.errorRateLimitedMaterial));
             editorMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.editorMaterial));
 
-            screenMeshListProperty = serializedObject.FindProperty(nameof(ScreenManager.screenMesh));
-            screenMatIndexListProperty = serializedObject.FindProperty(nameof(ScreenManager.screenMaterialIndex));
-
             useTextureOverrideProperty = serializedObject.FindProperty(nameof(ScreenManager.useTextureOverrides));
             overrideAspectRatioProperty = serializedObject.FindProperty(nameof(ScreenManager.overrideAspectRatio));
             aspectRatioProperty = serializedObject.FindProperty(nameof(ScreenManager.aspectRatio));
@@ -248,14 +255,6 @@ namespace Texel
             errorBlockedTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.errorBlockedTexture));
             errorRateLimitedTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.errorRateLimitedTexture));
             editorTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.editorTexture));
-
-            materialUpdateListProperty = serializedObject.FindProperty(nameof(ScreenManager.materialUpdateList));
-            materialPropertyListProperty = serializedObject.FindProperty(nameof(ScreenManager.materialPropertyList));
-
-            propRenderListProperty = serializedObject.FindProperty(nameof(ScreenManager.propMeshList));
-            propMaterialOverrideListProperty = serializedObject.FindProperty(nameof(ScreenManager.propMaterialOverrideList));
-            propMaterialIndexListProperty = serializedObject.FindProperty(nameof(ScreenManager.propMaterialIndexList));
-            propPropertyListProperty = serializedObject.FindProperty(nameof(ScreenManager.propPropertyList));
 
             useRenderOutProperty = serializedObject.FindProperty(nameof(ScreenManager.useRenderOut));
             outputCRTProperty = serializedObject.FindProperty(nameof(ScreenManager.outputCRT));
@@ -273,217 +272,24 @@ namespace Texel
 
             _udonSharpBackingUdonBehaviourProperty = serializedObject.FindProperty("_udonSharpBackingUdonBehaviour");
 
-            crtOutList = new ReorderableList(serializedObject, renderOutCrtListProperty);
-            crtOutList.drawElementCallback = OnDrawElement;
-            crtOutList.drawHeaderCallback = OnDrawHeader;
-            crtOutList.onAddCallback = OnAdd;
-            crtOutList.onRemoveCallback = OnRemove;
-            crtOutList.elementHeightCallback = OnElementHeight;
-            crtOutList.footerHeight = -15;
-            crtOutList.draggable = false;
+            crtList = new CrtListDisplay(serializedObject, (ScreenManager)target);
+            sharedMaterialList = new SharedMaterialListDisplay(serializedObject, (ScreenManager)target);
+            propBlockList = new PropBlockListDisplay(serializedObject, (ScreenManager)target);
+            objectOverrideList = new ObjectOverrideListDisplay(serializedObject, (ScreenManager)target);
+            globalPropList = new GlobalPropertyListDisplay(serializedObject, (ScreenManager)target);
 
             // CRT texture
             UpdateEditorState();
+
+            // Upgrade legacy entries
+            UpgradeLegacyCrtEntry();
         }
 
-        SerializedProperty GetElementSafe(SerializedProperty arr, int index)
+        static SerializedProperty GetElementSafe(SerializedProperty arr, int index)
         {
             if (arr.arraySize <= index)
                 arr.arraySize = index + 1;
             return arr.GetArrayElementAtIndex(index);
-        }
-
-        private void OnDrawElement(Rect rect, int index, bool isActive, bool isFocused)
-        {
-            ScreenManager manager = target as ScreenManager;
-
-            if (managers != null && !managers.Contains(manager))
-                managers.Add(manager);
-
-            var crtProp = GetElementSafe(renderOutCrtListProperty, index);
-            var matMapProp = GetElementSafe(renderOutMatPropsListProperty, index);
-            var sizeProp = GetElementSafe(renderOutSizeListProperty, index);
-            var targetAspectProp = GetElementSafe(renderOutTargetAspectListProperty, index);
-            var resizeProp = GetElementSafe(renderOutResizeListProperty, index);
-            var expandSizeProp = GetElementSafe(renderOutExpandSizeListProperty, index);
-            var globalTexProp = GetElementSafe(renderOutGlobalTexListProperty, index);
-
-            float lineHeight = EditorGUIUtility.singleLineHeight;
-            rect.height = lineHeight;
-
-            rect.y += EditorGUIUtility.standardVerticalSpacing;
-            //EditorGUI.LabelField(rect, $"Output CRT {index}");
-
-            //rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
-            EditorGUI.PropertyField(rect, crtProp, new GUIContent("CRT", "By default, a CRT has been generated in Assets for you, but you can change this for any other CRT."));
-
-            CustomRenderTexture crt = (CustomRenderTexture)crtProp.objectReferenceValue;
-            if (crt != null)
-            {
-                rect.x += 15;
-                rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
-
-                Vector2Int size = sizeProp.vector2IntValue;
-
-                Rect fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("CRT Size", "The resolution of the CRT.  If the resize to video option is enabled, the specified size will be used for placeholder textures.\n\nChanges to this value will change the size of the underlying CRT asset."));
-                fieldRect.x -= 15;
-                Rect field1 = fieldRect;
-                float xwidth = 8;
-                float xpad = 5;
-                float fwidth = (fieldRect.width - xwidth - xpad * 2) / 2;
-
-                field1.width = fwidth;
-                int width = EditorGUI.DelayedIntField(field1, size.x > 0 ? size.x : crt.width);
-                field1.x += fwidth + xpad;
-                field1.width = xwidth;
-                EditorGUI.LabelField(field1, "x");
-
-                field1.x += xwidth + xpad;
-                field1.width = fwidth;
-                int height = EditorGUI.DelayedIntField(field1, size.y > 0 ? size.y : crt.height);
-
-                if (width != crt.width || height != crt.height)
-                {
-                    crt.Release();
-                    crt.width = width;
-                    crt.height = height;
-                    crt.Create();
-                }
-
-                sizeProp.vector2IntValue = new Vector2Int(width, height);
-
-                rect.x += 15;
-                rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
-                fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Target Aspect Ratio", "The target aspect ratio should be set to the aspect ratio of the OBJECT that this CRT's texture will be applied to, such as a main video screen.  This can be different than the aspect ratio of the CRT or source video.\n\nIf the expand to fit option is enabled, the target aspect ratio will be used to calculate the expansion.\n\nIf the CRT material uses a compatible TXL shader, the aspect ratio property of the underlying material asset will be updated to match this value."));
-                fieldRect.x -= 30;
-                fieldRect.width = fwidth;
-                float newAspect = EditorGUI.DelayedFloatField(fieldRect, targetAspectProp.floatValue);
-                targetAspectProp.floatValue = newAspect;
-
-                rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
-                fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Resize to Video", "Dynamically resize the CRT to match the resolution of the video data.  When placeholder textures are displayed, the CRT's size specified above will be used."));
-                fieldRect.x -= 30;
-                resizeProp.boolValue = EditorGUI.Toggle(fieldRect, resizeProp.boolValue);
-
-                if (resizeProp.boolValue)
-                {
-                    rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
-                    fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Enlarge to Fit", "Enlarge the dynamic size of the CRT if necessary to fit the video data within the target aspect ratio."));
-                    fieldRect.x -= 30;
-                    expandSizeProp.boolValue = EditorGUI.Toggle(fieldRect, expandSizeProp.boolValue);
-                }
-                rect.x -= 15;
-
-                Material mat = crt.material;
-                rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
-                fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("CRT Material", "The material used to render the video data onto the CRT, fetched from the underlying asset.\n\nChanges to this value will change the material on the underlying CRT asset.  Only change this if you know what you're doing."));
-                fieldRect.x -= 15;
-                Material newMat = (Material)EditorGUI.ObjectField(fieldRect, mat, typeof(Material), false);
-                if (newMat != mat)
-                {
-                    crt.material = newMat;
-                    mat = newMat;
-                }
-
-                if (mat != null)
-                {
-                    ScreenPropertyMap matmap = (ScreenPropertyMap)matMapProp.objectReferenceValue;
-                    rect.x += 15;
-                    rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
-                    fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Property Map", "The property map tells the manager what property names to set on the shader used by the CRT's material.\n\nA property map is required when non-TXL shaders are used.  If you aren't using a custom CRT material, this can be left empty."));
-                    fieldRect.x -= 30;
-                    EditorGUI.ObjectField(fieldRect, matMapProp, GUIContent.none);
-
-                    // Force earlier target aspect value into material if it's a compatible TXL shader that supports it
-                    bool compat = compatMaterialShader(mat);
-                    if (compat)
-                    {
-                        float aspect = mat.GetFloat("_AspectRatio");
-                        if (aspect != newAspect)
-                            mat.SetFloat("_AspectRatio", newAspect);
-                    }
-
-                    rect.x -= 15;
-                }
-
-                rect.y += lineHeight + EditorGUIUtility.standardVerticalSpacing;
-                fieldRect = EditorGUI.PrefixLabel(rect, new GUIContent("Set Global VideoTex", "Sets the _Udon_VideoTex global shader property with this texture.\n\n_Udon_VideoTex is used by some video players as a common property to provide a video texture to avatars.  Avoid trying to set this value from multiple video players at the same time."));
-                fieldRect.x -= 15;
-                globalTexProp.boolValue = EditorGUI.Toggle(fieldRect, globalTexProp.boolValue);
-
-                rect.x -= 15;
-            }
-        }
-
-        private void OnDrawHeader(Rect rect)
-        {
-            GUI.Label(rect, new GUIContent("Output Custom Render Textures (CRTs)", "CRTs that will be enabled during video playback and recieve view or placeholder data"));
-        }
-
-        private void OnAdd(ReorderableList list)
-        {
-            int index = AddElement(renderOutCrtListProperty, renderOutMatPropsListProperty, renderOutSizeListProperty, renderOutTargetAspectListProperty,
-                renderOutResizeListProperty, renderOutExpandSizeListProperty, renderOutGlobalTexListProperty);
-
-            list.index = index;
-            CustomRenderTexture crt = CreateCRTCopy();
-
-            renderOutCrtListProperty.GetArrayElementAtIndex(index).objectReferenceValue = crt;
-            renderOutSizeListProperty.GetArrayElementAtIndex(index).vector2IntValue = new Vector2Int(crt.width, crt.height);
-            if (compatMaterialShader(crt))
-                renderOutTargetAspectListProperty.GetArrayElementAtIndex(index).floatValue = crt.material.GetFloat("_AspectRatio");
-
-            renderOutGlobalTexListProperty.GetArrayElementAtIndex(index).boolValue = (index == 0);
-
-        }
-
-        private void OnRemove(ReorderableList list)
-        {
-            if (list.index < 0 || list.index >= list.count)
-                return;
-
-            RemoveElement(renderOutCrtListProperty, renderOutMatPropsListProperty, renderOutSizeListProperty, renderOutTargetAspectListProperty,
-                renderOutResizeListProperty, renderOutExpandSizeListProperty, renderOutGlobalTexListProperty);
-
-            if (list.index == renderOutCrtListProperty.arraySize)
-                list.index--;
-        }
-
-        private float OnElementHeight(int index)
-        {
-            int lineCount = 2;
-
-            var crtProp = renderOutCrtListProperty.GetArrayElementAtIndex(index);
-            CustomRenderTexture crt = (CustomRenderTexture)crtProp.objectReferenceValue;
-            if (crt != null)
-            {
-                lineCount += 5;
-
-                if (renderOutResizeListProperty.GetArrayElementAtIndex(index).boolValue)
-                    lineCount += 1;
-
-                if (crt.material != null)
-                    lineCount += 1;
-            }
-
-            return (EditorGUIUtility.singleLineHeight + 2) * lineCount;
-        }
-
-        private int AddElement(SerializedProperty main, params SerializedProperty[] props)
-        {
-            int index = main.arraySize;
-
-            main.arraySize++;
-            foreach (var prop in props)
-                prop.arraySize++;
-
-            return index;
-        }
-
-        private void RemoveElement(params SerializedProperty[] props)
-        {
-            foreach (var prop in props)
-                prop.arraySize--;
         }
 
         public override void OnInspectorGUI()
@@ -491,62 +297,50 @@ namespace Texel
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
 
-            if (useRenderOutProperty.boolValue && outputCRTProperty.objectReferenceValue != null && renderOutCrtListProperty.arraySize == 0)
-            {
-                CustomRenderTexture crt = (CustomRenderTexture)outputCRTProperty.objectReferenceValue;
-
-                renderOutCrtListProperty.InsertArrayElementAtIndex(0);
-                renderOutMatPropsListProperty.InsertArrayElementAtIndex(0);
-                renderOutSizeListProperty.InsertArrayElementAtIndex(0);
-                renderOutTargetAspectListProperty.InsertArrayElementAtIndex(0);
-                renderOutResizeListProperty.InsertArrayElementAtIndex(0);
-                renderOutExpandSizeListProperty.InsertArrayElementAtIndex(0);
-                renderOutGlobalTexListProperty.InsertArrayElementAtIndex(0);
-
-                SerializedProperty prop1 = renderOutCrtListProperty.GetArrayElementAtIndex(0);
-                prop1.objectReferenceValue = outputCRTProperty.objectReferenceValue;
-
-                SerializedProperty prop2 = renderOutMatPropsListProperty.GetArrayElementAtIndex(0);
-                prop2.objectReferenceValue = outputMaterialPropertiesProperty.objectReferenceValue;
-
-                SerializedProperty crtProp = GetElementSafe(renderOutCrtListProperty, 0);
-                SerializedProperty matPropsProp = GetElementSafe(renderOutMatPropsListProperty, 0);
-                SerializedProperty sizeProp = GetElementSafe(renderOutSizeListProperty, 0);
-                SerializedProperty targetAspectProp = GetElementSafe(renderOutTargetAspectListProperty, 0);
-                SerializedProperty resizeProp = GetElementSafe(renderOutResizeListProperty, 0);
-                SerializedProperty expandSizeProp = GetElementSafe(renderOutExpandSizeListProperty, 0);
-                SerializedProperty globalTexProp = GetElementSafe(renderOutGlobalTexListProperty, 0);
-
-                crtProp.objectReferenceValue = crt;
-                matPropsProp.objectReferenceValue = outputMaterialPropertiesProperty.objectReferenceValue;
-                sizeProp.vector2IntValue = new Vector2Int(crt.width, crt.height);
-
-                if (compatMaterialShader(crt))
-                    targetAspectProp.floatValue = crt.material.GetFloat("_AspectRatio");
-                else
-                    targetAspectProp.floatValue = 0;
-
-                resizeProp.boolValue = false;
-                expandSizeProp.boolValue = false;
-
-                outputCRTProperty.objectReferenceValue = null;
-                outputMaterialPropertiesProperty.objectReferenceValue = null;
-                globalTexProp.boolValue = false;
-            }
-
-            GUIStyle boldFoldoutStyle = new GUIStyle(EditorStyles.foldout);
-            boldFoldoutStyle.fontStyle = FontStyle.Bold;
-
             if (GUILayout.Button("Screen Manager Documentation"))
-                Application.OpenURL("https://github.com/jaquadro/VideoTXL/wiki/Configuration:-Screen-Manager");
+                Application.OpenURL(mainHelpUrl);
 
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(videoPlayerProperty);
 
             // ---
 
+            EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+            TextureOverrideSection();
+
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Texture Overrides", EditorStyles.boldLabel);
+            crtList.Section();
+
+            EditorGUILayout.Space();
+            sharedMaterialList.Section();
+
+            EditorGUILayout.Space();
+            propBlockList.Section();
+
+            EditorGUILayout.Space();
+            globalPropList.Section();
+
+            // ---
+
+            EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+            ObjectMaterialSection();
+
+            // ---
+
+            EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+            DebugSection();
+
+            if (serializedObject.hasModifiedProperties)
+            {
+                serializedObject.ApplyModifiedProperties();
+                UpdateEditorState();
+            }
+        }
+
+        private void TextureOverrideSection()
+        {
+            if (!TXLEditor.DrawMainHeaderHelp(new GUIContent("Texture Overrides"), ref expandTextures, textureOverridesUrl))
+                return;
 
             EditorGUI.indentLevel++;
             EditorGUILayout.PropertyField(logoTextureProperty);
@@ -589,55 +383,12 @@ namespace Texel
             }
 
             EditorGUI.indentLevel--;
+        }
 
-            // ---
-
-            bool prevRenderOut = useRenderOutProperty.boolValue;
-
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Render Texture Output", EditorStyles.boldLabel);
-
-            EditorGUI.indentLevel++;
-            if (renderOutCrtListProperty.arraySize == 0)
-                EditorGUILayout.HelpBox("Custom Render Textures, which can be used like other Render Textures, are the easiest way to supply a video texture to different materials/shaders in your scene.  This includes feeding systems like LTCGI and AreaLit.  Add one or more CRTs to the list to get started.\n\nIf you just want to display a screen, consider using the other override options below, which will have better performance and display your video content at native resolution.", MessageType.Info);
-            EditorGUI.indentLevel--;
-
-            Rect listRect = GUILayoutUtility.GetRect(0, crtOutList.GetHeight() + 16, GUILayout.ExpandWidth(true));
-            listRect.x += 15;
-            listRect.width -= 15;
-            crtOutList.DoList(listRect);
-
-            bool packageCrtDetected = false;
-            for (int i = 0; i < renderOutCrtListProperty.arraySize; i++)
-            {
-                SerializedProperty prop = renderOutCrtListProperty.GetArrayElementAtIndex(i);
-                CustomRenderTexture crt = (CustomRenderTexture)prop.objectReferenceValue;
-                if (crt && AssetDatabase.GetAssetPath(crt).StartsWith("Packages/com.texelsaur.video"))
-                    packageCrtDetected = true;
-            }
-
-            if (packageCrtDetected)
-            {
-                EditorGUILayout.Space(20);
-                IndentedHelpBox("One or more referenced CRTs is within the VideoTXL package folder.  The CRT will be lost or have any changes reverted the next time VideoTXL is updated.  Creating a copy in Assets is recommended.", MessageType.Warning);
-            }
-
-            // ---
-
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Other Texture Overrides", EditorStyles.boldLabel);
-
-            EditorGUI.indentLevel++;
-            EditorGUILayout.Space();
-            MaterialFoldout();
-            EditorGUILayout.Space();
-            PropBlockFoldout();
-            EditorGUI.indentLevel--;
-
-            // ---
-
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Object Material Overrides", EditorStyles.boldLabel);
+        private void ObjectMaterialSection()
+        {
+            if (!TXLEditor.DrawMainHeaderHelp(new GUIContent("Object Material Overrides"), ref expandObjectOverrides, objectMaterialsUrl))
+                return;
 
             EditorGUI.indentLevel++;
             EditorGUILayout.PropertyField(useMaterialOverrideProperty);
@@ -670,265 +421,586 @@ namespace Texel
 
                 EditorGUILayout.PropertyField(editorMaterialProperty);
 
-                EditorGUILayout.Space();
-                ScreenFoldout();
-            }
-
-            EditorGUI.indentLevel--;
-
-            // ---
-
-            EditorGUILayout.Space();
-            expandDebug = EditorGUILayout.Foldout(expandDebug, "Debug Options", true, boldFoldoutStyle);
-            if (expandDebug)
-            {
-                EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
-                EditorGUILayout.PropertyField(eventLoggingProperty, new GUIContent("Include Events", "Include additional event traffic in debug log"));
-                EditorGUILayout.PropertyField(lowLevelLoggingProperty, new GUIContent("Include Low Level", "Include additional verbose messages in debug log"));
-                EditorGUILayout.PropertyField(vrcLoggingProperty, new GUIContent("VRC Logging", "Write out debug messages to VRChat log."));
                 EditorGUI.indentLevel--;
+                EditorGUILayout.Space();
+                objectOverrideList.Section();
+                EditorGUI.indentLevel++;
             }
 
-            if (serializedObject.hasModifiedProperties)
-            {
-                serializedObject.ApplyModifiedProperties();
-                UpdateEditorState();
-            }
-        }
-
-        private void IndentedHelpBox(string message, MessageType messageType)
-        {
-            EditorGUI.indentLevel++;
-            EditorGUILayout.HelpBox(message, messageType);
             EditorGUI.indentLevel--;
         }
 
-        private void ScreenFoldout()
+        private void DebugSection()
         {
-            int count = screenMeshListProperty.arraySize;
-            _showScreenListFoldout = EditorGUILayout.Foldout(_showScreenListFoldout, $"Video Screen Objects ({count})");
-            if (_showScreenListFoldout)
+            if (!TXLEditor.DrawMainHeaderHelp(new GUIContent("Debug Options"), ref expandDebug, debugOptionsUrl))
+                return;
+
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
+            EditorGUILayout.PropertyField(eventLoggingProperty, new GUIContent("Include Events", "Include additional event traffic in debug log"));
+            EditorGUILayout.PropertyField(lowLevelLoggingProperty, new GUIContent("Include Low Level", "Include additional verbose messages in debug log"));
+            EditorGUILayout.PropertyField(vrcLoggingProperty, new GUIContent("VRC Logging", "Write out debug messages to VRChat log."));
+            EditorGUI.indentLevel--;
+        }
+
+        class CrtListDisplay : ReorderableListDisplay
+        {
+            ScreenManager target;
+
+            SerializedProperty renderOutCrtListProperty;
+            SerializedProperty renderOutMatPropsListProperty;
+            SerializedProperty renderOutSizeListProperty;
+            SerializedProperty renderOutTargetAspectListProperty;
+            SerializedProperty renderOutResizeListProperty;
+            SerializedProperty renderOutExpandSizeListProperty;
+            SerializedProperty renderOutGlobalTexListProperty;
+
+            static string sectionUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#render-textures";
+
+            static GUIContent labelHeader = new GUIContent("Render Textures", "CRTs that will be enabled during video playback and recieve view or placeholder data");
+            static GUIContent labelCrt = new GUIContent("CRT", "By default, a CRT has been generated in Assets for you, but you can change this for any other CRT.");
+            static GUIContent labelCrtSize = new GUIContent("CRT Size", "The resolution of the CRT.  If the resize to video option is enabled, the specified size will be used for placeholder textures.\n\nChanges to this value will change the size of the underlying CRT asset.");
+            static GUIContent labelTargetAspect = new GUIContent("Target Aspect Ratio", "The target aspect ratio should be set to the aspect ratio of the OBJECT that this CRT's texture will be applied to, such as a main video screen.  This can be different than the aspect ratio of the CRT or source video.\n\nIf the expand to fit option is enabled, the target aspect ratio will be used to calculate the expansion.\n\nIf the CRT material uses a compatible TXL shader, the aspect ratio property of the underlying material asset will be updated to match this value.");
+            static GUIContent labelResizeVideo = new GUIContent("Resize to Video", "Dynamically resize the CRT to match the resolution of the video data.  When placeholder textures are displayed, the CRT's size specified above will be used.");
+            static GUIContent labelExpandSize = new GUIContent("Enlarge to Fit", "Enlarge the dynamic size of the CRT if necessary to fit the video data within the target aspect ratio.");
+            static GUIContent labelGlobalTex = new GUIContent("Set Global VideoTex", "Sets the _Udon_VideoTex global shader property with this texture.\n\n_Udon_VideoTex is used by some video players as a common property to provide a video texture to avatars.  Avoid trying to set this value from multiple video players at the same time.");
+            static GUIContent labelCrtMaterial = new GUIContent("CRT Material", "The material used to render the video data onto the CRT, fetched from the underlying asset.\n\nChanges to this value will change the material on the underlying CRT asset.  Only change this if you know what you're doing.");
+            static GUIContent labelCrtPropertyMap = new GUIContent("Property Map", "The property map tells the manager what property names to set on the shader used by the CRT's material.\n\nA property map is required when non-TXL shaders are used.  If you aren't using a custom CRT material, this can be left empty.");
+
+            static bool expandSection = true;
+
+            public CrtListDisplay(SerializedObject serializedObject, ScreenManager target) : base(serializedObject)
             {
-                EditorGUI.indentLevel++;
-                _showScreenFoldout = EditorTools.MultiArraySize(serializedObject, _showScreenFoldout,
-                    screenMeshListProperty, screenMatIndexListProperty);
-                
-                for (int i = 0; i < screenMeshListProperty.arraySize; i++)
+                this.target = target;
+                header = labelHeader;
+
+                renderOutCrtListProperty = AddSerializedArray(list.serializedProperty);
+                renderOutMatPropsListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.renderOutMatProps)));
+                renderOutSizeListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.renderOutSize)));
+                renderOutTargetAspectListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.renderOutTargetAspect)));
+                renderOutResizeListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.renderOutResize)));
+                renderOutExpandSizeListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.renderOutExpandSize)));
+                renderOutGlobalTexListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.renderOutGlobalTex)));
+
+                list.headerHeight = 1;
+            }
+
+            protected override SerializedProperty mainListProperty(SerializedObject serializedObject)
+            {
+                return serializedObject.FindProperty(nameof(ScreenManager.renderOutCrt));
+            }
+
+            protected override void OnDrawElement(Rect rect, int index, bool isActive, bool isFocused)
+            {
+                ScreenManager manager = target as ScreenManager;
+
+                if (managers != null && !managers.Contains(manager))
+                    managers.Add(manager);
+
+                var crtProp = GetElementSafe(renderOutCrtListProperty, index);
+                var matMapProp = GetElementSafe(renderOutMatPropsListProperty, index);
+                var sizeProp = GetElementSafe(renderOutSizeListProperty, index);
+                var targetAspectProp = GetElementSafe(renderOutTargetAspectListProperty, index);
+                var resizeProp = GetElementSafe(renderOutResizeListProperty, index);
+                var expandSizeProp = GetElementSafe(renderOutExpandSizeListProperty, index);
+                var globalTexProp = GetElementSafe(renderOutGlobalTexListProperty, index);
+
+                InitRect(ref rect);
+
+                DrawObjectField(ref rect, 0, labelCrt, crtProp);
+                CustomRenderTexture crt = (CustomRenderTexture)crtProp.objectReferenceValue;
+                if (!crt)
+                    return;
+
+                Vector2Int size = sizeProp.vector2IntValue;
+                Vector2Int newSize = DrawSizeField(ref rect, 1, labelCrtSize, new Vector2Int(size.x > 0 ? size.x : crt.width, size.y > 0 ? size.y : crt.height));
+                sizeProp.vector2IntValue = newSize;
+
+                if (newSize.x != crt.width || newSize.y != crt.height)
                 {
-                    string name = EditorTools.GetMeshRendererName(screenMeshListProperty, i);
-                    _showScreenFoldout[i] = EditorGUILayout.Foldout(_showScreenFoldout[i], $"Screen {i} ({name})");
-                    if (_showScreenFoldout[i])
+                    crt.Release();
+                    crt.width = newSize.x;
+                    crt.height = newSize.y;
+                    crt.Create();
+                }
+
+                DrawFloatField(ref rect, 2, labelTargetAspect, targetAspectProp);
+                DrawToggle(ref rect, 2, labelResizeVideo, resizeProp);
+                if (resizeProp.boolValue)
+                    DrawToggle(ref rect, 2, labelExpandSize, expandSizeProp);
+
+                Material newMat = DrawObjectField(ref rect, 1, labelCrtMaterial, crt.material, false);
+                if (newMat != crt.material)
+                    crt.material = newMat;
+
+                Material mat = crt.material;
+                if (mat != null)
+                {
+                    DrawObjectField(ref rect, 2, labelCrtPropertyMap, matMapProp);
+
+                    // Force earlier target aspect value into material if it's a compatible TXL shader that supports it
+                    bool compat = compatMaterialShader(mat);
+                    if (compat)
                     {
-                        EditorGUI.indentLevel++;
-
-                        SerializedProperty mesh = screenMeshListProperty.GetArrayElementAtIndex(i);
-                        SerializedProperty matIndex = screenMatIndexListProperty.GetArrayElementAtIndex(i);
-
-                        EditorGUILayout.PropertyField(mesh, new GUIContent("Mesh Renderer"));
-                        EditorGUILayout.PropertyField(matIndex, new GUIContent("Material Index"));
-
-                        EditorGUI.indentLevel--;
+                        float aspect = mat.GetFloat("_AspectRatio");
+                        if (aspect != targetAspectProp.floatValue)
+                            mat.SetFloat("_AspectRatio", targetAspectProp.floatValue);
                     }
                 }
-                EditorGUI.indentLevel--;
+
+                DrawToggle(ref rect, 1, labelGlobalTex, globalTexProp);
+            }
+
+            protected override float OnElementHeight(int index)
+            {
+                int lineCount = 1;
+
+                var crtProp = renderOutCrtListProperty.GetArrayElementAtIndex(index);
+                CustomRenderTexture crt = (CustomRenderTexture)crtProp.objectReferenceValue;
+                if (crt != null)
+                {
+                    lineCount += 5;
+
+                    if (renderOutResizeListProperty.GetArrayElementAtIndex(index).boolValue)
+                        lineCount += 1;
+
+                    if (crt.material != null)
+                        lineCount += 1;
+                }
+
+                return (EditorGUIUtility.singleLineHeight + 2) * lineCount + EditorGUIUtility.singleLineHeight / 2;
+            }
+
+            protected override void OnAdd(ReorderableList list)
+            {
+                base.OnAdd(list);
+
+                int index = list.index;
+                CustomRenderTexture crt = CreateCRTCopy();
+
+                renderOutCrtListProperty.GetArrayElementAtIndex(index).objectReferenceValue = crt;
+                renderOutSizeListProperty.GetArrayElementAtIndex(index).vector2IntValue = new Vector2Int(crt.width, crt.height);
+                if (compatMaterialShader(crt))
+                    renderOutTargetAspectListProperty.GetArrayElementAtIndex(index).floatValue = crt.material.GetFloat("_AspectRatio");
+
+                renderOutGlobalTexListProperty.GetArrayElementAtIndex(index).boolValue = (index == 0);
+            }
+
+            public void Section()
+            {
+                if (TXLEditor.DrawMainHeaderHelp(labelHeader, ref expandSection, sectionUrl))
+                {
+                    if (renderOutCrtListProperty.arraySize == 0)
+                    {
+                        TXLEditor.IndentedHelpBox("Custom Render Textures, which can be used like other Render Textures, are the easiest way to supply a video texture to different materials/shaders in your scene.  This includes feeding systems like LTCGI and AreaLit.  Add one or more CRTs to the list to get started.\n\nIf you just want to display a screen, consider using the other override options below, which will have better performance and display your video content at native resolution.", MessageType.Info);
+                        EditorGUILayout.Space();
+                    }
+
+                    Draw(1);
+                    EditorGUILayout.Space(20);
+                }
+
+                bool packageCrtDetected = false;
+                for (int i = 0; i < renderOutCrtListProperty.arraySize; i++)
+                {
+                    SerializedProperty prop = renderOutCrtListProperty.GetArrayElementAtIndex(i);
+                    CustomRenderTexture crt = (CustomRenderTexture)prop.objectReferenceValue;
+                    if (crt && AssetDatabase.GetAssetPath(crt).StartsWith("Packages/com.texelsaur.video"))
+                        packageCrtDetected = true;
+                }
+
+                if (packageCrtDetected)
+                {
+                    TXLEditor.IndentedHelpBox("One or more referenced CRTs is within the VideoTXL package folder.  The CRT will be lost or have any changes reverted the next time VideoTXL is updated.  Creating a copy in Assets is recommended.", MessageType.Warning);
+                    EditorGUILayout.Space();
+                }
             }
         }
 
-        private void MaterialFoldout()
+        class SharedMaterialListDisplay : ReorderableListDisplay
         {
-            int count = materialUpdateListProperty.arraySize;
-            _showMaterialListFoldout = EditorGUILayout.Foldout(_showMaterialListFoldout, $"Shared Material Updates ({count})");
-            if (_showMaterialListFoldout)
+            ScreenManager target;
+
+            SerializedProperty materialUpdateListProperty;
+            SerializedProperty materialPropertyListProperty;
+
+            static string sectionUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#shared-materials";
+
+            static GUIContent labelHeader = new GUIContent("Shared Material Updates", "List of shared materials that will be updated as video state changes.");
+            static GUIContent labelMaterial = new GUIContent("Material", "The shared material to update.");
+            static GUIContent labelPropMap = new GUIContent("Property Map", "The property map tells the screen manager the names of a material's shader properties such as main texture, flipping, gamma correction, etc.\n\nProperty maps are optional if the material uses a shader supplied by VideoTXL.");
+            static GUIContent labelCreatePropMap = new GUIContent("+", "Create an empty Screen Property Map object under the screen manager and asign it.  The new map will need to be filled out.");
+
+            static bool expandSection = true;
+
+            public SharedMaterialListDisplay(SerializedObject serializedObject, ScreenManager target) : base(serializedObject)
             {
-                EditorGUI.indentLevel++;
-                _showMaterialFoldout = EditorTools.MultiArraySize(serializedObject, _showMaterialFoldout,
-                    materialUpdateListProperty, materialPropertyListProperty);
+                this.target = target;
+                header = labelHeader;
+
+                materialUpdateListProperty = AddSerializedArray(list.serializedProperty);
+                materialPropertyListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.materialPropertyList)));
+
+                list.headerHeight = 1;
+            }
+
+            protected override SerializedProperty mainListProperty(SerializedObject serializedObject)
+            {
+                return serializedObject.FindProperty(nameof(ScreenManager.materialUpdateList));
+            }
+
+            protected override void OnDrawElement(Rect rect, int index, bool isActive, bool isFocused)
+            {
+                ScreenManager manager = target as ScreenManager;
+
+                if (managers != null && !managers.Contains(manager))
+                    managers.Add(manager);
+
+                var matProp = GetElementSafe(materialUpdateListProperty, index);
+                var mapProp = GetElementSafe(materialPropertyListProperty, index);
+
+                InitRect(ref rect);
+
+                DrawObjectField(ref rect, 0, labelMaterial, matProp);
+
+                bool compatMat = materialCompat(matProp);
+                Color addColor = compatMat ? GUI.backgroundColor : new Color(1, .32f, .29f);
+
+                if (mapProp.objectReferenceValue != null)
+                    DrawObjectField(ref rect, 1, labelPropMap, mapProp);
+                else if (DrawObjectFieldWithAdd(ref rect, 1, labelPropMap, mapProp, labelCreatePropMap, EditorGUIUtility.singleLineHeight * 1, addColor))
+                {
+                    GameObject propMap = CreateEmptyPropertyMap(target, (Material)matProp.objectReferenceValue);
+                    mapProp.objectReferenceValue = propMap.GetComponent<ScreenPropertyMap>();
+                    Selection.activeObject = propMap;
+                }
+            }
+
+            protected override float OnElementHeight(int index)
+            {
+                return (EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing) * 2 + EditorGUIUtility.singleLineHeight / 2;
+            }
+
+            public void Section()
+            {
+                if (TXLEditor.DrawMainHeaderHelp(labelHeader, ref expandSection, sectionUrl))
+                {
+                    Draw(1);
+                    EditorGUILayout.Space(20);
+                }
+
+                int missingMapCount = MissingMaterialMapCount();
+                if (missingMapCount > 0)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.HelpBox($"{missingMapCount} materials have no property map set. The screen manager will not be able to update properties on those materials.", MessageType.Error);
+                    EditorGUI.indentLevel--;
+                }
+            }
+
+            private int MissingMaterialMapCount()
+            {
+                int missingMapCount = 0;
 
                 for (int i = 0; i < materialUpdateListProperty.arraySize; i++)
                 {
-                    string name = EditorTools.GetMaterialName(materialUpdateListProperty, i);
-                    _showMaterialFoldout[i] = EditorGUILayout.Foldout(_showMaterialFoldout[i], $"Material {i} ({name})");
-                    if (_showMaterialFoldout[i])
-                    {
-                        EditorGUI.indentLevel++;
+                    SerializedProperty matProperties = materialPropertyListProperty.GetArrayElementAtIndex(i);
+                    ScreenPropertyMap map = (ScreenPropertyMap)matProperties.objectReferenceValue;
 
-                        SerializedProperty matUpdate = materialUpdateListProperty.GetArrayElementAtIndex(i);
-                        SerializedProperty matProperties = materialPropertyListProperty.GetArrayElementAtIndex(i);
+                    SerializedProperty matProp = materialUpdateListProperty.GetArrayElementAtIndex(i);
+                    Material mat = (Material)matProp.objectReferenceValue;
 
-                        EditorGUILayout.PropertyField(matUpdate, new GUIContent("Material"));
-                        EditorGUILayout.PropertyField(matProperties, new GUIContent("Property Map"));
-
-                        if (!objectRefValid(materialPropertyListProperty, i)) {
-                            if (materialCompat(i))
-                                IndentedHelpBox("Default property map inferred from compatible material shader.", MessageType.None);
-                            else if (objectRefValid(materialUpdateListProperty, i))
-                            {
-                                GUILayout.BeginHorizontal();
-                                GUILayout.FlexibleSpace();
-                                if (GUILayout.Button(new GUIContent("Create Property Map", "Create an empty Screen Property Map object under the screen manager and asign it.  The new map will need to be filled out."), GUILayout.Width(150)))
-                                {
-                                    GameObject propMap = CreateEmptyPropertyMap((Material)matUpdate.objectReferenceValue);
-                                    matProperties.objectReferenceValue = propMap.GetComponent<ScreenPropertyMap>();
-                                    Selection.activeObject = propMap;
-                                }
-                                GUILayout.EndHorizontal();
-                                EditorGUILayout.HelpBox("No property map set.  The screen manager will not be able to update properties on the material.  A property map tells the screen manager the names of a material's shader properties such as main texture, flipping, gamma correction, etc.", MessageType.Error);
-                            }
-                        } 
-
-                        EditorGUI.indentLevel--;
-                    }
+                    if (map == null && mat != null && !materialCompat(matProp))
+                        missingMapCount += 1;
                 }
-                EditorGUI.indentLevel--;
+
+                return missingMapCount;
+            }
+        }
+        
+        class PropBlockListDisplay : ReorderableListDisplay
+        {
+            enum OverrideMode
+            {
+                Renderer,
+                Material,
+            };
+
+            ScreenManager target;
+
+            SerializedProperty propRenderListProperty;
+            SerializedProperty propMaterialOverrideListProperty;
+            SerializedProperty propMaterialIndexListProperty;
+            SerializedProperty propPropertyListProperty;
+
+            static string sectionUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#material-property-blocks";
+
+            static GUIContent labelHeader = new GUIContent("Material Property Block Overrides", "");
+            static GUIContent labelRenderer = new GUIContent("Renderer", "");
+            static GUIContent labelOverrideMode = new GUIContent("Override Mode", "");
+            static GUIContent labelMaterialIndex = new GUIContent("Material Slot", "");
+            static GUIContent labelPropMap = new GUIContent("Property Map", "");
+            static GUIContent labelCreatePropMap = new GUIContent("+", "Create an empty Screen Property Map object under the screen manager and asign it.  The new map will need to be filled out.");
+
+            static bool expandSection = true;
+
+            public PropBlockListDisplay(SerializedObject serializedObject, ScreenManager target) : base(serializedObject)
+            {
+                this.target = target;
+                header = labelHeader;
+
+                propRenderListProperty = AddSerializedArray(list.serializedProperty);
+                propMaterialOverrideListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.propMaterialOverrideList)));
+                propMaterialIndexListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.propMaterialIndexList)));
+                propPropertyListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.propPropertyList)));
+
+                list.headerHeight = 1;
             }
 
-            int missingMapCount = MissingMaterialMapCount();
-            if (missingMapCount > 0)
-                EditorGUILayout.HelpBox($"{missingMapCount} materials have no property map set. The screen manager will not be able to update properties on those materials.", MessageType.Error);
-        }
-
-        private void PropBlockFoldout()
-        {
-            int count = propRenderListProperty.arraySize;
-            _showPropListFoldout = EditorGUILayout.Foldout(_showPropListFoldout, $"Material Property Block Overrides ({count})");
-            if (_showPropListFoldout)
+            protected override SerializedProperty mainListProperty(SerializedObject serializedObject)
             {
-                EditorGUI.indentLevel++;
-                _showPropFoldout = EditorTools.MultiArraySize(serializedObject, _showPropFoldout,
-                    propRenderListProperty, propMaterialOverrideListProperty, propMaterialIndexListProperty, propPropertyListProperty);
+                return serializedObject.FindProperty(nameof(ScreenManager.propMeshList));
+            }
+
+            protected override void OnDrawElement(Rect rect, int index, bool isActive, bool isFocused)
+            {
+                ScreenManager manager = target as ScreenManager;
+
+                if (managers != null && !managers.Contains(manager))
+                    managers.Add(manager);
+
+                var meshProp = GetElementSafe(propRenderListProperty, index);
+                var overrideProp = GetElementSafe(propMaterialOverrideListProperty, index);
+                var indexProp = GetElementSafe(propMaterialIndexListProperty, index);
+                var mapProp = GetElementSafe(propPropertyListProperty, index);
+
+                InitRect(ref rect);
+
+                DrawObjectField(ref rect, 0, labelRenderer, meshProp);
+
+                MeshRenderer render = (MeshRenderer)meshProp.objectReferenceValue;
+                if (render)
+                {
+                    overrideProp.intValue = (int)DrawEnumField(ref rect, 1, labelOverrideMode, (OverrideMode)overrideProp.intValue);
+                    if (overrideProp.intValue == 1)
+                    {
+                        string[] matEntries = GetMaterialSlots((MeshRenderer)meshProp.objectReferenceValue);
+                        DrawPopupField(ref rect, 2, labelMaterialIndex, indexProp, matEntries);
+                    }
+                }
+
+                bool compatMat = meshProp.objectReferenceValue == null || propOverrideCompat(manager, index);
+                Color addColor = compatMat ? GUI.backgroundColor : new Color(1, .32f, .29f);
+
+                if (mapProp.objectReferenceValue != null)
+                    DrawObjectField(ref rect, 1, labelPropMap, mapProp);
+                else if (DrawObjectFieldWithAdd(ref rect, 1, labelPropMap, mapProp, labelCreatePropMap, EditorGUIUtility.singleLineHeight * 1, addColor))
+                {
+                    GameObject propMap = CreateEmptyPropertyMap(target, null);
+                    mapProp.objectReferenceValue = propMap.GetComponent<ScreenPropertyMap>();
+                    Selection.activeObject = propMap;
+                }
+            }
+
+            protected override float OnElementHeight(int index)
+            {
+                int lines = 2;
+
+                var meshProp = GetElementSafe(propRenderListProperty, index);
+                if (meshProp.objectReferenceValue != null)
+                {
+                    lines += 1;
+                    var overrideProp = GetElementSafe(propMaterialOverrideListProperty, index);
+                    if (overrideProp.intValue == 1)
+                        lines += 1;
+                }
+
+                return (EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing) * lines + EditorGUIUtility.singleLineHeight / 2;
+            }
+
+            public void Section()
+            {
+                if (TXLEditor.DrawMainHeaderHelp(labelHeader, ref expandSection, sectionUrl))
+                {
+                    Draw(1);
+                    EditorGUILayout.Space(20);
+                }
+
+                int missingMapCount = MissingPropMapCount();
+                if (missingMapCount > 0)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.HelpBox($"{missingMapCount} override(s) have no property map set. The screen manager will not be able to update material properties on those objects.", MessageType.Error);
+                    EditorGUI.indentLevel--;
+                }
+            }
+
+            private int MissingPropMapCount()
+            {
+                int missingMapCount = 0;
 
                 for (int i = 0; i < propRenderListProperty.arraySize; i++)
                 {
-                    string name = EditorTools.GetMeshRendererName(propRenderListProperty, i);
-                    _showPropFoldout[i] = EditorGUILayout.Foldout(_showPropFoldout[i], $"Material Override {i} ({name})");
-                    if (_showPropFoldout[i])
-                    {
-                        EditorGUI.indentLevel++;
+                    SerializedProperty rendererProp = propRenderListProperty.GetArrayElementAtIndex(i);
+                    MeshRenderer renderer = (MeshRenderer)rendererProp.objectReferenceValue;
+                    if (!renderer)
+                        continue;
 
-                        SerializedProperty mesh = propRenderListProperty.GetArrayElementAtIndex(i);
-                        SerializedProperty useMatOverride = propMaterialOverrideListProperty.GetArrayElementAtIndex(i);
-                        SerializedProperty matIndex = propMaterialIndexListProperty.GetArrayElementAtIndex(i);
-                        SerializedProperty matProperties = propPropertyListProperty.GetArrayElementAtIndex(i);
+                    SerializedProperty matProperties = propPropertyListProperty.GetArrayElementAtIndex(i);
+                    ScreenPropertyMap map = (ScreenPropertyMap)matProperties.objectReferenceValue;
 
-                        EditorGUILayout.PropertyField(mesh, new GUIContent("Renderer"));
-
-                        GUIContent desc = new GUIContent("Override Mode", "Whether to override a property on the renderer or one of its specific materials");
-                        useMatOverride.intValue = EditorGUILayout.Popup(desc, useMatOverride.intValue, new string[] { "Renderer", "Material" });
-                        if (useMatOverride.intValue == 1)
-                            EditorGUILayout.PropertyField(matIndex, new GUIContent("Material Index"));
-
-                        EditorGUILayout.PropertyField(matProperties, new GUIContent("Property Map"));
-
-                        if (!objectRefValid(propPropertyListProperty, i))
-                        {
-                            if (propOverrideCompat(i))
-                                IndentedHelpBox("Default property map inferred from compatible material shader.", MessageType.None);
-                            else if (objectRefValid(propRenderListProperty, i))
-                            {
-                                GUILayout.BeginHorizontal();
-                                GUILayout.FlexibleSpace();
-                                if (GUILayout.Button(new GUIContent("Create Property Map", "Create an empty Screen Property Map object under the screen manager and asign it.  The new map will need to be filled out."), GUILayout.Width(150)))
-                                {
-                                    GameObject propMap = CreateEmptyPropertyMap(null);
-                                    matProperties.objectReferenceValue = propMap.GetComponent<ScreenPropertyMap>();
-                                    Selection.activeObject = propMap;
-                                }
-                                GUILayout.EndHorizontal();
-                                EditorGUILayout.HelpBox("No property map set. The screen manager will not be able to update properties on the object.  A property map tells the screen manager the names of a material's shader properties such as main texture, flipping, gamma correction, etc.", MessageType.Error);
-                            }
-                        }
-
-                        EditorGUI.indentLevel--;
-                    }
+                    if (map == null && !propOverrideCompat(target, i))
+                        missingMapCount += 1;
                 }
-                EditorGUI.indentLevel--;
-            }
 
-            int missingMapCount = MissingPropMapCount();
-            if (missingMapCount > 0)
-                EditorGUILayout.HelpBox($"{missingMapCount} override(s) have no property map set. The screen manager will not be able to update material properties on those objects.", MessageType.Error);
+                return missingMapCount;
+            }
         }
 
-        private int MissingMaterialMapCount()
+        class ObjectOverrideListDisplay : ReorderableListDisplay
         {
-            int missingMapCount = 0;
+            ScreenManager target;
 
-            for (int i = 0; i < materialUpdateListProperty.arraySize; i++)
+            SerializedProperty screenMeshListProperty;
+            SerializedProperty screenMatIndexListProperty;
+
+            static string sectionUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#object-materials";
+
+            static GUIContent labelHeader = new GUIContent("Objects", "");
+            static GUIContent labelObject = new GUIContent("Object", "");
+            static GUIContent labelMaterialIndex = new GUIContent("Material Index", "");
+
+            static bool expandSection = true;
+
+            public ObjectOverrideListDisplay(SerializedObject serializedObject, ScreenManager target) : base(serializedObject)
             {
-                SerializedProperty matProperties = materialPropertyListProperty.GetArrayElementAtIndex(i);
-                ScreenPropertyMap map = (ScreenPropertyMap)matProperties.objectReferenceValue;
+                this.target = target;
+                header = labelHeader;
 
-                SerializedProperty matProp = materialUpdateListProperty.GetArrayElementAtIndex(i);
-                Material mat = (Material)matProp.objectReferenceValue;
+                screenMeshListProperty = AddSerializedArray(list.serializedProperty);
+                screenMatIndexListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.screenMaterialIndex)));
 
-                if (map == null && mat != null && !materialCompat(i))
-                    missingMapCount += 1;
+                list.headerHeight = 1;
             }
 
-            return missingMapCount;
-        }
-
-        private int MissingPropMapCount()
-        {
-            int missingMapCount = 0;
-
-            for (int i = 0; i < propRenderListProperty.arraySize; i++)
+            protected override SerializedProperty mainListProperty(SerializedObject serializedObject)
             {
-                SerializedProperty rendererProp = propRenderListProperty.GetArrayElementAtIndex(i);
-                MeshRenderer renderer = (MeshRenderer)rendererProp.objectReferenceValue;
-                if (!renderer)
-                    continue;
-
-                SerializedProperty matProperties = propPropertyListProperty.GetArrayElementAtIndex(i);
-                ScreenPropertyMap map = (ScreenPropertyMap)matProperties.objectReferenceValue;
-
-                if (map == null && !propOverrideCompat(i))
-                    missingMapCount += 1;
+                return serializedObject.FindProperty(nameof(ScreenManager.screenMesh));
             }
 
-            return missingMapCount;
+            protected override void OnDrawElement(Rect rect, int index, bool isActive, bool isFocused)
+            {
+                ScreenManager manager = target as ScreenManager;
+
+                if (managers != null && !managers.Contains(manager))
+                    managers.Add(manager);
+
+                var meshProp = GetElementSafe(screenMeshListProperty, index);
+                var matIndexProp = GetElementSafe(screenMatIndexListProperty, index);
+
+                InitRect(ref rect);
+
+                DrawObjectField(ref rect, 0, labelObject, meshProp);
+
+                MeshRenderer render = (MeshRenderer)meshProp.objectReferenceValue;
+                if (render)
+                {
+                    string[] matEntries = GetMaterialSlots(render);
+                    DrawPopupField(ref rect, 1, labelMaterialIndex, matIndexProp, matEntries);
+                }
+            }
+
+            protected override float OnElementHeight(int index)
+            {
+                int lines = 1;
+
+                var meshProp = GetElementSafe(screenMeshListProperty, index);
+                if (meshProp.objectReferenceValue != null)
+                    lines += 1;
+
+                return (EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing) * lines + EditorGUIUtility.singleLineHeight / 2;
+            }
+
+            public void Section()
+            {
+                if (TXLEditor.DrawMainHeaderHelp(labelHeader, ref expandSection, sectionUrl))
+                {
+                    Draw(1);
+                    EditorGUILayout.Space(20);
+                }
+            }
         }
 
-        private bool objectRefValid(SerializedProperty propList, int index)
+        class GlobalPropertyListDisplay : ReorderableListDisplay
         {
-            SerializedProperty matProperties = propList.GetArrayElementAtIndex(index);
-            return matProperties.objectReferenceValue != null;
+            ScreenManager target;
+
+            SerializedProperty globalPropListProperty;
+
+            static string sectionUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#global-properties";
+
+            static GUIContent labelHeader = new GUIContent("Global Property Updates", "");
+            static GUIContent labelPropertyMap = new GUIContent("Property Map", "");
+
+            static bool expandSection = true;
+
+            public GlobalPropertyListDisplay(SerializedObject serializedObject, ScreenManager target) : base(serializedObject)
+            {
+                this.target = target;
+                header = labelHeader;
+
+                globalPropListProperty = AddSerializedArray(list.serializedProperty);
+
+                list.headerHeight = 1;
+            }
+
+            protected override SerializedProperty mainListProperty(SerializedObject serializedObject)
+            {
+                return serializedObject.FindProperty(nameof(ScreenManager.globalPropertyList));
+            }
+
+            protected override void OnDrawElement(Rect rect, int index, bool isActive, bool isFocused)
+            {
+                InitRect(ref rect);
+                DrawObjectField(ref rect, 0, labelPropertyMap, GetElementSafe(globalPropListProperty, index));
+            }
+
+            protected override float OnElementHeight(int index)
+            {
+                return (EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing) * 1 + EditorGUIUtility.singleLineHeight / 4;
+            }
+
+            public void Section()
+            {
+                if (TXLEditor.DrawMainHeaderHelp(labelHeader, ref expandSection, sectionUrl))
+                {
+                    Draw(1);
+                    EditorGUILayout.Space(20);
+                }
+            }
         }
 
-        private bool materialCompat(int index)
+        private static bool materialCompat(SerializedProperty matProp)
         {
-            SerializedProperty matProp = materialUpdateListProperty.GetArrayElementAtIndex(index);
             Material mat = (Material)matProp.objectReferenceValue;
-
             return compatMaterialShader(mat);
         }
 
-        private Material materialOverride(int index)
-        {
-            SerializedProperty matProp = materialUpdateListProperty.GetArrayElementAtIndex(index);
-            Material mat = (Material)matProp.objectReferenceValue;
-
-            return mat;
-        }
-
-        private bool propOverrideCompat(int index)
+        private static bool propOverrideCompat(ScreenManager manager, int index)
         {
             bool compat = false;
 
-            SerializedProperty rendererProp = propRenderListProperty.GetArrayElementAtIndex(index);
-            MeshRenderer renderer = (MeshRenderer)rendererProp.objectReferenceValue;
-            if (!renderer)
+            PropBlockEntry entry = new PropBlockEntry(manager, index);
+            if (!entry.renderer)
                 return false;
 
-            Material[] mats = renderer.sharedMaterials;
-
-            bool useMatIndex = propMaterialOverrideListProperty.GetArrayElementAtIndex(index).intValue == 1;
-            if (useMatIndex)
+            Material[] mats = entry.renderer.sharedMaterials;
+            
+            if (entry.useMaterialOverride)
             {
-                int matIndex = propMaterialIndexListProperty.GetArrayElementAtIndex(index).intValue;
-                if (matIndex >= 0 && matIndex < mats.Length)
-                    compat = compatMaterialShader(mats[matIndex]);
+                int matIndex = manager.propMaterialIndexList[index];
+                if (entry.materialIndex >= 0 && entry.materialIndex < mats.Length)
+                    compat = compatMaterialShader(mats[entry.materialIndex]);
             }
             else
             {
@@ -945,13 +1017,24 @@ namespace Texel
             return compat;
         }
 
-        private EditorScreenPropertyMap GetPropertyMapForOverride(int index)
+        private static string[] GetMaterialSlots(MeshRenderer renderer)
         {
-            ScreenManager manager = (ScreenManager)target;
-            if (target)
-                return GetPropertyMapForOverride(manager, index);
+            if (!renderer)
+                return new string[0];
 
-            return null;
+            Material[] mats = renderer.sharedMaterials;
+            string[] entries = new string[mats.Length];
+
+            for (int i = 0; i < mats.Length; i++)
+            {
+                Material mat = mats[i];
+                if (mat)
+                    entries[i] = $"{i} - {mat.name}";
+                else
+                    entries[i] = $"{i} - (unassigned)";
+            }
+
+            return entries;
         }
 
         private static EditorScreenPropertyMap GetPropertyMapForOverride(ScreenManager manager, int index)
@@ -1074,7 +1157,6 @@ namespace Texel
                     crt.Update(2);
                 }
             }
-            
         }
 
         private void UpdateSharedMaterial(Material mat, ScreenPropertyMap map)
@@ -1116,7 +1198,7 @@ namespace Texel
             }
         }
 
-        private CustomRenderTexture CreateCRTCopy()
+        private static CustomRenderTexture CreateCRTCopy()
         {
             string destBasePath = "Assets/Texel/Generated/RenderOut";
             Scene scene = SceneManager.GetActiveScene();
@@ -1162,7 +1244,7 @@ namespace Texel
             return crt;
         }
 
-        private bool EnsureFolderExists(string path)
+        private static bool EnsureFolderExists(string path)
         {
             string[] parts = path.Split('/');
             if (parts[0] != "Assets")
@@ -1185,7 +1267,7 @@ namespace Texel
             return true;
         }
 
-        private int FindNextCrtId(string destBasePath)
+        private static int FindNextCrtId(string destBasePath)
         {
             HashSet<string> refCrts = new HashSet<string>();
             ScreenManager[] sceneManagers = FindObjectsOfType<ScreenManager>();
@@ -1265,11 +1347,9 @@ namespace Texel
             }
         }
 
-        private GameObject CreateEmptyPropertyMap(Material mat)
+        private static GameObject CreateEmptyPropertyMap(ScreenManager manager, Material mat)
         {
-            ScreenManager man = (ScreenManager)serializedObject.targetObject;
-
-            GameObject map = VideoTxlManager.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Property Maps/PropertyMap.prefab", man.transform);
+            GameObject map = VideoTxlManager.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Property Maps/PropertyMap.prefab", manager.transform);
             ScreenPropertyMap propMap = map.GetComponent<ScreenPropertyMap>();
             if (mat)
             {
@@ -1292,6 +1372,53 @@ namespace Texel
                 map.name = "Property Map";
 
             return map;
+        }
+
+        private void UpgradeLegacyCrtEntry()
+        {
+            bool needsUpgrade = useRenderOutProperty.boolValue && outputCRTProperty.objectReferenceValue != null && renderOutCrtListProperty.arraySize == 0;
+            if (!needsUpgrade)
+                return;
+
+            CustomRenderTexture crt = (CustomRenderTexture)outputCRTProperty.objectReferenceValue;
+
+            renderOutCrtListProperty.InsertArrayElementAtIndex(0);
+            renderOutMatPropsListProperty.InsertArrayElementAtIndex(0);
+            renderOutSizeListProperty.InsertArrayElementAtIndex(0);
+            renderOutTargetAspectListProperty.InsertArrayElementAtIndex(0);
+            renderOutResizeListProperty.InsertArrayElementAtIndex(0);
+            renderOutExpandSizeListProperty.InsertArrayElementAtIndex(0);
+            renderOutGlobalTexListProperty.InsertArrayElementAtIndex(0);
+
+            SerializedProperty prop1 = renderOutCrtListProperty.GetArrayElementAtIndex(0);
+            prop1.objectReferenceValue = outputCRTProperty.objectReferenceValue;
+
+            SerializedProperty prop2 = renderOutMatPropsListProperty.GetArrayElementAtIndex(0);
+            prop2.objectReferenceValue = outputMaterialPropertiesProperty.objectReferenceValue;
+
+            SerializedProperty crtProp = GetElementSafe(renderOutCrtListProperty, 0);
+            SerializedProperty matPropsProp = GetElementSafe(renderOutMatPropsListProperty, 0);
+            SerializedProperty sizeProp = GetElementSafe(renderOutSizeListProperty, 0);
+            SerializedProperty targetAspectProp = GetElementSafe(renderOutTargetAspectListProperty, 0);
+            SerializedProperty resizeProp = GetElementSafe(renderOutResizeListProperty, 0);
+            SerializedProperty expandSizeProp = GetElementSafe(renderOutExpandSizeListProperty, 0);
+            SerializedProperty globalTexProp = GetElementSafe(renderOutGlobalTexListProperty, 0);
+
+            crtProp.objectReferenceValue = crt;
+            matPropsProp.objectReferenceValue = outputMaterialPropertiesProperty.objectReferenceValue;
+            sizeProp.vector2IntValue = new Vector2Int(crt.width, crt.height);
+
+            if (compatMaterialShader(crt))
+                targetAspectProp.floatValue = crt.material.GetFloat("_AspectRatio");
+            else
+                targetAspectProp.floatValue = 0;
+
+            resizeProp.boolValue = false;
+            expandSizeProp.boolValue = false;
+
+            outputCRTProperty.objectReferenceValue = null;
+            outputMaterialPropertiesProperty.objectReferenceValue = null;
+            globalTexProp.boolValue = false;
         }
     }
 }
