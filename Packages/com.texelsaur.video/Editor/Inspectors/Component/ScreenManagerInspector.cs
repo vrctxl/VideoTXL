@@ -53,6 +53,7 @@ namespace Texel
             switch (shaderName)
             {
                 case "VideoTXL/RealtimeEmissiveGamma":
+                case "VideoTXL/Unlit":
                     map = new EditorScreenPropertyMap();
                     map.screenTexture = "_MainTex";
                     map.avProCheck = "_IsAVProInput";
@@ -122,12 +123,8 @@ namespace Texel
         SerializedProperty vrcLoggingProperty;
         SerializedProperty lowLevelLoggingProperty;
         SerializedProperty eventLoggingProperty;
-
-        SerializedProperty useMaterialOverrideProperty;
-        SerializedProperty separatePlaybackMaterialsProperty;
+        
         SerializedProperty playbackMaterialProperty;
-        SerializedProperty playbackMaterialUnityProperty;
-        SerializedProperty playbackMaterialAVProProperty;
         SerializedProperty logoMaterialProperty;
         SerializedProperty loadingMaterialProperty;
         SerializedProperty syncMaterialProperty;
@@ -136,9 +133,8 @@ namespace Texel
         SerializedProperty errorInvalidMaterialProperty;
         SerializedProperty errorBlockedMaterialProperty;
         SerializedProperty errorRateLimitedMaterialProperty;
-        SerializedProperty editorMaterialProperty;
         
-        SerializedProperty useTextureOverrideProperty;
+        SerializedProperty latchErrorStateProperty;
         SerializedProperty overrideAspectRatioProperty;
         SerializedProperty aspectRatioProperty;
         SerializedProperty logoTextureProperty;
@@ -182,7 +178,7 @@ namespace Texel
 
         static string mainHelpUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager";
         static string textureOverridesUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#texture-overrides";
-        static string objectMaterialsUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#object-materials";
+        static string objectMaterialsUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#object-material-overrides";
         static string debugOptionsUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#debug-options";
 
         static ScreenManagerInspector()
@@ -228,11 +224,7 @@ namespace Texel
             lowLevelLoggingProperty = serializedObject.FindProperty(nameof(ScreenManager.lowLevelLogging));
             eventLoggingProperty = serializedObject.FindProperty(nameof(ScreenManager.eventLogging));
 
-            useMaterialOverrideProperty = serializedObject.FindProperty(nameof(ScreenManager.useMaterialOverrides));
-            separatePlaybackMaterialsProperty = serializedObject.FindProperty(nameof(ScreenManager.separatePlaybackMaterials));
             playbackMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.playbackMaterial));
-            playbackMaterialUnityProperty = serializedObject.FindProperty(nameof(ScreenManager.playbackMaterialUnity));
-            playbackMaterialAVProProperty = serializedObject.FindProperty(nameof(ScreenManager.playbackMaterialAVPro));
             logoMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.logoMaterial));
             loadingMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.loadingMaterial));
             syncMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.syncMaterial));
@@ -241,9 +233,8 @@ namespace Texel
             errorInvalidMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.errorInvalidMaterial));
             errorBlockedMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.errorBlockedMaterial));
             errorRateLimitedMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.errorRateLimitedMaterial));
-            editorMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.editorMaterial));
 
-            useTextureOverrideProperty = serializedObject.FindProperty(nameof(ScreenManager.useTextureOverrides));
+            latchErrorStateProperty = serializedObject.FindProperty(nameof(ScreenManager.latchErrorState));
             overrideAspectRatioProperty = serializedObject.FindProperty(nameof(ScreenManager.overrideAspectRatio));
             aspectRatioProperty = serializedObject.FindProperty(nameof(ScreenManager.aspectRatio));
             logoTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.logoTexture));
@@ -365,6 +356,7 @@ namespace Texel
                 EditorGUILayout.HelpBox("One or more textures are stored in the VideoTXL package folder, but are not shipped with the package.  They will be lost when the VideoTXL package is updated.", MessageType.Warning);
 
             EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(latchErrorStateProperty);
             EditorGUILayout.PropertyField(overrideAspectRatioProperty);
             if (overrideAspectRatioProperty.boolValue)
             {
@@ -391,43 +383,29 @@ namespace Texel
                 return;
 
             EditorGUI.indentLevel++;
-            EditorGUILayout.PropertyField(useMaterialOverrideProperty);
-            if (useMaterialOverrideProperty.boolValue)
+            
+            EditorGUILayout.PropertyField(playbackMaterialProperty);
+            EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(logoMaterialProperty);
+            EditorGUILayout.PropertyField(loadingMaterialProperty);
+            // EditorGUILayout.PropertyField(syncMaterialProperty);
+            EditorGUILayout.PropertyField(audioMaterialProperty);
+            EditorGUILayout.PropertyField(errorMaterialProperty);
+
+            _showErrorMatFoldout = EditorGUILayout.Foldout(_showErrorMatFoldout, "Error Material Overrides");
+            if (_showErrorMatFoldout)
             {
-                EditorGUILayout.PropertyField(separatePlaybackMaterialsProperty);
-                if (separatePlaybackMaterialsProperty.boolValue)
-                {
-                    EditorGUILayout.PropertyField(playbackMaterialUnityProperty);
-                    EditorGUILayout.PropertyField(playbackMaterialAVProProperty);
-                }
-                else
-                    EditorGUILayout.PropertyField(playbackMaterialProperty);
-
-                EditorGUILayout.PropertyField(logoMaterialProperty);
-                EditorGUILayout.PropertyField(loadingMaterialProperty);
-                // EditorGUILayout.PropertyField(syncMaterialProperty);
-                EditorGUILayout.PropertyField(audioMaterialProperty);
-                EditorGUILayout.PropertyField(errorMaterialProperty);
-
-                _showErrorMatFoldout = EditorGUILayout.Foldout(_showErrorMatFoldout, "Error Material Overrides");
-                if (_showErrorMatFoldout)
-                {
-                    EditorGUI.indentLevel++;
-                    EditorGUILayout.PropertyField(errorInvalidMaterialProperty);
-                    EditorGUILayout.PropertyField(errorBlockedMaterialProperty);
-                    EditorGUILayout.PropertyField(errorRateLimitedMaterialProperty);
-                    EditorGUI.indentLevel--;
-                }
-
-                EditorGUILayout.PropertyField(editorMaterialProperty);
-
-                EditorGUI.indentLevel--;
-                EditorGUILayout.Space();
-                objectOverrideList.Section();
                 EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(errorInvalidMaterialProperty);
+                EditorGUILayout.PropertyField(errorBlockedMaterialProperty);
+                EditorGUILayout.PropertyField(errorRateLimitedMaterialProperty);
+                EditorGUI.indentLevel--;
             }
 
             EditorGUI.indentLevel--;
+
+            EditorGUILayout.Space();
+            objectOverrideList.Section();
         }
 
         private void DebugSection()
@@ -630,6 +608,7 @@ namespace Texel
             static GUIContent labelMaterial = new GUIContent("Material", "The shared material to update.");
             static GUIContent labelPropMap = new GUIContent("Property Map", "The property map tells the screen manager the names of a material's shader properties such as main texture, flipping, gamma correction, etc.\n\nProperty maps are optional if the material uses a shader supplied by VideoTXL.");
             static GUIContent labelCreatePropMap = new GUIContent("+", "Create an empty Screen Property Map object under the screen manager and asign it.  The new map will need to be filled out.");
+            static GUIContent labelCreatePropMapOpt = new GUIContent("+", "Create an empty Screen Property Map object under the screen manager and asign it.  The new map will need to be filled out.\n\nThe selected material uses a shader that has a default property map, so it's not necessary to add one.");
 
             static bool expandSection = true;
 
@@ -665,10 +644,11 @@ namespace Texel
 
                 bool compatMat = materialCompat(matProp);
                 Color addColor = compatMat ? GUI.backgroundColor : new Color(1, .32f, .29f);
+                GUIContent label = compatMat ? labelCreatePropMapOpt : labelCreatePropMap;
 
                 if (mapProp.objectReferenceValue != null)
                     DrawObjectField(ref rect, 1, labelPropMap, mapProp);
-                else if (DrawObjectFieldWithAdd(ref rect, 1, labelPropMap, mapProp, labelCreatePropMap, EditorGUIUtility.singleLineHeight * 1, addColor))
+                else if (DrawObjectFieldWithAdd(ref rect, 1, labelPropMap, mapProp, label, EditorGUIUtility.singleLineHeight * 1, addColor))
                 {
                     GameObject propMap = CreateEmptyPropertyMap(target, (Material)matProp.objectReferenceValue);
                     mapProp.objectReferenceValue = propMap.GetComponent<ScreenPropertyMap>();
@@ -864,13 +844,9 @@ namespace Texel
             SerializedProperty screenMeshListProperty;
             SerializedProperty screenMatIndexListProperty;
 
-            static string sectionUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#object-materials";
-
             static GUIContent labelHeader = new GUIContent("Objects", "");
             static GUIContent labelObject = new GUIContent("Object", "");
             static GUIContent labelMaterialIndex = new GUIContent("Material Index", "");
-
-            static bool expandSection = true;
 
             public ObjectOverrideListDisplay(SerializedObject serializedObject, ScreenManager target) : base(serializedObject)
             {
@@ -879,8 +855,6 @@ namespace Texel
 
                 screenMeshListProperty = AddSerializedArray(list.serializedProperty);
                 screenMatIndexListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.screenMaterialIndex)));
-
-                list.headerHeight = 1;
             }
 
             protected override SerializedProperty mainListProperty(SerializedObject serializedObject)
@@ -923,11 +897,8 @@ namespace Texel
 
             public void Section()
             {
-                if (TXLEditor.DrawMainHeaderHelp(labelHeader, ref expandSection, sectionUrl))
-                {
-                    Draw(1);
-                    EditorGUILayout.Space(20);
-                }
+                Draw(1);
+                EditorGUILayout.Space(20);
             }
         }
 
@@ -937,7 +908,7 @@ namespace Texel
 
             SerializedProperty globalPropListProperty;
 
-            static string sectionUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#global-properties";
+            static string sectionUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#global-shader-properties";
 
             static GUIContent labelHeader = new GUIContent("Global Property Updates", "");
             static GUIContent labelPropertyMap = new GUIContent("Property Map", "");
@@ -1340,6 +1311,7 @@ namespace Texel
             switch (mat.shader.name)
             {
                 case "VideoTXL/RealtimeEmissiveGamma":
+                case "VideoTXL/Unlit":
                 case "VideoTXL/RenderOut":
                     return true;
                 default:

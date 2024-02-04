@@ -13,79 +13,82 @@ using VRC.Udon.Common.Interfaces;
 
 namespace Texel
 {
+    public enum ScreenOverrideType
+    {
+        Playback = 0,
+        Logo = 1,
+        Loading = 2,
+        Sync = 3,
+        Audio = 4,
+        Error = 5,
+        ErrorInvalid = 6,
+        ErrorRate = 7,
+        ErrorBlocked = 8,
+        Editor = 9,
+    }
+
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class ScreenManager : EventBase
     {
         [Tooltip("A proxy for dispatching video-related events to this object")]
-        public TXLVideoPlayer videoPlayer;
+        [SerializeField] internal TXLVideoPlayer videoPlayer;
 
         [Tooltip("Log debug statements to a world object")]
-        public DebugLog debugLog;
-        public bool vrcLogging = false;
-        public bool eventLogging = false;
-        public bool lowLevelLogging = false;
+        [SerializeField] internal DebugLog debugLog;
+        [SerializeField] internal bool vrcLogging = false;
+        [SerializeField] internal bool eventLogging = false;
+        [SerializeField] internal bool lowLevelLogging = false;
 
         [Tooltip("Prevent screen state from cycling between loading and error placeholders.")]
-        public bool latchErrorState = true;
-
-        [Tooltip("Whether to update material assignments on a set of video screen objects")]
-        public bool useMaterialOverrides = false;
-        [Tooltip("Use separate playback materials for Unity and AVPro player modes.  This may be necessary for some shaders that can't be configured with an AVPro flag.")]
-        public bool separatePlaybackMaterials = false;
+        [SerializeField] internal bool latchErrorState = true;
+        
+        bool useMaterialOverrides = true;
         [Tooltip("The screen material to apply when video is playing back.  The object's current material is captured as the playback material by default.")]
-        public Material playbackMaterial;
-        [Tooltip("The screen material to apply when video is playing back in Unity video mode.  The object's current material is captured as the playback material by default.")]
-        public Material playbackMaterialUnity;
-        [Tooltip("The screen material to apply when video is playing back in AVPro mode.  The object's current material is captured as the playback material by default.")]
-        public Material playbackMaterialAVPro;
+        [SerializeField] internal Material playbackMaterial;
         [Tooltip("The screen material to apply when no video is playing or loading.")]
-        public Material logoMaterial;
+        [SerializeField] internal Material logoMaterial;
         [Tooltip("The screen material to apply when a video is being loaded.  Falls back to Logo Material.")]
-        public Material loadingMaterial;
-        public Material syncMaterial;
+        [SerializeField] internal Material loadingMaterial;
+        [SerializeField] internal Material syncMaterial;
         [Tooltip("The screen material to apply when an audio-only video is detected.")]
-        public Material audioMaterial;
+        [SerializeField] internal Material audioMaterial;
         [Tooltip("The screen material to apply when an error has occurred.  Falls back to Logo Material.")]
-        public Material errorMaterial;
+        [SerializeField] internal Material errorMaterial;
         [Tooltip("The screen material to apply when an invalid URL or offline stream has been loaded.  Falls back to Error Material.")]
-        public Material errorInvalidMaterial;
+        [SerializeField] internal Material errorInvalidMaterial;
         [Tooltip("The screen material to apply when loading has been temporarily rate-limited.  Falls back to Error Material.")]
-        public Material errorRateLimitedMaterial;
+        [SerializeField] internal Material errorRateLimitedMaterial;
         [Tooltip("The screen material to apply when an untrusted URL has been loaded and untrusted URLs are blocked.  Falls back to Error Material.")]
-        public Material errorBlockedMaterial;
-
-        [Tooltip("The screen material to apply in Unity's editor runtime")]
-        public Material editorMaterial;
+        [SerializeField] internal Material errorBlockedMaterial;
 
         [SerializeField] internal MeshRenderer[] screenMesh;
         [SerializeField] internal int[] screenMaterialIndex;
-
-        [Tooltip("Whether to update textures properties on a set of shared material objects")]
-        public bool useTextureOverrides = false;
+        
+        bool useTextureOverrides = true;
 
         [Tooltip("Whether the aspect ratio for placeholder textures should be overridden by a specific value.  Use this to supply the original aspect ratio for textures that have been rescaled to powers-of-2.")]
-        public bool overrideAspectRatio = true;
+        [SerializeField] internal bool overrideAspectRatio = true;
         [Tooltip("The aspect ratio that should be used for placeholder textures, ignoring their native unity value.")]
-        public float aspectRatio = 1.777f;
+        [SerializeField] internal float aspectRatio = 1.777f;
 
         [Tooltip("The screen texture to apply when no video is playing or loading.")]
-        public Texture logoTexture;
+        [SerializeField] internal Texture logoTexture;
         [Tooltip("The screen texture to apply when a video is being loaded.  Falls back to Logo Texture.")]
-        public Texture loadingTexture;
-        public Texture syncTexture;
+        [SerializeField] internal Texture loadingTexture;
+        [SerializeField] internal Texture syncTexture;
         [Tooltip("The screen texture to apply when an audio-only video is detected.")]
-        public Texture audioTexture;
+        [SerializeField] internal Texture audioTexture;
         [Tooltip("The screen texture to apply when an error has occurred.  Falls back to Logo Texture.")]
-        public Texture errorTexture;
+        [SerializeField] internal Texture errorTexture;
         [Tooltip("The screen texture to apply when an invalid URL or offline stream has been loaded.  Falls back to Error Texture.")]
-        public Texture errorInvalidTexture;
+        [SerializeField] internal Texture errorInvalidTexture;
         [Tooltip("The screen texture to apply when loading has been temporarily rate-limited.  Falls back to Error Texture.")]
-        public Texture errorRateLimitedTexture;
+        [SerializeField] internal Texture errorRateLimitedTexture;
         [Tooltip("The screen texture to apply when an untrusted URL has been loaded and untrusted URLs are blocked.  Falls back to Error Texture.")]
-        public Texture errorBlockedTexture;
+        [SerializeField] internal Texture errorBlockedTexture;
 
         [Tooltip("The screen texture to apply in Unity's editor runtime")]
-        public Texture editorTexture;
+        [SerializeField] internal Texture editorTexture;
 
         [SerializeField] internal Material[] materialUpdateList;
         [SerializeField] internal ScreenPropertyMap[] materialPropertyList;
@@ -97,12 +100,9 @@ namespace Texel
 
         [SerializeField] internal ScreenPropertyMap[] globalPropertyList;
 
-        [Tooltip("Blit the source video or placeholder image to a specified custom render texture (CRT).  Each copy of the video player that writes to a CRT and could play concurrently must have its own CRT asset and associated material.")]
-        public bool useRenderOut = false;
-        [Tooltip("A predefined custom render texture (CRT).  The CRT should be backed by a compatible material shader, such as VideoTXL/RenderOut.")]
-        public CustomRenderTexture outputCRT;
-        [Tooltip("A map of properties to update on the CRT's material as the video player state changes.")]
-        public ScreenPropertyMap outputMaterialProperties;
+        [SerializeField] internal bool useRenderOut = false;
+        [SerializeField] internal CustomRenderTexture outputCRT;
+        [SerializeField] internal ScreenPropertyMap outputMaterialProperties;
 
         [SerializeField] internal CustomRenderTexture[] renderOutCrt;
         [SerializeField] internal ScreenPropertyMap[] renderOutMatProps;
@@ -114,13 +114,6 @@ namespace Texel
 
         [SerializeField] internal bool downloadLogoImage;
         [SerializeField] internal VRCUrl downloadLogoImageUrl;
-
-        /*string outputMaterialMainTex = "_MainTex";
-        string outputMaterialAVPro;
-        string outputMaterialInvert;
-        string outputMaterialGamma;
-        string outputMaterialFit;
-        string outputMaterialAspectRatio;*/
 
         int baseIndexCrt;
         int shaderPropCrtLength;
@@ -249,7 +242,7 @@ namespace Texel
             replacementMaterials[SCREEN_INDEX_ERROR_INVALID] = errorInvalidMaterial ?? replacementMaterials[SCREEN_INDEX_ERROR];
             replacementMaterials[SCREEN_INDEX_ERROR_RATE] = errorRateLimitedMaterial ?? replacementMaterials[SCREEN_INDEX_ERROR];
             replacementMaterials[SCREEN_INDEX_ERROR_BLOCKED] = errorBlockedMaterial ?? replacementMaterials[SCREEN_INDEX_ERROR];
-            replacementMaterials[SCREEN_INDEX_EDITOR] = editorMaterial;
+            replacementMaterials[SCREEN_INDEX_EDITOR] = null;
 
             replacementTextures = new Texture[SCREEN_INDEX_COUNT];
             replacementTextures[SCREEN_INDEX_PLAYBACK] = null;
@@ -280,10 +273,10 @@ namespace Texel
                 imageDownloader.DownloadImage(downloadLogoImageUrl, null, (IUdonEventReceiver)this, info);
             }
 
-            SendCustomEventDelayedFrames(nameof(_PostInit), 1);
+            SendCustomEventDelayedFrames(nameof(_InternalPostInit), 1);
         }
 
-        public void _PostInit()
+        public void _InternalPostInit()
         {
             _BindVideoPlayer(videoPlayer);
         }
@@ -293,9 +286,9 @@ namespace Texel
             TXLVideoPlayer prevPlayer = this.videoPlayer;
             if (prevPlayer)
             {
-                prevPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, nameof(_OnVideoStateUpdate));
+                prevPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, nameof(_InternalOnVideoStateUpdate));
                 if (prevPlayer.VideoManager)
-                    prevPlayer.VideoManager._Unregister(VideoManager.SOURCE_CHANGE_EVENT, this, nameof(_OnSourceChanged));
+                    prevPlayer.VideoManager._Unregister(VideoManager.SOURCE_CHANGE_EVENT, this, nameof(_InternalOnSourceChanged));
             }
 
             captureRenderer = null;
@@ -304,18 +297,18 @@ namespace Texel
             this.videoPlayer = videoPlayer;
             if (videoPlayer)
             {
-                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, nameof(_OnVideoStateUpdate));
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, nameof(_InternalOnVideoStateUpdate));
                 if (videoPlayer.VideoManager)
-                    videoPlayer.VideoManager._Register(VideoManager.SOURCE_CHANGE_EVENT, this, nameof(_OnSourceChanged));
+                    videoPlayer.VideoManager._Register(VideoManager.SOURCE_CHANGE_EVENT, this, nameof(_InternalOnSourceChanged));
             }
 
-            _OnSourceChanged();
-            _OnVideoStateUpdate();
+            _InternalOnSourceChanged();
+            _InternalOnVideoStateUpdate();
         }
 
         public override void OnImageLoadSuccess(IVRCImageDownload result)
         {
-            _SetTextureOverride(SCREEN_INDEX_LOGO, result.Result);
+            _SetTextureOverride(ScreenOverrideType.Logo, result.Result);
             _ResetCheckScreenMaterial();
         }
 
@@ -357,9 +350,9 @@ namespace Texel
             get { return currentGamma; }
         }
 
-        public int CurrentScreenFit
+        public TXLScreenFit CurrentScreenFit
         {
-            get { return currentFit; }
+            get { return (TXLScreenFit)currentFit; }
         }
 
         public float CurrentAspectRatioOverride
@@ -369,8 +362,7 @@ namespace Texel
 
         void _InitMaterialOverrides()
         {
-            if (!useMaterialOverrides)
-                return;
+            useMaterialOverrides = true;
 
             if (!Utilities.IsValid(screenMesh) || screenMesh.Length == 0)
             {
@@ -402,8 +394,7 @@ namespace Texel
 
         void _InitTextureOverrides()
         {
-            if (!useTextureOverrides)
-                return;
+            useTextureOverrides = true;
 
             bool hasMaterialUpdates = Utilities.IsValid(materialUpdateList) && materialUpdateList.Length > 0;
             bool hasPropupdates = Utilities.IsValid(propMeshList) && propMeshList.Length > 0;
@@ -587,6 +578,7 @@ namespace Texel
             switch (mat.shader.name)
             {
                 case "VideoTXL/RealtimeEmissiveGamma":
+                case "VideoTXL/Unlit":
                     _LoadRealtimeEmissiveGammaProps(i);
                     return true;
                 case "VideoTXL/RenderOut":
@@ -696,12 +688,7 @@ namespace Texel
             }
         }
 
-        public void _UpdateVideoError(VideoError error)
-        {
-            _lastErrorCode = error;
-        }
-
-        public void _OnVideoStateUpdate()
+        public void _InternalOnVideoStateUpdate()
         {
             _DebugEvent("Event OnVideoStateUpdate");
 
@@ -733,7 +720,7 @@ namespace Texel
             }
         }
 
-        public void _OnSourceChanged()
+        public void _InternalOnSourceChanged()
         {
             _DebugEvent("Event OnSourceChanged");
 
@@ -782,7 +769,7 @@ namespace Texel
             }
         }
 
-        public void _UpdateScreenMaterial(int screenMode)
+        void _UpdateScreenMaterial(int screenMode)
         {
             _DebugLowLevel($"Update screen material: mode={screenMode}");
 
@@ -796,19 +783,40 @@ namespace Texel
             _ResetCheckScreenMaterial();
         }
 
+        public Texture _GetTextureOverride(ScreenOverrideType overrideType)
+        {
+            return replacementTextures[(int)overrideType];
+        }
+
+        [Obsolete("Use version of method that takes ScreenOverrideType")]
         public Texture _GetTextureOverride(int screenIndex)
         {
             return replacementTextures[screenIndex];
         }
 
-        public void _SetTextureOverride(int screenIndex, Texture texture)
+        public void _SetTextureOverride(ScreenOverrideType overrideType, Texture texture)
         {
-            replacementTextures[screenIndex] = texture;
+            int screenIndex = (int)overrideType;
+            if (replacementTextures[screenIndex] != texture)
+            {
+                replacementTextures[screenIndex] = texture;
+                _ResetCheckScreenMaterial();
+            }
         }
 
-        public Texture _GetResolvedTextureOverride(int screenIndex)
+        [Obsolete("Use version of method that takes ScreenOverrideType")]
+        public void _SetTextureOverride(int screenIndex, Texture texture)
         {
-            int resIndex = screenIndex;
+            if (replacementTextures[screenIndex] != texture)
+            {
+                replacementTextures[screenIndex] = texture;
+                _ResetCheckScreenMaterial();
+            }
+        }
+
+        public Texture _GetResolvedTextureOverride(ScreenOverrideType overrideType)
+        {
+            int resIndex = (int)overrideType;
             Texture tex = replacementTextures[resIndex];
 
             while (tex == null && screenIndexFallbackMap[resIndex] >= 0)
@@ -820,7 +828,18 @@ namespace Texel
             return tex;
         }
 
-        public void _ResetCheckScreenMaterial()
+        [Obsolete("Use version of method that takes ScreenOverrideType")]
+        public Texture _GetResolvedTextureOverride(int screenIndex)
+        {
+            return _GetResolvedTextureOverride((ScreenOverrideType)screenIndex);
+        }
+
+        public void _Refresh()
+        {
+            _ResetCheckScreenMaterial();
+        }
+
+        void _ResetCheckScreenMaterial()
         {
             _EnsureInit();
 
@@ -839,7 +858,7 @@ namespace Texel
 
             if (useTextureOverrides)
             {
-                Texture replacement = _GetResolvedTextureOverride(screenIndex);
+                Texture replacement = _GetResolvedTextureOverride((ScreenOverrideType)screenIndex);
                 _UpdateCaptureData(replacement, captureTex);
                 _UpdateMaterials();
                 _UpdatePropertyBlocks();
@@ -859,7 +878,7 @@ namespace Texel
         void _QueueUpdateCheck(float delay)
         {
             pendingUpdates += 1;
-            SendCustomEventDelayedSeconds(nameof(_CheckUpdateScreenMaterial), delay);
+            SendCustomEventDelayedSeconds(nameof(_InternalCheckUpdateScreenMaterial), delay);
         }
 
         void _QueueUpdateCheckIfNoPending(float delay)
@@ -872,10 +891,10 @@ namespace Texel
         void _QueueUpdateCheckFrames(int frames)
         {
             pendingUpdates += 1;
-            SendCustomEventDelayedFrames(nameof(_CheckUpdateScreenMaterial), frames);
+            SendCustomEventDelayedFrames(nameof(_InternalCheckUpdateScreenMaterial), frames);
         }
 
-        public void _CheckUpdateScreenMaterial()
+        public void _InternalCheckUpdateScreenMaterial()
         {
             pendingUpdates -= 1;
 
@@ -899,7 +918,7 @@ namespace Texel
 
             if (useTextureOverrides)
             {
-                Texture replacement = _GetResolvedTextureOverride(screenIndex);
+                Texture replacement = _GetResolvedTextureOverride((ScreenOverrideType)screenIndex);
                 _UpdateCaptureData(replacement, captureTex);
                 _UpdateMaterials();
                 _UpdatePropertyBlocks();
@@ -1178,18 +1197,10 @@ namespace Texel
 
         Material _GetPlaybackMaterial(int meshIndex)
         {
-            if (!separatePlaybackMaterials)
-                return Utilities.IsValid(playbackMaterial) ? playbackMaterial : _originalScreenMaterial[meshIndex];
-
-            if (_screenSource == VideoSource.VIDEO_SOURCE_UNITY && Utilities.IsValid(playbackMaterialUnity))
-                return playbackMaterialUnity;
-            if (_screenSource == VideoSource.VIDEO_SOURCE_AVPRO && Utilities.IsValid(playbackMaterialAVPro))
-                return playbackMaterialAVPro;
-
-            return _originalScreenMaterial[meshIndex];
+            return Utilities.IsValid(playbackMaterial) ? playbackMaterial : _originalScreenMaterial[meshIndex];
         }
 
-        public Texture CaptureValid()
+        Texture CaptureValid()
         {
             if (!Utilities.IsValid(captureRenderer))
             {

@@ -8,6 +8,20 @@ namespace Texel
 {
     public class TXLEditor
     {
+        public static bool DrawFoldoutHeader(GUIContent label, bool expanded)
+        {
+            expanded = EditorGUILayout.Foldout(expanded, label);
+            EditorGUILayout.Space();
+
+            return expanded;
+        }
+
+        public static bool DrawFoldoutHeader(GUIContent label, ref bool expanded)
+        {
+            expanded = DrawFoldoutHeader(label, expanded);
+            return expanded;
+        }
+
         public static bool DrawMainHeader(GUIContent label, bool expanded)
         {
             expanded = EditorGUILayout.BeginFoldoutHeaderGroup(expanded, label);

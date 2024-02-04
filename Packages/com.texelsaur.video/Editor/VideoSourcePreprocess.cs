@@ -6,6 +6,7 @@ using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using VRC.SDK3.Components;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
 
@@ -28,11 +29,30 @@ namespace Texel
             foreach (var source in sources)
             {
                 if (!source.videoMux || !source.videoMux.videoPlayer)
-                    return;
+                    continue;
                 if (!source.videoMux.videoPlayer.runBuildHooks)
-                    return;
+                    continue;
 
                 CheckAndUpdateSource(source);
+            }
+
+            PlayerControls[] controls = root.GetComponentsInChildren<PlayerControls>(true);
+            foreach (var control in controls)
+            {
+                if (!control.videoPlayer || !control.videoPlayer.runBuildHooks)
+                    continue;
+
+                VRCUrlInputField field = control.urlInput;
+                if (!field)
+                {
+                    field = control.GetComponentInChildren<VRCUrlInputField>();
+                    if (!field)
+                        continue;
+
+                    control.urlInput = field;
+                }
+
+                PlayerControlsInspector.CheckRepairUrlInput(control, field);
             }
         }
 
