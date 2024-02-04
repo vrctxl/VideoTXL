@@ -5,65 +5,93 @@
 // - no lightmap support
 // - no per-material color
 
-Shader "VideoTXL/Unlit/Texture" {
+Shader "VideoTXL/Unlit" {
 	Properties{
 		_MainTex("Base (RGB)", 2D) = "white" {}
-		[Toggle(_)]_IsAVProInput("Is AV Pro Input", Int) = 0
+		_MarginTex("Margin (RGB)", 2D) = "black" {}
+		_AspectRatio("Aspect Ratio", Float) = 1.777777
+		[HideInInspector] _TexAspectRatio("Aspect Ratio Override", Float) = 0
+		[Enum(Fit,0,Fit Height,1,Fit Width,2,Stretch,3)] _FitMode("Fit Mode", Int) = 0
+		[Toggle] _ApplyGammaAVPro("Apply Gamma", Int) = 0
+		[Toggle] _IsAVProInput("Is AV Pro Input", Int) = 0
+		[Toggle] _InvertAVPro("Invert AVPro", Int) = 0
 	}
 
-		SubShader{
-			Tags { "RenderType" = "Opaque" }
-			LOD 100
+	SubShader{
+		Tags { "RenderType" = "Opaque" }
+		LOD 100
 
-			Pass {
-				CGPROGRAM
-					#pragma vertex vert
-					#pragma fragment frag
-					#pragma target 2.0
-					#pragma multi_compile_fog
+		Pass {
+			CGPROGRAM
+				#pragma vertex vert
+				#pragma fragment frag
+				#pragma target 3.0
+				#pragma multi_compile_fog
 
-					#include "UnityCG.cginc"
+				#include "UnityCG.cginc"
+				#include "VideoTXL.cginc"
 
-					struct appdata_t {
-						float4 vertex : POSITION;
-						float2 texcoord : TEXCOORD0;
-						UNITY_VERTEX_INPUT_INSTANCE_ID
-					};
+				struct appdata_t {
+					float4 vertex : POSITION;
+					float2 texcoord : TEXCOORD0;
+					UNITY_VERTEX_INPUT_INSTANCE_ID
+				};
 
-					struct v2f {
-						float4 vertex : SV_POSITION;
-						float2 texcoord : TEXCOORD0;
-						UNITY_FOG_COORDS(1)
-						UNITY_VERTEX_OUTPUT_STEREO
-					};
+				struct v2f {
+					float4 vertex : SV_POSITION;
+					float2 texcoord : TEXCOORD0;
+					//float visibility : FLOAT;
+					UNITY_FOG_COORDS(1)
+					UNITY_VERTEX_OUTPUT_STEREO
+				};
 
-					sampler2D _MainTex;
-					float4 _MainTex_ST;
-					int _IsAVProInput;
+				sampler2D _MainTex;
+				float4 _MainTex_ST;
+				float4 _MainTex_TexelSize;
 
-					v2f vert(appdata_t v)
-					{
-						v2f o;
-						UNITY_SETUP_INSTANCE_ID(v);
-						UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-						o.vertex = UnityObjectToClipPos(v.vertex);
-						o.texcoord = TRANSFORM_TEX(v.texcoord, _MainTex);
-						if (_IsAVProInput) {
-							o.texcoord.y = 1 - o.texcoord.y;
-						}
-						UNITY_TRANSFER_FOG(o,o.vertex);
-						return o;
-					}
+				sampler2D _MarginTex;
+				float4 _MarginTex_ST;
 
-					fixed4 frag(v2f i) : SV_Target
-					{
-						fixed4 col = tex2D(_MainTex, i.texcoord);
-						UNITY_APPLY_FOG(i.fogCoord, col);
-						UNITY_OPAQUE_ALPHA(col.a);
-						return col;
-					}
-				ENDCG
-			}
+				int _IsAVProInput;
+				int _InvertAVPro;
+				int _ApplyGammaAVPro;
+
+				v2f vert(appdata_t v)
+				{
+					v2f o;
+					UNITY_SETUP_INSTANCE_ID(v);
+					UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+					o.vertex = UnityObjectToClipPos(v.vertex);
+					o.texcoord = TRANSFORM_TEX(v.texcoord, _MainTex);
+
+					UNITY_TRANSFER_FOG(o,o.vertex);
+					return o;
+				}
+
+				fixed4 frag(v2f i) : SV_Target
+				{
+					float2 uv = float2(0, 0);
+					float visibility = 0;
+					TXL_ComputeScreenFit(i.texcoord.xy, _MainTex_TexelSize.zw, uv, visibility);
+
+					if (_IsAVProInput && _InvertAVPro)
+						uv.y = 1 - uv.y;
+
+					float2 muv = TRANSFORM_TEX(i.texcoord.xy, _MarginTex);
+					float4 margin = tex2D(_MarginTex, muv) * (1 - visibility);
+
+					float4 color = tex2D(_MainTex, uv * _MainTex_ST.xy + _MainTex_ST.zw);
+
+					if (_IsAVProInput && _ApplyGammaAVPro)
+						color.rgb = GammaToLinearSpace(color.rgb);
+
+					color = color * visibility + margin;
+
+					UNITY_APPLY_FOG(i.fogCoord, color);
+					UNITY_OPAQUE_ALPHA(color.a);
+					return color;
+				}
+			ENDCG
+		}
 	}
-
 }

@@ -333,6 +333,13 @@ namespace Texel
             }
 
             VRCUrlInputField vrcInput = (VRCUrlInputField)urlInputProperty.objectReferenceValue;
+
+            CheckRepairUrlInput(self, vrcInput, true);
+        }
+
+        internal static void CheckRepairUrlInput(PlayerControls playerControls, VRCUrlInputField vrcInput, bool markDirty = false)
+        {
+            UdonBehaviour behaviour = UdonSharpEditorUtility.GetBackingUdonBehaviour(playerControls);
             if (vrcInput == null)
                 return;
 
@@ -401,7 +408,9 @@ namespace Texel
 
             PrefabUtility.RecordPrefabInstancePropertyModifications(vrcInput);
             PrefabUtility.RecordPrefabInstancePropertyModifications(recordRoot);
-            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+
+            if (markDirty)
+                EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         }
 
         void UpdateColors()
