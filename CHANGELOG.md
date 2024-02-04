@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.3.0] - 02-04-24
+
+- Overhaul of Screen Manager inspector
+- Removed legacy Screen Manager options "Use Material Overrides", "Separate Playback Materials", "Editor Material"
+- Added Screen Manager option "Latch Error State"
+- Added Global Property Updates section to Screen Manager
+- Updated VideoTXL/Unlit shader to match support of VideoTXL/RealtimeEmissiveGamma
+- Cleaned up API interface of Screen Manager
+- Fixed build hooks canceling if a video source was found without a video player being reachable
+- Added URL Input repair to build hooks
+
 ## [2.2.7] - 01-29-24
 
 - Fixed script upgrade warnings for Unity 2022
