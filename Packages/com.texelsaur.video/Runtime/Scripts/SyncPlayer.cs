@@ -440,7 +440,11 @@ namespace Texel
 
             _UpdateVideoSourceOverride(mode);
             if (mode != VideoSource.VIDEO_SOURCE_NONE)
+            {
                 videoMux._UpdateVideoSource(_syncVideoSourceOverride);
+                if (_syncVideoSourceOverride == VideoSource.VIDEO_SOURCE_UNITY)
+                    videoMux._VideoSetLoop(_syncRepeatPlaylist);
+            }
 
             RequestSerialization();
         }
@@ -1157,7 +1161,7 @@ namespace Texel
                 urlRemapper._SetAudioProfile(audioManager.SelectedChannelGroup);
 
                 if (!_suppressSourceUpdate && _inSustainZone && urlRemapper._ValidRemapped(_preResolvedUrl, _resolvedUrl))
-                    _ForceResync(false);                    
+                    _ForceResync(false);
             }
         }
 
@@ -1457,6 +1461,8 @@ namespace Texel
         {
             _suppressSourceUpdate = true;
             videoMux._UpdateVideoSource(sourceType);
+            if (sourceType == VideoSource.VIDEO_SOURCE_UNITY)
+                videoMux._VideoSetLoop(_syncRepeatPlaylist);
             _suppressSourceUpdate = false;
         }
 
@@ -1534,6 +1540,8 @@ namespace Texel
         void _UpdateRepeatMode(bool state)
         {
             repeatPlaylist = state;
+            if (videoMux && videoMux.ActiveSourceType == VideoSource.VIDEO_SOURCE_UNITY)
+                videoMux._VideoSetLoop(_syncRepeatPlaylist);
             _UpdateHandlers(EVENT_VIDEO_PLAYLIST_UPDATE);
         }
 
