@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.1] - 02-12-24
+
+- Fixed cast error in ScreenManager inspector window
+- Changed looping behavior of unity sources in SyncPlayer to be seamless
+
 ## [2.3.0] - 02-04-24
 
 - Overhaul of Screen Manager inspector

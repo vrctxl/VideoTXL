@@ -123,7 +123,7 @@ namespace Texel
         SerializedProperty vrcLoggingProperty;
         SerializedProperty lowLevelLoggingProperty;
         SerializedProperty eventLoggingProperty;
-        
+
         SerializedProperty playbackMaterialProperty;
         SerializedProperty logoMaterialProperty;
         SerializedProperty loadingMaterialProperty;
@@ -133,7 +133,7 @@ namespace Texel
         SerializedProperty errorInvalidMaterialProperty;
         SerializedProperty errorBlockedMaterialProperty;
         SerializedProperty errorRateLimitedMaterialProperty;
-        
+
         SerializedProperty latchErrorStateProperty;
         SerializedProperty overrideAspectRatioProperty;
         SerializedProperty aspectRatioProperty;
@@ -164,7 +164,7 @@ namespace Texel
         SerializedProperty useRenderOutProperty;
         SerializedProperty outputCRTProperty;
         SerializedProperty outputMaterialPropertiesProperty;
-        
+
         CrtListDisplay crtList;
         SharedMaterialListDisplay sharedMaterialList;
         PropBlockListDisplay propBlockList;
@@ -383,7 +383,7 @@ namespace Texel
                 return;
 
             EditorGUI.indentLevel++;
-            
+
             EditorGUILayout.PropertyField(playbackMaterialProperty);
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(logoMaterialProperty);
@@ -697,7 +697,7 @@ namespace Texel
                 return missingMapCount;
             }
         }
-        
+
         class PropBlockListDisplay : ReorderableListDisplay
         {
             enum OverrideMode
@@ -966,7 +966,7 @@ namespace Texel
                 return false;
 
             Material[] mats = entry.renderer.sharedMaterials;
-            
+
             if (entry.useMaterialOverride)
             {
                 int matIndex = manager.propMaterialIndexList[index];
@@ -1067,8 +1067,10 @@ namespace Texel
             MaterialPropertyBlock block = new MaterialPropertyBlock();
 
             TXLVideoPlayer videoPlayer = manager.videoPlayer;
-            Texture2D logoTex = (Texture2D)manager.editorTexture;
-            if (logoTex == null)
+            Texture2D logoTex = null;
+            if (manager.editorTexture is Texture2D)
+                logoTex = (Texture2D)manager.editorTexture;
+            if (logoTex == null && manager.logoTexture is Texture2D)
                 logoTex = (Texture2D)manager.logoTexture;
 
             for (int i = 0; i < manager.propMeshList.Length; i++)
@@ -1143,8 +1145,10 @@ namespace Texel
             if (emap == null)
                 emap = EditorScreenPropertyMap.FromMaterial(mat);
 
-            Texture2D logoTex = (Texture2D)manager.editorTexture;
-            if (logoTex == null)
+            Texture2D logoTex = null;
+            if (manager.editorTexture is Texture2D)
+                logoTex = (Texture2D)manager.editorTexture;
+            if (logoTex == null && manager.logoTexture is Texture2D)
                 logoTex = (Texture2D)manager.logoTexture;
 
             if (mat && emap != null)
