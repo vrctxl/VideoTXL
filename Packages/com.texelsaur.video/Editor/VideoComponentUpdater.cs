@@ -466,6 +466,7 @@ namespace Texel
                             targetAudioSource.enabled = false;
                             targetAudioSource.volume = sourceAudioSource.volume;
                             targetAudioSource.spatialBlend = sourceAudioSource.spatialBlend;
+                            targetAudioSource.panStereo = sourceAudioSource.panStereo;
                             targetAudioSource.spread = sourceAudioSource.spread;
                             targetAudioSource.minDistance = sourceAudioSource.minDistance;
                             targetAudioSource.maxDistance = sourceAudioSource.maxDistance;
