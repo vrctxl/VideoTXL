@@ -1058,8 +1058,15 @@ namespace Texel
             }
         }
 
+        private Texture ValidCurrentTexture
+        {
+            get { return currentTexture ? currentTexture : Texture2D.blackTexture; }
+        }
+
         void _UpdateMaterials()
         {
+            Texture validCurrent = ValidCurrentTexture;
+
             int fit = _VideoScreenFit();
             for (int i = 0; i < materialUpdateList.Length; i++)
             {
@@ -1068,7 +1075,7 @@ namespace Texel
                 if (mat == null || name == null || name.Length == 0)
                     continue;
 
-                mat.SetTexture(name, currentTexture);
+                mat.SetTexture(name, validCurrent);
 
                 _SetMatIntProperty(mat, shaderPropAVProList[baseIndexMat + i], currentAVPro ? 1 : 0);
                 _SetMatIntProperty(mat, shaderPropInvertList[baseIndexMat + i], currentGamma ? 1 : 0);
@@ -1086,7 +1093,7 @@ namespace Texel
                 Material mat = crt.material;
                 if (Utilities.IsValid(mat))
                 {
-                    mat.SetTexture(shaderPropMainTexList[baseIndexCrt], currentTexture);
+                    mat.SetTexture(shaderPropMainTexList[baseIndexCrt], validCurrent);
 
                     _SetMatIntProperty(mat, shaderPropAVProList[baseIndexCrt], currentAVPro ? 1 : 0);
                     _SetMatIntProperty(mat, shaderPropGammaList[baseIndexCrt], currentGamma ? 1 : 0);
@@ -1094,7 +1101,7 @@ namespace Texel
                     _SetMatIntProperty(mat, shaderPropFitList[baseIndexCrt], fit);
                     _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexCrt], currentAspectRatio);
 
-                    bool isRT = currentTexture.GetType() == typeof(RenderTexture) || currentTexture.GetType() == typeof(CustomRenderTexture);
+                    bool isRT = validCurrent.GetType() == typeof(RenderTexture) || validCurrent.GetType() == typeof(CustomRenderTexture);
                     if (_screenMode == SCREEN_MODE_NORMAL || isRT)
                         crt.updateMode = CustomRenderTextureUpdateMode.Realtime;
                     else
@@ -1108,6 +1115,8 @@ namespace Texel
 
         void _UpdatePropertyBlocks()
         {
+            Texture validCurrent = ValidCurrentTexture;
+
             int fit = _VideoScreenFit();
             for (int i = 0; i < propMeshList.Length; i++)
             {
@@ -1122,7 +1131,7 @@ namespace Texel
                 else
                     renderer.GetPropertyBlock(block);
 
-                block.SetTexture(texName, currentTexture);
+                block.SetTexture(texName, validCurrent);
 
                 _SetIntProperty(shaderPropAVProList[baseIndexProp + i], currentAVPro ? 1 : 0);
                 _SetIntProperty(shaderPropGammaList[baseIndexProp + i], currentGamma ? 1 : 0);
@@ -1139,11 +1148,13 @@ namespace Texel
 
         void _UpdateGlobalProperties()
         {
+            Texture validCurrent = ValidCurrentTexture;
+
             int fit = _VideoScreenFit();
             for (int i = 0; i < globalPropMainTexList.Length; i++)
             {
                 if (globalPropMainTexList[i] != 0)
-                    VRCShader.SetGlobalTexture(globalPropMainTexList[i], currentTexture);
+                    VRCShader.SetGlobalTexture(globalPropMainTexList[i], validCurrent);
                 if (globalPropAVProList[i] != 0)
                     VRCShader.SetGlobalInteger(globalPropAVProList[i], currentAVPro ? 1 : 0);
                 if (globalPropGammaList[i] != 0)
