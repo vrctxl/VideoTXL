@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.3.2] - 02-17-24
+
+- Fixed potential race in ScreenManager that could throw an error and stop the manager
+
 ## [2.3.1] - 02-12-24
 
 - Fixed cast error in ScreenManager inspector window
