@@ -544,7 +544,7 @@ namespace Texel
                     continue;
 
                 _originalMaterialTexture[i] = materialUpdateList[i].GetTexture(name);
-                _originalMatAVPro[i] = _GetMatIntProperty(materialUpdateList[i], shaderPropMainTexList[baseIndexMat + i]);
+                _originalMatAVPro[i] = _GetMatIntProperty(materialUpdateList[i], shaderPropAVProList[baseIndexMat + i]);
                 _originalMatInvert[i] = _GetMatIntProperty(materialUpdateList[i], shaderPropInvertList[baseIndexMat + i]);
                 _originalMatGamma[i] = _GetMatIntProperty(materialUpdateList[i], shaderPropGammaList[baseIndexMat + i]);
                 _originalMatFit[i] = _GetMatIntProperty(materialUpdateList[i], shaderPropFitList[baseIndexMat + i]);
@@ -967,7 +967,7 @@ namespace Texel
 
             _ResetCaptureData();
 
-            currentAspectRatio = (overrideAspectRatio && _screenMode != SCREEN_MODE_NORMAL) ? aspectRatio : 0;
+            currentAspectRatio = (overrideAspectRatio && replacementTex) ? aspectRatio : 0;
 
             if (Utilities.IsValid(replacementTex))
             {
