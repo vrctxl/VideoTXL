@@ -61,8 +61,6 @@ namespace Texel
         [NonSerialized]
         public bool syncing;
         [NonSerialized]
-        public bool heldReady;
-        [NonSerialized]
         public VideoError lastErrorCode;
         [NonSerialized]
         public bool streamFallback;
