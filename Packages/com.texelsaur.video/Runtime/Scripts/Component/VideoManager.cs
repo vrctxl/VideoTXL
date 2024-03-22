@@ -33,6 +33,7 @@ namespace Texel
         [Header("Debug")]
         public bool debugLogging = true;
         public DebugLog debugLog;
+        public DebugState debugState;
 
         [SerializeField] bool enableAVProInEditor = false;
 
@@ -59,6 +60,7 @@ namespace Texel
         int lowLatency = VideoSource.LOW_LATENCY_UNKNOWN;
         int preferredResIndex = 0;
         bool avSyncEnabled = false;
+        bool loopEnabled = false;
 
         int[] supportedResolutions;
         int[] sourceResMap;
@@ -134,6 +136,8 @@ namespace Texel
 
             if (videoPlayer)
                 videoPlayer._SetVideoManager(this);
+
+            _SetDebugState(debugState);
         }
 
         void _Discover()
@@ -484,6 +488,8 @@ namespace Texel
             if (!_ActiveSourceValid())
                 return;
 
+            loopEnabled = state;
+
             VideoSource source = sources[activeSource];
             _DebugLog(source, $"Set Loop: {state}");
 
@@ -544,6 +550,9 @@ namespace Texel
             if (activeSource >= 0)
             {
                 source = sources[activeSource];
+                source._SetAVSync(avSyncEnabled);
+                source._VideoSetLoop(loopEnabled);
+
                 activeVideoPlayer = source.VideoPlayer;
             }
 
@@ -741,6 +750,65 @@ namespace Texel
         public void _DownstreamDebugLog(VideoSource source, string message)
         {
             _DebugLog(source, message);
+        }
+
+        public void _SetDebugState(DebugState debug)
+        {
+            if (debugState)
+            {
+                debugState._Unregister(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
+                debugState = null;
+            }
+
+            if (!debug)
+                return;
+
+            debugState = debug;
+            debugState._Register(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
+            debugState._SetContext(this, nameof(_InternalUpdateDebugState), "VideoManager");
+        }
+
+        public void _InternalUpdateDebugState()
+        {
+            VRCPlayerApi owner = Networking.GetOwner(gameObject);
+            debugState._SetValue("videoPlayer", videoPlayer ? videoPlayer.ToString() : "--");
+            debugState._SetValue("lastErrorClass", LastErrorClass.ToString());
+            debugState._SetValue("lastError", LastError.ToString());
+            debugState._SetValue("lastErrorTXL", LastErrorTXL.ToString());
+            debugState._SetValue("activeSource", activeSource.ToString());
+            debugState._SetValue("prevSource", prevSource.ToString());
+            debugState._SetValue("nextSourceIndex", nextSourceIndex.ToString());
+            debugState._SetValue("videoType", videoType.ToString());
+            debugState._SetValue("lowLatency", lowLatency.ToString());
+            debugState._SetValue("preferredResIndex", preferredResIndex.ToString());
+            debugState._SetValue("avSyncEnabled", avSyncEnabled.ToString());
+            debugState._SetValue("loopEnabled", loopEnabled.ToString());
+
+            if (activeSource > -1)
+            {
+                VideoSource source = sources[activeSource];
+                if (source != null)
+                {
+                    BaseVRCVideoPlayer player = source.VideoPlayer;
+                    debugState._SetValue("active.id", source.ID.ToString());
+                    debugState._SetValue("active.maxResolution", source.maxResolution.ToString());
+                    debugState._SetValue("active.lowLatency", source.lowLatency.ToString());
+                    debugState._SetValue("active.captureRenderer", source.captureRenderer ? source.captureRenderer.ToString() : "--");
+                    debugState._SetValue("active.avproReservedChannel", source.avproReservedChannel ? source.avproReservedChannel.ToString() : "--");
+                    debugState._SetValue("active.player", player ? player.ToString() : "--");
+                   
+                    if (player != null)
+                    {
+                        debugState._SetValue("active.lastEvent", VideoSource._VideoSourceEventName(source.LastEvent));
+                        debugState._SetValue("active.enableAutomaticResync", player.EnableAutomaticResync.ToString());
+                        debugState._SetValue("active.isPlaying", player.IsPlaying.ToString());
+                        debugState._SetValue("active.isReady", player.IsReady.ToString());
+                        debugState._SetValue("active.loop", player.Loop.ToString());
+                        debugState._SetValue("active.duration", player.GetDuration().ToString());
+                        debugState._SetValue("active.time", player.GetTime().ToString());
+                    }
+                }
+            }
         }
     }
 }

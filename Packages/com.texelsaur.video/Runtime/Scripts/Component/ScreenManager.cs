@@ -35,13 +35,14 @@ namespace Texel
 
         [Tooltip("Log debug statements to a world object")]
         [SerializeField] internal DebugLog debugLog;
+        [SerializeField] internal DebugState debugState;
         [SerializeField] internal bool vrcLogging = false;
         [SerializeField] internal bool eventLogging = false;
         [SerializeField] internal bool lowLevelLogging = false;
 
         [Tooltip("Prevent screen state from cycling between loading and error placeholders.")]
         [SerializeField] internal bool latchErrorState = true;
-        
+
         bool useMaterialOverrides = true;
         [Tooltip("The screen material to apply when video is playing back.  The object's current material is captured as the playback material by default.")]
         [SerializeField] internal Material playbackMaterial;
@@ -63,7 +64,7 @@ namespace Texel
 
         [SerializeField] internal MeshRenderer[] screenMesh;
         [SerializeField] internal int[] screenMaterialIndex;
-        
+
         bool useTextureOverrides = true;
 
         [Tooltip("Whether the aspect ratio for placeholder textures should be overridden by a specific value.  Use this to supply the original aspect ratio for textures that have been rescaled to powers-of-2.")]
@@ -188,6 +189,7 @@ namespace Texel
         int currentFit;
         float currentAspectRatio;
         bool currentValid = false;
+        Vector2Int currentRes;
 
         int globalTexPropertyId = -1;
 
@@ -272,6 +274,9 @@ namespace Texel
 
                 imageDownloader.DownloadImage(downloadLogoImageUrl, null, (IUdonEventReceiver)this, info);
             }
+
+            if (Utilities.IsValid(debugState))
+                _SetDebugState(debugState);
 
             SendCustomEventDelayedFrames(nameof(_InternalPostInit), 1);
         }
@@ -992,6 +997,7 @@ namespace Texel
                 if (currentTexture)
                 {
                     currentAspectRatio = (float)currentTexture.width / currentTexture.height;
+                    currentRes = new Vector2Int(currentTexture.width, currentTexture.height);
 
                     for (int i = 0; i < renderOutCrt.Length; i++)
                     {
@@ -1281,6 +1287,45 @@ namespace Texel
         {
             if (lowLevelLogging)
                 _DebugLog(message);
+        }
+
+        public void _SetDebugState(DebugState debug)
+        {
+            if (debugState)
+            {
+                debugState._Unregister(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
+                debugState = null;
+            }
+
+            if (!debug)
+                return;
+
+            debugState = debug;
+            debugState._Register(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
+            debugState._SetContext(this, nameof(_InternalUpdateDebugState), "ScreenManager");
+        }
+
+        public void _InternalUpdateDebugState()
+        {
+            VRCPlayerApi owner = Networking.GetOwner(gameObject);
+            debugState._SetValue("videoPlayer", videoPlayer ? videoPlayer.ToString() : "--");
+            debugState._SetValue("isQuest", _IsQuest().ToString());
+            debugState._SetValue("captureRenderer", captureRenderer ? captureRenderer.ToString() : "--");
+            debugState._SetValue("screenSource", _screenSource.ToString());
+            debugState._SetValue("screenMode", _screenMode.ToString());
+            debugState._SetValue("screenFit", _screenFit.ToString());
+            debugState._SetValue("inError", _inError.ToString());
+            debugState._SetValue("lastErrorCode", _lastErrorCode.ToString());
+            debugState._SetValue("checkFrameCount", _checkFrameCount.ToString());
+            debugState._SetValue("pendingUpdates", pendingUpdates.ToString());
+            debugState._SetValue("currentTexture", currentTexture ? currentTexture.ToString() : "--");
+            debugState._SetValue("currentAVPro", currentAVPro.ToString());
+            debugState._SetValue("currentGamma", currentGamma.ToString());
+            debugState._SetValue("currentInvert", currentInvert.ToString());
+            debugState._SetValue("currentFit", currentFit.ToString());
+            debugState._SetValue("currentAspectRatio", currentAspectRatio.ToString());
+            debugState._SetValue("currentResolution", $"{currentRes.x}x{currentRes.y}");
+            debugState._SetValue("currentValid", currentValid.ToString());
         }
     }
 }

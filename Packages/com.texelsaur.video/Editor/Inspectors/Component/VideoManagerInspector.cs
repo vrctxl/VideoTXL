@@ -17,6 +17,7 @@ namespace Texel
         SerializedProperty enableAVProInEditorProperty;
 
         SerializedProperty debugLogProperty;
+        SerializedProperty debugStateProperty;
         SerializedProperty debugLoggingProperty;
 
         DateTime lastValidate;
@@ -29,6 +30,7 @@ namespace Texel
             enableAVProInEditorProperty = serializedObject.FindProperty("enableAVProInEditor");
 
             debugLogProperty = serializedObject.FindProperty(nameof(VideoManager.debugLog));
+            debugStateProperty = serializedObject.FindProperty(nameof(VideoManager.debugState));
             debugLoggingProperty = serializedObject.FindProperty(nameof(VideoManager.debugLogging));
 
             Revalidate();
@@ -105,6 +107,7 @@ namespace Texel
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Debug Options", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
+            EditorGUILayout.PropertyField(debugStateProperty, new GUIContent("Debug State", "Track periodically refreshed internal state in a world object"));
             EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
 
             serializedObject.ApplyModifiedProperties();

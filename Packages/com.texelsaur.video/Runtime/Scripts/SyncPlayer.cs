@@ -137,7 +137,7 @@ namespace Texel
                 DebugLog("Detected " + (Networking.LocalPlayer.IsUserInVR() ? "PC VR" : "PC Desktop") + " Platform");
 
             if (Utilities.IsValid(debugState))
-                debugState._Regsiter(this, "_UpdateDebugState", "SyncPlayer");
+                _SetDebugState(debugState);
 
             _hasAccessControl = Utilities.IsValid(accessControl);
             _hasSustainZone = Utilities.IsValid(playbackZoneMembership);
@@ -232,6 +232,8 @@ namespace Texel
             videoMux._Register(VideoManager.SOURCE_CHANGE_EVENT, this, "_OnSourceChange");
 
             videoMux._UpdateLowLatency(VideoSource.LOW_LATENCY_ENABLE);
+            videoMux._SetAVSync(autoInternalAVSync);
+            videoMux._VideoSetLoop(_syncRepeatPlaylist);
 
             _UpdateVideoSourceOverride(defaultVideoSource);
             _UpdateVideoManagerSourceNoResync(videoMux.ActiveSourceType);
@@ -430,6 +432,13 @@ namespace Texel
             _syncRepeatPlaylist = !_syncRepeatPlaylist;
             _UpdateRepeatMode(_syncRepeatPlaylist);
             RequestSerialization();
+        }
+
+        public void _TriggerInternalAVSync()
+        {
+            DebugTrace("Trigger Internal AVSync Mode");
+
+            _UpdateAVSync(!autoInternalAVSync);
         }
 
         public override void _SetSourceMode(int mode)
@@ -1545,6 +1554,14 @@ namespace Texel
             _UpdateHandlers(EVENT_VIDEO_PLAYLIST_UPDATE);
         }
 
+        void _UpdateAVSync(bool state)
+        {
+            autoInternalAVSync = state;
+            if (videoMux)
+                videoMux._SetAVSync(autoInternalAVSync);
+            _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
+        }
+
         void _UpdateQueuedUrlData()
         {
             if (_syncQueuedUrl == queuedUrl)
@@ -1594,7 +1611,23 @@ namespace Texel
                 DebugLog(message);
         }
 
-        public void _UpdateDebugState()
+        public void _SetDebugState(DebugState debug)
+        {
+            if (debugState)
+            {
+                debugState._Unregister(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
+                debugState = null;
+            }
+
+            if (!debug)
+                return;
+
+            debugState = debug;
+            debugState._Register(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
+            debugState._SetContext(this, nameof(_InternalUpdateDebugState), "SyncPlayer");
+        }
+
+        public void _InternalUpdateDebugState()
         {
             VRCPlayerApi owner = Networking.GetOwner(gameObject);
             debugState._SetValue("isQuest", IsQuest.ToString());
