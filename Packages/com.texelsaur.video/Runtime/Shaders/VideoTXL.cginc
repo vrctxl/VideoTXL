@@ -9,9 +9,9 @@ float2 TXL_ComputeScreenCorrection(float2 res) {
 	float2 normRes = float2(res.x / _AspectRatio, res.y);
 	float2 correction;
 
-	if (_FitMode == 2 || (_FitMode == 0 && normRes.x > normRes.y))
+	if (_FitMode == 2 || (_FitMode == 0 && normRes.x > normRes.y) || (_FitMode == 4 && normRes.x < normRes.y))
 		correction = float2(1, normRes.y / normRes.x);
-	else if (_FitMode == 1 || (_FitMode == 0 && normRes.x < normRes.y))
+	else if (_FitMode == 1 || (_FitMode == 0 && normRes.x < normRes.y) || (_FitMode == 4 && normRes.x > normRes.y))
 		correction = float2(normRes.x / normRes.y, 1);
 
 	return correction;
