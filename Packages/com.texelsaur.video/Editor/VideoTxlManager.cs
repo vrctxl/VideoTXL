@@ -16,43 +16,43 @@ namespace Texel
         [MenuItem("GameObject/TXL/VideoTXL/Sync Video Player", false, 100)]
         public static void AddSyncPlayerToScene()
         {
-            AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Sync Video Player.prefab");
+            Selection.activeObject = AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Sync Video Player.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Other Video Players/Sync Video Player Template", false, 201)]
         public static void AddSyncPlayerTemplateToScene()
         {
-            AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Base/Sync Video Player Base.prefab");
+            Selection.activeObject = AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Base/Sync Video Player Base.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Other Video Players/Local Video Player Template", false, 202)]
         public static void AddLocalPlayerTemplateToScene()
         {
-            AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Base/Local Video Player Base.prefab");
+            Selection.activeObject = AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Base/Local Video Player Base.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Other Video Players/Basic Sync Video Player", false, 301)]
         public static void AddBasicSyncPlayerToScene()
         {
-            AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Basic Sync Video Player.prefab");
+            Selection.activeObject = AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Basic Sync Video Player.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Other Video Players/Local Video Player AVPro", false, 302)]
         public static void AddLocalAVProPlayerToScene()
         {
-            AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Local Video Player AVPro.prefab");
+            Selection.activeObject = AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Local Video Player AVPro.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Other Video Players/Local Video Player Unity", false, 303)]
         public static void AddLocalUnityPlayerToScene()
         {
-            AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Local Video Player Unity.prefab");
+            Selection.activeObject = AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Local Video Player Unity.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Other Video Players/Sync Video Player Full", false, 304)]
         public static void AddSyncPlayerFullToScene()
         {
-            AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Sync Video Player Full.prefab");
+            Selection.activeObject = AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Sync Video Player Full.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/UI/Sync Video Player Controls", false, 211)]
@@ -535,16 +535,6 @@ namespace Texel
             }
         }
 
-        public static void AddPrefabToScene(string path)
-        {
-            GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (asset != null)
-            {
-                GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(asset);
-                EditorGUIUtility.PingObject(instance);
-            }
-        }
-
         public static Transform GetVideoManagerRoot()
         {
             return GetComponentRoot<VideoManager>();
@@ -595,9 +585,43 @@ namespace Texel
 
             GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(asset);
             instance.transform.parent = parent;
+            instance.transform.localPosition = Vector3.zero;
+            instance.transform.localRotation = Quaternion.identity;
+            instance.transform.localScale = Vector3.one;
 
             EditorGUIUtility.PingObject(instance);
             return instance;
+        }
+
+        public static GameObject AddPrefabToScene(string path)
+        {
+            GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (asset != null)
+            {
+                GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(asset);
+
+                EditorGUIUtility.PingObject(instance);
+                return instance;
+            }
+
+            return null;
+        }
+
+        public static GameObject AddPrefabToActiveOrScene(string path)
+        {
+            GameObject active = GetActiveObject();
+            if (active)
+                return AddPrefabToObject(path, active.transform);
+            else
+                return AddPrefabToScene(path);
+        }
+
+        public static GameObject GetActiveObject()
+        {
+            if (!Selection.activeTransform)
+                return null;
+
+            return Selection.activeTransform.gameObject;
         }
 
         public static void AddVideoSource(string path, Transform parent)

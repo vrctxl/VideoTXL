@@ -96,6 +96,7 @@ namespace Texel
             "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ScreenBlack.jpg",
             "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ScreenLoading.jpg",
             "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ScreenSynchronizing.jpg",
+            "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ScreenTXL.png",
         };
 
         struct PropBlockEntry
