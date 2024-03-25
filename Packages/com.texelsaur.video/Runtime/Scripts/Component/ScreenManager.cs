@@ -183,6 +183,7 @@ namespace Texel
         int pendingUpdates = 0;
 
         Texture currentTexture;
+        Texture captureTexture;
         bool currentAVPro;
         bool currentInvert;
         bool currentGamma;
@@ -290,8 +291,7 @@ namespace Texel
             if (prevPlayer)
             {
                 prevPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, nameof(_InternalOnVideoStateUpdate));
-                if (prevPlayer.VideoManager)
-                    prevPlayer.VideoManager._Unregister(VideoManager.SOURCE_CHANGE_EVENT, this, nameof(_InternalOnSourceChanged));
+                prevPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_SOURCE_CHANGE, this, nameof(_InternalOnSourceChanged));
             }
 
             captureRenderer = null;
@@ -301,8 +301,7 @@ namespace Texel
             if (videoPlayer)
             {
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, nameof(_InternalOnVideoStateUpdate));
-                if (videoPlayer.VideoManager)
-                    videoPlayer.VideoManager._Register(VideoManager.SOURCE_CHANGE_EVENT, this, nameof(_InternalOnSourceChanged));
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_SOURCE_CHANGE, this, nameof(_InternalOnSourceChanged));
             }
 
             _InternalOnSourceChanged();
@@ -851,8 +850,8 @@ namespace Texel
             _ResetCaptureData();
             currentValid = false;
 
-            Texture captureTex = CaptureValid();
-            currentValid = Utilities.IsValid(captureTex);
+            captureTexture = CaptureValid();
+            currentValid = Utilities.IsValid(captureTexture);
 
             int screenIndex = _CalculateScreenIndex(currentValid);
 
@@ -862,7 +861,7 @@ namespace Texel
             if (useTextureOverrides)
             {
                 Texture replacement = _GetResolvedTextureOverride((ScreenOverrideType)screenIndex);
-                _UpdateCaptureData(replacement, captureTex);
+                _UpdateCaptureData(replacement, captureTexture);
                 _UpdateMaterials();
                 _UpdatePropertyBlocks();
                 _UpdateGlobalProperties();
@@ -909,9 +908,9 @@ namespace Texel
 
             _EnsureInit();
 
-            Texture captureTex = CaptureValid();
+            captureTexture = CaptureValid();
             bool prevValid = currentValid;
-            currentValid = Utilities.IsValid(captureTex);
+            currentValid = Utilities.IsValid(captureTexture);
             _DebugLowLevel($"Check Update Screen Material: valid={currentValid}");
 
             int screenIndex = _CalculateScreenIndex(currentValid);
@@ -922,7 +921,7 @@ namespace Texel
             if (useTextureOverrides)
             {
                 Texture replacement = _GetResolvedTextureOverride((ScreenOverrideType)screenIndex);
-                _UpdateCaptureData(replacement, captureTex);
+                _UpdateCaptureData(replacement, captureTexture);
                 _UpdateMaterials();
                 _UpdatePropertyBlocks();
                 _UpdateGlobalProperties();
@@ -1082,8 +1081,8 @@ namespace Texel
                 mat.SetTexture(name, validCurrent);
 
                 _SetMatIntProperty(mat, shaderPropAVProList[baseIndexMat + i], currentAVPro ? 1 : 0);
-                _SetMatIntProperty(mat, shaderPropInvertList[baseIndexMat + i], currentGamma ? 1 : 0);
-                _SetMatIntProperty(mat, shaderPropGammaList[baseIndexMat + i], currentInvert ? 1 : 0);
+                _SetMatIntProperty(mat, shaderPropInvertList[baseIndexMat + i], currentInvert ? 1 : 0);
+                _SetMatIntProperty(mat, shaderPropGammaList[baseIndexMat + i], currentGamma ? 1 : 0);
                 _SetMatIntProperty(mat, shaderPropFitList[baseIndexMat + i], fit);
                 _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexMat + i], currentAspectRatio);
             }
@@ -1316,6 +1315,7 @@ namespace Texel
             debugState._SetValue("lastErrorCode", _lastErrorCode.ToString());
             debugState._SetValue("checkFrameCount", _checkFrameCount.ToString());
             debugState._SetValue("pendingUpdates", pendingUpdates.ToString());
+            debugState._SetValue("captureTexture", captureTexture ? captureTexture.ToString() : "--");
             debugState._SetValue("currentTexture", currentTexture ? currentTexture.ToString() : "--");
             debugState._SetValue("currentAVPro", currentAVPro.ToString());
             debugState._SetValue("currentGamma", currentGamma.ToString());

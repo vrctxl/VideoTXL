@@ -83,7 +83,7 @@ Shader "VideoTXL/Unlit" {
 					float4 color = tex2D(_MainTex, uv * _MainTex_ST.xy + _MainTex_ST.zw);
 
 					if (_IsAVProInput && _ApplyGammaAVPro)
-						color.rgb = GammaToLinearSpace(color.rgb);
+						color.rgb = pow(color.rgb, 2.2);
 
 					color = color * visibility + margin;
 
