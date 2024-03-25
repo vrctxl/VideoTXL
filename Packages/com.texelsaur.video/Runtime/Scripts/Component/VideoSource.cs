@@ -21,6 +21,17 @@ namespace Texel
         LowLatency = 2,
     }
 
+    public enum VideoSourceEvent
+    {
+        Ready,
+        Start,
+        End,
+        Error,
+        Loop,
+        Pause,
+        Play,
+    }
+
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class VideoSource : UdonSharpBehaviour
     {
@@ -51,6 +62,7 @@ namespace Texel
         public const short LOW_LATENCY_ENABLE = 2;
 
         public short VideoSourceType { get; private set; }
+        public VideoSourceEvent LastEvent { get; private set; }
 
         public int ID
         {
@@ -180,42 +192,49 @@ namespace Texel
 
         public override void OnVideoReady()
         {
+            LastEvent = VideoSourceEvent.Ready;
             if (videoMux)
                 videoMux._OnVideoReady(id);
         }
 
         public override void OnVideoStart()
         {
+            LastEvent = VideoSourceEvent.Start;
             if (videoMux)
                 videoMux._OnVideoStart(id);
         }
 
         public override void OnVideoEnd()
         {
+            LastEvent = VideoSourceEvent.End;
             if (videoMux)
                 videoMux._OnVideoEnd(id);
         }
 
         public override void OnVideoError(VideoError videoError)
         {
+            LastEvent = VideoSourceEvent.Error;
             if (videoMux)
                 videoMux._OnVideoError(id, videoError);
         }
 
         public override void OnVideoLoop()
         {
+            LastEvent = VideoSourceEvent.Loop;
             if (videoMux)
                 videoMux._OnVideoLoop(id);
         }
 
         public override void OnVideoPause()
         {
+            LastEvent = VideoSourceEvent.Pause;
             if (videoMux)
                 videoMux._OnVideoPause(id);
         }
 
         public override void OnVideoPlay()
         {
+            LastEvent = VideoSourceEvent.Play;
             if (videoMux)
                 videoMux._OnVideoPlay(id);
         }
@@ -283,6 +302,19 @@ namespace Texel
         {
             if (videoMux)
                 videoMux._DownstreamDebugLog(this, message);
+        }
+
+        public static string _VideoSourceEventName(VideoSourceEvent val)
+        {
+            if (val == VideoSourceEvent.End) return "End";
+            if (val == VideoSourceEvent.Error) return "Error";
+            if (val == VideoSourceEvent.Loop) return "Loop";
+            if (val == VideoSourceEvent.Pause) return "Pause";
+            if (val == VideoSourceEvent.Play) return "Play";
+            if (val == VideoSourceEvent.Ready) return "Ready";
+            if (val == VideoSourceEvent.Start) return "Start";
+
+            return "Unknown";
         }
     }
 }

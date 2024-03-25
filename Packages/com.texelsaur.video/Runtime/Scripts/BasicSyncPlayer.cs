@@ -1,5 +1,4 @@
-﻿#if UDON
-using System;
+﻿using System;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components.Video;
@@ -656,4 +655,3 @@ namespace Texel
         }
     }
 }
-#endif

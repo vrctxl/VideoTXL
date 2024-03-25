@@ -18,6 +18,14 @@ namespace Texel
         FitHeight,
         FitWidth,
         Stretch,
+        Fill,
+    }
+
+    public enum TXLRepeatMode : byte
+    {
+        None,
+        All,
+        Single,
     }
 
     public abstract class TXLVideoPlayer : EventBase
@@ -39,6 +47,7 @@ namespace Texel
         public const int SCREEN_FIT_HEIGHT = 1;
         public const int SCREEN_FIT_WIDTH = 2;
         public const int SCREEN_STRETCH = 3;
+        public const int SCREEN_FILL = 4;
 
         protected VideoManager videoMux;
         protected AudioManager audioManager;
@@ -75,6 +84,7 @@ namespace Texel
         [NonSerialized]
         public bool locked;
         [NonSerialized]
+        [Obsolete("Use property RepeatMode")]
         public bool repeatPlaylist;
         [NonSerialized]
         public VRCUrl currentUrl = VRCUrl.Empty;
@@ -107,6 +117,8 @@ namespace Texel
         public virtual bool SupportsLock { get; protected set; }
 
         public virtual bool SupportsOwnership { get; protected set; }
+
+        public virtual TXLRepeatMode RepeatMode { get; set; }
 
         public virtual bool _CanTakeControl()
         {

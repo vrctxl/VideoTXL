@@ -96,6 +96,7 @@ namespace Texel
             "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ScreenBlack.jpg",
             "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ScreenLoading.jpg",
             "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ScreenSynchronizing.jpg",
+            "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/ScreenTXL.png",
         };
 
         struct PropBlockEntry
@@ -120,6 +121,7 @@ namespace Texel
         SerializedProperty videoPlayerProperty;
 
         SerializedProperty debugLogProperty;
+        SerializedProperty debugStateProperty;
         SerializedProperty vrcLoggingProperty;
         SerializedProperty lowLevelLoggingProperty;
         SerializedProperty eventLoggingProperty;
@@ -220,6 +222,7 @@ namespace Texel
             videoPlayerProperty = serializedObject.FindProperty(nameof(ScreenManager.videoPlayer));
 
             debugLogProperty = serializedObject.FindProperty(nameof(ScreenManager.debugLog));
+            debugStateProperty = serializedObject.FindProperty(nameof(ScreenManager.debugState));
             vrcLoggingProperty = serializedObject.FindProperty(nameof(ScreenManager.vrcLogging));
             lowLevelLoggingProperty = serializedObject.FindProperty(nameof(ScreenManager.lowLevelLogging));
             eventLoggingProperty = serializedObject.FindProperty(nameof(ScreenManager.eventLogging));
@@ -415,6 +418,7 @@ namespace Texel
 
             EditorGUI.indentLevel++;
             EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
+            EditorGUILayout.PropertyField(debugStateProperty, new GUIContent("Debug State", "Track periodically refreshed internal state in a world object"));
             EditorGUILayout.PropertyField(eventLoggingProperty, new GUIContent("Include Events", "Include additional event traffic in debug log"));
             EditorGUILayout.PropertyField(lowLevelLoggingProperty, new GUIContent("Include Low Level", "Include additional verbose messages in debug log"));
             EditorGUILayout.PropertyField(vrcLoggingProperty, new GUIContent("VRC Logging", "Write out debug messages to VRChat log."));
@@ -1325,7 +1329,7 @@ namespace Texel
 
         private static GameObject CreateEmptyPropertyMap(ScreenManager manager, Material mat)
         {
-            GameObject map = VideoTxlManager.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Property Maps/PropertyMap.prefab", manager.transform);
+            GameObject map = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Property Maps/PropertyMap.prefab", manager.transform);
             ScreenPropertyMap propMap = map.GetComponent<ScreenPropertyMap>();
             if (mat)
             {

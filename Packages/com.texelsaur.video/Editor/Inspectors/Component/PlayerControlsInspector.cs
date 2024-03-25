@@ -66,6 +66,7 @@ namespace Texel
         SerializedProperty loadIconProperty;
         SerializedProperty resyncIconProperty;
         SerializedProperty repeatIconProperty;
+        SerializedProperty repeatOneIconProperty;
         SerializedProperty shuffleIconProperty;
         SerializedProperty infoIconProperty;
         SerializedProperty nextIconProperty;
@@ -152,6 +153,7 @@ namespace Texel
             "MainPanel/UpperRow/ControlGroup/StopButton/IconStop",
             "MainPanel/UpperRow/ControlGroup/NextButton/IconNext",
             "MainPanel/UpperRow/ButtonGroup/RepeatButton/IconRepeat",
+            "MainPanel/UpperRow/ButtonGroup/RepeatButton/IconRepeatOne",
             "MainPanel/UpperRow/ButtonGroup/PlaylistButton/IconPlaylist",
             "MainPanel/UpperRow/ButtonGroup/InfoButton/IconInfo",
             "MainPanel/LowerRow/InputProgress/LoadButton/IconLoad",
@@ -202,6 +204,7 @@ namespace Texel
             loadIconProperty = serializedObject.FindProperty(nameof(PlayerControls.loadIcon));
             resyncIconProperty = serializedObject.FindProperty(nameof(PlayerControls.resyncIcon));
             repeatIconProperty = serializedObject.FindProperty(nameof(PlayerControls.repeatIcon));
+            repeatOneIconProperty = serializedObject.FindProperty(nameof(PlayerControls.repeatOneIcon));
             shuffleIconProperty = serializedObject.FindProperty(nameof(PlayerControls.shuffleIcon));
             infoIconProperty = serializedObject.FindProperty(nameof(PlayerControls.infoIcon));
             nextIconProperty = serializedObject.FindProperty(nameof(PlayerControls.nextIcon));
@@ -266,6 +269,7 @@ namespace Texel
                 EditorGUILayout.PropertyField(loadIconProperty);
                 EditorGUILayout.PropertyField(resyncIconProperty);
                 EditorGUILayout.PropertyField(repeatIconProperty);
+                EditorGUILayout.PropertyField(repeatOneIconProperty);
                 EditorGUILayout.PropertyField(shuffleIconProperty);
                 EditorGUILayout.PropertyField(infoIconProperty);
                 EditorGUILayout.PropertyField(nextIconProperty);
