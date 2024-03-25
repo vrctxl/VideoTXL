@@ -277,11 +277,9 @@ namespace Texel
 
             if (Utilities.IsValid(debugState))
                 _SetDebugState(debugState);
-
-            SendCustomEventDelayedFrames(nameof(_InternalPostInit), 1);
         }
 
-        public void _InternalPostInit()
+        protected override void _PostInit()
         {
             _BindVideoPlayer(videoPlayer);
         }

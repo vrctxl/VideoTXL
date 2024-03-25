@@ -1329,7 +1329,7 @@ namespace Texel
 
         private static GameObject CreateEmptyPropertyMap(ScreenManager manager, Material mat)
         {
-            GameObject map = VideoTxlManager.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Property Maps/PropertyMap.prefab", manager.transform);
+            GameObject map = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Property Maps/PropertyMap.prefab", manager.transform);
             ScreenPropertyMap propMap = map.GetComponent<ScreenPropertyMap>();
             if (mat)
             {

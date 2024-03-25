@@ -77,11 +77,9 @@ namespace Texel
                 _urlSourceType = SOURCE_TYPE_URL;
 
             _UpdatePlayerState(VIDEO_STATE_STOPPED);
-
-            SendCustomEventDelayedFrames(nameof(_PostInit), 1);
         }
 
-        public void _PostInit()
+        protected override void _PostInit()
         {
             if (!videoMux)
             {

@@ -88,8 +88,8 @@ namespace Texel
         [UdonSynced]
         bool _syncLocked = true;
 
-        [UdonSynced]
-        bool _syncRepeatPlaylist;
+        [UdonSynced, FieldChangeCallback(nameof(_SyncRepeatMode))]
+        TXLRepeatMode syncRepeatMode;
 
         [UdonSynced, FieldChangeCallback(nameof(HoldVideos))]
         bool _syncHoldVideos = false;
@@ -169,11 +169,10 @@ namespace Texel
             if (Networking.IsOwner(gameObject))
             {
                 _syncLocked = defaultLocked;
-                _syncRepeatPlaylist = loop;
+                _SyncRepeatMode = loop ? TXLRepeatMode.All : TXLRepeatMode.None;
                 _syncScreenFit = (byte)defaultScreenFit;
                 HoldVideos = holdLoadedVideos;
                 _UpdateLockState(_syncLocked);
-                _UpdateRepeatMode(_syncRepeatPlaylist);
                 _UpdateScreenFit(_syncScreenFit);
                 RequestSerialization();
             }
@@ -183,11 +182,9 @@ namespace Texel
 
             if (!Networking.IsOwner(gameObject))
                 SendCustomEventDelayedSeconds(nameof(_InitCheck), 5);
-
-            SendCustomEventDelayedFrames(nameof(_PostInit), 1);
         }
 
-        public void _PostInit()
+        protected override void _PostInit()
         {
             if (!videoMux)
             {
@@ -233,7 +230,7 @@ namespace Texel
 
             videoMux._UpdateLowLatency(VideoSource.LOW_LATENCY_ENABLE);
             videoMux._SetAVSync(autoInternalAVSync);
-            videoMux._VideoSetLoop(_syncRepeatPlaylist);
+            _UpdateVideoManagerLoop();
 
             _UpdateVideoSourceOverride(defaultVideoSource);
             _UpdateVideoManagerSourceNoResync(videoMux.ActiveSourceType);
@@ -253,6 +250,71 @@ namespace Texel
 
             if (audioManager)
                 audioManager._Register(AudioManager.EVENT_CHANNEL_GROUP_CHANGED, this, "_OnAudioProfileChanged");
+        }
+
+        internal TXLRepeatMode _SyncRepeatMode
+        {
+            get { return syncRepeatMode; }
+            set
+            {
+                syncRepeatMode = value;
+                repeatPlaylist = value != TXLRepeatMode.None;
+ 
+                _UpdateVideoManagerLoop();
+
+                _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
+                _UpdateHandlers(EVENT_VIDEO_PLAYLIST_UPDATE);
+            }
+        }
+
+        void _UpdateVideoManagerLoop()
+        {
+            bool enableLoop = syncRepeatMode != TXLRepeatMode.None;
+            if (enableLoop)
+            {
+                bool activePlaylist = false;
+                if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
+                    activePlaylist = true;
+
+                if (activePlaylist && syncRepeatMode != TXLRepeatMode.Single)
+                    enableLoop = false;
+            }
+
+            if (videoMux)
+            {
+                if (!enableLoop)
+                    videoMux._VideoSetLoop(false);
+                else if (enableLoop && videoMux.ActiveSourceType == VideoSource.VIDEO_SOURCE_UNITY)
+                    videoMux._VideoSetLoop(true);
+            }
+        }
+
+        TXLRepeatMode _CheckRepeatMode(TXLRepeatMode mode)
+        {
+            bool activePlaylist = false;
+            if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
+                activePlaylist = true;
+
+            if (mode == TXLRepeatMode.Single && !activePlaylist)
+                mode = TXLRepeatMode.All;
+
+            return mode;
+        }
+
+        public override TXLRepeatMode RepeatMode
+        {
+            get { return syncRepeatMode; }
+            set
+            {
+                DebugTrace($"RepeatMode = {value}");
+                if (!_TakeControl())
+                    return;
+
+                value = _CheckRepeatMode(value);
+
+                _SyncRepeatMode = value;
+                RequestSerialization();
+            }
         }
 
         public bool HoldVideos
@@ -429,9 +491,17 @@ namespace Texel
             if (!_TakeControl())
                 return;
 
-            _syncRepeatPlaylist = !_syncRepeatPlaylist;
-            _UpdateRepeatMode(_syncRepeatPlaylist);
-            RequestSerialization();
+            if (syncRepeatMode == TXLRepeatMode.None)
+                RepeatMode = TXLRepeatMode.All;
+            else if (syncRepeatMode == TXLRepeatMode.All)
+            {
+                if (_CheckRepeatMode(TXLRepeatMode.Single) == TXLRepeatMode.All)
+                    RepeatMode = TXLRepeatMode.None;
+                else
+                    RepeatMode = TXLRepeatMode.Single;
+            }
+            else if (syncRepeatMode == TXLRepeatMode.Single)
+                RepeatMode = TXLRepeatMode.None;
         }
 
         public void _TriggerInternalAVSync()
@@ -451,8 +521,7 @@ namespace Texel
             if (mode != VideoSource.VIDEO_SOURCE_NONE)
             {
                 videoMux._UpdateVideoSource(_syncVideoSourceOverride);
-                if (_syncVideoSourceOverride == VideoSource.VIDEO_SOURCE_UNITY)
-                    videoMux._VideoSetLoop(_syncRepeatPlaylist);
+                _UpdateVideoManagerLoop();
             }
 
             RequestSerialization();
@@ -985,7 +1054,7 @@ namespace Texel
                 return true;
             }
 
-            if (_syncRepeatPlaylist)
+            if (syncRepeatMode != TXLRepeatMode.None)
             {
                 SendCustomEventDelayedFrames("_LoopVideo", 1);
                 return true;
@@ -1244,7 +1313,6 @@ namespace Texel
             _UpdateVideoManagerSourceNoResync(_syncVideoSource);
             _UpdateScreenFit(_syncScreenFit);
             _UpdateLockState(_syncLocked);
-            _UpdateRepeatMode(_syncRepeatPlaylist);
             _UpdateQueuedUrlData();
 
             if (_syncVideoNumber == _loadedVideoNumber)
@@ -1470,8 +1538,7 @@ namespace Texel
         {
             _suppressSourceUpdate = true;
             videoMux._UpdateVideoSource(sourceType);
-            if (sourceType == VideoSource.VIDEO_SOURCE_UNITY)
-                videoMux._VideoSetLoop(_syncRepeatPlaylist);
+            _UpdateVideoManagerLoop();
             _suppressSourceUpdate = false;
         }
 
@@ -1544,14 +1611,6 @@ namespace Texel
             trackDuration = duration;
             trackTarget = target;
             _UpdateHandlers(EVENT_VIDEO_TRACKING_UPDATE);
-        }
-
-        void _UpdateRepeatMode(bool state)
-        {
-            repeatPlaylist = state;
-            if (videoMux && videoMux.ActiveSourceType == VideoSource.VIDEO_SOURCE_UNITY)
-                videoMux._VideoSetLoop(_syncRepeatPlaylist);
-            _UpdateHandlers(EVENT_VIDEO_PLAYLIST_UPDATE);
         }
 
         void _UpdateAVSync(bool state)

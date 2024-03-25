@@ -21,6 +21,13 @@ namespace Texel
         Fill,
     }
 
+    public enum TXLRepeatMode : byte
+    {
+        None,
+        All,
+        Single,
+    }
+
     public abstract class TXLVideoPlayer : EventBase
     {
         public const int EVENT_VIDEO_STATE_UPDATE = 0;
@@ -77,6 +84,7 @@ namespace Texel
         [NonSerialized]
         public bool locked;
         [NonSerialized]
+        [Obsolete("Use property RepeatMode")]
         public bool repeatPlaylist;
         [NonSerialized]
         public VRCUrl currentUrl = VRCUrl.Empty;
@@ -109,6 +117,8 @@ namespace Texel
         public virtual bool SupportsLock { get; protected set; }
 
         public virtual bool SupportsOwnership { get; protected set; }
+
+        public virtual TXLRepeatMode RepeatMode { get; set; }
 
         public virtual bool _CanTakeControl()
         {

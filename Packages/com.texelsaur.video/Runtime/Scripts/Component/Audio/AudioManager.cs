@@ -105,8 +105,7 @@ namespace Texel
                     _DebugError("Could not find parent video player.  Audio playback will not work.", true);
             }
 
-            if (Utilities.IsValid(debugState))
-                debugState._Regsiter(this, "_UpdateDebugState", "AudioOverrideManager");
+            _SetDebugState(debugState);
 
             if (!Utilities.IsValid(audioControls))
                 audioControls = new Component[0];
@@ -195,11 +194,9 @@ namespace Texel
 
             if (videoPlayer)
                 videoPlayer._SetAudioManager(this);
-
-            SendCustomEventDelayedFrames(nameof(_PostInit), 1);
         }
 
-        public void _PostInit()
+        protected override void _PostInit()
         {
             if (videoPlayer)
             {
@@ -758,7 +755,23 @@ namespace Texel
                 _DebugLog(message);
         }
 
-        public void _UpdateDebugState()
+        public void _SetDebugState(DebugState debug)
+        {
+            if (debugState)
+            {
+                debugState._Unregister(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
+                debugState = null;
+            }
+
+            if (!debug)
+                return;
+
+            debugState = debug;
+            debugState._Register(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
+            debugState._SetContext(this, nameof(_InternalUpdateDebugState), "AudioManager");
+        }
+
+        public void _InternalUpdateDebugState()
         {
             VRCPlayerApi owner = Networking.GetOwner(gameObject);
             debugState._SetValue("muteSourceForInactiveVideo", muteSourceForInactiveVideo.ToString());

@@ -31,6 +31,7 @@ namespace Texel
         public Image loadIcon;
         public Image resyncIcon;
         public Image repeatIcon;
+        public Image repeatOneIcon;
         public Image shuffleIcon;
         public Image infoIcon;
         public Image nextIcon;
@@ -147,6 +148,11 @@ namespace Texel
             loadIcon.color = disabledColor;
             resyncIcon.color = disabledColor;
             repeatIcon.color = disabledColor;
+            if (repeatOneIcon)
+            {
+                repeatOneIcon.color = disabledColor;
+                repeatOneIcon.enabled = false;
+            }
             nextIcon.color = disabledColor;
             prevIcon.color = disabledColor;
             playlistIcon.color = disabledColor;
@@ -552,7 +558,29 @@ namespace Texel
             bool canControl = videoPlayer._CanTakeControl();
             bool enableControl = !videoPlayer.locked || canControl;
 
-            repeatIcon.color = videoPlayer.repeatPlaylist ? activeColor : normalColor;
+            TXLRepeatMode repeatMode = videoPlayer.RepeatMode;
+            if (repeatMode == TXLRepeatMode.None)
+            {
+                repeatIcon.enabled = true;
+                repeatIcon.color = normalColor;
+                if (repeatOneIcon)
+                    repeatOneIcon.enabled = false;
+            } else if (repeatMode == TXLRepeatMode.All)
+            {
+                repeatIcon.enabled = true;
+                repeatIcon.color = activeColor;
+                if (repeatOneIcon)
+                    repeatOneIcon.enabled = false;
+            } else if (repeatMode == TXLRepeatMode.Single)
+            {
+                repeatIcon.enabled = false;
+                if (repeatOneIcon)
+                {
+                    repeatOneIcon.enabled = true;
+                    repeatOneIcon.color = activeColor;
+                }
+            }
+
             Playlist playlist = (Playlist)videoPlayer.urlSource;
 
             if (Utilities.IsValid(playlist) && playlist.trackCount > 0)
@@ -922,6 +950,8 @@ namespace Texel
                 resyncIcon = (Image)_FindComponent("MainPanel/UpperRow/SyncGroup/ResyncButton/IconResync", typeof(Image));
             if (!Utilities.IsValid(repeatIcon))
                 repeatIcon = (Image)_FindComponent("MainPanel/UpperRow/ButtonGroup/RepeatButton/IconRepeat", typeof(Image));
+            if (!Utilities.IsValid(repeatOneIcon))
+                repeatIcon = (Image)_FindComponent("MainPanel/UpperRow/ButtonGroup/RepeatButton/IconRepeatOne", typeof(Image));
             if (!Utilities.IsValid(playlistIcon))
                 playlistIcon = (Image)_FindComponent("MainPanel/UpperRow/ButtonGroup/PlaylistButton/IconPlaylist", typeof(Image));
             if (!Utilities.IsValid(infoIcon))

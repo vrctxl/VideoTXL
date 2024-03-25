@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.4.0] - 03-24-24
+
+- Min CommonTXL version 1.4.0
+- Changed repeat into a tri-state option including "repeat one" to loop current track
+- Added RepeatMode property (get/set) to TXLVideoPlayer, obsoletes repeatPlaylist field
+- Added DebugState field to VideoManager and ScreenManager
+- Added _SetDebugState method to SyncPlayer, VideoManager, AudioManager, ScreenManager
+- Added _TriggerInternalAVSync method to SyncPlayer to toggle internal AV sync
+- Fixes to pass through internal AV sync and loop settings to video sources
+- Added logo screen texture to list of recognized packages textures
+- Menu options to add video player prefabs now place them under selected object in hierarchy
+- Added "Fill" screen fit option, which clips the smaller of horizontal or vertical overflow
+
 ## [2.3.2] - 02-17-24
 
 - Fixed potential race in ScreenManager that could throw an error and stop the manager

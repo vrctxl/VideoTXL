@@ -16,43 +16,43 @@ namespace Texel
         [MenuItem("GameObject/TXL/VideoTXL/Sync Video Player", false, 100)]
         public static void AddSyncPlayerToScene()
         {
-            Selection.activeObject = AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Sync Video Player.prefab");
+            Selection.activeObject = MenuUtil.AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Sync Video Player.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Other Video Players/Sync Video Player Template", false, 201)]
         public static void AddSyncPlayerTemplateToScene()
         {
-            Selection.activeObject = AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Base/Sync Video Player Base.prefab");
+            Selection.activeObject = MenuUtil.AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Base/Sync Video Player Base.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Other Video Players/Local Video Player Template", false, 202)]
         public static void AddLocalPlayerTemplateToScene()
         {
-            Selection.activeObject = AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Base/Local Video Player Base.prefab");
+            Selection.activeObject = MenuUtil.AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Base/Local Video Player Base.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Other Video Players/Basic Sync Video Player", false, 301)]
         public static void AddBasicSyncPlayerToScene()
         {
-            Selection.activeObject = AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Basic Sync Video Player.prefab");
+            Selection.activeObject = MenuUtil.AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Basic Sync Video Player.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Other Video Players/Local Video Player AVPro", false, 302)]
         public static void AddLocalAVProPlayerToScene()
         {
-            Selection.activeObject = AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Local Video Player AVPro.prefab");
+            Selection.activeObject = MenuUtil.AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Local Video Player AVPro.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Other Video Players/Local Video Player Unity", false, 303)]
         public static void AddLocalUnityPlayerToScene()
         {
-            Selection.activeObject = AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Local Video Player Unity.prefab");
+            Selection.activeObject = MenuUtil.AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Local Video Player Unity.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Other Video Players/Sync Video Player Full", false, 304)]
         public static void AddSyncPlayerFullToScene()
         {
-            Selection.activeObject = AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Sync Video Player Full.prefab");
+            Selection.activeObject = MenuUtil.AddPrefabToActiveOrScene("Packages/com.texelsaur.video/Runtime/Prefabs/Other Video Players/Sync Video Player Full.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/UI/Sync Video Player Controls", false, 211)]
@@ -124,7 +124,7 @@ namespace Texel
             TXLVideoPlayer vp = GetVideoPlayer();
             if (vp)
             {
-                GameObject playlistObj = AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/UI/PlaylistUI.prefab", vp.transform);
+                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/UI/PlaylistUI.prefab", vp.transform);
                 if (vp is SyncPlayer && ((SyncPlayer)vp).urlSource is Playlist)
                 {
                     PlaylistUI ui = playlistObj.GetComponent<PlaylistUI>();
@@ -133,7 +133,7 @@ namespace Texel
                 }
             }
             else
-                AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/UI/PlaylistUI.prefab");
+                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/UI/PlaylistUI.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/UI/Load Playlist Button", false, 301)]
@@ -142,7 +142,7 @@ namespace Texel
             TXLVideoPlayer vp = GetVideoPlayer();
             if (vp)
             {
-                GameObject playlistObj = AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/UI/PlaylistLoadButton.prefab", vp.transform);
+                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/UI/PlaylistLoadButton.prefab", vp.transform);
                 if (vp is SyncPlayer && ((SyncPlayer)vp).urlSource is Playlist)
                 {
                     PlaylistLoadData ui = playlistObj.GetComponent<PlaylistLoadData>();
@@ -151,7 +151,7 @@ namespace Texel
                 }
             }
             else
-                AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/UI/PlaylistLoadButton.prefab");
+                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/UI/PlaylistLoadButton.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Video Sources/Add Unity Video Source", true, 220)]
@@ -352,24 +352,24 @@ namespace Texel
             TXLVideoPlayer vp = GetVideoPlayer();
             if (vp)
             {
-                GameObject playlistObj = AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Playlist.prefab", vp.transform);
+                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Playlist.prefab", vp.transform);
                 if (vp is SyncPlayer && ((SyncPlayer)vp).urlSource == null)
                     ((SyncPlayer)vp).urlSource = playlistObj.GetComponent<Playlist>();
             } else
-                AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Playlist.prefab");
+                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Playlist.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Playlists and URL Sources/Playlist Data", false, 241)]
         public static void AddPlaylistDataToScene()
         {
-            PlaylistCatalog catalog = GetObjectOrParent<PlaylistCatalog>();
+            PlaylistCatalog catalog = MenuUtil.GetObjectOrParent<PlaylistCatalog>();
             if (catalog)
             {
                 AddPlaylistData(catalog);
                 return;
             }
 
-            Playlist playlist = GetObjectOrParent<Playlist>();
+            Playlist playlist = MenuUtil.GetObjectOrParent<Playlist>();
             if (playlist)
             {
                 AddPlaylistData(playlist);
@@ -383,12 +383,12 @@ namespace Texel
                 return;
             }
 
-            AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistData.prefab");
+            MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistData.prefab");
         }
 
         static void AddPlaylistData(PlaylistCatalog catalog)
         {
-            GameObject obj = AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistData.prefab", catalog.transform);
+            GameObject obj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistData.prefab", catalog.transform);
             catalog.playlists = catalog.playlists.Append(obj.GetComponent<PlaylistData>()).ToArray();
         }
 
@@ -400,7 +400,7 @@ namespace Texel
                 return;
             }
 
-            GameObject obj = AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistData.prefab", playlist.transform);
+            GameObject obj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistData.prefab", playlist.transform);
             if (playlist.playlistData == null)
                 playlist.playlistData = obj.GetComponent<PlaylistData>();
         }
@@ -413,14 +413,14 @@ namespace Texel
                 return;
             }
 
-            AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistData.prefab", vp.transform);
+            MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistData.prefab", vp.transform);
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Playlists and URL Sources/Playlist Catalog", false, 242)]
         public static void AddPlaylistCatalogToScene()
         {
             Transform parent = null;
-            Playlist playlist = GetObjectOrParent<Playlist>();
+            Playlist playlist = MenuUtil.GetObjectOrParent<Playlist>();
             if (!playlist)
             {
                 TXLVideoPlayer vp = GetVideoPlayer();
@@ -437,7 +437,7 @@ namespace Texel
 
             if (parent)
             {
-                GameObject obj = AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistCatalog.prefab", parent);
+                GameObject obj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistCatalog.prefab", parent);
                 PlaylistCatalog catalog = obj.GetComponent<PlaylistCatalog>();
                 if (playlist)
                 {
@@ -449,7 +449,7 @@ namespace Texel
                 return;
             }
 
-            AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistCatalog.prefab");
+            MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistCatalog.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Components/Access Control", false, 250)]
@@ -458,12 +458,12 @@ namespace Texel
             TXLVideoPlayer vp = GetVideoPlayer();
             if (vp)
             {
-                GameObject playlistObj = AddPrefabToObject("Packages/com.texelsaur.common/Runtime/Prefabs/AccessControl.prefab", vp.transform);
+                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.common/Runtime/Prefabs/AccessControl.prefab", vp.transform);
                 if (vp is SyncPlayer && ((SyncPlayer)vp).accessControl == null)
                     ((SyncPlayer)vp).accessControl = playlistObj.GetComponent<AccessControl>();
             }
             else
-                AddPrefabToScene("Packages/com.texelsaur.common/Runtime/Prefabs/AccessControl.prefab");
+                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.common/Runtime/Prefabs/AccessControl.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Components/URL Remapper", false, 251)]
@@ -472,12 +472,12 @@ namespace Texel
             TXLVideoPlayer vp = GetVideoPlayer();
             if (vp)
             {
-                GameObject playlistObj = AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/URL Remapper.prefab", vp.transform);
+                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/URL Remapper.prefab", vp.transform);
                 if (vp is SyncPlayer && ((SyncPlayer)vp).urlRemapper == null)
                     ((SyncPlayer)vp).urlRemapper = playlistObj.GetComponent<UrlRemapper>();
             }
             else
-                AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/URL Remapper.prefab");
+                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/URL Remapper.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Components/Sync Playback Zone", false, 252)]
@@ -486,12 +486,12 @@ namespace Texel
             TXLVideoPlayer vp = GetVideoPlayer();
             if (vp)
             {
-                GameObject playlistObj = AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/SyncPlaybackZone.prefab", vp.transform);
+                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/SyncPlaybackZone.prefab", vp.transform);
                 if (vp is SyncPlayer && ((SyncPlayer)vp).playbackZoneMembership == null)
                     ((SyncPlayer)vp).playbackZoneMembership = playlistObj.GetComponent<ZoneMembership>();
             }
             else
-                AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/SyncPlaybackZone.prefab");
+                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/SyncPlaybackZone.prefab");
         }
 
         [MenuItem("Tools/TXL/VideoTXL/Repair Prefabs in Scene")]
@@ -537,96 +537,22 @@ namespace Texel
 
         public static Transform GetVideoManagerRoot()
         {
-            return GetComponentRoot<VideoManager>();
+            return MenuUtil.GetComponentRoot<TXLVideoPlayer, VideoManager>();
         }
 
         public static Transform GetAudioManagerRoot()
         {
-            return GetComponentRoot<AudioManager>();
-        }
-
-        public static T GetObjectOrParent<T>() where T : UdonSharpBehaviour
-        {
-            if (!Selection.activeTransform)
-                return null;
-            T com = Selection.activeTransform.GetComponent<T>();
-            if (!com)
-                com = Selection.activeTransform.GetComponentInParent<T>();
-
-            return com;
+            return MenuUtil.GetComponentRoot<TXLVideoPlayer, AudioManager>();
         }
 
         public static TXLVideoPlayer GetVideoPlayer()
         {
-            return GetObjectOrParent<TXLVideoPlayer>();
-        }
-
-        public static Transform GetComponentRoot<T>() where T : UdonSharpBehaviour
-        {
-            TXLVideoPlayer vp = GetVideoPlayer();
-            if (!vp)
-                return null;
-
-            T videoMan = vp.GetComponentInChildren<T>();
-            if (!videoMan)
-                return null;
-
-            return videoMan.transform;
-        }
-
-        public static GameObject AddPrefabToObject(string path, Transform parent)
-        {
-            if (!parent)
-                return null;
-
-            GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (!asset)
-                return null;
-
-            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(asset);
-            instance.transform.parent = parent;
-            instance.transform.localPosition = Vector3.zero;
-            instance.transform.localRotation = Quaternion.identity;
-            instance.transform.localScale = Vector3.one;
-
-            EditorGUIUtility.PingObject(instance);
-            return instance;
-        }
-
-        public static GameObject AddPrefabToScene(string path)
-        {
-            GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (asset != null)
-            {
-                GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(asset);
-
-                EditorGUIUtility.PingObject(instance);
-                return instance;
-            }
-
-            return null;
-        }
-
-        public static GameObject AddPrefabToActiveOrScene(string path)
-        {
-            GameObject active = GetActiveObject();
-            if (active)
-                return AddPrefabToObject(path, active.transform);
-            else
-                return AddPrefabToScene(path);
-        }
-
-        public static GameObject GetActiveObject()
-        {
-            if (!Selection.activeTransform)
-                return null;
-
-            return Selection.activeTransform.gameObject;
+            return MenuUtil.GetObjectOrParent<TXLVideoPlayer>();
         }
 
         public static void AddVideoSource(string path, Transform parent)
         {
-            GameObject source = AddPrefabToObject(path, parent);
+            GameObject source = MenuUtil.AddPrefabToObject(path, parent);
             if (!source)
                 return;
 
@@ -639,7 +565,7 @@ namespace Texel
 
         public static void AddAudioProfile(string path, Transform parent)
         {
-            GameObject source = AddPrefabToObject(path, parent);
+            GameObject source = MenuUtil.AddPrefabToObject(path, parent);
             if (!source)
                 return;
 
