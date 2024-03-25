@@ -36,7 +36,10 @@ namespace Texel
         public const int EVENT_VIDEO_LOCK_UPDATE = 3;
         public const int EVENT_VIDEO_PLAYLIST_UPDATE = 4;
         public const int EVENT_VIDEO_READY = 5;
-        protected const int EVENT_COUNT = 6;
+        public const int EVENT_BIND_VIDEOMANAGER = 6;
+        public const int EVENT_UNBIND_VIDEOMANAGER = 7;
+        public const int EVENT_VIDEO_SOURCE_CHANGE = 8;
+        protected const int EVENT_COUNT = 9;
 
         public const int VIDEO_STATE_STOPPED = 0;
         public const int VIDEO_STATE_LOADING = 1;
@@ -158,7 +161,13 @@ namespace Texel
 
         public virtual void _SetVideoManager(VideoManager manager)
         {
+            if (videoMux)
+                _UpdateHandlers(EVENT_UNBIND_VIDEOMANAGER);
+
             videoMux = manager;
+
+            if (videoMux)
+                _UpdateHandlers(EVENT_BIND_VIDEOMANAGER);
         }
 
         public virtual void _SetAudioManager(AudioManager manager)

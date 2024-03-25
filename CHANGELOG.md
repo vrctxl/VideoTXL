@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.4.1] - 03-25-24
+
+- Fixed shared material-based screens flipped and incorrect gamma on Quest
+- Fixed video source change not recognized by screen manager in some cases
+- Added EVENT_BIND_VIDEOMANAGER, EVENT_UNBIND_VIDEOMANAGER, EVENT_VIDEO_SOURCE_CHANGE events to TXLVideoPlayer
+
 ## [2.4.0] - 03-24-24
 
 - Min CommonTXL version 1.4.0

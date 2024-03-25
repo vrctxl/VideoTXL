@@ -1220,7 +1220,7 @@ namespace Texel
                 urlRemapper._SetVideoSource(videoMux.ActiveSource);
 
             playerSource = (short)videoMux.ActiveSourceType;
-            _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
+            _UpdateHandlers(EVENT_VIDEO_SOURCE_CHANGE);
 
             if (!_suppressSourceUpdate && _inSustainZone)
                 _ForceResync(true);
