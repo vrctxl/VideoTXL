@@ -13,6 +13,8 @@ namespace Texel
         [Header("Optional Components")]
         [Tooltip("Set of input URLs to remap to alternate URLs on a per-platform basis")]
         public UrlRemapper urlRemapper;
+        [Tooltip("Component that ties this video player to primary video player, loading an alternate URL and syncing time against the primary")]
+        public DependentSource dependentSource;
 
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
@@ -67,6 +69,9 @@ namespace Texel
 
             if (Utilities.IsValid(urlRemapper))
                 urlRemapper._SetGameMode(IsQuest ? UrlRemapper.GAME_MODE_QUEST : UrlRemapper.GAME_MODE_PC);
+
+            if (dependentSource)
+                dependentSource._BindDepdendentVideoPlayer(this);
 
             if (Utilities.IsValid(staticUrlSource))
             {

@@ -916,6 +916,7 @@ namespace Texel
 
             static GUIContent labelHeader = new GUIContent("Global Property Updates", "");
             static GUIContent labelPropertyMap = new GUIContent("Property Map", "");
+            static GUIContent labelCreatePropertyMap = new GUIContent("+", "Create an empty Screen Property Map object under the screen manager and asign it.  The new map will need to be filled out.");
 
             static bool expandSection = true;
 
@@ -937,7 +938,20 @@ namespace Texel
             protected override void OnDrawElement(Rect rect, int index, bool isActive, bool isFocused)
             {
                 InitRect(ref rect);
-                DrawObjectField(ref rect, 0, labelPropertyMap, GetElementSafe(globalPropListProperty, index));
+
+                SerializedProperty mapProp = GetElementSafe(globalPropListProperty, index);
+                Color addColor = new Color(1, .32f, .29f);
+
+                if (mapProp.objectReferenceValue != null)
+                    DrawObjectField(ref rect, 0, labelPropertyMap, mapProp);
+                else if (DrawObjectFieldWithAdd(ref rect, 0, labelPropertyMap, mapProp, labelCreatePropertyMap, EditorGUIUtility.singleLineHeight * 1, addColor))
+                {
+                    GameObject propMap = CreateEmptyPropertyMap(target, null);
+                    mapProp.objectReferenceValue = propMap.GetComponent<ScreenPropertyMap>();
+                    Selection.activeObject = propMap;
+                }
+
+                //DrawObjectField(ref rect, 0, labelPropertyMap, GetElementSafe(globalPropListProperty, index));
             }
 
             protected override float OnElementHeight(int index)

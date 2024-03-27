@@ -220,6 +220,13 @@ namespace Texel
             prop.intValue = DrawPopupField(ref rect, indentLevel, label, prop.intValue, options);
         }
 
+        protected void DrawPropertyField(ref Rect rect, int indentLevel, GUIContent label, SerializedProperty prop)
+        {
+            Rect lineRect = Indent(ref rect, indentLevel);
+            Rect fieldRect = DrawPrefix(lineRect, indentLevel, label);
+            EditorGUI.PropertyField(fieldRect, prop, GUIContent.none);
+        }
+
         protected T DrawObjectField<T>(ref Rect rect, int indentLevel, GUIContent label, T obj, bool allowSceneObjects) where T : UnityEngine.Object
         {
             Rect lineRect = Indent(ref rect, indentLevel);
