@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.4.2] - 03-27-24
+
+- Added DependentSource component for linking a Local Video Player to another video player
+- Added optional Dependent Source field to Local Vidoe Player
+- Added button to create new property map to global shader entries in screen manager inspector
+
 ## [2.4.1] - 03-25-24
 
 - Fixed shared material-based screens flipped and incorrect gamma on Quest
