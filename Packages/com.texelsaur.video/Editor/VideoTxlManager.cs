@@ -480,7 +480,21 @@ namespace Texel
                 MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/URL Remapper.prefab");
         }
 
-        [MenuItem("GameObject/TXL/VideoTXL/Components/Sync Playback Zone", false, 252)]
+        [MenuItem("GameObject/TXL/VideoTXL/Components/Dependent Source", false, 252)]
+        public static void AddDependentSourceToScene()
+        {
+            TXLVideoPlayer vp = GetVideoPlayer();
+            if (vp)
+            {
+                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Dependent Source.prefab", vp.transform);
+                if (vp is LocalPlayer && ((LocalPlayer)vp).urlRemapper == null)
+                    ((LocalPlayer)vp).dependentSource = playlistObj.GetComponent<DependentSource>();
+            }
+            else
+                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Dependent Source.prefab");
+        }
+
+        [MenuItem("GameObject/TXL/VideoTXL/Components/Sync Playback Zone", false, 253)]
         public static void AddSyncPlaybackZoneToScene()
         {
             TXLVideoPlayer vp = GetVideoPlayer();

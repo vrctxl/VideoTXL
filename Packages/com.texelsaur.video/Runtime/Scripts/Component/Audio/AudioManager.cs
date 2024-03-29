@@ -93,7 +93,7 @@ namespace Texel
 
         protected override void _Init()
         {
-            _DebugEvent("Init");
+            _DebugLog("Init");
 
             if (!videoPlayer)
             {
@@ -106,6 +106,9 @@ namespace Texel
             }
 
             _SetDebugState(debugState);
+
+            if (debugEvents)
+                eventDebugLog = debugLog;
 
             if (!Utilities.IsValid(audioControls))
                 audioControls = new Component[0];
@@ -381,7 +384,6 @@ namespace Texel
 
         public void _OnVideoStateUpdate()
         {
-            _DebugEvent("Event OnVideoStateUpdate");
             if (!muteSourceForInactiveVideo)
                 return;
 
@@ -400,7 +402,6 @@ namespace Texel
 
         public void _OnVideoSourceChange()
         {
-            _DebugEvent("Event OnVideoSourceChange");
             _SelectVideoSource(videoPlayer.VideoManager.ActiveSource);
         }
 
@@ -747,12 +748,6 @@ namespace Texel
                 Debug.LogError("[VideoTXL:AudioManager] " + message);
             if (Utilities.IsValid(debugLog))
                 debugLog._Write("AudioManager", message);
-        }
-
-        void _DebugEvent(string message)
-        {
-            if (debugEvents)
-                _DebugLog(message);
         }
 
         public void _SetDebugState(DebugState debug)

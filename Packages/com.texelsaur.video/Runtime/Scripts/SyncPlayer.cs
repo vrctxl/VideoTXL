@@ -129,7 +129,7 @@ namespace Texel
         protected override void _Init()
         {
             base._Init();
-            DebugEvent("Init");
+            DebugLog("Init");
 
             if (IsQuest)
                 DebugLog("Detected Quest platform");
@@ -138,6 +138,9 @@ namespace Texel
 
             if (Utilities.IsValid(debugState))
                 _SetDebugState(debugState);
+
+            if (eventLogging)
+                eventDebugLog = debugLog;
 
             _hasAccessControl = Utilities.IsValid(accessControl);
             _hasSustainZone = Utilities.IsValid(playbackZoneMembership);
@@ -337,7 +340,7 @@ namespace Texel
 
         public void _OnPlaybackZoneEnter()
         {
-            DebugEvent("Event OnPlaybackZoneEnter");
+            DebugTrace("Event OnPlaybackZoneEnter");
 
             if (playerArg == Networking.LocalPlayer)
             {
@@ -377,7 +380,7 @@ namespace Texel
 
         public void _OnPlaybackZoneExit()
         {
-            DebugEvent("Event OnPlaybackZoneExit");
+            DebugTrace("Event OnPlaybackZoneExit");
 
             if (playerArg == Networking.LocalPlayer)
             {
@@ -400,7 +403,7 @@ namespace Texel
 
         /*public void _OnPlaylistListChange()
         {
-            DebugEvent("Event OnPlaylistListChange");
+            DebugTrace("Event OnPlaylistListChange");
             _UpdateHandlers(EVENT_VIDEO_PLAYLIST_UPDATE);
 
             if (Networking.IsOwner(gameObject))
@@ -768,7 +771,7 @@ namespace Texel
 
         public void _OnTrackChange()
         {
-            DebugEvent("Event OnTrackChange");
+            DebugTrace("Event OnTrackChange");
             if (Networking.IsOwner(gameObject))
                 _PlayPlaylistUrl();
         }
@@ -923,7 +926,7 @@ namespace Texel
 
         public void _OnVideoReady()
         {
-            DebugEvent("Event OnVideoReady");
+            DebugTrace("Event OnVideoReady");
 
             float position = videoMux.VideoTime;
             float duration = videoMux.VideoDuration;
@@ -960,7 +963,7 @@ namespace Texel
 
         public void _OnVideoStart()
         {
-            DebugEvent("Event OnVideoStart");
+            DebugTrace("Event OnVideoStart");
 
             _videoReady = false;
 
@@ -1013,7 +1016,7 @@ namespace Texel
         {
             _videoReady = false;
 
-            DebugEvent("Event OnVideoEnd");
+            DebugTrace("Event OnVideoEnd");
             if (!seekableSource && Time.time - _playStartTime < 10)
             {
                 Debug.Log("Video end encountered at start of stream, ignoring");
@@ -1116,7 +1119,7 @@ namespace Texel
         // AVPro sends loop event but does not auto-loop, and setting time sometimes deadlocks player *sigh*
         public void _OnVideoLoop()
         {
-            DebugEvent("Event OnVideoLoop");
+            DebugTrace("Event OnVideoLoop");
             /*
             float current = _currentPlayer.GetTime();
             float duration = _currentPlayer.GetDuration();
@@ -1136,7 +1139,7 @@ namespace Texel
         {
             _videoReady = false;
 
-            DebugEvent($"Event OnVideoError");
+            DebugTrace($"Event OnVideoError");
             if (playerState == VIDEO_STATE_STOPPED)
                 return;
 
@@ -1214,7 +1217,7 @@ namespace Texel
 
         public void _OnSourceChange()
         {
-            DebugEvent($"Event OnSourceChange activeSourceType={videoMux.ActiveSourceType}");
+            DebugTrace($"Event OnSourceChange activeSourceType={videoMux.ActiveSourceType}");
 
             if (urlRemapper)
                 urlRemapper._SetVideoSource(videoMux.ActiveSource);
@@ -1232,7 +1235,7 @@ namespace Texel
             if (audioManager.SelectedChannelGroup)
                 groupName = audioManager.SelectedChannelGroup.groupName;
 
-            DebugEvent($"Event OnAudioProfileChanged channelGroup={groupName}");
+            DebugTrace($"Event OnAudioProfileChanged channelGroup={groupName}");
 
             if (urlRemapper)
             {
@@ -1656,12 +1659,6 @@ namespace Texel
                 Debug.LogError("[VideoTXL:SyncPlayer] " + message);
             if (Utilities.IsValid(debugLog))
                 debugLog._Write("SyncPlayer", message);
-        }
-
-        void DebugEvent(string message)
-        {
-            if (eventLogging)
-                DebugLog(message);
         }
 
         void DebugTrace(string message)
