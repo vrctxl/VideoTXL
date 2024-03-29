@@ -57,7 +57,7 @@ namespace Texel
         UdonBehaviour audioLinkCache;
         UdonBehaviour vrslAudioDmxRuntimeCache;
         
-        bool expandDebug = false;
+        static bool expandDebug = false;
 
         int groupCount = 0;
         int avproAudiolinkCount = 0;

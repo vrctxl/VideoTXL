@@ -19,9 +19,12 @@ namespace Texel
         SerializedProperty debugLogProperty;
         SerializedProperty debugStateProperty;
         SerializedProperty debugLoggingProperty;
+        SerializedProperty eventLoggingProperty;
 
         DateTime lastValidate;
         bool audioValid = true;
+
+        static bool expandDebug = false;
 
         private void OnEnable()
         {
@@ -32,6 +35,7 @@ namespace Texel
             debugLogProperty = serializedObject.FindProperty(nameof(VideoManager.debugLog));
             debugStateProperty = serializedObject.FindProperty(nameof(VideoManager.debugState));
             debugLoggingProperty = serializedObject.FindProperty(nameof(VideoManager.debugLogging));
+            eventLoggingProperty = serializedObject.FindProperty(nameof(VideoManager.eventLogging));
 
             Revalidate();
         }
@@ -47,6 +51,9 @@ namespace Texel
         {
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
+
+            GUIStyle boldFoldoutStyle = new GUIStyle(EditorStyles.foldout);
+            boldFoldoutStyle.fontStyle = FontStyle.Bold;
 
             VideoManager videoManager = (VideoManager)serializedObject.targetObject;
             TXLVideoPlayer videoPlayer = (TXLVideoPlayer)videoPlayerProperty.objectReferenceValue;
@@ -84,14 +91,6 @@ namespace Texel
                 EditorGUI.indentLevel--;
             }
 
-            //EditorGUILayout.Space();
-            //EditorGUILayout.PropertyField(sourcesProperty, new GUIContent("Sources", "The list of available video sources."));
-
-            //List<VideoSource> unitySources = VideoComponentUpdater.GetVideoSources(videoManager, VideoSource.VIDEO_SOURCE_UNITY);
-            //List<VideoSource> avproSources = VideoComponentUpdater.GetVideoSources(videoManager, VideoSource.VIDEO_SOURCE_AVPRO);
-            //if (unitySources.Count == 0 && avproSources.Count == 0)
-            //    EditorGUILayout.HelpBox("No video sources are defined.  Video playback will not work until at least one video source is added.  Check documentation linked above for information on adding new video sources, or use another version of the video player prefab that includes sources.", MessageType.Warning);
-
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Audio", EditorStyles.boldLabel);
             if (!audioValid)
@@ -105,10 +104,14 @@ namespace Texel
             }
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Debug Options", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
-            EditorGUILayout.PropertyField(debugStateProperty, new GUIContent("Debug State", "Track periodically refreshed internal state in a world object"));
-            EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
+            expandDebug = EditorGUILayout.Foldout(expandDebug, "Debug Options", true, boldFoldoutStyle);
+            if (expandDebug)
+            {
+                EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
+                EditorGUILayout.PropertyField(debugStateProperty, new GUIContent("Debug State", "Track periodically refreshed internal state in a world object"));
+                EditorGUILayout.PropertyField(eventLoggingProperty, new GUIContent("Include Events", "Include additional event traffic in debug log"));
+                EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
+            }
 
             serializedObject.ApplyModifiedProperties();
         }

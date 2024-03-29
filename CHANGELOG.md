@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.3] - 03-28-24
+
+- Min CommonTXL version 1.5.0
+- Added DependentSource prefab and GameObject menu option
+- Added event logging option to Video Manager
+- Changed event logging behavior in SyncPlayer, AudioManager, ScreenManager
+
 ## [2.4.2] - 03-27-24
 
 - Added DependentSource component for linking a Local Video Player to another video player

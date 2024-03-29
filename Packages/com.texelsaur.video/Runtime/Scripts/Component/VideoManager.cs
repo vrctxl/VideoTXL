@@ -30,8 +30,8 @@ namespace Texel
         public TXLVideoPlayer videoPlayer;
         public VideoSource[] sources;
 
-        [Header("Debug")]
         public bool debugLogging = true;
+        public bool eventLogging = false;
         public DebugLog debugLog;
         public DebugState debugState;
 
@@ -136,6 +136,9 @@ namespace Texel
 
             if (videoPlayer)
                 videoPlayer._SetVideoManager(this);
+
+            if (eventLogging)
+                eventDebugLog = debugLog;
 
             _SetDebugState(debugState);
         }

@@ -209,7 +209,7 @@ namespace Texel
 
         protected override void _Init()
         {
-            _DebugEvent("Init");
+            _DebugLog("Init");
 
             if (!videoPlayer)
             {
@@ -278,6 +278,9 @@ namespace Texel
 
             if (Utilities.IsValid(debugState))
                 _SetDebugState(debugState);
+
+            if (eventLogging)
+                eventDebugLog = debugLog;
         }
 
         protected override void _PostInit()
@@ -692,7 +695,7 @@ namespace Texel
 
         public void _InternalOnVideoStateUpdate()
         {
-            _DebugEvent("Event OnVideoStateUpdate");
+            _DebugLowLevel("Event OnVideoStateUpdate");
 
             if (!videoPlayer)
             {
@@ -724,7 +727,7 @@ namespace Texel
 
         public void _InternalOnSourceChanged()
         {
-            _DebugEvent("Event OnSourceChanged");
+            _DebugLowLevel("Event OnSourceChanged");
 
             if (videoPlayer && videoPlayer.VideoManager)
             {
@@ -1272,12 +1275,6 @@ namespace Texel
                 Debug.LogError("[VideoTXL:ScreenManager] " + message);
             if (Utilities.IsValid(debugLog))
                 debugLog._Write("ScreenManager", message);
-        }
-
-        void _DebugEvent(string message)
-        {
-            if (eventLogging)
-                _DebugLog(message);
         }
 
         void _DebugLowLevel(string message)
