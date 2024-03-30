@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.4.4] - 03-30-24
+
+- Fixed VideoTex not holding onto editor texture in editor window
+- Changed deault lower bound of audio fade zone from 0.01 to 0.1
+
 ## [2.4.3] - 03-28-24
 
 - Min CommonTXL version 1.5.0

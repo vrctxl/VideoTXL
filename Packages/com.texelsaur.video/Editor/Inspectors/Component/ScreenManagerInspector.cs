@@ -177,6 +177,7 @@ namespace Texel
         static bool expandObjectOverrides = false;
         static bool expandDebug = false;
         static List<ScreenManager> managers;
+        static RenderTexture videoTexRT;
 
         static string mainHelpUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager";
         static string textureOverridesUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#texture-overrides";
@@ -186,9 +187,24 @@ namespace Texel
         static ScreenManagerInspector()
         {
             EditorSceneManager.activeSceneChangedInEditMode += OnSceneLoaded;
+            AssemblyReloadEvents.afterAssemblyReload += OnAssemblyReload;
         }
 
         static void OnSceneLoaded(Scene prevScene, Scene newScene)
+        {
+            Debug.Log("SceneLoaded");
+            UpdateManagers();
+            UpdateEditorTextures();
+        }
+
+        static void OnAssemblyReload()
+        {
+            Debug.Log("AssemblyReload");
+            UpdateManagers();
+            UpdateEditorTextures();
+        }
+
+        static void UpdateManagers()
         {
             ScreenManager[] found = FindObjectsOfType<ScreenManager>();
 
@@ -196,8 +212,6 @@ namespace Texel
             managers.AddRange(found);
 
             Debug.Log($"[VideoTXL] Found {managers.Count} ScreenManagers in scene");
-
-            UpdateEditorTextures();
         }
 
         static void UpdateEditorTextures()
@@ -1146,6 +1160,25 @@ namespace Texel
                     UpdateSharedMaterial(manager, crtMat, map);
 
                     crt.Update(2);
+
+                    if (manager.renderOutGlobalTex[i])
+                    {
+                        Debug.Log($"Set Global Tex {crt} {crt.IsCreated()}");
+
+                        if (!videoTexRT)
+                            videoTexRT = new RenderTexture(crt);
+                        else
+                        {
+                            if (videoTexRT.IsCreated())
+                                videoTexRT.Release();
+                            videoTexRT.width = crt.width;
+                            videoTexRT.height = crt.height;
+                        }
+                        videoTexRT.Create();
+
+                        Graphics.Blit(null, videoTexRT, crtMat);
+                        Shader.SetGlobalTexture("_Udon_VideoTex", videoTexRT);
+                    }
                 }
             }
         }
