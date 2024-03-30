@@ -27,12 +27,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7187779247017602230}
+  serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7187779247395199962}
-  m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &7187779247017602227
 MonoBehaviour:
@@ -59,10 +60,12 @@ MonoBehaviour:
   channelName: Default
   volume: 1
   lockVolume: 0
+  lockMute: 0
   mute: 0
   fadeZone: {fileID: 2831270152470892240}
   track: 0
   audioLinkSource: 1
+  vrslAudioDMXSource: 0
   audioSourceTemplate: {fileID: 7187779247017602226}
   fade: 1
 --- !u!82 &7187779247017602226
@@ -230,15 +233,16 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7187779247395199965}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7225166866993981886}
   - {fileID: 7187779247017602231}
   - {fileID: 7187779248970549324}
   m_Father: {fileID: 0}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &7187779247395199960
 MonoBehaviour:
@@ -321,12 +325,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7187779247886805888}
+  serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7187779248970549324}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &7187779247886805901
 MonoBehaviour:
@@ -353,10 +358,12 @@ MonoBehaviour:
   channelName: Default
   volume: 1
   lockVolume: 0
+  lockMute: 0
   mute: 0
   fadeZone: {fileID: 2831270152470892240}
   track: 0
   audioLinkSource: 0
+  vrslAudioDMXSource: 0
   audioSourceTemplate: {fileID: 7187779247886805900}
   fade: 1
 --- !u!82 &7187779247886805900
@@ -522,19 +529,21 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7187779248970549327}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7187779247886805889}
   m_Father: {fileID: 7187779247395199962}
-  m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &7187779248207907900
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
+    serializedVersion: 3
     m_TransformParent: {fileID: 7187779247395199962}
     m_Modifications:
     - target: {fileID: 541819371107018114, guid: 88a505f83830feb4497450b7a09f3969,
@@ -609,13 +618,10 @@ PrefabInstance:
       objectReference: {fileID: 4938951356119171820, guid: 88a505f83830feb4497450b7a09f3969,
         type: 3}
     m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 88a505f83830feb4497450b7a09f3969, type: 3}
---- !u!4 &7225166866993981886 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 541819371107018114, guid: 88a505f83830feb4497450b7a09f3969,
-    type: 3}
-  m_PrefabInstance: {fileID: 7187779248207907900}
-  m_PrefabAsset: {fileID: 0}
 --- !u!114 &2831270152470892240 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4938951356119171820, guid: 88a505f83830feb4497450b7a09f3969,
@@ -628,3 +634,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f701cb8a66aac3c4c868a6202d0d4b0f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!4 &7225166866993981886 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 541819371107018114, guid: 88a505f83830feb4497450b7a09f3969,
+    type: 3}
+  m_PrefabInstance: {fileID: 7187779248207907900}
+  m_PrefabAsset: {fileID: 0}
