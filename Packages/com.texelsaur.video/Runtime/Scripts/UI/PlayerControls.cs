@@ -680,7 +680,7 @@ namespace Texel
                 }
                 else if (playerState == TXLVideoPlayer.VIDEO_STATE_ERROR)
                 {
-                    stopIcon.color = disabledColor;
+                    stopIcon.color = videoPlayer.retryOnError ? normalColor : disabledColor;
                     //loadIcon.color = normalColor;
                     resyncIcon.color = normalColor;
                     pauseIcon.color = disabledColor;

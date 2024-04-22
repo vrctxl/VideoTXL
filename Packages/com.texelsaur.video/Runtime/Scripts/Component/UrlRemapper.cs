@@ -21,13 +21,14 @@ namespace Texel
         public bool[] latencyRule;
         public bool[] resolutionRule;
         public bool[] audioProfileRule;
+        public bool[] customRule;
 
         public GamePlatform[] platforms;
         public VideoSourceBackend[] sourceTypes;
         public VideoSourceLatency[] sourceLatencies;
         public int[] sourceResolutions;
         public string[] audioProfiles;
-
+        public BasicTest[] customTests;
 
         public bool[] applyPC;
         public bool[] applyQuest;
@@ -108,6 +109,9 @@ namespace Texel
                     if (audioProfileRule[i] && audioProfile.groupName != audioProfiles[i])
                         continue;
                 }
+
+                if (customRule[i] && customTests[i] && !customTests[i]._Test())
+                    continue;
 
                 if (remappedUrls.Length <= i || !Utilities.IsValid(remappedUrls[i]))
                     continue;

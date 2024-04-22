@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.4.5] - 04-22-24
+
+- Added custom rule support to URL Remapper
+- Fixed screen manager not updating double-buffered CRTs between certain state transitions
+- Fixed stop button not appearing available when rery on error was enabled
+- Fixed some sync player state not being initialized ahead of first deserialization
+- Fixed playlist not network syncing if it wasn't shuffled
+
 ## [2.4.4] - 03-30-24
 
 - Fixed VideoTex not holding onto editor texture in editor window

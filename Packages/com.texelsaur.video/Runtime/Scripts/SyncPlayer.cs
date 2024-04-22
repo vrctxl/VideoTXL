@@ -169,16 +169,15 @@ namespace Texel
                 urlSource._Register(Playlist.EVENT_TRACK_CHANGE, this, nameof(_OnTrackChange));
             }
 
+            _syncLocked = defaultLocked;
+            _SyncRepeatMode = loop ? TXLRepeatMode.All : TXLRepeatMode.None;
+            _syncScreenFit = (byte)defaultScreenFit;
+            HoldVideos = holdLoadedVideos;
+            _UpdateLockState(_syncLocked);
+            _UpdateScreenFit(_syncScreenFit);
+
             if (Networking.IsOwner(gameObject))
-            {
-                _syncLocked = defaultLocked;
-                _SyncRepeatMode = loop ? TXLRepeatMode.All : TXLRepeatMode.None;
-                _syncScreenFit = (byte)defaultScreenFit;
-                HoldVideos = holdLoadedVideos;
-                _UpdateLockState(_syncLocked);
-                _UpdateScreenFit(_syncScreenFit);
                 RequestSerialization();
-            }
 
             if (autoInternalAVSync)
                 SendCustomEventDelayedSeconds("_AVSyncStart", 1);
