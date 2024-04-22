@@ -20,12 +20,14 @@ namespace Texel
         SerializedProperty latencyRuleProperty;
         SerializedProperty resolutionRuleProperty;
         SerializedProperty audioProfileRuleProperty;
+        SerializedProperty customRuleProperty;
 
         SerializedProperty platformsProperty;
         SerializedProperty sourceTypesProperty;
         SerializedProperty sourceLatenciesProperty;
         SerializedProperty sourceResolutionsProperty;
         SerializedProperty audioProfilesProperty;
+        SerializedProperty customTestsProperty;
 
         private void OnEnable()
         {
@@ -37,12 +39,14 @@ namespace Texel
             latencyRuleProperty = serializedObject.FindProperty(nameof(UrlRemapper.latencyRule));
             resolutionRuleProperty = serializedObject.FindProperty(nameof(UrlRemapper.resolutionRule));
             audioProfileRuleProperty = serializedObject.FindProperty(nameof(UrlRemapper.audioProfileRule));
+            customRuleProperty = serializedObject.FindProperty(nameof(UrlRemapper.customRule));
 
             platformsProperty = serializedObject.FindProperty(nameof(UrlRemapper.platforms));
             sourceTypesProperty = serializedObject.FindProperty(nameof(UrlRemapper.sourceTypes));
             sourceLatenciesProperty = serializedObject.FindProperty(nameof(UrlRemapper.sourceLatencies));
             sourceResolutionsProperty = serializedObject.FindProperty(nameof(UrlRemapper.sourceResolutions));
             audioProfilesProperty = serializedObject.FindProperty(nameof(UrlRemapper.audioProfiles));
+            customTestsProperty = serializedObject.FindProperty(nameof(UrlRemapper.customTests));
         }
 
         public override void OnInspectorGUI()
@@ -60,7 +64,8 @@ namespace Texel
             _showRuleFoldout = EditorTools.MultiArraySize(serializedObject, _showRuleFoldout,
                 referenceUrlsProperty, remappedUrlsProperty,
                 platformRuleProperty, sourceTypeRuleProperty, latencyRuleProperty, resolutionRuleProperty, audioProfileRuleProperty,
-                platformsProperty, sourceTypesProperty, sourceLatenciesProperty, sourceResolutionsProperty, audioProfilesProperty);
+                platformsProperty, sourceTypesProperty, sourceLatenciesProperty, sourceResolutionsProperty, audioProfilesProperty,
+                customRuleProperty, customTestsProperty);
 
             EditorGUILayout.Space();
 
@@ -83,12 +88,14 @@ namespace Texel
                     SerializedProperty latencyRule = latencyRuleProperty.GetArrayElementAtIndex(i);
                     SerializedProperty resolutionRule = resolutionRuleProperty.GetArrayElementAtIndex(i);
                     SerializedProperty audioProfileRule = audioProfileRuleProperty.GetArrayElementAtIndex(i);
+                    SerializedProperty customRule = customRuleProperty.GetArrayElementAtIndex(i);
 
                     SerializedProperty platform = platformsProperty.GetArrayElementAtIndex(i);
                     SerializedProperty sourceType = sourceTypesProperty.GetArrayElementAtIndex(i);
                     SerializedProperty latency = sourceLatenciesProperty.GetArrayElementAtIndex(i);
                     SerializedProperty resolution = sourceResolutionsProperty.GetArrayElementAtIndex(i);
                     SerializedProperty audioProfile = audioProfilesProperty.GetArrayElementAtIndex(i);
+                    SerializedProperty customTest = customTestsProperty.GetArrayElementAtIndex(i);
 
                     EditorGUILayout.PropertyField(platformRule, new GUIContent("Apply Platform Rule"));
                     if (platformRule.boolValue)
@@ -113,6 +120,10 @@ namespace Texel
                     EditorGUILayout.PropertyField(audioProfileRule, new GUIContent("Apply Audio Profile Rule"));
                     if (audioProfileRule.boolValue)
                         EditorGUILayout.PropertyField(audioProfile, new GUIContent("Audio Profile Matches"));
+
+                    EditorGUILayout.PropertyField(customRule, new GUIContent("Apply Custom Rule"));
+                    if (customRule.boolValue)
+                        EditorGUILayout.PropertyField(customTest, new GUIContent("Custom Rule Passes"));
 
                     EditorGUI.indentLevel--;
                 }

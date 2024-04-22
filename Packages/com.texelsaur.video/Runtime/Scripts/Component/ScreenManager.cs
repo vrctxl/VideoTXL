@@ -1113,7 +1113,7 @@ namespace Texel
                     else
                     {
                         crt.updateMode = CustomRenderTextureUpdateMode.OnDemand;
-                        crt.Update();
+                        crt.Update(crt.doubleBuffered ? 2 : 1);
                     }
                 }
             }

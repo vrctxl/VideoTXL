@@ -46,7 +46,7 @@ namespace Texel
         [UdonSynced]
         short syncPlaylistSerial = 0;
         [UdonSynced]
-        byte[] syncTrackerOrder;
+        byte[] syncTrackerOrder = new byte[0];
         [UdonSynced, FieldChangeCallback("ShuffleEnabled")]
         bool syncShuffle;
         [UdonSynced]
@@ -91,7 +91,8 @@ namespace Texel
                 syncShuffle = shuffle;
                 syncAutoAdvance = autoAdvance;
                 RequestSerialization();
-            } else
+            }
+            else
                 SendCustomEventDelayedSeconds(nameof(_InitCheck), 5);
         }
 
@@ -294,13 +295,14 @@ namespace Texel
 
         void _PostLoadShuffle()
         {
-            syncTrackerOrder = null;
             if (syncShuffle)
             {
                 syncTrackerOrder = new byte[playlist.Length];
                 _Shuffle();
                 syncShuffleSerial += 1;
             }
+            else
+                syncTrackerOrder = new byte[0];
         }
 
         void _PostLoadTrack()
@@ -496,7 +498,7 @@ namespace Texel
         {
             if (index < 0 || index >= trackCount)
                 return -1;
-            if (syncTrackerOrder == null)
+            if (syncTrackerOrder == null || syncTrackerOrder.Length == 0)
                 return index;
 
             return syncTrackerOrder[index];
@@ -591,6 +593,8 @@ namespace Texel
 
         void _LoadSyncedCatalogIndex()
         {
+            DebugLog($"Load synced catalog index {syncCatalogueIndex}");
+
             PlaylistData data = null;
             if (playlistCatalog && syncCatalogueIndex >= 0 && syncCatalogueIndex < playlistCatalog.PlaylistCount)
                 data = playlistCatalog.playlists[syncCatalogueIndex];
