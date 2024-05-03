@@ -116,7 +116,7 @@ namespace Texel.Video.Internal
             ytdlProcess.StartInfo.UseShellExecute = false;
             ytdlProcess.StartInfo.RedirectStandardOutput = true;
             ytdlProcess.StartInfo.FileName = _youtubeDLPath;
-            ytdlProcess.StartInfo.Arguments = $"--no-check-certificate --no-cache-dir --rm-cache-dir -f \"mp4[height<=?{resolution}]/best[height<=?{resolution}]\" --get-url \"{url}\"";
+            ytdlProcess.StartInfo.Arguments = $"--no-check-certificate --no-cache-dir --rm-cache-dir -f \"mp4[height<=?{resolution}][protocol=https]/best[height<=?{resolution}][protocol=https]\" --get-url \"{url}\"";
 
             Debug.Log($"[<color=#9C6994>USharpVideo YTDL</color>] Attempting to resolve URL '{url}'");
 

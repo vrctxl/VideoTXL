@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.4.6] - 05-02-24
+
+- Fixed editor URL resolver to resolve correctly with latest yt-dlp update
+
 ## [2.4.5] - 04-22-24
 
 - Added custom rule support to URL Remapper
