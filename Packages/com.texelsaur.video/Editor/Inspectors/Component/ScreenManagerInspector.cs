@@ -226,9 +226,10 @@ namespace Texel
                 UpdateEditorCRT(manager);
             }
 
-            EditorWindow view = EditorWindow.GetWindow<SceneView>();
-            if (view)
-                view.Repaint();
+            // Probably responsible for the ghost windows, but without may leave editor textures un-updated in some cases
+            // EditorWindow view = EditorWindow.GetWindow<SceneView>();
+            // if (view)
+            //     view.Repaint();
         }
 
         private void OnEnable()

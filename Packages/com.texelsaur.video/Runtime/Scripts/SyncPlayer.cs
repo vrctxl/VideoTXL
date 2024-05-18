@@ -881,7 +881,7 @@ namespace Texel
             if (IsQuest && _syncQuestUrl != null && _syncQuestUrl != VRCUrl.Empty && _syncQuestUrl.Get().Trim() != "")
             {
                 url = _syncQuestUrl;
-                DebugLog("Loading Quest URL variant");
+                DebugLog($"Loading Quest URL variant: {url}");
             }
 
             _preResolvedUrl = url;
@@ -890,7 +890,7 @@ namespace Texel
             {
                 url = urlRemapper._Remap(url);
                 if (Utilities.IsValid(url) && _syncUrl.Get() != url.Get())
-                    DebugLog("Remapped URL");
+                    DebugLog($"Remapped URL: {url}");
             }
 
             _resolvedUrl = url;

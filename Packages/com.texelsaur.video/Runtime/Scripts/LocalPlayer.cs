@@ -275,7 +275,7 @@ namespace Texel
             {
                 resolvedUrl = urlRemapper._Remap(url);
                 if (Utilities.IsValid(resolvedUrl) && resolvedUrl.Get() != url.Get())
-                    DebugLog("Remapped URL");
+                    DebugLog($"Remapped URL: {url}");
             }
 
             videoMux._VideoLoadURL(resolvedUrl);
