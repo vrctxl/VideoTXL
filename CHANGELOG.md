@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.4.7] - 05-18-24
+
+- Potential fix for "ghost" frozen editor windows sometimes appearing
+- Write out remapped URL in log if remapping happens
+
 ## [2.4.6] - 05-02-24
 
 - Fixed editor URL resolver to resolve correctly with latest yt-dlp update
