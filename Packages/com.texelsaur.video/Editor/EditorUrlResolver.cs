@@ -63,7 +63,7 @@ namespace Texel.Video.Internal
 
             if (!File.Exists(_youtubeDLPath))
             {
-                Debug.LogWarning("[USharpVideo YTDL] Unable to find VRC YouTube-DL or YT-DLP installation, URLs will not be resolved in editor test your videos in game.");
+                Debug.LogWarning("[<color=#A7D147>VideoTXL YTDL</color>] Unable to find VRC YouTube-DL or YT-DLP installation, URLs will not be resolved in editor test your videos in game.");
                 return;
             }
 
@@ -118,7 +118,7 @@ namespace Texel.Video.Internal
             ytdlProcess.StartInfo.FileName = _youtubeDLPath;
             ytdlProcess.StartInfo.Arguments = $"--no-check-certificate --no-cache-dir --rm-cache-dir -f \"mp4[height<=?{resolution}][protocol=https]/best[height<=?{resolution}][protocol=https]\" --get-url \"{url}\"";
 
-            Debug.Log($"[<color=#9C6994>USharpVideo YTDL</color>] Attempting to resolve URL '{url}'");
+            Debug.Log($"[<color=#A7D147>VideoTXL YTDL</color>] Attempting to resolve URL '{url}'");
 
             ytdlProcess.Start();
             _runningYtdlProcesses.Add(ytdlProcess);
@@ -142,7 +142,7 @@ namespace Texel.Video.Internal
                 errorCallback(VideoError.InvalidURL);
             else
             {
-                Debug.Log($"[<color=#9C6994>USharpVideo YTDL</color>] Successfully resolved URL '{originalUrl}' to '{resolvedURL}'");
+                Debug.Log($"[<color=#A7D147>VideoTXL YTDL</color>] Successfully resolved URL '{originalUrl}' to '{resolvedURL}'");
                 urlResolvedCallback(resolvedURL);
             }
         }

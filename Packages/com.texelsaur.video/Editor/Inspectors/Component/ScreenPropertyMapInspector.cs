@@ -16,6 +16,8 @@ namespace Texel
         SerializedProperty applyGammaProperty;
         SerializedProperty screenFitProperty;
         SerializedProperty aspectRatioProperty;
+        SerializedProperty targetAspectRatioProperty;
+        SerializedProperty doubleBufferedProperty;
 
         private void OnEnable()
         {
@@ -26,6 +28,8 @@ namespace Texel
             applyGammaProperty = serializedObject.FindProperty(nameof(ScreenPropertyMap.applyGamma));
             screenFitProperty = serializedObject.FindProperty(nameof(ScreenPropertyMap.screenFit));
             aspectRatioProperty = serializedObject.FindProperty(nameof(ScreenPropertyMap.aspectRatio));
+            targetAspectRatioProperty = serializedObject.FindProperty(nameof(ScreenPropertyMap.targetAspectRatio));
+            doubleBufferedProperty = serializedObject.FindProperty(nameof(ScreenPropertyMap.doubleBuffered));
         }
 
         public override void OnInspectorGUI()
@@ -43,6 +47,8 @@ namespace Texel
             EditorGUILayout.PropertyField(applyGammaProperty);
             EditorGUILayout.PropertyField(screenFitProperty);
             EditorGUILayout.PropertyField(aspectRatioProperty);
+            EditorGUILayout.PropertyField(targetAspectRatioProperty);
+            EditorGUILayout.PropertyField(doubleBufferedProperty);
 
             serializedObject.ApplyModifiedProperties();
         }

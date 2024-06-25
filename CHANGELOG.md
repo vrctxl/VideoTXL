@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.4.8] - 06-14-24
+
+- Included YTDL editor resolver logs with "VideoTXL" instead of "USharpVideo"
+- Reversed previous "ghost windows" fix as it is not a VideoTXL issue
+- Added "Handle Stream End Event" option to Video Manager, allowing event to be ignored
+- Added more safety checks to the options UI in case some object references are missing
+- Added init checks to several ScreenManager public methods
+- Added Target Aspect Ratio and Double Buffered properties to property map for CRT material shaders
+- Exposed Double Buffered checkbox on CRT list
+- Hid several CRT properties behind an Advanced Options checkbox by default
+- Enabled double buffering by default on newly created CRTs
+- Added single-button conversion from default screen setup to CRT setup
+
 ## [2.4.7] - 05-18-24
 
 - Potential fix for "ghost" frozen editor windows sometimes appearing

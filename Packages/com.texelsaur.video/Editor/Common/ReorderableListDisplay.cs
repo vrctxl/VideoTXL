@@ -123,6 +123,11 @@ namespace Texel
             return prop;
         }
 
+        public int Count
+        {
+            get { return list.count; }
+        }
+
         public void Draw(int indentLevel)
         {
             Rect listRect = GUILayoutUtility.GetRect(0, list.GetHeight() + 16, GUILayout.ExpandWidth(true));
@@ -137,6 +142,13 @@ namespace Texel
             fieldRect.x -= indentLevel * indentUnit;
 
             return fieldRect;
+        }
+
+        protected bool DrawToggle(ref Rect rect, int indentLevel, GUIContent label, bool value)
+        {
+            Rect lineRect = Indent(ref rect, indentLevel);
+            Rect fieldRect = DrawPrefix(lineRect, indentLevel, label);
+            return EditorGUI.Toggle(fieldRect, value);
         }
 
         protected void DrawToggle(ref Rect rect, int indentLevel, GUIContent label, SerializedProperty prop)

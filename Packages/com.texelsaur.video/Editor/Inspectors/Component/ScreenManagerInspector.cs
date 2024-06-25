@@ -20,6 +20,8 @@ namespace Texel
         public string applyGamma;
         public string screenFit;
         public string aspectRatio;
+        public string targetAspectRatio;
+        public string doubleBuffered;
 
         public EditorScreenPropertyMap() { }
 
@@ -35,6 +37,8 @@ namespace Texel
             emap.applyGamma = map.applyGamma;
             emap.screenFit = map.screenFit;
             emap.aspectRatio = map.aspectRatio;
+            emap.targetAspectRatio = map.targetAspectRatio;
+            emap.doubleBuffered = map.doubleBuffered;
 
             return emap;
         }
@@ -68,6 +72,9 @@ namespace Texel
                     map.invertY = "_FlipY";
                     map.applyGamma = "_ApplyGamma";
                     map.screenFit = "_FitMode";
+                    map.aspectRatio = "_TexAspectRatio";
+                    map.targetAspectRatio = "_AspectRatio";
+                    map.doubleBuffered = "_DoubleBuffered";
                     return map;
                 default:
                     return map;
@@ -86,6 +93,7 @@ namespace Texel
     {
         const string DEFAULT_CRT_PATH = "Packages/com.texelsaur.video/Runtime/RenderTextures/VideoTXLCRT.asset";
         const string DEFAULT_CRT_MAT_PATH = "Packages/com.texelsaur.video/Runtime/Materials/StreamOutput.mat";
+        const string DEFAULT_SCREEN_MAT_PATH = "Packages/com.texelsaur.video/Runtime/Materials/StandardMaterialScreen.mat";
 
         static readonly string[] PLACEHOLDER_IMAGE_PATHS = {
             "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/Error.jpg",
@@ -117,6 +125,7 @@ namespace Texel
 
         static bool _showErrorMatFoldout;
         static bool _showErrorTexFoldout;
+        static bool _showCrtAdvanced = false;
 
         SerializedProperty videoPlayerProperty;
 
@@ -192,6 +201,10 @@ namespace Texel
 
         static void OnSceneLoaded(Scene prevScene, Scene newScene)
         {
+            Scene scene = SceneManager.GetActiveScene();
+            if (scene == null || scene.name == "")
+                return;
+
             Debug.Log("SceneLoaded");
             UpdateManagers();
             UpdateEditorTextures();
@@ -199,6 +212,10 @@ namespace Texel
 
         static void OnAssemblyReload()
         {
+            Scene scene = SceneManager.GetActiveScene();
+            if (scene == null || scene.name == "")
+                return;
+
             Debug.Log("AssemblyReload");
             UpdateManagers();
             UpdateEditorTextures();
@@ -226,10 +243,9 @@ namespace Texel
                 UpdateEditorCRT(manager);
             }
 
-            // Probably responsible for the ghost windows, but without may leave editor textures un-updated in some cases
-            // EditorWindow view = EditorWindow.GetWindow<SceneView>();
-            // if (view)
-            //     view.Repaint();
+            EditorWindow view = EditorWindow.GetWindow<SceneView>();
+            if (view)
+                view.Repaint();
         }
 
         private void OnEnable()
@@ -281,7 +297,7 @@ namespace Texel
 
             _udonSharpBackingUdonBehaviourProperty = serializedObject.FindProperty("_udonSharpBackingUdonBehaviour");
 
-            crtList = new CrtListDisplay(serializedObject, (ScreenManager)target);
+            crtList = new CrtListDisplay(serializedObject, (ScreenManager)target, this);
             sharedMaterialList = new SharedMaterialListDisplay(serializedObject, (ScreenManager)target);
             propBlockList = new PropBlockListDisplay(serializedObject, (ScreenManager)target);
             objectOverrideList = new ObjectOverrideListDisplay(serializedObject, (ScreenManager)target);
@@ -443,6 +459,7 @@ namespace Texel
         class CrtListDisplay : ReorderableListDisplay
         {
             ScreenManager target;
+            ScreenManagerInspector inspector;
 
             SerializedProperty renderOutCrtListProperty;
             SerializedProperty renderOutMatPropsListProperty;
@@ -455,6 +472,7 @@ namespace Texel
             static string sectionUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#render-textures";
 
             static GUIContent labelHeader = new GUIContent("Render Textures", "CRTs that will be enabled during video playback and recieve view or placeholder data");
+            static GUIContent labelAdvancedOptions = new GUIContent("Show Advanced Options", "Show additional options that would be changed in advanced scenarios.");
             static GUIContent labelCrt = new GUIContent("CRT", "By default, a CRT has been generated in Assets for you, but you can change this for any other CRT.");
             static GUIContent labelCrtSize = new GUIContent("CRT Size", "The resolution of the CRT.  If the resize to video option is enabled, the specified size will be used for placeholder textures.\n\nChanges to this value will change the size of the underlying CRT asset.");
             static GUIContent labelTargetAspect = new GUIContent("Target Aspect Ratio", "The target aspect ratio should be set to the aspect ratio of the OBJECT that this CRT's texture will be applied to, such as a main video screen.  This can be different than the aspect ratio of the CRT or source video.\n\nIf the expand to fit option is enabled, the target aspect ratio will be used to calculate the expansion.\n\nIf the CRT material uses a compatible TXL shader, the aspect ratio property of the underlying material asset will be updated to match this value.");
@@ -463,12 +481,14 @@ namespace Texel
             static GUIContent labelGlobalTex = new GUIContent("Set Global VideoTex", "Sets the _Udon_VideoTex global shader property with this texture.\n\n_Udon_VideoTex is used by some video players as a common property to provide a video texture to avatars.  Avoid trying to set this value from multiple video players at the same time.");
             static GUIContent labelCrtMaterial = new GUIContent("CRT Material", "The material used to render the video data onto the CRT, fetched from the underlying asset.\n\nChanges to this value will change the material on the underlying CRT asset.  Only change this if you know what you're doing.");
             static GUIContent labelCrtPropertyMap = new GUIContent("Property Map", "The property map tells the manager what property names to set on the shader used by the CRT's material.\n\nA property map is required when non-TXL shaders are used.  If you aren't using a custom CRT material, this can be left empty.");
+            static GUIContent labelDoubleBuffer = new GUIContent("Double Buffered", "Whether the CRT should be double-buffered, set on the underlying asset.  If the CRT material supports a double-buffered property in the map, it will be set to match.\n\nDouble buffering can help conceal dropped video frames when using AVPro video sources, at the cost of an extra texture copy.");
 
             static bool expandSection = true;
 
-            public CrtListDisplay(SerializedObject serializedObject, ScreenManager target) : base(serializedObject)
+            public CrtListDisplay(SerializedObject serializedObject, ScreenManager target, ScreenManagerInspector inspector) : base(serializedObject)
             {
                 this.target = target;
+                this.inspector = inspector;
                 header = labelHeader;
 
                 renderOutCrtListProperty = AddSerializedArray(list.serializedProperty);
@@ -526,24 +546,48 @@ namespace Texel
                 if (resizeProp.boolValue)
                     DrawToggle(ref rect, 2, labelExpandSize, expandSizeProp);
 
-                Material newMat = DrawObjectField(ref rect, 1, labelCrtMaterial, crt.material, false);
-                if (newMat != crt.material)
-                    crt.material = newMat;
+                if (_showCrtAdvanced)
+                {
+                    Material newMat = DrawObjectField(ref rect, 1, labelCrtMaterial, crt.material, false);
+                    if (newMat != crt.material)
+                        crt.material = newMat;
+                }
 
                 Material mat = crt.material;
+                bool compatMat = false;
+                EditorScreenPropertyMap emap = null;
+                List<string> propNames = new List<string>();
+
                 if (mat != null)
                 {
-                    DrawObjectField(ref rect, 2, labelCrtPropertyMap, matMapProp);
+                    propNames.AddRange(mat.GetPropertyNames(MaterialPropertyType.Int));
+                    propNames.AddRange(mat.GetPropertyNames(MaterialPropertyType.Float));
+
+                    if (_showCrtAdvanced)
+                        DrawObjectField(ref rect, 2, labelCrtPropertyMap, matMapProp);
 
                     // Force earlier target aspect value into material if it's a compatible TXL shader that supports it
-                    bool compat = compatMaterialShader(mat);
-                    if (compat)
+                    compatMat = compatMaterialShader(mat);
+                    if (compatMat)
                     {
-                        float aspect = mat.GetFloat("_AspectRatio");
-                        if (aspect != targetAspectProp.floatValue)
-                            mat.SetFloat("_AspectRatio", targetAspectProp.floatValue);
+                        emap = EditorScreenPropertyMap.FromPropertyMap((ScreenPropertyMap)matMapProp.objectReferenceValue);
+                        if (emap == null)
+                            emap = EditorScreenPropertyMap.FromMaterial(mat);
+
+                        if (emap != null && emap.targetAspectRatio != "" && propNames.Contains(emap.targetAspectRatio))
+                        {
+                            float aspect = mat.GetFloat(emap.targetAspectRatio);
+                            if (aspect != targetAspectProp.floatValue)
+                                mat.SetFloat(emap.targetAspectRatio, targetAspectProp.floatValue);
+                        }
                     }
                 }
+
+                if (_showCrtAdvanced)
+                    crt.doubleBuffered = DrawToggle(ref rect, 1, labelDoubleBuffer, crt.doubleBuffered);
+
+                if (compatMat && emap != null && emap.doubleBuffered != "" && propNames.Contains(emap.doubleBuffered))
+                    mat.SetInt(emap.doubleBuffered, crt.doubleBuffered ? 1 : 0);
 
                 DrawToggle(ref rect, 1, labelGlobalTex, globalTexProp);
             }
@@ -556,12 +600,14 @@ namespace Texel
                 CustomRenderTexture crt = (CustomRenderTexture)crtProp.objectReferenceValue;
                 if (crt != null)
                 {
-                    lineCount += 5;
+                    lineCount += 4;
+                    if (_showCrtAdvanced)
+                        lineCount += 2;
 
                     if (renderOutResizeListProperty.GetArrayElementAtIndex(index).boolValue)
                         lineCount += 1;
 
-                    if (crt.material != null)
+                    if (_showCrtAdvanced && crt.material != null)
                         lineCount += 1;
                 }
 
@@ -572,15 +618,28 @@ namespace Texel
             {
                 base.OnAdd(list);
 
-                int index = list.index;
-                CustomRenderTexture crt = CreateCRTCopy();
+                AddCRT(list.index, CreateCRTCopy());
+            }
 
+            void AddCRT(int index, CustomRenderTexture crt)
+            {
                 renderOutCrtListProperty.GetArrayElementAtIndex(index).objectReferenceValue = crt;
                 renderOutSizeListProperty.GetArrayElementAtIndex(index).vector2IntValue = new Vector2Int(crt.width, crt.height);
                 if (compatMaterialShader(crt))
-                    renderOutTargetAspectListProperty.GetArrayElementAtIndex(index).floatValue = crt.material.GetFloat("_AspectRatio");
+                {
+                    EditorScreenPropertyMap emap = EditorScreenPropertyMap.FromMaterial(crt.material);
+                    if (emap != null && emap.targetAspectRatio != "")
+                        renderOutTargetAspectListProperty.GetArrayElementAtIndex(index).floatValue = crt.material.GetFloat(emap.targetAspectRatio);
+                }
 
                 renderOutGlobalTexListProperty.GetArrayElementAtIndex(index).boolValue = (index == 0);
+            }
+
+            public void AddDefault(CustomRenderTexture crt)
+            {
+                base.OnAdd(list);
+
+                AddCRT(list.index, crt);
             }
 
             public void Section()
@@ -589,12 +648,42 @@ namespace Texel
                 {
                     if (renderOutCrtListProperty.arraySize == 0)
                     {
-                        TXLEditor.IndentedHelpBox("Custom Render Textures, which can be used like other Render Textures, are the easiest way to supply a video texture to different materials/shaders in your scene.  This includes feeding systems like LTCGI and AreaLit.  Add one or more CRTs to the list to get started.\n\nIf you just want to display a screen, consider using the other override options below, which will have better performance and display your video content at native resolution.", MessageType.Info);
+                        bool defaultState = InDefaultState(target);
+                        // If you just want to display a screen, consider using the other override options below, which will have better performance and display your video content at native resolution.
+                        string info = "Due to ongoing issues with AVPro dropping video frames, a CRT setup is recommended over other update methods.";
+                        if (defaultState)
+                            info += "  Use the one-click button below to convert the video player's default screen setup to use a CRT.  This will generate the necessary CRT resources, as well as a shared material that will be assigned to the screen.";
+
+                        TXLEditor.IndentedHelpBox("Custom Render Textures (CRTs), which can be used like other Render Textures, are the easiest way to supply a video texture to different materials/shaders in your scene.  This includes feeding systems like LTCGI and AreaLit.  Add one or more CRTs to the list to get started.", MessageType.Info);
+                        TXLEditor.IndentedHelpBox(info, MessageType.Warning);
                         EditorGUILayout.Space();
+
+                        if (defaultState)
+                        {
+                            GUILayout.BeginHorizontal();
+                            GUILayout.Space(15);
+                            if (GUILayout.Button("Convert to CRT Setup"))
+                                inspector.ConvertDefaultToCRT();
+                            
+                            GUILayout.EndHorizontal();
+                            EditorGUILayout.Space();
+                        }
+                    } else
+                    {
+                        EditorGUI.indentLevel += 1;
+                        _showCrtAdvanced = EditorGUILayout.Toggle(labelAdvancedOptions, _showCrtAdvanced);
+                        EditorGUILayout.Space();
+                        EditorGUI.indentLevel -= 1;
                     }
 
                     Draw(1);
                     EditorGUILayout.Space(20);
+                }
+
+                if (renderOutCrtListProperty.arraySize != 0)
+                {
+                    TXLEditor.IndentedHelpBox("Use the CRT objects like regular textures in any of your own materials, and apply those materials to your screens or other video surfaces.", MessageType.Info);
+                    EditorGUILayout.Space();
                 }
 
                 bool packageCrtDetected = false;
@@ -754,6 +843,22 @@ namespace Texel
                 propPropertyListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.propPropertyList)));
 
                 list.headerHeight = 1;
+            }
+
+            public void Clear()
+            {
+                serializedObject.FindProperty(nameof(ScreenManager.propMeshList)).ClearArray();
+                serializedObject.FindProperty(nameof(ScreenManager.propMaterialOverrideList)).ClearArray();
+                serializedObject.FindProperty(nameof(ScreenManager.propMaterialIndexList)).ClearArray();
+                serializedObject.FindProperty(nameof(ScreenManager.propPropertyList)).ClearArray();
+            }
+
+            public MeshRenderer GetRenderer(int index)
+            {
+                if (index < 0 || index >= propRenderListProperty.arraySize)
+                    return null;
+
+                return (MeshRenderer)propRenderListProperty.GetArrayElementAtIndex(index).objectReferenceValue;
             }
 
             protected override SerializedProperty mainListProperty(SerializedObject serializedObject)
@@ -1214,9 +1319,12 @@ namespace Texel
                 if (emap.invertY != "")
                     mat.SetInt(emap.invertY, 0);
 
-                SyncPlayer videoPlayer = (SyncPlayer)manager.videoPlayer;
-                if (emap.screenFit != "" && videoPlayer)
-                    mat.SetInt(emap.screenFit, (int)videoPlayer.defaultScreenFit);
+                if (manager.videoPlayer is SyncPlayer)
+                {
+                    SyncPlayer videoPlayer = (SyncPlayer)manager.videoPlayer;
+                    if (emap.screenFit != "" && videoPlayer)
+                        mat.SetInt(emap.screenFit, (int)videoPlayer.defaultScreenFit);
+                }
 
                 bool overrideAspectRatio = manager.overrideAspectRatio;
                 float aspectRatio = manager.aspectRatio;
@@ -1225,7 +1333,7 @@ namespace Texel
             }
         }
 
-        private static CustomRenderTexture CreateCRTCopy()
+        private static string GetAssetBasePath()
         {
             string destBasePath = "Assets/Texel/Generated/RenderOut";
             Scene scene = SceneManager.GetActiveScene();
@@ -1242,7 +1350,19 @@ namespace Texel
                 return null;
             }
 
-            int nextId = FindNextCrtId(destBasePath);
+            return destBasePath;
+        }
+
+        private static CustomRenderTexture CreateCRTCopy(int id = -1)
+        {
+            string destBasePath = GetAssetBasePath();
+            if (destBasePath == null)
+                return null;
+
+            int nextId = id;
+            if (nextId == -1)
+                nextId = FindNextCrtId(destBasePath);
+
             if (nextId < 0)
             {
                 Debug.LogError("Could not find unused ID value to generate new CRT asset");
@@ -1269,6 +1389,29 @@ namespace Texel
             crt.material = mat;
 
             return crt;
+        }
+
+        private static Material CreateStandardMaterialCopy(int id = -1)
+        {
+            string destBasePath = GetAssetBasePath();
+            if (destBasePath == null)
+                return null;
+
+            if (id == -1)
+                id = UnityEngine.Random.Range(0, 999);
+
+            string newMatPath = $"{destBasePath}/VideoTXLScreen-{id}.mat";
+            Material mat = (Material)AssetDatabase.LoadAssetAtPath(newMatPath, typeof(Material));
+            if (mat)
+                return mat;
+
+            if (!AssetDatabase.CopyAsset(DEFAULT_SCREEN_MAT_PATH, newMatPath))
+            {
+                Debug.LogError($"Could not copy screen material to: {newMatPath}");
+                return null;
+            }
+
+            return (Material)AssetDatabase.LoadAssetAtPath(newMatPath, typeof(Material));
         }
 
         private static bool EnsureFolderExists(string path)
@@ -1400,6 +1543,51 @@ namespace Texel
                 map.name = "Property Map";
 
             return map;
+        }
+
+        private static bool InDefaultState(ScreenManager manager)
+        {
+            if (manager.renderOutCrt != null && manager.renderOutCrt.Length != 0)
+                return false;
+            if (manager.materialPropertyList != null && manager.materialPropertyList.Length != 0)
+                return false;
+            if (manager.propMeshList == null || manager.propMeshList.Length == 0)
+                return false;
+
+            return true;
+        }
+
+        public void ConvertDefaultToCRT()
+        {
+            string basePath = GetAssetBasePath();
+            int crtId = FindNextCrtId(basePath);
+            CustomRenderTexture crt = CreateCRTCopy(crtId);
+            Material mat = CreateStandardMaterialCopy(crtId);
+            mat.SetTexture("_MainTex", crt);
+            mat.SetTexture("_EmissionMap", crt);
+
+            crtList.AddDefault(crt);
+
+            MeshRenderer mesh = propBlockList.GetRenderer(0);
+            if (mesh != null)
+            {
+                Material[] mats = mesh.sharedMaterials;
+                int matIndex = 0;
+
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    if (compatMaterialShader(mats[i]))
+                    {
+                        matIndex = i;
+                        break;
+                    }
+                }
+
+                mats[matIndex] = mat;
+                mesh.sharedMaterials = mats;
+            }
+
+            propBlockList.Clear();
         }
 
         private void UpgradeLegacyCrtEntry()
