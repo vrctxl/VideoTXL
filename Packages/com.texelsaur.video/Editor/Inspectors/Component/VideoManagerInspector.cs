@@ -15,6 +15,8 @@ namespace Texel
         SerializedProperty videoPlayerProperty;
         SerializedProperty sourcesProperty;
         SerializedProperty enableAVProInEditorProperty;
+        SerializedProperty defaultReactStreamStopProperty;
+        SerializedProperty defaultstreamStopThresholdProperty;
 
         SerializedProperty debugLogProperty;
         SerializedProperty debugStateProperty;
@@ -30,7 +32,9 @@ namespace Texel
         {
             videoPlayerProperty = serializedObject.FindProperty(nameof(VideoManager.videoPlayer));
             sourcesProperty = serializedObject.FindProperty(nameof(VideoManager.sources));
-            enableAVProInEditorProperty = serializedObject.FindProperty("enableAVProInEditor");
+            enableAVProInEditorProperty = serializedObject.FindProperty(nameof(VideoManager.enableAVProInEditor));
+            defaultReactStreamStopProperty = serializedObject.FindProperty(nameof(VideoManager.defaultReactStreamStop));
+            defaultstreamStopThresholdProperty = serializedObject.FindProperty(nameof(VideoManager.defaultStreamStopThreshold));
 
             debugLogProperty = serializedObject.FindProperty(nameof(VideoManager.debugLog));
             debugStateProperty = serializedObject.FindProperty(nameof(VideoManager.debugState));
@@ -73,6 +77,16 @@ namespace Texel
             EditorGUILayout.PropertyField(enableAVProInEditorProperty, new GUIContent("Enable AVPro In Editor", "Enables loading videos with an AVPro video source active.  This is NOT supported in a default SDK environment.  If you know what you're doing and you've taken the necessary steps to run AVPro in your editor, enable this option."));
             if (enableAVProInEditorProperty.boolValue)
                 EditorGUILayout.HelpBox("The above setting does NOT add AVPro playback support to your editor environment.  It will just allow the video player to attempt loading URLs on AVPro video sources.  You must take additional steps on your own to support AVPro playback in the editor.", MessageType.Warning);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Default Options", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(defaultReactStreamStopProperty, new GUIContent("Handle Stream End Event", "Enables reacting to an end event from a livestream, causing the video player to stop.\n\nEnd events should indicate the stream has ended, but sometimes they are sent erroneously mid-stream or may be sent when the stream is being restarted."));
+            if (defaultReactStreamStopProperty.boolValue)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(defaultstreamStopThresholdProperty, new GUIContent("Ignore Threshold", "The number of seconds from connecting to a livestream during which any stop events should be ignored.  AVPro may raise a stop event shortly after connecting to a livestream, even though the stream is still running."));
+                EditorGUI.indentLevel--;
+            }
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Video Sources", EditorStyles.boldLabel);

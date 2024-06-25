@@ -109,7 +109,6 @@ namespace Texel
         bool _heldVideoReady = false;
         bool _skipAdvanceNextTrack = false;
         float _lastSyncTime;
-        float _playStartTime = 0;
         bool _overrideLock = false;
         bool _suppressSourceUpdate = false;
         public bool _videoReady = false;
@@ -909,7 +908,6 @@ namespace Texel
             videoMux._VideoStop();
             _videoTargetTime = 0;
             _pendingLoadTime = 0;
-            _playStartTime = 0;
             _videoReady = false;
 
             if (Networking.IsOwner(gameObject))
@@ -980,7 +978,6 @@ namespace Texel
 
                 _UpdatePlayerState(VIDEO_STATE_PLAYING);
                 _UpdatePlayerPaused(false);
-                _playStartTime = Time.time;
 
                 _syncOwnerPlaying = true;
                 _syncOwnerPaused = false;
@@ -1004,7 +1001,6 @@ namespace Texel
                 else
                 {
                     _UpdatePlayerState(VIDEO_STATE_PLAYING);
-                    _playStartTime = Time.time;
 
                     SyncVideoImmediate();
                 }
@@ -1016,11 +1012,6 @@ namespace Texel
             _videoReady = false;
 
             DebugTrace("Event OnVideoEnd");
-            if (!seekableSource && Time.time - _playStartTime < 10)
-            {
-                Debug.Log("Video end encountered at start of stream, ignoring");
-                return;
-            }
 
             seekableSource = false;
 
@@ -1710,7 +1701,6 @@ namespace Texel
             debugState._SetValue("holdReadyState", _holdReadyState.ToString());
             debugState._SetValue("heldVideoReady", _heldVideoReady.ToString());
             debugState._SetValue("lastSyncTime", _lastSyncTime.ToString());
-            debugState._SetValue("playStartTime", _playStartTime.ToString());
             debugState._SetValue("pendingLoadTime", _pendingLoadTime.ToString());
             debugState._SetValue("seekableSource", seekableSource.ToString());
             debugState._SetValue("trackDuration", trackDuration.ToString());

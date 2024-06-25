@@ -163,9 +163,7 @@ namespace Texel
 
         public void _SelectTrack(int track)
         {
-            Debug.Log($"Pressed {track}");
-
-            if (playlist._MoveTo(track))
+            if (backingVideoPlayer && playlist._MoveTo(track))
             {
                 playlist._SetEnabled(true);
                 //SyncPlayer videoPlayer = playlist.syncPlayer;
@@ -173,6 +171,8 @@ namespace Texel
                 //    videoPlayer._HoldNextVideo();
                 backingVideoPlayer._ChangeUrl(playlist._GetCurrentUrl(), playlist._GetCurrentQuestUrl());
             }
+            else
+                Debug.LogWarning("[VideoTXL] Tried to select playlist track, but the playlist is not associated with a video player!");
         }
 
         void _UnselectEntries()

@@ -290,6 +290,8 @@ namespace Texel
 
         public void _BindVideoPlayer(TXLVideoPlayer videoPlayer)
         {
+            _EnsureInit();
+
             TXLVideoPlayer prevPlayer = this.videoPlayer;
             if (prevPlayer)
             {
@@ -790,17 +792,23 @@ namespace Texel
 
         public Texture _GetTextureOverride(ScreenOverrideType overrideType)
         {
+            _EnsureInit();
+
             return replacementTextures[(int)overrideType];
         }
 
         [Obsolete("Use version of method that takes ScreenOverrideType")]
         public Texture _GetTextureOverride(int screenIndex)
         {
+            _EnsureInit();
+
             return replacementTextures[screenIndex];
         }
 
         public void _SetTextureOverride(ScreenOverrideType overrideType, Texture texture)
         {
+            _EnsureInit();
+
             int screenIndex = (int)overrideType;
             if (replacementTextures[screenIndex] != texture)
             {
@@ -812,6 +820,8 @@ namespace Texel
         [Obsolete("Use version of method that takes ScreenOverrideType")]
         public void _SetTextureOverride(int screenIndex, Texture texture)
         {
+            _EnsureInit();
+
             if (replacementTextures[screenIndex] != texture)
             {
                 replacementTextures[screenIndex] = texture;
@@ -821,6 +831,8 @@ namespace Texel
 
         public Texture _GetResolvedTextureOverride(ScreenOverrideType overrideType)
         {
+            _EnsureInit();
+
             int resIndex = (int)overrideType;
             Texture tex = replacementTextures[resIndex];
 

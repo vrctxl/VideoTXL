@@ -24,6 +24,12 @@ namespace Texel
         [Tooltip("The name of the shader property that indicates the intended aspect ratio of the screen texture, overriding ratio calculated from the actual texture dimensions.")]
         public string aspectRatio;
 
+        [Header("Optional CRT Properties")]
+        [Tooltip("The name of the shader property that indicates the intended aspect ratio of the target screen mesh.")]
+        public string targetAspectRatio;
+        [Tooltip("The name of the shader property that indicates the material should handle double buffering.  Only applicable to CRT materials.")]
+        public string doubleBuffered;
+
         private void Start()
         {
 

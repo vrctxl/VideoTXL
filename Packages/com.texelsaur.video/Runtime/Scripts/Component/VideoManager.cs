@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Runtime.CompilerServices;
 using Texel;
 using UdonSharp;
 using UnityEngine;
@@ -7,6 +8,8 @@ using VRC.SDK3.Components.Video;
 using VRC.SDK3.Video.Components.Base;
 using VRC.SDKBase;
 using VRC.Udon;
+
+[assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
 
 namespace Texel
 {
@@ -35,7 +38,9 @@ namespace Texel
         public DebugLog debugLog;
         public DebugState debugState;
 
-        [SerializeField] bool enableAVProInEditor = false;
+        [SerializeField] internal bool enableAVProInEditor = false;
+        [SerializeField] internal bool defaultReactStreamStop = true;
+        [SerializeField] internal float defaultStreamStopThreshold = 10;
 
         public const int VIDEO_READY_EVENT = 0;
         public const int VIDEO_START_EVENT = 1;
@@ -69,6 +74,8 @@ namespace Texel
         VideoSource[] avproSources;
 
         BaseVRCVideoPlayer activeVideoPlayer;
+
+        private float playStartTime = 0;
 
         public bool SupportsUnity { get; private set; }
         public bool SupportsAVPro { get; private set; }
@@ -309,6 +316,9 @@ namespace Texel
         {
             if (!_GateEvent(id, "Video start event"))
                 return;
+
+            playStartTime = Time.time;
+
             //VideoSource source = sources[id];
             //_DebugLog(source, "Video start event");
 
@@ -319,6 +329,13 @@ namespace Texel
         {
             if (!_GateEvent(id, "Video end event"))
                 return;
+
+            if (!VideoIsSeekable && defaultReactStreamStop && (Time.time - playStartTime) < defaultStreamStopThreshold)
+            {
+                _DebugLog("Video end encountered within stream start threshold, ignoring");
+                return;
+            }
+
             //VideoSource source = sources[id];
             //_DebugLog(source, "Video end event");
 
@@ -403,6 +420,18 @@ namespace Texel
                 if (!activeVideoPlayer)
                     return false;
                 return activeVideoPlayer.IsPlaying;
+            }
+        }
+
+        public bool VideoIsSeekable
+        {
+            get
+            {
+                if (!activeVideoPlayer)
+                    return false;
+
+                float duration = activeVideoPlayer.GetDuration();
+                return !float.IsInfinity(duration) && !float.IsNaN(duration) && duration > 1;
             }
         }
 
@@ -786,6 +815,9 @@ namespace Texel
             debugState._SetValue("preferredResIndex", preferredResIndex.ToString());
             debugState._SetValue("avSyncEnabled", avSyncEnabled.ToString());
             debugState._SetValue("loopEnabled", loopEnabled.ToString());
+            debugState._SetValue("reactStreamStop", defaultReactStreamStop.ToString());
+            debugState._SetValue("streamStopThresold", defaultStreamStopThreshold.ToString());
+            debugState._SetValue("playStartTime", playStartTime.ToString());
 
             if (activeSource > -1)
             {

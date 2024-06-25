@@ -199,14 +199,18 @@ namespace Texel
                 latency = 1;
 
             //videoModeDropdown.SetValueWithoutNotify(videoPlayer.videoMux.VideoType);
-            videoLatencyDropdown.SetValueWithoutNotify(latency);
-            videoResolutionDropdown.SetValueWithoutNotify(videoPlayer.VideoManager.ResolutionIndex);
+            if (videoLatencyDropdown)
+                videoLatencyDropdown.SetValueWithoutNotify(latency);
+            if (videoResolutionDropdown)
+                videoResolutionDropdown.SetValueWithoutNotify(videoPlayer.VideoManager.ResolutionIndex);
         }
 
         public void _OnVideoStateUpdate()
         {
-            videoFitDropdown.SetValueWithoutNotify(videoPlayer.screenFit);
-            videoModeDropdown.SetValueWithoutNotify(videoPlayer.playerSourceOverride);
+            if (videoFitDropdown)
+                videoFitDropdown.SetValueWithoutNotify(videoPlayer.screenFit);
+            if (videoModeDropdown)
+                videoModeDropdown.SetValueWithoutNotify(videoPlayer.playerSourceOverride);
         }
 
         // Info Panel
@@ -222,36 +226,51 @@ namespace Texel
             string currentUrl = videoPlayer.currentUrl.Get();
             string lastUrl = videoPlayer.lastUrl.Get();
 
-            infoPlayCurrentVideoImage.color = (enableControl && currentUrl != "") ? normalColor : disabledColor;
-            infoPlayLastVideoImage.color = (enableControl && lastUrl != "") ? normalColor : disabledColor;
+            if (infoPlayCurrentVideoImage)
+                infoPlayCurrentVideoImage.color = (enableControl && currentUrl != "") ? normalColor : disabledColor;
+            if (infoPlayLastVideoImage)
+                infoPlayLastVideoImage.color = (enableControl && lastUrl != "") ? normalColor : disabledColor;
 
-            if (currentUrl != null && currentUrl.Length > 36)
-                infoCurrentVideoText.text = currentUrl.Substring(0, 16) + "..." + currentUrl.Substring(currentUrl.Length - 16, 16);
-            else
-                infoCurrentVideoText.text = currentUrl;
+            if (infoCurrentVideoText)
+            {
+                if (currentUrl != null && currentUrl.Length > 36)
+                    infoCurrentVideoText.text = currentUrl.Substring(0, 16) + "..." + currentUrl.Substring(currentUrl.Length - 16, 16);
+                else
+                    infoCurrentVideoText.text = currentUrl;
+            }
 
-            if (lastUrl != null && lastUrl.Length > 36)
-                infoLastVideoText.text = lastUrl.Substring(0, 16) + "..." + lastUrl.Substring(lastUrl.Length - 16, 16);
-            else
-                infoLastVideoText.text = lastUrl;
+            if (infoLastVideoText)
+            {
+                if (lastUrl != null && lastUrl.Length > 36)
+                    infoLastVideoText.text = lastUrl.Substring(0, 16) + "..." + lastUrl.Substring(lastUrl.Length - 16, 16);
+                else
+                    infoLastVideoText.text = lastUrl;
+            }
 
             if (!videoPlayer.IsQuest)
             {
-                infoCurrentVideoInput.text = currentUrl;
-                infoLastVideoInput.text = lastUrl;
+                if (infoCurrentVideoInput)
+                    infoCurrentVideoInput.text = currentUrl;
+                if (infoLastVideoInput)
+                    infoLastVideoInput.text = lastUrl;
             }
 
             if (mainControls)
             {
-                infoInstanceOwnerText.text = mainControls.instanceOwner;
-                infoMasterText.text = mainControls.instanceMaster;
+                if (infoInstanceOwnerText)
+                    infoInstanceOwnerText.text = mainControls.instanceOwner;
+                if (infoMasterText)
+                    infoMasterText.text = mainControls.instanceMaster;
             }
 
-            VRCPlayerApi owner = Networking.GetOwner(videoPlayer.gameObject);
-            if (Utilities.IsValid(owner) && owner.IsValid())
-                infoObjectOwnerText.text = owner.displayName;
-            else
-                infoObjectOwnerText.text = "";
+            if (infoObjectOwnerText)
+            {
+                VRCPlayerApi owner = Networking.GetOwner(videoPlayer.gameObject);
+                if (Utilities.IsValid(owner) && owner.IsValid())
+                    infoObjectOwnerText.text = owner.displayName;
+                else
+                    infoObjectOwnerText.text = "";
+            }
 
         }
 
@@ -354,7 +373,8 @@ namespace Texel
                 }
             }
 
-            audioProfileDropdown.SetValueWithoutNotify(channelGroup);
+            if (audioProfileDropdown)
+                audioProfileDropdown.SetValueWithoutNotify(channelGroup);
         }
 
         public void _HandleAudioProfileChangedUI()

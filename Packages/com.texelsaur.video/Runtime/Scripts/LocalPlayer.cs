@@ -61,7 +61,6 @@ namespace Texel
 
         VRCUrl playAtUrl;
         float playAt = 0;
-        float playStartTime = 0;
 
         protected override void _Init()
         {
@@ -358,7 +357,6 @@ namespace Texel
 
             _UpdatePlayerState(VIDEO_STATE_PLAYING);
             //_UpdatePlayerPaused(false);
-            playStartTime = Time.time;
 
             if (seekableSource)
             {
@@ -369,12 +367,6 @@ namespace Texel
 
         public void _OnVideoEnd()
         {
-            if (!seekableSource && Time.time - playStartTime < 10)
-            {
-                DebugLog("Video end encountered at start of stream, ignoring");
-                return;
-            }
-
             DebugLog("Video end");
 
             seekableSource = false;
