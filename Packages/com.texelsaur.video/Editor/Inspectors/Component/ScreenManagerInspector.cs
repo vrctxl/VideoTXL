@@ -195,6 +195,8 @@ namespace Texel
         bool vrslOutsideLinked = false;
         UdonBehaviour vrslControllerCache;
 
+        static Material vrslEditorBlitMat = null;
+
         static bool expandTextures = true;
         static bool expandObjectOverrides = false;
         static bool expandDebug = false;
@@ -256,6 +258,7 @@ namespace Texel
                 UpdateEditorMaterialBlocks(manager);
                 UpdateEditorSharedMaterials(manager);
                 UpdateEditorCRT(manager);
+                UpdateEditorVRSL(manager);
             }
 
             EditorWindow view = EditorWindow.GetWindow<SceneView>();
@@ -324,6 +327,13 @@ namespace Texel
             propBlockList = new PropBlockListDisplay(serializedObject, (ScreenManager)target);
             objectOverrideList = new ObjectOverrideListDisplay(serializedObject, (ScreenManager)target);
             globalPropList = new GlobalPropertyListDisplay(serializedObject, (ScreenManager)target);
+
+            if (vrslBlitMatProperty.objectReferenceValue) {
+                if (vrslEditorBlitMat)
+                    vrslEditorBlitMat.CopyPropertiesFromMaterial((Material)vrslBlitMatProperty.objectReferenceValue);
+                else
+                    vrslEditorBlitMat = new Material((Material)vrslBlitMatProperty.objectReferenceValue);
+            }
 
             // CRT texture
             UpdateEditorState();
@@ -566,10 +576,7 @@ namespace Texel
                     asRect.y += (boxRect.height - 2 - asRect.height) * (1 - offsetScale.y);
                 }
 
-                GUIStyle style = new GUIStyle();
-                style.padding = new RectOffset();
-
-                GUI.Box(boxRect, bgTex, style);
+                GUI.DrawTexture(boxRect, bgTex, ScaleMode.StretchToFill, false, aspectRatio);
                 Handles.DrawSolidRectangleWithOutline(asRect, new Color(1, 1, 1, .15f), Color.white);
 
                 // Y Scroll
@@ -1441,6 +1448,7 @@ namespace Texel
             UpdateEditorCRT(manager);
             UpdateEditorSharedMaterials(manager);
             UpdateEditorMaterialBlocks(manager);
+            UpdateEditorVRSL(manager);
         }
 
         private static void UpdateEditorSharedMaterials(ScreenManager manager)
@@ -1540,6 +1548,30 @@ namespace Texel
                     }
                 }
             }
+        }
+
+        private static void UpdateEditorVRSL(ScreenManager manager)
+        {
+            if (!manager || !manager.vrslDmxRT || !manager.vrslBlitMat)
+                return;
+
+            Texture2D logoTex = null;
+            if (manager.editorTexture is Texture2D)
+                logoTex = (Texture2D)manager.editorTexture;
+            if (logoTex == null && manager.logoTexture is Texture2D)
+                logoTex = (Texture2D)manager.logoTexture;
+
+            bool horizontal = manager.vrslDmxRT.height == 960;
+
+            vrslEditorBlitMat.SetTexture("_MainTex", logoTex);
+            vrslEditorBlitMat.SetVector("_OffsetScale", new Vector4(manager.vrslOffsetScale.x, manager.vrslOffsetScale.y, manager.vrslOffsetScale.z, manager.vrslOffsetScale.z));
+            vrslEditorBlitMat.SetInt("_Horizontal", horizontal ? 1 : 0);
+            vrslEditorBlitMat.SetInt("_DoubleBuffered", 0);
+            vrslEditorBlitMat.SetInt("_ApplyGamma", 0);
+            vrslEditorBlitMat.SetInt("_FlipY", 0);
+            vrslEditorBlitMat.SetFloat("_AspectRatio", manager.vrslSourceAspectRatio);
+
+            Graphics.Blit(logoTex, manager.vrslDmxRT, vrslEditorBlitMat);
         }
 
         private void UpdateSharedMaterial(Material mat, ScreenPropertyMap map)
