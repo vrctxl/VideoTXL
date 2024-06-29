@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.5.0] - 06-29-24
+
+- Added direct VRSL integration in Screen Manager
+
 ## [2.4.8] - 06-14-24
 
 - Included YTDL editor resolver logs with "VideoTXL" instead of "USharpVideo"

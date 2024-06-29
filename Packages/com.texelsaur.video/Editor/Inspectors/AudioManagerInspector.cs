@@ -279,21 +279,6 @@ namespace Texel
             serializedObject.ApplyModifiedProperties();
         }
 
-        private UdonBehaviour FindExternal(UdonBehaviour cache, string scriptName)
-        {
-            if (cache)
-            {
-                UdonBehaviour[] components = cache.transform.GetComponents<UdonBehaviour>();
-                cache = FindBehaviour(components, scriptName);
-                if (cache)
-                    return cache;
-            }
-
-            UdonBehaviour[] allBehaviours = FindObjectsOfType<UdonBehaviour>();
-            cache = FindBehaviour(allBehaviours, scriptName);
-            return cache;
-        }
-
         private void FindExternal()
         {
             FindAudioLink();
@@ -302,48 +287,24 @@ namespace Texel
 
         private UdonBehaviour FindAudioLink()
         {
-            audioLinkCache = FindExternal(audioLinkCache, "AudioLink");
+            audioLinkCache = TXLUdon.FindExternal(audioLinkCache, "AudioLink");
             return audioLinkCache;
         }
 
         private UdonBehaviour FindVRSLAudioDMXRuntime()
         {
-            vrslAudioDmxRuntimeCache = FindExternal(vrslAudioDmxRuntimeCache, "VRSL_AudioDMX");
+            vrslAudioDmxRuntimeCache = TXLUdon.FindExternal(vrslAudioDmxRuntimeCache, "VRSL_AudioDMX");
             return vrslAudioDmxRuntimeCache;
-        }
-
-        private UdonBehaviour FindBehaviour(UdonBehaviour[] behaviors, string scriptName)
-        {
-            foreach (UdonBehaviour behaviour in behaviors)
-            {
-                if (!behaviour.programSource)
-                    continue;
-
-                if (behaviour.programSource.name != scriptName)
-                    continue;
-
-                return behaviour;
-            }
-
-            return null;
         }
 
         private void LinkAudioLink()
         {
-            LinkProperty(audioLinkProperty, FindAudioLink());
+            TXLUdon.LinkProperty(audioLinkProperty, FindAudioLink());
         }
 
         private void LinkVRSL()
         {
-            LinkProperty(vrslAudioDmxRuntimeProperty, FindVRSLAudioDMXRuntime());
-        }
-
-        private void LinkProperty(SerializedProperty property, UdonBehaviour component)
-        {
-            if (component)
-                property.objectReferenceValue = component;
-            else
-                property.objectReferenceValue = null;
+            TXLUdon.LinkProperty(vrslAudioDmxRuntimeProperty, FindVRSLAudioDMXRuntime());
         }
 
         private bool IsAudioLinkOnAnotherManager()
