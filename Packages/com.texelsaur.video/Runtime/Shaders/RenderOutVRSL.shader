@@ -68,6 +68,9 @@ Shader "VideoTXL/RenderOutVRSL" {
 				float2 offset = _OffsetScale.xy;
 				float2 scale = _OffsetScale.zw;
 
+				if (_FlipY)
+					offset.y = 1 - offset.y;
+
 				float dmxW = (208.0 / 1920) * (_AspectRatio / 1.777777);
 				float dmxH = 1;
 				if (_Horizontal) {

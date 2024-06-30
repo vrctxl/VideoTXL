@@ -516,6 +516,8 @@ namespace Texel
                 aspectRatio = 1.777777f;
                 if (overrideAspectRatioProperty.boolValue && aspectRatioProperty.floatValue > 0)
                     aspectRatio = aspectRatioProperty.floatValue;
+
+                vrslSourceAspectRatioProperty.floatValue = aspectRatio;
             }
 
             RenderTexture rt = (RenderTexture)vrslDmxRTProperty.objectReferenceValue;
@@ -706,6 +708,9 @@ namespace Texel
 
         private bool IsVRSLOnAnotherManager()
         {
+            if (managers == null)
+                UpdateManagers();
+
             foreach (ScreenManager manager in managers)
             {
                 if (manager == serializedObject.targetObject)
@@ -1552,7 +1557,7 @@ namespace Texel
 
         private static void UpdateEditorVRSL(ScreenManager manager)
         {
-            if (!manager || !manager.vrslDmxRT || !manager.vrslBlitMat)
+            if (!manager || !manager.vrslDmxRT || !manager.vrslBlitMat || !vrslEditorBlitMat)
                 return;
 
             Texture2D logoTex = null;
