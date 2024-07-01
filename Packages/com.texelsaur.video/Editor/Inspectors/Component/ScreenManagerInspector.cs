@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using UnityEditorInternal;
 using UnityEngine.SceneManagement;
 using UnityEditor.SceneManagement;
+using UdonSharp;
 
 namespace Texel
 {
@@ -94,6 +95,7 @@ namespace Texel
         const string DEFAULT_CRT_PATH = "Packages/com.texelsaur.video/Runtime/RenderTextures/VideoTXLCRT.asset";
         const string DEFAULT_CRT_MAT_PATH = "Packages/com.texelsaur.video/Runtime/Materials/StreamOutput.mat";
         const string DEFAULT_SCREEN_MAT_PATH = "Packages/com.texelsaur.video/Runtime/Materials/StandardMaterialScreen.mat";
+        const string DEFAULT_VRSL_MAT_PATH = "Packages/com.texelsaur.video/Runtime/Materials/StreamOutputVRSL.mat";
 
         static readonly string[] PLACEHOLDER_IMAGE_PATHS = {
             "Packages/com.texelsaur.video/Runtime/Textures/Placeholder Screens/Error.jpg",
@@ -169,6 +171,14 @@ namespace Texel
         SerializedProperty downloadLogoImageProperty;
         SerializedProperty downloadLogoImageUrlProperty;
 
+        // VRSL Integration
+        SerializedProperty vrslControllerProperty;
+        SerializedProperty vrslDmxRTProperty;
+        SerializedProperty vrslOffsetScaleProperty;
+        SerializedProperty vrslSourceAspectRatioProperty;
+        SerializedProperty vrslBlitMatProperty;
+        SerializedProperty vrslDoubleBufferAVProProperty;
+
         SerializedProperty _udonSharpBackingUdonBehaviourProperty;
 
         // Legacy
@@ -182,9 +192,15 @@ namespace Texel
         ObjectOverrideListDisplay objectOverrideList;
         GlobalPropertyListDisplay globalPropList;
 
+        bool vrslOutsideLinked = false;
+        UdonBehaviour vrslControllerCache;
+
+        static Material vrslEditorBlitMat = null;
+
         static bool expandTextures = true;
         static bool expandObjectOverrides = false;
         static bool expandDebug = false;
+        static bool expandIntegrations = false;
         static List<ScreenManager> managers;
         static RenderTexture videoTexRT;
 
@@ -192,6 +208,7 @@ namespace Texel
         static string textureOverridesUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#texture-overrides";
         static string objectMaterialsUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#object-material-overrides";
         static string debugOptionsUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#debug-options";
+        static string integrationsUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#integrations";
 
         static ScreenManagerInspector()
         {
@@ -241,6 +258,7 @@ namespace Texel
                 UpdateEditorMaterialBlocks(manager);
                 UpdateEditorSharedMaterials(manager);
                 UpdateEditorCRT(manager);
+                UpdateEditorVRSL(manager);
             }
 
             EditorWindow view = EditorWindow.GetWindow<SceneView>();
@@ -295,6 +313,13 @@ namespace Texel
             downloadLogoImageProperty = serializedObject.FindProperty(nameof(ScreenManager.downloadLogoImage));
             downloadLogoImageUrlProperty = serializedObject.FindProperty(nameof(ScreenManager.downloadLogoImageUrl));
 
+            vrslControllerProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslController));
+            vrslDmxRTProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslDmxRT));
+            vrslOffsetScaleProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslOffsetScale));
+            vrslSourceAspectRatioProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslSourceAspectRatio));
+            vrslBlitMatProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslBlitMat));
+            vrslDoubleBufferAVProProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslDoubleBufferAVPro));
+
             _udonSharpBackingUdonBehaviourProperty = serializedObject.FindProperty("_udonSharpBackingUdonBehaviour");
 
             crtList = new CrtListDisplay(serializedObject, (ScreenManager)target, this);
@@ -303,11 +328,21 @@ namespace Texel
             objectOverrideList = new ObjectOverrideListDisplay(serializedObject, (ScreenManager)target);
             globalPropList = new GlobalPropertyListDisplay(serializedObject, (ScreenManager)target);
 
+            if (vrslBlitMatProperty.objectReferenceValue) {
+                if (vrslEditorBlitMat)
+                    vrslEditorBlitMat.CopyPropertiesFromMaterial((Material)vrslBlitMatProperty.objectReferenceValue);
+                else
+                    vrslEditorBlitMat = new Material((Material)vrslBlitMatProperty.objectReferenceValue);
+            }
+
             // CRT texture
             UpdateEditorState();
 
             // Upgrade legacy entries
             UpgradeLegacyCrtEntry();
+
+            vrslOutsideLinked = IsVRSLOnAnotherManager();
+            FindExternal();
         }
 
         static SerializedProperty GetElementSafe(SerializedProperty arr, int index)
@@ -349,6 +384,11 @@ namespace Texel
 
             EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
             ObjectMaterialSection();
+
+            // ---
+
+            EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+            IntegrationsSection();
 
             // ---
 
@@ -454,6 +494,233 @@ namespace Texel
             EditorGUILayout.PropertyField(lowLevelLoggingProperty, new GUIContent("Include Low Level", "Include additional verbose messages in debug log"));
             EditorGUILayout.PropertyField(vrcLoggingProperty, new GUIContent("VRC Logging", "Write out debug messages to VRChat log."));
             EditorGUI.indentLevel--;
+        }
+
+        private void IntegrationsSection()
+        {
+            if (!TXLEditor.DrawMainHeaderHelp(new GUIContent("External Systems"), ref expandIntegrations, integrationsUrl))
+                return;
+
+            EditorGUI.indentLevel++;
+            EditorGUILayout.LabelField(new GUIContent("VRSL"), EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(vrslControllerProperty, new GUIContent("Local UI Control Panel", "The VRSL_LocalUIControlPanel in your scene"));
+            EditorGUILayout.PropertyField(vrslDmxRTProperty, new GUIContent("DMX Raw RT", "The VRSL raw RenderTexture for either horizontal, vertical, or legacy configuration"));
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(vrslBlitMatProperty, new GUIContent("DMX Copy material", "The material used to copy the DMX section of the video feed to the DMX Raw RT.  Do not change unless you know what you're doing."));
+            EditorGUILayout.PropertyField(vrslSourceAspectRatioProperty, new GUIContent("Source Aspect Ratio", "The expected aspect ratio of streams containing VRSL DMX Grid data"));
+            EditorGUI.indentLevel--;
+
+            float aspectRatio = vrslSourceAspectRatioProperty.floatValue;
+            if (aspectRatio <= 0)
+            {
+                aspectRatio = 1.777777f;
+                if (overrideAspectRatioProperty.boolValue && aspectRatioProperty.floatValue > 0)
+                    aspectRatio = aspectRatioProperty.floatValue;
+
+                vrslSourceAspectRatioProperty.floatValue = aspectRatio;
+            }
+
+            RenderTexture rt = (RenderTexture)vrslDmxRTProperty.objectReferenceValue;
+            if (rt != null)
+            {
+                EditorGUILayout.LabelField("DMX Area");
+                EditorGUILayout.Space(3);
+
+                // Horz: 104 x 960
+                // Vert: 104 x 540
+
+                bool vertical = rt.height == 540;
+                float dmxW = 1;
+                float dmxH = (208f / 1080) * (aspectRatio / 1.77777f);
+                if (vertical)
+                {
+                    dmxW = (208f / 1920) * (aspectRatio / 1.77777f);
+                    dmxH = 1;
+                }
+
+                Vector3 offsetScale = vrslOffsetScaleProperty.vector3Value;
+
+                float editWidth = Math.Min(EditorGUIUtility.currentViewWidth - 45 - 50, 400f);
+                float editHeight = editWidth / aspectRatio;
+
+                Texture bgTex = (Texture)editorTextureProperty.objectReferenceValue;
+                if (bgTex == null)
+                    bgTex = Texture2D.blackTexture;
+
+                float requestHeight = editHeight;
+                //if (vertical)
+                    requestHeight += 30;
+
+                Rect rect = GUILayoutUtility.GetRect(editWidth, requestHeight);
+                rect.x += 30;
+                rect.width -= 30; // Margin
+                rect.width -= 20; // Slider
+
+                Rect boxRect = rect;
+                boxRect.width = Math.Min(editWidth, rect.width);
+                boxRect.height = boxRect.width / aspectRatio;
+                boxRect.x = rect.x;
+                
+                Rect asRect = new Rect(boxRect.x + 1, boxRect.y + 1, boxRect.width - 2, boxRect.height - 2);
+                if (!vertical)
+                {
+                    float diffH = asRect.height - (asRect.height * dmxH);
+                    asRect.height = (asRect.height - diffH) * offsetScale.z;
+                    asRect.y += diffH * (1 - offsetScale.y);
+                    asRect.width *= offsetScale.z;
+                    asRect.x += (boxRect.width - 2 - asRect.width) * offsetScale.x;
+                } else
+                {
+                    float diffW = asRect.width - (asRect.width * dmxW);
+                    asRect.width = (asRect.width - diffW) * offsetScale.z;
+                    asRect.x += diffW * offsetScale.x;
+                    asRect.height *= offsetScale.z;
+                    asRect.y += (boxRect.height - 2 - asRect.height) * (1 - offsetScale.y);
+                }
+
+                GUI.DrawTexture(boxRect, bgTex, ScaleMode.StretchToFill, false, aspectRatio);
+                Handles.DrawSolidRectangleWithOutline(asRect, new Color(1, 1, 1, .15f), Color.white);
+
+                // Y Scroll
+                Rect scrollRect = new Rect(boxRect.xMax + 5, boxRect.yMin + asRect.height / 2 - 3, 20, boxRect.height - asRect.height + 6);
+                offsetScale.y = GUI.VerticalSlider(scrollRect, !vertical || offsetScale.z < 1 ? offsetScale.y : 0, 1, 0);
+
+                // X Scroll
+                scrollRect = new Rect(boxRect.xMin + asRect.width / 2, boxRect.yMax + 5, boxRect.width - asRect.width, 20);
+                offsetScale.x = GUI.HorizontalSlider(scrollRect, vertical || offsetScale.z < 1 ? offsetScale.x : 0, 0, 1);
+
+                EditorGUI.indentLevel++;
+                Vector2 offset = EditorGUILayout.Vector2Field(new GUIContent("Offset"), new Vector2(offsetScale.x, offsetScale.y));
+                offsetScale.x = Math.Clamp(offset.x, 0, 1);
+                offsetScale.y = Math.Clamp(offset.y, 0, 1);
+
+                offsetScale.z = EditorGUILayout.Slider(new GUIContent("Scale"), offsetScale.z, 0, 1);
+                Rect buttonLineRect = GUILayoutUtility.GetRect(editWidth, EditorGUIUtility.singleLineHeight);
+                Rect buttonArea = EditorGUI.PrefixLabel(buttonLineRect, new GUIContent(" "));
+                Rect buttonRect = buttonArea;
+
+                buttonRect.width = (buttonArea.width - 10) / 3;
+                if (GUI.Button(buttonRect, new GUIContent("1080p")))
+                    offsetScale.z = 1;
+
+                buttonRect.x = buttonArea.x + (buttonArea.width - 10) / 3 + 5;
+                if (GUI.Button(buttonRect, new GUIContent("720p")))
+                    offsetScale.z = .666666f;
+
+                buttonRect.x = buttonArea.x + (buttonArea.width - 10) / 3 * 2 + 10;
+                if (GUI.Button(buttonRect, new GUIContent("480p")))
+                    offsetScale.z = .444444f;
+
+                EditorGUI.indentLevel--;
+
+                vrslOffsetScaleProperty.vector3Value = offsetScale;
+
+                EditorGUILayout.PropertyField(vrslDoubleBufferAVProProperty, new GUIContent("Double Buffer AVPro", "Use double buffering with AVPro video sources to repeat previous frames whenever a frame is dropped."));
+            }
+
+            if (vrslControllerCache)
+            {
+                if (vrslOutsideLinked && vrslControllerProperty.objectReferenceValue)
+                    EditorGUILayout.HelpBox("VRSL controller detected in scene.  VRSL is already linked to another TXL ScreenManager.  This can cause a conflict.", MessageType.Warning, true);
+                else if (vrslOutsideLinked && !vrslControllerProperty.objectReferenceValue)
+                    EditorGUILayout.HelpBox("VRSL controller detected in scene.  VRSL is already linked to another TXL ScreenManager.", MessageType.Info, true);
+                else if (!vrslControllerProperty.objectReferenceValue)
+                    EditorGUILayout.HelpBox("VRSL controller detected in scene.  Link VRSL to have this manager keep feed video data directly to VRSL.", MessageType.Info, true);
+
+                if (vrslControllerProperty.objectReferenceValue)
+                {
+                    UdonBehaviour behaviour = (UdonBehaviour)vrslControllerProperty.objectReferenceValue;
+                    if (behaviour.programSource.name != "VRSL_LocalUIControlPanel")
+                        EditorGUILayout.HelpBox("Specified UdonBehaviour is not a VRSL_LocalUIControlPanel script.", MessageType.Error, true);
+                }
+            }
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(15);
+            if (GUILayout.Button(new GUIContent("Link VRSL to this manager", "Finds VRSL in the scene and automatically configures rendering video data to it.")))
+                LinkVRSL();
+            GUILayout.EndHorizontal();
+
+            EditorGUI.indentLevel--;
+        }
+
+        private void FindExternal()
+        {
+            FindVRSLController();
+        }
+
+        void LinkVRSL()
+        {
+            TXLUdon.LinkProperty(vrslControllerProperty, FindVRSLController());
+            if (vrslControllerCache)
+            {
+                UdonSharpBehaviour sharp = UdonSharpEditorUtility.GetProxyBehaviour(vrslControllerCache);
+                if (sharp)
+                {
+                    int mode = (int)sharp.GetProgramVariable("DMXMode");
+                    CustomRenderTexture[] crts = null;
+                    if (mode == 0)
+                        crts = (CustomRenderTexture[])sharp.GetProgramVariable("DMX_CRTS_Horizontal");
+                    else if (mode == 1)
+                        crts = (CustomRenderTexture[])sharp.GetProgramVariable("DMX_CRTS_Vertical");
+
+                    vrslDmxRTProperty.objectReferenceValue = _FindRawRT(crts);
+                }
+
+                if (!vrslBlitMatProperty.objectReferenceValue)
+                    vrslBlitMatProperty.objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(DEFAULT_VRSL_MAT_PATH);
+            }
+        }
+
+        private RenderTexture _FindRawRT(CustomRenderTexture[] crts)
+        {
+            if (crts == null)
+                return null;
+
+            for (int i = 0; i < crts.Length; i++)
+            {
+                if (!crts[i])
+                    continue;
+
+                Material mat = crts[i].material;
+                if (!mat)
+                    continue;
+
+                List<string> props = new List<string>(mat.GetPropertyNames(MaterialPropertyType.Texture));
+                if (!props.Contains("_DMXTexture"))
+                    continue;
+
+                Texture tex = mat.GetTexture("_DMXTexture");
+                if (!tex || !(tex is RenderTexture))
+                    continue;
+
+                return (RenderTexture)tex;
+            }
+
+            return null;
+        }
+
+        private UdonBehaviour FindVRSLController()
+        {
+            vrslControllerCache = TXLUdon.FindExternal(vrslControllerCache, "VRSL_LocalUIControlPanel");
+            return vrslControllerCache;
+        }
+
+        private bool IsVRSLOnAnotherManager()
+        {
+            if (managers == null)
+                UpdateManagers();
+
+            foreach (ScreenManager manager in managers)
+            {
+                if (manager == serializedObject.targetObject)
+                    continue;
+
+                if (manager.vrslController)
+                    return true;
+            }
+
+            return false;
         }
 
         class CrtListDisplay : ReorderableListDisplay
@@ -1186,6 +1453,7 @@ namespace Texel
             UpdateEditorCRT(manager);
             UpdateEditorSharedMaterials(manager);
             UpdateEditorMaterialBlocks(manager);
+            UpdateEditorVRSL(manager);
         }
 
         private static void UpdateEditorSharedMaterials(ScreenManager manager)
@@ -1269,8 +1537,6 @@ namespace Texel
 
                     if (manager.renderOutGlobalTex[i])
                     {
-                        Debug.Log($"Set Global Tex {crt} {crt.IsCreated()}");
-
                         if (!videoTexRT)
                             videoTexRT = new RenderTexture(crt);
                         else
@@ -1287,6 +1553,30 @@ namespace Texel
                     }
                 }
             }
+        }
+
+        private static void UpdateEditorVRSL(ScreenManager manager)
+        {
+            if (!manager || !manager.vrslDmxRT || !manager.vrslBlitMat || !vrslEditorBlitMat)
+                return;
+
+            Texture2D logoTex = null;
+            if (manager.editorTexture is Texture2D)
+                logoTex = (Texture2D)manager.editorTexture;
+            if (logoTex == null && manager.logoTexture is Texture2D)
+                logoTex = (Texture2D)manager.logoTexture;
+
+            bool horizontal = manager.vrslDmxRT.height == 960;
+
+            vrslEditorBlitMat.SetTexture("_MainTex", logoTex);
+            vrslEditorBlitMat.SetVector("_OffsetScale", new Vector4(manager.vrslOffsetScale.x, manager.vrslOffsetScale.y, manager.vrslOffsetScale.z, manager.vrslOffsetScale.z));
+            vrslEditorBlitMat.SetInt("_Horizontal", horizontal ? 1 : 0);
+            vrslEditorBlitMat.SetInt("_DoubleBuffered", 0);
+            vrslEditorBlitMat.SetInt("_ApplyGamma", 0);
+            vrslEditorBlitMat.SetInt("_FlipY", 0);
+            vrslEditorBlitMat.SetFloat("_AspectRatio", manager.vrslSourceAspectRatio);
+
+            Graphics.Blit(logoTex, manager.vrslDmxRT, vrslEditorBlitMat);
         }
 
         private void UpdateSharedMaterial(Material mat, ScreenPropertyMap map)

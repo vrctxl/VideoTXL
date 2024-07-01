@@ -116,6 +116,14 @@ namespace Texel
         [SerializeField] internal bool downloadLogoImage;
         [SerializeField] internal VRCUrl downloadLogoImageUrl;
 
+        // VRSL Integration
+        [SerializeField] internal UdonBehaviour vrslController;
+        [SerializeField] internal RenderTexture vrslDmxRT;
+        [SerializeField] internal Vector3 vrslOffsetScale;
+        [SerializeField] internal float vrslSourceAspectRatio;
+        [SerializeField] internal bool vrslDoubleBufferAVPro = true;
+        [SerializeField] internal Material vrslBlitMat;
+
         int baseIndexCrt;
         int shaderPropCrtLength;
         int baseIndexMat;
@@ -191,6 +199,7 @@ namespace Texel
         float currentAspectRatio;
         bool currentValid = false;
         Vector2Int currentRes;
+        RenderTexture vrslBuffer;
 
         int globalTexPropertyId = -1;
 
@@ -260,6 +269,7 @@ namespace Texel
             replacementTextures[SCREEN_INDEX_EDITOR] = editorTexture;
 
             _InitGlobalTex();
+            _InitVRSL();
 
 #if COMPILER_UDONSHARP
             _InitMaterialOverrides();
@@ -311,6 +321,38 @@ namespace Texel
 
             _InternalOnSourceChanged();
             _InternalOnVideoStateUpdate();
+        }
+
+        public void _InitVRSL()
+        {
+            if (!vrslDmxRT)
+                return;
+
+            bool horizontal = false;
+            if (vrslController)
+            {
+                int mode = (int)vrslController.GetProgramVariable("DMXMode");
+                horizontal = mode == 0;
+            }
+            else
+                horizontal = vrslDmxRT.height == 960;
+
+            if (vrslBlitMat)
+            {
+                vrslBlitMat.SetTexture("_MainTex", vrslDmxRT);
+                vrslBlitMat.SetVector("_OffsetScale", new Vector4(vrslOffsetScale.x, vrslOffsetScale.y, vrslOffsetScale.z, vrslOffsetScale.z));
+                vrslBlitMat.SetInt("_Horizontal", horizontal ? 1 : 0);
+                vrslBlitMat.SetInt("_DoubleBuffered", vrslDoubleBufferAVPro ? 1 : 0);
+            }
+
+            if (vrslDoubleBufferAVPro)
+            {
+                vrslBuffer = new RenderTexture(vrslDmxRT.descriptor);
+                vrslBuffer.Create();
+                vrslBlitMat.SetTexture("_BufferTex", vrslBuffer);
+
+                _DebugLog($"Initialized VRSL buffer {vrslBuffer.width}x{vrslBuffer.height}");
+            }
         }
 
         public override void OnImageLoadSuccess(IVRCImageDownload result)
@@ -1081,6 +1123,18 @@ namespace Texel
             get { return currentTexture ? currentTexture : Texture2D.blackTexture; }
         }
 
+        private void Update()
+        {
+            if (vrslDmxRT && vrslBlitMat)
+            {
+                if (vrslBuffer && currentAVPro)
+                    VRCGraphics.Blit(vrslDmxRT, vrslBuffer);
+
+                //Texture tex = ValidCurrentTexture;
+                VRCGraphics.Blit(null, vrslDmxRT, vrslBlitMat);
+            }
+        }
+
         void _UpdateMaterials()
         {
             Texture validCurrent = ValidCurrentTexture;
@@ -1128,6 +1182,17 @@ namespace Texel
                         crt.Update(crt.doubleBuffered ? 2 : 1);
                     }
                 }
+            }
+
+            if (vrslBlitMat)
+            {
+                vrslBlitMat.SetTexture("_MainTex", validCurrent);
+                vrslBlitMat.SetTexture("_BufferTex", vrslBuffer);
+
+                _SetMatIntProperty(vrslBlitMat, "_ApplyGamma", currentGamma ? 1 : 0);
+                _SetMatIntProperty(vrslBlitMat, "_FlipY", currentInvert ? 1 : 0);
+                _SetMatFloatProperty(vrslBlitMat, "_AspectRatio", currentAspectRatio);
+                _SetMatFloatProperty(vrslBlitMat, "_DoubleBuffered", currentAVPro && vrslDoubleBufferAVPro ? 1 : 0);
             }
         }
 

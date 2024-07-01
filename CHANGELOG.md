@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.4.9] - 07-01-24
+
+- Added direct VRSL integration in Screen Manager
+- Fixed lock control message when on access control
+- Fixed sustain zone continuing to play if leaving while loading
+
 ## [2.4.8] - 06-14-24
 
 - Included YTDL editor resolver logs with "VideoTXL" instead of "USharpVideo"
