@@ -32,6 +32,7 @@ Shader "VideoTXL/RenderOutVRSL" {
 			struct v2f {
 				float4 vertex : SV_POSITION;
 				float2 texcoord : TEXCOORD0;
+				float2 texcoord1 : TEXCOORD1;
 				UNITY_FOG_COORDS(1)
 				UNITY_VERTEX_OUTPUT_STEREO
 			};
@@ -59,6 +60,8 @@ Shader "VideoTXL/RenderOutVRSL" {
 
 				if (_FlipY)
 					o.texcoord.y = 1 - o.texcoord.y;
+
+				o.texcoord1.xy = v.texcoord.xy;
 
 				UNITY_TRANSFER_FOG(o, o.vertex);
 				return o;
@@ -89,7 +92,7 @@ Shader "VideoTXL/RenderOutVRSL" {
 				float4 color = tex2D(_MainTex, uv);
 
 				if (_DoubleBuffered) {
-					float4 prev = tex2D(_BufferTex, uv);
+					float4 prev = tex2D(_BufferTex, i.texcoord1.xy);
 					color.rgb = lerp(prev, color, color.a);
 				}
 

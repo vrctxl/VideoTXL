@@ -347,8 +347,11 @@ namespace Texel
 
             if (vrslDoubleBufferAVPro)
             {
-                vrslBuffer = new RenderTexture(vrslDmxRT);
+                vrslBuffer = new RenderTexture(vrslDmxRT.descriptor);
                 vrslBuffer.Create();
+                vrslBlitMat.SetTexture("_BufferTex", vrslBuffer);
+
+                _DebugLog($"Initialized VRSL buffer {vrslBuffer.width}x{vrslBuffer.height}");
             }
         }
 
@@ -1127,8 +1130,8 @@ namespace Texel
                 if (vrslBuffer && currentAVPro)
                     VRCGraphics.Blit(vrslDmxRT, vrslBuffer);
 
-                Texture tex = ValidCurrentTexture;
-                VRCGraphics.Blit(tex, vrslDmxRT, vrslBlitMat);
+                //Texture tex = ValidCurrentTexture;
+                VRCGraphics.Blit(null, vrslDmxRT, vrslBlitMat);
             }
         }
 
@@ -1183,6 +1186,9 @@ namespace Texel
 
             if (vrslBlitMat)
             {
+                vrslBlitMat.SetTexture("_MainTex", validCurrent);
+                vrslBlitMat.SetTexture("_BufferTex", vrslBuffer);
+
                 _SetMatIntProperty(vrslBlitMat, "_ApplyGamma", currentGamma ? 1 : 0);
                 _SetMatIntProperty(vrslBlitMat, "_FlipY", currentInvert ? 1 : 0);
                 _SetMatFloatProperty(vrslBlitMat, "_AspectRatio", currentAspectRatio);
