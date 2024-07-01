@@ -925,6 +925,13 @@ namespace Texel
         {
             DebugTrace("Event OnVideoReady");
 
+            if (!_inSustainZone)
+            {
+                videoMux._VideoStop();
+                _UpdatePlayerState(VIDEO_STATE_STOPPED);
+                return;
+            }
+
             float position = videoMux.VideoTime;
             float duration = videoMux.VideoDuration;
             DebugLog("Video ready, duration: " + duration + ", position: " + position);

@@ -852,10 +852,12 @@ namespace Texel
 
         public string _MakeOwnerMessage()
         {
+            if (videoPlayer.accessControl)
+                return $"Controls locked by access control";
             if (instanceMaster == instanceOwner || instanceOwner == "")
                 return $"Controls locked to master {instanceMaster}";
-            else
-                return $"Controls locked to master {instanceMaster} and owner {instanceOwner}";
+
+            return $"Controls locked to master {instanceMaster} and owner {instanceOwner}";
         }
 
         public override void OnPlayerJoined(VRCPlayerApi player)
