@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.4.10] - 07-02-24
+
+- Added VRSLEnabled property to screen manager to control at runtime
+
 ## [2.4.9] - 07-01-24
 
 - Added direct VRSL integration in Screen Manager

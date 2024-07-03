@@ -27,6 +27,12 @@ namespace Texel
         Editor = 9,
     }
 
+    public enum VRSLMode
+    {
+        Horizontal = 0,
+        Vertical = 1,
+    }
+
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class ScreenManager : EventBase
     {
@@ -117,6 +123,7 @@ namespace Texel
         [SerializeField] internal VRCUrl downloadLogoImageUrl;
 
         // VRSL Integration
+        [SerializeField] internal bool vrslEnabled;
         [SerializeField] internal UdonBehaviour vrslController;
         [SerializeField] internal RenderTexture vrslDmxRT;
         [SerializeField] internal Vector3 vrslOffsetScale;
@@ -323,7 +330,24 @@ namespace Texel
             _InternalOnVideoStateUpdate();
         }
 
-        public void _InitVRSL()
+        void _InitVRSL()
+        {
+            if (!vrslDmxRT)
+                return;
+
+            _RefreshVRSL();
+
+            if (vrslDoubleBufferAVPro)
+            {
+                vrslBuffer = new RenderTexture(vrslDmxRT.descriptor);
+                vrslBuffer.Create();
+                vrslBlitMat.SetTexture("_BufferTex", vrslBuffer);
+
+                _DebugLog($"Initialized VRSL buffer {vrslBuffer.width}x{vrslBuffer.height}");
+            }
+        }
+
+        void _RefreshVRSL()
         {
             if (!vrslDmxRT)
                 return;
@@ -343,15 +367,6 @@ namespace Texel
                 vrslBlitMat.SetVector("_OffsetScale", new Vector4(vrslOffsetScale.x, vrslOffsetScale.y, vrslOffsetScale.z, vrslOffsetScale.z));
                 vrslBlitMat.SetInt("_Horizontal", horizontal ? 1 : 0);
                 vrslBlitMat.SetInt("_DoubleBuffered", vrslDoubleBufferAVPro ? 1 : 0);
-            }
-
-            if (vrslDoubleBufferAVPro)
-            {
-                vrslBuffer = new RenderTexture(vrslDmxRT.descriptor);
-                vrslBuffer.Create();
-                vrslBlitMat.SetTexture("_BufferTex", vrslBuffer);
-
-                _DebugLog($"Initialized VRSL buffer {vrslBuffer.width}x{vrslBuffer.height}");
             }
         }
 
@@ -407,6 +422,12 @@ namespace Texel
         public float CurrentAspectRatioOverride
         {
             get { return currentAspectRatio; }
+        }
+
+        public bool VRSLEnabled
+        {
+            get { return vrslEnabled; }
+            set { vrslEnabled = value; }
         }
 
         void _InitMaterialOverrides()
@@ -1125,7 +1146,7 @@ namespace Texel
 
         private void Update()
         {
-            if (vrslDmxRT && vrslBlitMat)
+            if (vrslEnabled && vrslDmxRT && vrslBlitMat)
             {
                 if (vrslBuffer && currentAVPro)
                     VRCGraphics.Blit(vrslDmxRT, vrslBuffer);
