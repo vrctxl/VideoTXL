@@ -172,6 +172,7 @@ namespace Texel
         SerializedProperty downloadLogoImageUrlProperty;
 
         // VRSL Integration
+        SerializedProperty vrslEnabledProperty;
         SerializedProperty vrslControllerProperty;
         SerializedProperty vrslDmxRTProperty;
         SerializedProperty vrslOffsetScaleProperty;
@@ -313,6 +314,7 @@ namespace Texel
             downloadLogoImageProperty = serializedObject.FindProperty(nameof(ScreenManager.downloadLogoImage));
             downloadLogoImageUrlProperty = serializedObject.FindProperty(nameof(ScreenManager.downloadLogoImageUrl));
 
+            vrslEnabledProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslEnabled));
             vrslControllerProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslController));
             vrslDmxRTProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslDmxRT));
             vrslOffsetScaleProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslOffsetScale));
@@ -503,119 +505,125 @@ namespace Texel
 
             EditorGUI.indentLevel++;
             EditorGUILayout.LabelField(new GUIContent("VRSL"), EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(vrslControllerProperty, new GUIContent("Local UI Control Panel", "The VRSL_LocalUIControlPanel in your scene"));
-            EditorGUILayout.PropertyField(vrslDmxRTProperty, new GUIContent("DMX Raw RT", "The VRSL raw RenderTexture for either horizontal, vertical, or legacy configuration"));
-            EditorGUI.indentLevel++;
-            EditorGUILayout.PropertyField(vrslBlitMatProperty, new GUIContent("DMX Copy material", "The material used to copy the DMX section of the video feed to the DMX Raw RT.  Do not change unless you know what you're doing."));
-            EditorGUILayout.PropertyField(vrslSourceAspectRatioProperty, new GUIContent("Source Aspect Ratio", "The expected aspect ratio of streams containing VRSL DMX Grid data"));
-            EditorGUI.indentLevel--;
+            EditorGUILayout.PropertyField(vrslEnabledProperty, new GUIContent("Enabled", "Whether the VRSL integration is enabled or not"));
 
-            float aspectRatio = vrslSourceAspectRatioProperty.floatValue;
-            if (aspectRatio <= 0)
+            if (vrslEnabledProperty.boolValue)
             {
-                aspectRatio = 1.777777f;
-                if (overrideAspectRatioProperty.boolValue && aspectRatioProperty.floatValue > 0)
-                    aspectRatio = aspectRatioProperty.floatValue;
-
-                vrslSourceAspectRatioProperty.floatValue = aspectRatio;
-            }
-
-            RenderTexture rt = (RenderTexture)vrslDmxRTProperty.objectReferenceValue;
-            if (rt != null)
-            {
-                EditorGUILayout.LabelField("DMX Area");
-                EditorGUILayout.Space(3);
-
-                // Horz: 104 x 960
-                // Vert: 104 x 540
-
-                bool vertical = rt.height == 540;
-                float dmxW = 1;
-                float dmxH = (208f / 1080) * (aspectRatio / 1.77777f);
-                if (vertical)
-                {
-                    dmxW = (208f / 1920) * (aspectRatio / 1.77777f);
-                    dmxH = 1;
-                }
-
-                Vector3 offsetScale = vrslOffsetScaleProperty.vector3Value;
-
-                float editWidth = Math.Min(EditorGUIUtility.currentViewWidth - 45 - 50, 400f);
-                float editHeight = editWidth / aspectRatio;
-
-                Texture bgTex = (Texture)editorTextureProperty.objectReferenceValue;
-                if (bgTex == null)
-                    bgTex = Texture2D.blackTexture;
-
-                float requestHeight = editHeight;
-                //if (vertical)
-                    requestHeight += 30;
-
-                Rect rect = GUILayoutUtility.GetRect(editWidth, requestHeight);
-                rect.x += 30;
-                rect.width -= 30; // Margin
-                rect.width -= 20; // Slider
-
-                Rect boxRect = rect;
-                boxRect.width = Math.Min(editWidth, rect.width);
-                boxRect.height = boxRect.width / aspectRatio;
-                boxRect.x = rect.x;
-                
-                Rect asRect = new Rect(boxRect.x + 1, boxRect.y + 1, boxRect.width - 2, boxRect.height - 2);
-                if (!vertical)
-                {
-                    float diffH = asRect.height - (asRect.height * dmxH);
-                    asRect.height = (asRect.height - diffH) * offsetScale.z;
-                    asRect.y += diffH * (1 - offsetScale.y);
-                    asRect.width *= offsetScale.z;
-                    asRect.x += (boxRect.width - 2 - asRect.width) * offsetScale.x;
-                } else
-                {
-                    float diffW = asRect.width - (asRect.width * dmxW);
-                    asRect.width = (asRect.width - diffW) * offsetScale.z;
-                    asRect.x += diffW * offsetScale.x;
-                    asRect.height *= offsetScale.z;
-                    asRect.y += (boxRect.height - 2 - asRect.height) * (1 - offsetScale.y);
-                }
-
-                GUI.DrawTexture(boxRect, bgTex, ScaleMode.StretchToFill, false, aspectRatio);
-                Handles.DrawSolidRectangleWithOutline(asRect, new Color(1, 1, 1, .15f), Color.white);
-
-                // Y Scroll
-                Rect scrollRect = new Rect(boxRect.xMax + 5, boxRect.yMin + asRect.height / 2 - 3, 20, boxRect.height - asRect.height + 6);
-                offsetScale.y = GUI.VerticalSlider(scrollRect, !vertical || offsetScale.z < 1 ? offsetScale.y : 0, 1, 0);
-
-                // X Scroll
-                scrollRect = new Rect(boxRect.xMin + asRect.width / 2, boxRect.yMax + 5, boxRect.width - asRect.width, 20);
-                offsetScale.x = GUI.HorizontalSlider(scrollRect, vertical || offsetScale.z < 1 ? offsetScale.x : 0, 0, 1);
-
+                EditorGUILayout.PropertyField(vrslControllerProperty, new GUIContent("Local UI Control Panel", "The VRSL_LocalUIControlPanel in your scene"));
+                EditorGUILayout.PropertyField(vrslDmxRTProperty, new GUIContent("DMX Raw RT", "The VRSL raw RenderTexture for either horizontal, vertical, or legacy configuration"));
                 EditorGUI.indentLevel++;
-                Vector2 offset = EditorGUILayout.Vector2Field(new GUIContent("Offset"), new Vector2(offsetScale.x, offsetScale.y));
-                offsetScale.x = Math.Clamp(offset.x, 0, 1);
-                offsetScale.y = Math.Clamp(offset.y, 0, 1);
-
-                offsetScale.z = EditorGUILayout.Slider(new GUIContent("Scale"), offsetScale.z, 0, 1);
-                Rect buttonLineRect = GUILayoutUtility.GetRect(editWidth, EditorGUIUtility.singleLineHeight);
-                Rect buttonArea = EditorGUI.PrefixLabel(buttonLineRect, new GUIContent(" "));
-                Rect buttonRect = buttonArea;
-
-                buttonRect.width = (buttonArea.width - 10) / 3;
-                if (GUI.Button(buttonRect, new GUIContent("1080p")))
-                    offsetScale.z = 1;
-
-                buttonRect.x = buttonArea.x + (buttonArea.width - 10) / 3 + 5;
-                if (GUI.Button(buttonRect, new GUIContent("720p")))
-                    offsetScale.z = .666666f;
-
-                buttonRect.x = buttonArea.x + (buttonArea.width - 10) / 3 * 2 + 10;
-                if (GUI.Button(buttonRect, new GUIContent("480p")))
-                    offsetScale.z = .444444f;
-
+                EditorGUILayout.PropertyField(vrslBlitMatProperty, new GUIContent("DMX Copy material", "The material used to copy the DMX section of the video feed to the DMX Raw RT.  Do not change unless you know what you're doing."));
+                EditorGUILayout.PropertyField(vrslSourceAspectRatioProperty, new GUIContent("Source Aspect Ratio", "The expected aspect ratio of streams containing VRSL DMX Grid data"));
                 EditorGUI.indentLevel--;
 
-                vrslOffsetScaleProperty.vector3Value = offsetScale;
+                float aspectRatio = vrslSourceAspectRatioProperty.floatValue;
+                if (aspectRatio <= 0)
+                {
+                    aspectRatio = 1.777777f;
+                    if (overrideAspectRatioProperty.boolValue && aspectRatioProperty.floatValue > 0)
+                        aspectRatio = aspectRatioProperty.floatValue;
 
-                EditorGUILayout.PropertyField(vrslDoubleBufferAVProProperty, new GUIContent("Double Buffer AVPro", "Use double buffering with AVPro video sources to repeat previous frames whenever a frame is dropped."));
+                    vrslSourceAspectRatioProperty.floatValue = aspectRatio;
+                }
+
+                RenderTexture rt = (RenderTexture)vrslDmxRTProperty.objectReferenceValue;
+                if (rt != null)
+                {
+                    EditorGUILayout.LabelField("DMX Area");
+                    EditorGUILayout.Space(3);
+
+                    // Horz: 104 x 960
+                    // Vert: 104 x 540
+
+                    bool vertical = rt.height == 540;
+                    float dmxW = 1;
+                    float dmxH = (208f / 1080) * (aspectRatio / 1.77777f);
+                    if (vertical)
+                    {
+                        dmxW = (208f / 1920) * (aspectRatio / 1.77777f);
+                        dmxH = 1;
+                    }
+
+                    Vector3 offsetScale = vrslOffsetScaleProperty.vector3Value;
+
+                    float editWidth = Math.Min(EditorGUIUtility.currentViewWidth - 45 - 50, 400f);
+                    float editHeight = editWidth / aspectRatio;
+
+                    Texture bgTex = (Texture)editorTextureProperty.objectReferenceValue;
+                    if (bgTex == null)
+                        bgTex = Texture2D.blackTexture;
+
+                    float requestHeight = editHeight;
+                    //if (vertical)
+                    requestHeight += 30;
+
+                    Rect rect = GUILayoutUtility.GetRect(editWidth, requestHeight);
+                    rect.x += 30;
+                    rect.width -= 30; // Margin
+                    rect.width -= 20; // Slider
+
+                    Rect boxRect = rect;
+                    boxRect.width = Math.Min(editWidth, rect.width);
+                    boxRect.height = boxRect.width / aspectRatio;
+                    boxRect.x = rect.x;
+
+                    Rect asRect = new Rect(boxRect.x + 1, boxRect.y + 1, boxRect.width - 2, boxRect.height - 2);
+                    if (!vertical)
+                    {
+                        float diffH = asRect.height - (asRect.height * dmxH);
+                        asRect.height = (asRect.height - diffH) * offsetScale.z;
+                        asRect.y += diffH * (1 - offsetScale.y);
+                        asRect.width *= offsetScale.z;
+                        asRect.x += (boxRect.width - 2 - asRect.width) * offsetScale.x;
+                    }
+                    else
+                    {
+                        float diffW = asRect.width - (asRect.width * dmxW);
+                        asRect.width = (asRect.width - diffW) * offsetScale.z;
+                        asRect.x += diffW * offsetScale.x;
+                        asRect.height *= offsetScale.z;
+                        asRect.y += (boxRect.height - 2 - asRect.height) * (1 - offsetScale.y);
+                    }
+
+                    GUI.DrawTexture(boxRect, bgTex, ScaleMode.StretchToFill, false, aspectRatio);
+                    Handles.DrawSolidRectangleWithOutline(asRect, new Color(1, 1, 1, .15f), Color.white);
+
+                    // Y Scroll
+                    Rect scrollRect = new Rect(boxRect.xMax + 5, boxRect.yMin + asRect.height / 2 - 3, 20, boxRect.height - asRect.height + 6);
+                    offsetScale.y = GUI.VerticalSlider(scrollRect, !vertical || offsetScale.z < 1 ? offsetScale.y : 0, 1, 0);
+
+                    // X Scroll
+                    scrollRect = new Rect(boxRect.xMin + asRect.width / 2, boxRect.yMax + 5, boxRect.width - asRect.width, 20);
+                    offsetScale.x = GUI.HorizontalSlider(scrollRect, vertical || offsetScale.z < 1 ? offsetScale.x : 0, 0, 1);
+
+                    EditorGUI.indentLevel++;
+                    Vector2 offset = EditorGUILayout.Vector2Field(new GUIContent("Offset"), new Vector2(offsetScale.x, offsetScale.y));
+                    offsetScale.x = Math.Clamp(offset.x, 0, 1);
+                    offsetScale.y = Math.Clamp(offset.y, 0, 1);
+
+                    offsetScale.z = EditorGUILayout.Slider(new GUIContent("Scale"), offsetScale.z, 0, 1);
+                    Rect buttonLineRect = GUILayoutUtility.GetRect(editWidth, EditorGUIUtility.singleLineHeight);
+                    Rect buttonArea = EditorGUI.PrefixLabel(buttonLineRect, new GUIContent(" "));
+                    Rect buttonRect = buttonArea;
+
+                    buttonRect.width = (buttonArea.width - 10) / 3;
+                    if (GUI.Button(buttonRect, new GUIContent("1080p")))
+                        offsetScale.z = 1;
+
+                    buttonRect.x = buttonArea.x + (buttonArea.width - 10) / 3 + 5;
+                    if (GUI.Button(buttonRect, new GUIContent("720p")))
+                        offsetScale.z = .666666f;
+
+                    buttonRect.x = buttonArea.x + (buttonArea.width - 10) / 3 * 2 + 10;
+                    if (GUI.Button(buttonRect, new GUIContent("480p")))
+                        offsetScale.z = .444444f;
+
+                    EditorGUI.indentLevel--;
+
+                    vrslOffsetScaleProperty.vector3Value = offsetScale;
+
+                    EditorGUILayout.PropertyField(vrslDoubleBufferAVProProperty, new GUIContent("Double Buffer AVPro", "Use double buffering with AVPro video sources to repeat previous frames whenever a frame is dropped."));
+                }
             }
 
             if (vrslControllerCache)
@@ -669,6 +677,8 @@ namespace Texel
 
                 if (!vrslBlitMatProperty.objectReferenceValue)
                     vrslBlitMatProperty.objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(DEFAULT_VRSL_MAT_PATH);
+
+                vrslEnabledProperty.boolValue = true;
             }
         }
 
