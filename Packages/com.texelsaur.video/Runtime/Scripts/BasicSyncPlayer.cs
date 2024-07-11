@@ -412,7 +412,8 @@ namespace Texel
                 _syncOwnerPlaying = true;
                 RequestSerialization();
                 
-                _currentPlayer.SetTime(_videoTargetTime);
+                if (seekableSource)
+                    _currentPlayer.SetTime(_videoTargetTime);
             }
             else
             {

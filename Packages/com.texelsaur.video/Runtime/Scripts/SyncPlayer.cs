@@ -991,7 +991,8 @@ namespace Texel
                 RequestSerialization();
 
                 //if (!paused)
-                videoMux._VideoSetTime(_videoTargetTime);
+                if (seekableSource)
+                    videoMux._VideoSetTime(_videoTargetTime);
 
                 SyncVideoImmediate();
             }

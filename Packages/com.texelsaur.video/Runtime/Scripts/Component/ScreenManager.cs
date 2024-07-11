@@ -118,6 +118,8 @@ namespace Texel
         [SerializeField] internal bool[] renderOutResize;
         [SerializeField] internal bool[] renderOutExpandSize;
         [SerializeField] internal bool[] renderOutGlobalTex;
+        [SerializeField] internal bool[] renderOutDoubleBufferAVPro;
+        [SerializeField] internal bool[] renderOutDoubleBufferUnity;
 
         [SerializeField] internal bool downloadLogoImage;
         [SerializeField] internal VRCUrl downloadLogoImageUrl;
@@ -129,6 +131,7 @@ namespace Texel
         [SerializeField] internal Vector3 vrslOffsetScale;
         [SerializeField] internal float vrslSourceAspectRatio;
         [SerializeField] internal bool vrslDoubleBufferAVPro = true;
+        [SerializeField] internal bool vrslDoubleBufferUnity = false;
         [SerializeField] internal Material vrslBlitMat;
 
         int baseIndexCrt;
@@ -146,6 +149,7 @@ namespace Texel
         string[] shaderPropGammaList;
         string[] shaderPropFitList;
         string[] shaderPropAspectRatioList;
+        string[] shaderPropDoubleBufferedList;
 
         int[] globalPropMainTexList;
         int[] globalPropAVProList;
@@ -283,6 +287,8 @@ namespace Texel
             _InitTextureOverrides();
 #endif
 
+            _InitCRTDoubleBuffer();
+
             if (downloadLogoImage)
             {
                 imageDownloader = new VRCImageDownloader();
@@ -335,15 +341,46 @@ namespace Texel
             if (!vrslDmxRT)
                 return;
 
-            _RefreshVRSL();
+            _RefreshVRSL();        
+        }
 
-            if (vrslDoubleBufferAVPro)
+        void _UpdateVRSLBuffer()
+        {
+            bool shouldBuffer = false;
+            if (vrslDoubleBufferAVPro && _screenSource == VideoSource.VIDEO_SOURCE_AVPRO)
+                shouldBuffer = true;
+            if (vrslDoubleBufferUnity && _screenSource == VideoSource.VIDEO_SOURCE_UNITY)
+                shouldBuffer = true;
+
+            if (shouldBuffer)
             {
-                vrslBuffer = new RenderTexture(vrslDmxRT.descriptor);
-                vrslBuffer.Create();
-                vrslBlitMat.SetTexture("_BufferTex", vrslBuffer);
+                if (!vrslBuffer)
+                {
+                    vrslBuffer = new RenderTexture(vrslDmxRT.descriptor);
+                    vrslBuffer.Create();
+                    _DebugLog($"Initialized VRSL buffer {vrslBuffer.width}x{vrslBuffer.height}");
+                }
 
-                _DebugLog($"Initialized VRSL buffer {vrslBuffer.width}x{vrslBuffer.height}");
+                if (vrslBlitMat)
+                {
+                    vrslBlitMat.SetTexture("_BufferTex", vrslBuffer);
+                    vrslBlitMat.SetInt("_DoubleBuffered", shouldBuffer ? 1 : 0);
+                }
+            }
+            else
+            {
+                if (vrslBuffer)
+                {
+                    vrslBuffer.Release();
+                    vrslBuffer = null;
+                    _DebugLog("Released VRSL buffer");
+                }
+
+                if (vrslBlitMat)
+                {
+                    vrslBlitMat.SetTexture("_BufferTex", Texture2D.blackTexture);
+                    vrslBlitMat.SetInt("_DoubleBuffered", 0);
+                }
             }
         }
 
@@ -361,12 +398,13 @@ namespace Texel
             else
                 horizontal = vrslDmxRT.height == 960;
 
+            _UpdateVRSLBuffer();
+
             if (vrslBlitMat)
             {
                 vrslBlitMat.SetTexture("_MainTex", vrslDmxRT);
                 vrslBlitMat.SetVector("_OffsetScale", new Vector4(vrslOffsetScale.x, vrslOffsetScale.y, vrslOffsetScale.z, vrslOffsetScale.z));
                 vrslBlitMat.SetInt("_Horizontal", horizontal ? 1 : 0);
-                vrslBlitMat.SetInt("_DoubleBuffered", vrslDoubleBufferAVPro ? 1 : 0);
             }
         }
 
@@ -428,6 +466,52 @@ namespace Texel
         {
             get { return vrslEnabled; }
             set { vrslEnabled = value; }
+        }
+
+        public bool _GetVRSLDoubleBuffered(VideoSourceBackend type)
+        {
+            if (type == VideoSourceBackend.Unity)
+                return vrslDoubleBufferUnity;
+            if (type == VideoSourceBackend.AVPro)
+                return vrslDoubleBufferAVPro;
+
+            return false;
+        }
+
+        public void _SetVRSLDoubleBuffered(VideoSourceBackend type, bool state)
+        {
+            if (type == VideoSourceBackend.Unity)
+                vrslDoubleBufferUnity = state;
+            else if (type == VideoSourceBackend.AVPro)
+                vrslDoubleBufferAVPro = state;
+
+            _UpdateVRSLBuffer();
+        }
+
+        public bool _GetCRTDoubleBuffered(VideoSourceBackend type, int crtIndex)
+        {
+            if (crtIndex < 0 || crtIndex >= renderOutCrt.Length)
+                return false;
+
+            if (type == VideoSourceBackend.AVPro)
+                return renderOutDoubleBufferAVPro[crtIndex];
+            if (type == VideoSourceBackend.Unity)
+                return renderOutDoubleBufferUnity[crtIndex];
+
+            return false;
+        }
+
+        public void _SetCRTDoubleBuffered(VideoSourceBackend type, int crtIndex, bool state)
+        {
+            if (crtIndex < 0 || crtIndex >= renderOutCrt.Length)
+                return;
+
+            if (type == VideoSourceBackend.AVPro)
+                renderOutDoubleBufferAVPro[crtIndex] = state;
+            if (type == VideoSourceBackend.Unity)
+                renderOutDoubleBufferUnity[crtIndex] = state;
+
+            _UpdateCRTDoubleBuffer(crtIndex);
         }
 
         void _InitMaterialOverrides()
@@ -511,6 +595,7 @@ namespace Texel
             shaderPropGammaList = new string[totalPropLength];
             shaderPropFitList = new string[totalPropLength];
             shaderPropAspectRatioList = new string[totalPropLength];
+            shaderPropDoubleBufferedList = new string[totalPropLength];
 
             // Material Props
             if (hasMaterialUpdates)
@@ -640,6 +725,50 @@ namespace Texel
             }
         }
 
+        void _InitCRTDoubleBuffer()
+        {
+            if (renderOutDoubleBufferAVPro == null || renderOutDoubleBufferAVPro.Length < renderOutCrt.Length)
+            {
+                renderOutDoubleBufferAVPro = new bool[renderOutCrt.Length];
+                for (int i = 0; i < renderOutCrt.Length; i++)
+                {
+                    if (renderOutCrt[i])
+                        renderOutDoubleBufferAVPro[i] = renderOutCrt[i].doubleBuffered;
+                }
+            }
+
+            if (renderOutDoubleBufferUnity == null || renderOutDoubleBufferUnity.Length < renderOutCrt.Length)
+            {
+                renderOutDoubleBufferUnity = new bool[renderOutCrt.Length];
+                for (int i = 0; i < renderOutCrt.Length; i++)
+                {
+                    if (renderOutCrt[i])
+                        renderOutDoubleBufferUnity[i] = renderOutCrt[i].doubleBuffered;
+                }
+            }
+
+            _UpdateCRTDoubleBuffer();
+        }
+
+        void _UpdateCRTDoubleBuffer()
+        {
+            for (int i = 0; i < renderOutCrt.Length; i++)
+                _UpdateCRTDoubleBuffer(i);
+        }
+
+        void _UpdateCRTDoubleBuffer(int crtIndex)
+        {
+            if (!renderOutCrt[crtIndex])
+                return;
+
+            bool useDB = _screenSource == VideoSource.VIDEO_SOURCE_AVPRO ? renderOutDoubleBufferAVPro[crtIndex] : renderOutDoubleBufferUnity[crtIndex];
+            renderOutCrt[crtIndex].doubleBuffered = useDB;
+
+            Material mat = renderOutCrt[crtIndex].material;
+            if (mat && shaderPropDoubleBufferedList[baseIndexCrt + crtIndex] != "")
+                mat.SetInt(shaderPropDoubleBufferedList[baseIndexCrt + crtIndex], useDB ? 1 : 0);
+        }
+
         bool _TryLoadDefaultProps(int i, Material mat)
         {
             if (!mat || !mat.shader)
@@ -670,6 +799,7 @@ namespace Texel
             shaderPropGammaList[i] = propMap.applyGamma;
             shaderPropFitList[i] = propMap.screenFit;
             shaderPropAspectRatioList[i] = propMap.aspectRatio;
+            shaderPropDoubleBufferedList[i] = propMap.doubleBuffered;
         }
 
         void _LoadGlobalPropertyMap(int i, ScreenPropertyMap propMap)
@@ -704,6 +834,7 @@ namespace Texel
             shaderPropGammaList[i] = "_ApplyGammaAVPro";
             shaderPropFitList[i] = "_FitMode";
             shaderPropAspectRatioList[i] = "_TexAspectRatio";
+            shaderPropDoubleBufferedList[i] = "";
         }
 
         void _LoadRenderOutProps(int i)
@@ -714,6 +845,7 @@ namespace Texel
             shaderPropGammaList[i] = "_ApplyGamma";
             shaderPropFitList[i] = "_FitMode";
             shaderPropAspectRatioList[i] = "_TexAspectRatio";
+            shaderPropDoubleBufferedList[i] = "_DoubleBuffered";
         }
 
         void _RestoreMaterialOverrides()
@@ -798,6 +930,9 @@ namespace Texel
             {
                 captureRenderer = videoPlayer.VideoManager.CaptureRenderer;
                 _screenSource = videoPlayer.VideoManager.ActiveSourceType;
+
+                _UpdateCRTDoubleBuffer();
+                _UpdateVRSLBuffer();
             }
 
             _ResetCheckScreenMaterial();
@@ -1148,7 +1283,7 @@ namespace Texel
         {
             if (vrslEnabled && vrslDmxRT && vrslBlitMat)
             {
-                if (vrslBuffer && currentAVPro)
+                if (vrslBuffer)
                     VRCGraphics.Blit(vrslDmxRT, vrslBuffer);
 
                 //Texture tex = ValidCurrentTexture;
@@ -1186,13 +1321,13 @@ namespace Texel
                 Material mat = crt.material;
                 if (Utilities.IsValid(mat))
                 {
-                    mat.SetTexture(shaderPropMainTexList[baseIndexCrt], validCurrent);
+                    mat.SetTexture(shaderPropMainTexList[baseIndexCrt + i], validCurrent);
 
-                    _SetMatIntProperty(mat, shaderPropAVProList[baseIndexCrt], currentAVPro ? 1 : 0);
-                    _SetMatIntProperty(mat, shaderPropGammaList[baseIndexCrt], currentGamma ? 1 : 0);
-                    _SetMatIntProperty(mat, shaderPropInvertList[baseIndexCrt], currentInvert ? 1 : 0);
-                    _SetMatIntProperty(mat, shaderPropFitList[baseIndexCrt], fit);
-                    _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexCrt], currentAspectRatio);
+                    _SetMatIntProperty(mat, shaderPropAVProList[baseIndexCrt + i], currentAVPro ? 1 : 0);
+                    _SetMatIntProperty(mat, shaderPropGammaList[baseIndexCrt + i], currentGamma ? 1 : 0);
+                    _SetMatIntProperty(mat, shaderPropInvertList[baseIndexCrt + i], currentInvert ? 1 : 0);
+                    _SetMatIntProperty(mat, shaderPropFitList[baseIndexCrt + i], fit);
+                    _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexCrt + i], currentAspectRatio);
 
                     bool isRT = validCurrent.GetType() == typeof(RenderTexture) || validCurrent.GetType() == typeof(CustomRenderTexture);
                     if (_screenMode == SCREEN_MODE_NORMAL || isRT)
@@ -1208,12 +1343,13 @@ namespace Texel
             if (vrslBlitMat)
             {
                 vrslBlitMat.SetTexture("_MainTex", validCurrent);
-                vrslBlitMat.SetTexture("_BufferTex", vrslBuffer);
+                //vrslBlitMat.SetTexture("_BufferTex", vrslBuffer);
 
                 _SetMatIntProperty(vrslBlitMat, "_ApplyGamma", currentGamma ? 1 : 0);
                 _SetMatIntProperty(vrslBlitMat, "_FlipY", currentInvert ? 1 : 0);
                 _SetMatFloatProperty(vrslBlitMat, "_AspectRatio", currentAspectRatio);
-                _SetMatFloatProperty(vrslBlitMat, "_DoubleBuffered", currentAVPro && vrslDoubleBufferAVPro ? 1 : 0);
+
+                //_SetMatFloatProperty(vrslBlitMat, "_DoubleBuffered", currentAVPro && vrslDoubleBufferAVPro ? 1 : 0);
             }
         }
 
