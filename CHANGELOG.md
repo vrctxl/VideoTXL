@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.4.11] - 07-10-24
+
+- Fixed Audio Fade Zone sometimes dropping audio when entering inner collider
+- Detect simple spherical audio zones and convert to more efficient distance interpolation
+- Fixed livestreams sometimes freezing at start for master/owner in SyncPlayer and BasicSyncPlayer
+- Fixed VRSL integration initializing with 0 scale
+- Fixed Screen Manager using first CRT's property map on all CRTs
+- CRT double buffering now exposed as separate Unity and AVPro settings
+- Added _GetVRSLDoubleBuffered, _SetVRSLDoubleBuffered, _GetCRTDoubleBuffered, _SetCRTDoubleBuffered API to Screen Manager
+
 ## [2.4.10] - 07-02-24
 
 - Added VRSLEnabled property to screen manager to control at runtime

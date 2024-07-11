@@ -167,6 +167,8 @@ namespace Texel
         SerializedProperty renderOutResizeListProperty;
         SerializedProperty renderOutExpandSizeListProperty;
         SerializedProperty renderOutGlobalTexListProperty;
+        SerializedProperty renderOutDoubleBufferAVProListProperty;
+        SerializedProperty renderOutDoubleBufferUnityListProperty;
 
         SerializedProperty downloadLogoImageProperty;
         SerializedProperty downloadLogoImageUrlProperty;
@@ -179,6 +181,7 @@ namespace Texel
         SerializedProperty vrslSourceAspectRatioProperty;
         SerializedProperty vrslBlitMatProperty;
         SerializedProperty vrslDoubleBufferAVProProperty;
+        SerializedProperty vrslDoubleBufferUnityProperty;
 
         SerializedProperty _udonSharpBackingUdonBehaviourProperty;
 
@@ -310,6 +313,8 @@ namespace Texel
             renderOutResizeListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutResize));
             renderOutExpandSizeListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutExpandSize));
             renderOutGlobalTexListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutGlobalTex));
+            renderOutDoubleBufferAVProListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutDoubleBufferAVPro));
+            renderOutDoubleBufferUnityListProperty = serializedObject.FindProperty(nameof(ScreenManager.renderOutDoubleBufferUnity));
 
             downloadLogoImageProperty = serializedObject.FindProperty(nameof(ScreenManager.downloadLogoImage));
             downloadLogoImageUrlProperty = serializedObject.FindProperty(nameof(ScreenManager.downloadLogoImageUrl));
@@ -321,6 +326,7 @@ namespace Texel
             vrslSourceAspectRatioProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslSourceAspectRatio));
             vrslBlitMatProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslBlitMat));
             vrslDoubleBufferAVProProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslDoubleBufferAVPro));
+            vrslDoubleBufferUnityProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslDoubleBufferUnity));
 
             _udonSharpBackingUdonBehaviourProperty = serializedObject.FindProperty("_udonSharpBackingUdonBehaviour");
 
@@ -335,6 +341,30 @@ namespace Texel
                     vrslEditorBlitMat.CopyPropertiesFromMaterial((Material)vrslBlitMatProperty.objectReferenceValue);
                 else
                     vrslEditorBlitMat = new Material((Material)vrslBlitMatProperty.objectReferenceValue);
+            }
+
+            if (renderOutDoubleBufferAVProListProperty.arraySize < renderOutCrtListProperty.arraySize)
+            {
+                renderOutDoubleBufferAVProListProperty.arraySize = renderOutCrtListProperty.arraySize;
+                for (int i = 0; i < renderOutCrtListProperty.arraySize; i++)
+                {
+                    CustomRenderTexture crt = (CustomRenderTexture)renderOutCrtListProperty.GetArrayElementAtIndex(i).objectReferenceValue;
+                    if (crt)
+                        renderOutDoubleBufferAVProListProperty.GetArrayElementAtIndex(i).boolValue = crt.doubleBuffered;
+                }
+                serializedObject.ApplyModifiedProperties();
+            }
+
+            if (renderOutDoubleBufferUnityListProperty.arraySize < renderOutCrtListProperty.arraySize)
+            {
+                renderOutDoubleBufferUnityListProperty.arraySize = renderOutCrtListProperty.arraySize;
+                for (int i = 0; i < renderOutCrtListProperty.arraySize; i++)
+                {
+                    CustomRenderTexture crt = (CustomRenderTexture)renderOutCrtListProperty.GetArrayElementAtIndex(i).objectReferenceValue;
+                    if (crt)
+                        renderOutDoubleBufferUnityListProperty.GetArrayElementAtIndex(i).boolValue = crt.doubleBuffered;
+                }
+                serializedObject.ApplyModifiedProperties();
             }
 
             // CRT texture
@@ -498,6 +528,10 @@ namespace Texel
             EditorGUI.indentLevel--;
         }
 
+        static GUIContent doubleBufferLabel = new GUIContent("Double Bufferd", "Use double buffering with AVPro video sources to repeat previous frames whenever a frame is dropped.");
+        static GUIContent unityLabel = new GUIContent("Unity");
+        static GUIContent avproLabel = new GUIContent("AVPro");
+
         private void IntegrationsSection()
         {
             if (!TXLEditor.DrawMainHeaderHelp(new GUIContent("External Systems"), ref expandIntegrations, integrationsUrl))
@@ -622,7 +656,11 @@ namespace Texel
 
                     vrslOffsetScaleProperty.vector3Value = offsetScale;
 
-                    EditorGUILayout.PropertyField(vrslDoubleBufferAVProProperty, new GUIContent("Double Buffer AVPro", "Use double buffering with AVPro video sources to repeat previous frames whenever a frame is dropped."));
+                    EditorGUILayout.Space(EditorGUIUtility.standardVerticalSpacing);
+                    Rect bufferRect = GUILayoutUtility.GetRect(editWidth, EditorGUIUtility.singleLineHeight);
+                    TXLGUI.DrawToggle2(bufferRect, 1, doubleBufferLabel, avproLabel, vrslDoubleBufferAVProProperty, unityLabel, vrslDoubleBufferUnityProperty);
+
+                    //EditorGUILayout.PropertyField(vrslDoubleBufferAVProProperty, new GUIContent("Double Buffer AVPro", "Use double buffering with AVPro video sources to repeat previous frames whenever a frame is dropped."));
                 }
             }
 
@@ -679,6 +717,8 @@ namespace Texel
                     vrslBlitMatProperty.objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(DEFAULT_VRSL_MAT_PATH);
 
                 vrslEnabledProperty.boolValue = true;
+                if (vrslOffsetScaleProperty.vector3Value.z == 0)
+                    vrslOffsetScaleProperty.vector3Value = new Vector3(1, 1, 1);
             }
         }
 
@@ -745,6 +785,8 @@ namespace Texel
             SerializedProperty renderOutResizeListProperty;
             SerializedProperty renderOutExpandSizeListProperty;
             SerializedProperty renderOutGlobalTexListProperty;
+            SerializedProperty renderOutDoubleBufferAVProListProperty;
+            SerializedProperty renderOutDoubleBufferUnityListProperty;
 
             static string sectionUrl = "https://vrctxl.github.io/Docs/docs/video-txl/configuration/screen-manager#render-textures";
 
@@ -759,6 +801,8 @@ namespace Texel
             static GUIContent labelCrtMaterial = new GUIContent("CRT Material", "The material used to render the video data onto the CRT, fetched from the underlying asset.\n\nChanges to this value will change the material on the underlying CRT asset.  Only change this if you know what you're doing.");
             static GUIContent labelCrtPropertyMap = new GUIContent("Property Map", "The property map tells the manager what property names to set on the shader used by the CRT's material.\n\nA property map is required when non-TXL shaders are used.  If you aren't using a custom CRT material, this can be left empty.");
             static GUIContent labelDoubleBuffer = new GUIContent("Double Buffered", "Whether the CRT should be double-buffered, set on the underlying asset.  If the CRT material supports a double-buffered property in the map, it will be set to match.\n\nDouble buffering can help conceal dropped video frames when using AVPro video sources, at the cost of an extra texture copy.");
+            static GUIContent labelUnity = new GUIContent("Unity");
+            static GUIContent labelAVPro = new GUIContent("AVPro");
 
             static bool expandSection = true;
 
@@ -775,6 +819,8 @@ namespace Texel
                 renderOutResizeListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.renderOutResize)));
                 renderOutExpandSizeListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.renderOutExpandSize)));
                 renderOutGlobalTexListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.renderOutGlobalTex)));
+                renderOutDoubleBufferAVProListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.renderOutDoubleBufferAVPro)));
+                renderOutDoubleBufferUnityListProperty = AddSerializedArray(serializedObject.FindProperty(nameof(ScreenManager.renderOutDoubleBufferUnity)));
 
                 list.headerHeight = 1;
             }
@@ -798,6 +844,8 @@ namespace Texel
                 var resizeProp = GetElementSafe(renderOutResizeListProperty, index);
                 var expandSizeProp = GetElementSafe(renderOutExpandSizeListProperty, index);
                 var globalTexProp = GetElementSafe(renderOutGlobalTexListProperty, index);
+                var doubleBufferAVPro = GetElementSafe(renderOutDoubleBufferAVProListProperty, index);
+                var doubleBufferUnity = GetElementSafe(renderOutDoubleBufferUnityListProperty, index);
 
                 InitRect(ref rect);
 
@@ -861,7 +909,7 @@ namespace Texel
                 }
 
                 if (_showCrtAdvanced)
-                    crt.doubleBuffered = DrawToggle(ref rect, 1, labelDoubleBuffer, crt.doubleBuffered);
+                    DrawToggle2(ref rect, 1, labelDoubleBuffer, labelAVPro, doubleBufferAVPro, labelUnity, doubleBufferUnity);
 
                 if (compatMat && emap != null && emap.doubleBuffered != "" && propNames.Contains(emap.doubleBuffered))
                     mat.SetInt(emap.doubleBuffered, crt.doubleBuffered ? 1 : 0);
@@ -909,6 +957,7 @@ namespace Texel
                         renderOutTargetAspectListProperty.GetArrayElementAtIndex(index).floatValue = crt.material.GetFloat(emap.targetAspectRatio);
                 }
 
+                renderOutDoubleBufferAVProListProperty.GetArrayElementAtIndex(index).boolValue = true;
                 renderOutGlobalTexListProperty.GetArrayElementAtIndex(index).boolValue = (index == 0);
             }
 

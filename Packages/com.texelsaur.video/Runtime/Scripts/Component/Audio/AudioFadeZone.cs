@@ -51,11 +51,17 @@ namespace Texel
         //AudioManager audioManager;
         //int audioChannel;
 
+        bool simpleCollider = false;
+        Vector3 simpleOrigin;
+        float simpleInnerRadius = 0;
+        float simpleOuterRadius = 0;
+
         bool legacyCollider = true;
         bool hasAudioSource = false;
         //bool hasAudioManager = false;
         bool forceRecalc = false;
         bool pendingRecalc = false;
+        bool finishRecalcQueued = false;
 
         int triggerCount = 0;
         float targetVolume;
@@ -79,6 +85,27 @@ namespace Texel
 
             if (!innerZone || !outerZone || audioSourceLocations.Length > 0)
                 legacyCollider = false;
+
+            // Try converting colocated spheres to audio source location
+            if (innerZone && outerZone && audioSourceLocations.Length == 0)
+            {
+                SphereCollider innerSphere = (SphereCollider)innerZone;
+                SphereCollider outerSphere = (SphereCollider)outerZone;
+                if (innerSphere && outerSphere && innerSphere.center == outerSphere.center)
+                {
+                    DebugLog("Converting colliders to simple spherical interpolation");
+                    legacyCollider = false;
+                    simpleCollider = true;
+                    simpleInnerRadius = innerSphere.radius;
+                    simpleOuterRadius = outerSphere.radius;
+                    simpleOrigin = innerSphere.center;
+
+                    innerSphere.enabled = false;
+                    outerSphere.enabled = false;
+                    innerZone = null;
+                    outerZone = null;
+                }
+            }
 
             if (active)
             {
@@ -113,8 +140,14 @@ namespace Texel
 
             if ((forceColliderCheck || pendingRecalc) && triggerCount >= 1 && !forceRecalc)
             {
-                _Recalculate();
+                SendCustomEventDelayedFrames(nameof(_Recalculate), 1);
                 return;
+            }
+
+            if (forceRecalc && !finishRecalcQueued)
+            {
+                finishRecalcQueued = true;
+                SendCustomEventDelayedFrames(nameof(_FinishRecalc), 2);
             }
 
             triggerCount += 1;
@@ -141,17 +174,15 @@ namespace Texel
             if (forceRecalc)
                 return;
 
+            triggerCount = 0;
+            forceRecalc = true;
+            pendingRecalc = false;
+
             innerZone.enabled = false;
             outerZone.enabled = false;
 
             innerZone.enabled = true;
             outerZone.enabled = true;
-
-            triggerCount = 0;
-            forceRecalc = true;
-            pendingRecalc = false;
-
-            SendCustomEventDelayedFrames("_FinishRecalc", 2);
         }
 
         public void _RecalculateNextEvent()
@@ -162,19 +193,24 @@ namespace Texel
 
         public void _FinishRecalc()
         {
+            DebugLog("FinishRecalculate");
+            finishRecalcQueued = false;
             forceRecalc = false;
         }
 
         void _InitInterpolateZoneFadeLoop()
         {
-            if (!active || !Utilities.IsValid(innerZone) || !Utilities.IsValid(outerZone))
+            if (!active)
                 return;
 
-            innerZone.enabled = false;
-            outerZone.enabled = false;
+            if (legacyCollider)
+            {
+                innerZone.enabled = false;
+                outerZone.enabled = false;
 
-            innerZone.enabled = true;
-            outerZone.enabled = true;
+                innerZone.enabled = true;
+                outerZone.enabled = true;
+            }
 
             _InterpolateZoneFadeLoop();
         }
@@ -206,7 +242,29 @@ namespace Texel
                 return;
 
             float lastFade = targetVolume;
-            if (!legacyCollider)
+            if (simpleCollider)
+            {
+                VRCPlayerApi player = Networking.LocalPlayer;
+                if (Utilities.IsValid(player))
+                {
+                    float calcVolume = 0;
+                    Vector3 location = player.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position;
+
+                    float dist = Vector3.Distance(location, transform.position + simpleOrigin);
+                    if (dist < simpleInnerRadius)
+                        calcVolume = Mathf.Max(calcVolume, upperBound);
+                    else if (dist > simpleOuterRadius)
+                        calcVolume = Mathf.Max(calcVolume, lowerBound);
+                    else
+                    {
+                        float factor = (dist - simpleInnerRadius) / (simpleOuterRadius - simpleInnerRadius);
+                        calcVolume = Mathf.Max(calcVolume, Mathf.Lerp(upperBound, lowerBound, factor));
+                    }
+
+                    targetVolume = calcVolume;
+                }
+            }
+            else if (!legacyCollider)
             {
 
                 VRCPlayerApi player = Networking.LocalPlayer;

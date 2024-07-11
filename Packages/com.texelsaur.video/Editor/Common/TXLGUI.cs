@@ -12,7 +12,7 @@ namespace Texel
         protected static Rect DrawPrefix(Rect rect, int indentLevel, GUIContent label)
         {
             Rect fieldRect = EditorGUI.PrefixLabel(rect, label);
-            fieldRect.x -= indentLevel * indentUnit;
+            fieldRect.x -= (indentLevel + EditorGUI.indentLevel) * indentUnit;
 
             return fieldRect;
         }
@@ -44,6 +44,27 @@ namespace Texel
             int height = EditorGUI.DelayedIntField(field1, size.y);
 
             return new Vector2Int(width, height);
+        }
+
+        public static void DrawToggle2(Rect rect, int indentLevel, GUIContent label, GUIContent label1, SerializedProperty prop1, GUIContent label2, SerializedProperty prop2)
+        {
+            Rect lineRect = Indent(rect, indentLevel);
+            Rect fieldRect = DrawPrefix(lineRect, indentLevel, label);
+
+            Rect field1 = fieldRect;
+            field1.width /= 2;
+            Rect field2 = field1;
+            field2.x = field1.xMax;
+
+            prop1.boolValue = EditorGUI.Toggle(field1, prop1.boolValue);
+            field1.x += 20;
+            field1.width -= 20;
+            EditorGUI.LabelField(field1, label1);
+
+            prop2.boolValue = EditorGUI.Toggle(field2, prop2.boolValue);
+            field2.x += 20;
+            field2.width -= 20;
+            EditorGUI.LabelField(field2, label2);
         }
     }
 }
