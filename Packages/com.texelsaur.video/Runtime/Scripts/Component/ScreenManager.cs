@@ -346,6 +346,9 @@ namespace Texel
 
         void _UpdateVRSLBuffer()
         {
+            if (!vrslDmxRT)
+                return;
+
             bool shouldBuffer = false;
             if (vrslDoubleBufferAVPro && _screenSource == VideoSource.VIDEO_SOURCE_AVPRO)
                 shouldBuffer = true;
