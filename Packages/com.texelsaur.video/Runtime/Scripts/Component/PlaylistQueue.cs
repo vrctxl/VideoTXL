@@ -8,7 +8,7 @@ using VRC.Udon;
 namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
-    public class PlaylistQueue : VideoUrlSource
+    public class PlaylistQueue : VideoUrlListSource
     {
         TXLVideoPlayer videoPlayer;
 
@@ -17,9 +17,9 @@ namespace Texel
         [UdonSynced]
         VRCUrl[] syncQueue;
         [UdonSynced]
-        int syncTrackCount = 0;
+        short syncTrackCount = 0;
         [UdonSynced]
-        int syncCurrentIndex = 0;
+        short syncCurrentIndex = -1;
         [UdonSynced, FieldChangeCallback("SourceEnabled")]
         bool syncEnabled = true;
 
@@ -31,27 +31,29 @@ namespace Texel
         int syncTrackChangeUpdate = 0;
         int prevTrackChangeUpdate = 0;
 
-        public const int EVENT_LIST_CHANGE = 0;
-        public const int EVENT_TRACK_CHANGE = 1;
-        public const int EVENT_OPTION_CHANGE = 2;
-        public const int EVENT_BIND_VIDEOPLAYER = 3;
-        const int EVENT_COUNT = 4;
-
         void Start()
         {
             _EnsureInit();
         }
 
-        protected override int EventCount { get => EVENT_COUNT; }
-
         protected override void _Init()
         {
             base._Init();
+
+            syncQueue = new VRCUrl[0];
         }
 
         public override void _SetVideoPlayer(TXLVideoPlayer videoPlayer)
         {
+            Debug.Log($"<color='00FFFF'>[VideoTXL:PlaylistQueue]</color> _SetVideoPlayer {videoPlayer}");
             this.videoPlayer = videoPlayer;
+
+            _UpdateHandlers(VideoUrlSource.EVENT_BIND_VIDEOPLAYER);
+        }
+
+        public override TXLVideoPlayer VideoPlayer
+        {
+            get { return videoPlayer; }
         }
 
         public override bool IsEnabled
@@ -64,6 +66,16 @@ namespace Texel
             get { return syncEnabled && syncTrackCount > 0; }
         }
 
+        public override bool AutoAdvance
+        {
+            get { return true; }
+        }
+
+        public override bool ResumeAfterLoad
+        {
+            get { return true; }
+        }
+
         public bool SourceEnabled
         {
             get { return syncEnabled; }
@@ -73,12 +85,17 @@ namespace Texel
             }
         }
 
+        public override short Count
+        {
+            get { return syncTrackCount; }
+        }
+
         public override bool _CanMoveNext()
         {
             if (syncTrackCount == 0)
                 return false;
 
-            return CurrentIndex < syncTrackCount - 1 || _Repeats();
+            return CurrentIndex < syncTrackCount - 1 || RepeatMode != TXLRepeatMode.None;
         }
 
         public override bool _CanMovePrev()
@@ -86,7 +103,7 @@ namespace Texel
             if (syncTrackCount == 0)
                 return false;
 
-            return CurrentIndex > 0 || _Repeats();
+            return CurrentIndex > 0 || RepeatMode != TXLRepeatMode.None;
         }
 
         public override bool _CanMoveTo(int index)
@@ -102,27 +119,35 @@ namespace Texel
             return syncQueue[CurrentIndex];
         }
 
-        public override bool _MoveNext()
+        public override VRCUrl _GetTrackURL(int index)
         {
-            if (!_TakeControl())
-                return false;
+            if (index < 0 || index >= syncTrackCount)
+                return null;
 
-            if (!removeTracks)
-            {
-                if (CurrentIndex < syncTrackCount - 1)
-                    CurrentIndex += 1;
-                else if (_Repeats())
-                    CurrentIndex = 0;
-                else
-                    CurrentIndex = -1;
+            return syncQueue[index];
+        }
 
-                RequestSerialization();
-                return CurrentIndex >= 0;
-            }
+        public override VRCUrl _GetTrackQuestURL(int index)
+        {
+            return null;
+        }
+
+        public override string _GetTrackName(int index)
+        {
+            return "";
+        }
+
+        public override void _PlayCurrentUrl()
+        {
+            /*if (!_TakeControl())
+                return;
+
+            if (!removeTracks || syncTrackCount <= 0)
+                return;
 
             int originalIndex = CurrentIndex;
 
-            int shift = CurrentIndex + 1;
+            short shift = (short)(CurrentIndex + 1);
             int limit = syncTrackCount - shift;
 
             for (int i = 0; i < limit; i++)
@@ -133,16 +158,66 @@ namespace Texel
             syncTrackCount -= shift;
             syncQueueUpdate += 1;
 
-            CurrentIndex = syncTrackCount > 0 ? 0 : -1;
-            if (CurrentIndex >= 0 && Networking.IsOwner(gameObject))
+            CurrentIndex = -1;
+            if (Networking.IsOwner(gameObject))
                 _UpdateHandlers(EVENT_LIST_CHANGE);
 
-            if (CurrentIndex != originalIndex)
+            syncTrackChangeUpdate += 1;
+            //if (Networking.IsOwner(gameObject))
+            //    _UpdateHandlers(EVENT_TRACK_CHANGE);
+
+            RequestSerialization();*/
+        }
+
+        public override bool _MoveNext()
+        {
+            Debug.Log($"<color='0x00FFFF'>[VideoTXL:PlaylistQueue]</color> _MoveNext");
+            if (!_TakeControl())
+                return false;
+
+            if (!removeTracks)
             {
-                syncTrackChangeUpdate += 1;
-                if (Networking.IsOwner(gameObject))
-                    _UpdateHandlers(EVENT_TRACK_CHANGE);
+                TXLRepeatMode repeat = RepeatMode;
+                if (CurrentIndex < syncTrackCount - 1)
+                    CurrentIndex += 1;
+                else if (repeat == TXLRepeatMode.All)
+                    CurrentIndex = 0;
+                else if (repeat == TXLRepeatMode.Single)
+                    CurrentIndex = CurrentIndex;
+                else
+                    CurrentIndex = -1;
+
+                RequestSerialization();
+                return CurrentIndex >= 0;
             }
+
+            int originalIndex = CurrentIndex;
+            int nextIndex = originalIndex + 1;
+
+            if (originalIndex > -1)
+            {
+                int limit = syncTrackCount - nextIndex;
+                for (int i = 0; i < limit; i++)
+                    syncQueue[i] = syncQueue[i + nextIndex];
+                for (int i = limit; i < syncTrackCount; i++)
+                    syncQueue[i] = VRCUrl.Empty;
+
+                syncTrackCount -= (short)nextIndex;
+                syncQueueUpdate += 1;
+
+                _UpdateHandlers(EVENT_LIST_CHANGE);
+            }
+
+            nextIndex -= 1;
+            if (nextIndex >= syncTrackCount)
+                nextIndex = -1;
+
+            if (nextIndex != originalIndex)
+                CurrentIndex = (short)nextIndex;
+            else
+                _UpdateHandlers(EVENT_TRACK_CHANGE);
+
+            syncTrackChangeUpdate += 1;
 
             RequestSerialization();
 
@@ -156,12 +231,15 @@ namespace Texel
 
             if (!removeTracks)
             {
+                TXLRepeatMode repeat = RepeatMode;
                 if (CurrentIndex > 0)
                     CurrentIndex -= 1;
-                else if (_Repeats())
-                    CurrentIndex = syncTrackCount - 1;
+                else if (repeat == TXLRepeatMode.Single)
+                    CurrentIndex = CurrentIndex;
+                else if (repeat == TXLRepeatMode.All)
+                    CurrentIndex = (short)(syncTrackCount - 1);
                 else
-                    CurrentIndex = 01;
+                    CurrentIndex = -1;
 
                 RequestSerialization();
                 return CurrentIndex >= 0;
@@ -180,7 +258,7 @@ namespace Texel
                 if (index < 0 || index >= syncTrackCount)
                     return false;
 
-                CurrentIndex = index;
+                CurrentIndex = (short)index;
 
                 RequestSerialization();
                 return CurrentIndex >= 0;
@@ -189,10 +267,10 @@ namespace Texel
             return false;
         }
 
-        public int CurrentIndex
+        public override short CurrentIndex
         {
             get { return syncCurrentIndex; }
-            set
+            protected set
             {
                 if (syncCurrentIndex != value)
                 {
@@ -236,8 +314,13 @@ namespace Texel
             syncQueueUpdate += 1;
             syncTrackCount += 1;
 
+            bool isPlaying = videoPlayer && (videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_LOADING || videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_PLAYING);
+
             if (Networking.IsOwner(gameObject))
                 _UpdateHandlers(EVENT_LIST_CHANGE);
+
+            if (CurrentIndex == -1 && !isPlaying)
+                CurrentIndex = 0;
 
             RequestSerialization();
         }
@@ -253,12 +336,15 @@ namespace Texel
             return true;
         }
 
-        bool _Repeats()
+        TXLRepeatMode RepeatMode
         {
-            if (videoPlayer)
-                return videoPlayer.repeatPlaylist;
+            get
+            {
+                if (videoPlayer)
+                    return videoPlayer.RepeatMode;
 
-            return false;
+                return TXLRepeatMode.None;
+            }
         }
     }
 }

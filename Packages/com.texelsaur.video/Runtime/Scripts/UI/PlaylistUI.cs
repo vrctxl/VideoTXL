@@ -10,7 +10,8 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class PlaylistUI : UdonSharpBehaviour
     {
-        public Playlist playlist;
+        //public Playlist playlist;
+        public VideoUrlListSource playlist;
         public GameObject playlistEntryTemplate;
 
         public bool showTrackNames = true;
@@ -20,7 +21,7 @@ namespace Texel
         public Text titleText;
 
         TXLVideoPlayer backingVideoPlayer;
-        PlaylistData data;
+        //PlaylistData data;
         PlaylistUIEntry[] entries;
         RectTransform[] entriesRT;
 
@@ -40,7 +41,7 @@ namespace Texel
             _InitFromPlaylist(player.playlist);
         }*/
 
-        public void _InitFromPlaylist(Playlist playlist)
+        public void _InitFromPlaylist(VideoUrlListSource playlist)
         {
             if (entries == null)
                 entries = new PlaylistUIEntry[0];
@@ -120,19 +121,21 @@ namespace Texel
 
         public void _OnListChange()
         {
+            Debug.Log("TXL _OnListChange");
             _ClearList();
 
             if (!Utilities.IsValid(playlist))
                 return;
 
-            data = playlist.playlistData;
+            //data = playlist.playlistData;
 
             if (Utilities.IsValid(titleText))
             {
-                if (!Utilities.IsValid(data))
-                    titleText.text = "";
-                else
-                    titleText.text = data.playlistName;
+                titleText.text = playlist.ListName;
+                //if (!Utilities.IsValid(data))
+                //    titleText.text = "";
+                //else
+                //    titleText.text = data.playlistName;
             }
 
             _BuildList();
@@ -141,7 +144,7 @@ namespace Texel
 
         public void _OnOptionChange()
         {
-            if (!playlist.PlaylistEnabled)
+            if (!playlist.IsEnabled)
                 _UnselectEntries();
         }
 
@@ -163,13 +166,14 @@ namespace Texel
 
         public void _SelectTrack(int track)
         {
-            if (backingVideoPlayer && playlist._MoveTo(track))
+            if (backingVideoPlayer)
             {
-                playlist._SetEnabled(true);
+                //playlist._SetEnabled(true);
                 //SyncPlayer videoPlayer = playlist.syncPlayer;
                 //if (playlist.holdOnReady)
                 //    videoPlayer._HoldNextVideo();
-                backingVideoPlayer._ChangeUrl(playlist._GetCurrentUrl(), playlist._GetCurrentQuestUrl());
+                if (playlist._MoveTo(track))
+                    backingVideoPlayer._ChangeUrl(playlist._GetCurrentUrl(), playlist._GetCurrentQuestUrl());
             }
             else
                 Debug.LogWarning("[VideoTXL] Tried to select playlist track, but the playlist is not associated with a video player!");
@@ -198,13 +202,14 @@ namespace Texel
 
         void _BuildList()
         {
-            if (!Utilities.IsValid(data))
+            if (!Utilities.IsValid(playlist))
                 return;
 
-            entries = new PlaylistUIEntry[data.playlist.Length];
-            entriesRT = new RectTransform[data.playlist.Length];
+            int count = playlist.Count;
+            entries = new PlaylistUIEntry[count];
+            entriesRT = new RectTransform[count];
 
-            for (int i = 0; i < data.playlist.Length; i++)
+            for (int i = 0; i < count; i++)
             {
                 GameObject entry = Instantiate(playlistEntryTemplate);
 
@@ -220,13 +225,13 @@ namespace Texel
                     url = playlist._GetTrackURL(i).ToString();
                     title = playlist._GetTrackName(i);
                 }
-                else
-                {
-                    url = data.playlist[i].ToString();
-                    title = data.trackNames[i];
-                }
+                //else
+                //{
+                //    url = data.playlist[i].ToString();
+                //    title = data.trackNames[i];
+                //}
 
-                if (!showTrackNames)
+                if (!showTrackNames || title == null || title == "")
                     title = url;
 
                 script.Title = title;

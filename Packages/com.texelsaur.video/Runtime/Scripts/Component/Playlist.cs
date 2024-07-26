@@ -8,7 +8,7 @@ using VRC.Udon.Common;
 namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
-    public class Playlist : VideoUrlSource
+    public class Playlist : VideoUrlListSource
     {
         TXLVideoPlayer videoPlayer;
 
@@ -65,18 +65,22 @@ namespace Texel
         [NonSerialized]
         public int trackCount;
 
-        public const int EVENT_LIST_CHANGE = 0;
-        public const int EVENT_TRACK_CHANGE = 1;
-        public const int EVENT_OPTION_CHANGE = 2;
-        public const int EVENT_BIND_VIDEOPLAYER = 3;
-        const int EVENT_COUNT = 4;
+        [Obsolete("Use VideoUrlListSource.EVENT_LIST_CHANGE")]
+        public new const int EVENT_LIST_CHANGE = VideoUrlListSource.EVENT_LIST_CHANGE;
+        [Obsolete("Use VideoUrlListSource.EVENT_TRACK_CHANGE")]
+        public new const int EVENT_TRACK_CHANGE = VideoUrlListSource.EVENT_TRACK_CHANGE;
+        [Obsolete("Use VideoUrlSource.EVENT_OPTION_CHANGE")]
+        public new const int EVENT_OPTION_CHANGE = VideoUrlSource.EVENT_OPTION_CHANGE;
+        [Obsolete("Use VideoUrlSource.EVENT_BIND_VIDEOPLAYER")]
+        public new const int EVENT_BIND_VIDEOPLAYER = VideoUrlSource.EVENT_BIND_VIDEOPLAYER;
+        //const new int EVENT_COUNT = 4;
 
         private void Start()
         {
             _EnsureInit();
         }
 
-        protected override int EventCount { get => EVENT_COUNT; }
+        //protected override int EventCount { get => EVENT_COUNT; }
 
         protected override void _Init()
         {
@@ -118,7 +122,7 @@ namespace Texel
             _PostLoadShuffle();
             syncShuffleSerial += 1;
 
-            _UpdateHandlers(EVENT_LIST_CHANGE);
+            _UpdateHandlers(VideoUrlListSource.EVENT_LIST_CHANGE);
 
             _PostLoadTrack();
 
@@ -147,10 +151,10 @@ namespace Texel
 
             _MasterInit();
 
-            _UpdateHandlers(EVENT_BIND_VIDEOPLAYER);
+            _UpdateHandlers(VideoUrlSource.EVENT_BIND_VIDEOPLAYER);
         }
 
-        public TXLVideoPlayer VideoPlayer
+        public override TXLVideoPlayer VideoPlayer
         {
             get { return videoPlayer; }
         }
@@ -198,7 +202,7 @@ namespace Texel
             else
                 DebugLog("Loading empty playlist data");
 
-            _UpdateHandlers(EVENT_LIST_CHANGE);
+            _UpdateHandlers(VideoUrlListSource.EVENT_LIST_CHANGE);
         }
 
         public void _LoadFromCatalogueData(PlaylistData data)
@@ -226,7 +230,7 @@ namespace Texel
             CurrentIndex = -1;
 
             _PostLoadShuffle();
-            _UpdateHandlers(EVENT_LIST_CHANGE);
+            _UpdateHandlers(VideoUrlListSource.EVENT_LIST_CHANGE);
 
             _PostLoadTrack();
 
@@ -250,7 +254,7 @@ namespace Texel
             CurrentIndex = -1;
 
             _PostLoadShuffle();
-            _UpdateHandlers(EVENT_LIST_CHANGE);
+            _UpdateHandlers(VideoUrlListSource.EVENT_LIST_CHANGE);
 
             _PostLoadTrack();
 
@@ -319,7 +323,12 @@ namespace Texel
             }
         }
 
-        public short CurrentIndex
+        public override short Count
+        {
+            get { return (short)playlist.Length; }
+        }
+
+        public override short CurrentIndex
         {
             get { return syncCurrentIndex; }
             protected set
@@ -334,7 +343,7 @@ namespace Texel
             set
             {
                 syncCurrentIndexSerial = value;
-                _UpdateHandlers(EVENT_TRACK_CHANGE);
+                _UpdateHandlers(VideoUrlListSource.EVENT_TRACK_CHANGE);
             }
         }
 
@@ -344,7 +353,7 @@ namespace Texel
             set
             {
                 syncEnabled = value;
-                _UpdateHandlers(EVENT_OPTION_CHANGE);
+                _UpdateHandlers(VideoUrlSource.EVENT_OPTION_CHANGE);
             }
         }
 
@@ -354,7 +363,7 @@ namespace Texel
             set
             {
                 syncShuffle = value;
-                _UpdateHandlers(EVENT_OPTION_CHANGE);
+                _UpdateHandlers(VideoUrlSource.EVENT_OPTION_CHANGE);
             }
         }
 
@@ -369,8 +378,13 @@ namespace Texel
             set
             {
                 syncAutoAdvance = value;
-                _UpdateHandlers(EVENT_OPTION_CHANGE);
+                _UpdateHandlers(VideoUrlSource.EVENT_OPTION_CHANGE);
             }
+        }
+
+        public override bool ResumeAfterLoad
+        {
+            get { return resumeAfterLoad; }
         }
 
         public override bool _MoveNext()
@@ -467,7 +481,7 @@ namespace Texel
             return questPlaylist[index];
         }
 
-        public VRCUrl _GetTrackURL(int index)
+        public override VRCUrl _GetTrackURL(int index)
         {
             index = _TrackIndex(index);
             if (index < 0)
@@ -476,7 +490,7 @@ namespace Texel
             return playlist[index];
         }
 
-        public VRCUrl _GetTrackQuestURL(int index)
+        public override VRCUrl _GetTrackQuestURL(int index)
         {
             index = _TrackIndex(index);
             if (index < 0)
@@ -485,7 +499,7 @@ namespace Texel
             return questPlaylist[index];
         }
 
-        public string _GetTrackName(int index)
+        public override string _GetTrackName(int index)
         {
             index = _TrackIndex(index);
             if (index < 0)
@@ -540,7 +554,7 @@ namespace Texel
             if (listChange)
             {
                 syncShuffleSerial += 1;
-                _UpdateHandlers(EVENT_LIST_CHANGE);
+                _UpdateHandlers(VideoUrlListSource.EVENT_LIST_CHANGE);
             }
 
             RequestSerialization();
@@ -586,7 +600,7 @@ namespace Texel
         bool _Repeats()
         {
             if (videoPlayer)
-                return videoPlayer.repeatPlaylist;
+                return videoPlayer.RepeatMode == TXLRepeatMode.All;
 
             return false;
         }
@@ -623,7 +637,7 @@ namespace Texel
             }
 
             if (listChange)
-                _UpdateHandlers(EVENT_LIST_CHANGE);
+                _UpdateHandlers(VideoUrlListSource.EVENT_LIST_CHANGE);
 
             if (syncCurrentIndexSerial != prevCurrentIndexSerial)
             {

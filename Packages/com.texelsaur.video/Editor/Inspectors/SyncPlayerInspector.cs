@@ -189,9 +189,10 @@ namespace Texel
                     //EditorGUILayout.ObjectField(urlSourceProperty, typeof(Playlist), new GUIContent("Playlist Source", "A Playlist URL Source."));
                     //EditorGUILayout.PropertyField(defaultUrlSourcePlaylistProperty, new GUIContent("Playlist Source", "A Playlist URL Source."));
                     break;
-                //case UrlSourceType.Queue:
-                //    EditorGUILayout.PropertyField(defaultUrlSourceQueueProperty, new GUIContent("Queue Source", "A Queue URL Source."));
-                //    break;
+                case UrlSourceType.Queue:
+                    urlSourceProperty.objectReferenceValue = EditorGUILayout.ObjectField(new GUIContent("Queue", "A Queue URL Source."), urlSourceProperty.objectReferenceValue, typeof(PlaylistQueue), true);
+                    //EditorGUILayout.PropertyField(defaultUrlSourceQueueProperty, new GUIContent("Queue Source", "A Queue URL Source."));
+                    break;
                 case UrlSourceType.Custom:
                     urlSourceProperty.objectReferenceValue = EditorGUILayout.ObjectField(new GUIContent("Custom URL Source", "Any source that descends from the VideoUrlSource base class."), urlSourceProperty.objectReferenceValue, typeof(VideoUrlSource), true);
                     //EditorGUILayout.PropertyField(urlSourceProperty, new GUIContent("URL Source", "Any source that descents from the VideoUrlSource base class."));

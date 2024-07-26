@@ -581,21 +581,21 @@ namespace Texel
                 }
             }
 
-            Playlist playlist = (Playlist)videoPlayer.urlSource;
+            VideoUrlListSource playlist = (VideoUrlListSource)videoPlayer.urlSource;
 
-            if (Utilities.IsValid(playlist) && playlist.trackCount > 0)
+            if (Utilities.IsValid(playlist) && playlist.Count > 0)
             {
-                nextIcon.color = (enableControl && playlist.PlaylistEnabled && playlist._CanMoveNext()) ? normalColor : disabledColor;
-                prevIcon.color = (enableControl && playlist.PlaylistEnabled && playlist._CanMovePrev()) ? normalColor : disabledColor;
+                nextIcon.color = (enableControl && playlist.IsEnabled && playlist._CanMoveNext()) ? normalColor : disabledColor;
+                prevIcon.color = (enableControl && playlist.IsEnabled && playlist._CanMovePrev()) ? normalColor : disabledColor;
                 playlistIcon.color = enableControl ? normalColor : disabledColor;
 
-                bool playlistActive = playlist.PlaylistEnabled && playlist.CurrentIndex >= 0 && playlist.trackCount > 0;
+                bool playlistActive = playlist.IsEnabled && playlist.CurrentIndex >= 0 && playlist.Count > 0;
                 if (!playlistActive)
                     playlistText.text = "";
-                else if (playlist.trackCatalogMode)
-                    playlistText.text = $"TRACK: {playlist.CurrentIndex + 1}";
+                //else if (playlist.trackCatalogMode)
+                //    playlistText.text = $"TRACK: {playlist.CurrentIndex + 1}";
                 else
-                    playlistText.text = $"TRACK: {playlist.CurrentIndex + 1} / {playlist.trackCount}";
+                    playlistText.text = $"TRACK: {playlist.CurrentIndex + 1} / {playlist.Count}";
             }
             else
             {

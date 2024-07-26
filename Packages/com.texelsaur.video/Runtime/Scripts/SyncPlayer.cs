@@ -165,7 +165,7 @@ namespace Texel
             if (urlSource)
             {
                 urlSource._SetVideoPlayer(this);
-                urlSource._Register(Playlist.EVENT_TRACK_CHANGE, this, nameof(_OnTrackChange));
+                urlSource._Register(VideoUrlListSource.EVENT_TRACK_CHANGE, this, nameof(_OnTrackChange));
             }
 
             _syncLocked = defaultLocked;
@@ -782,7 +782,10 @@ namespace Texel
             _syncQueuedUrl = VRCUrl.Empty;
 
             if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
+            {
                 _PlayVideoFallback(urlSource._GetCurrentUrl(), urlSource._GetCurrentQuestUrl());
+                urlSource._PlayCurrentUrl();
+            }
 
             _overrideLock = false;
         }
@@ -1037,7 +1040,7 @@ namespace Texel
                 string currentUrl = _syncUrl != null ? _syncUrl.Get() : "";
                 string playlistUrl = urlSource._GetCurrentUrl() != null ? urlSource._GetCurrentUrl().Get() : "";
                 bool currentTrackFromList = currentUrl == playlistUrl;
-                bool canAdvance = ((Playlist)urlSource).resumeAfterLoad || currentTrackFromList;
+                bool canAdvance = urlSource.ResumeAfterLoad || currentTrackFromList;
 
                 if (urlSource.AutoAdvance && canAdvance)
                 {
