@@ -802,8 +802,11 @@ namespace Texel
         bool _IsAutoVideoSource(string urlStr)
         {
             // Assume youtube is video-based (but it could be a livestream...)
+
+            // NB: As of 2024-07-25 Youtube no longer returns compatible codecs for Unity video.  Unless workaround is found,
+            // Youtube videos must now be loaded on AVPro sources.
             if (urlStr.Contains("youtube.com/watch") || urlStr.Contains("youtu.be/"))
-                return true;
+                return false;
 
             // VRCDN sources are always stream
             if (urlStr.Contains("vrcdn.live"))

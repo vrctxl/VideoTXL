@@ -10,6 +10,7 @@ using UnityEditorInternal;
 using UnityEngine.SceneManagement;
 using UnityEditor.SceneManagement;
 using UdonSharp;
+using System.IO;
 
 namespace Texel
 {
@@ -198,6 +199,7 @@ namespace Texel
 
         bool vrslOutsideLinked = false;
         UdonBehaviour vrslControllerCache;
+        string vrslVersion = null;
 
         static Material vrslEditorBlitMat = null;
 
@@ -373,6 +375,7 @@ namespace Texel
             // Upgrade legacy entries
             UpgradeLegacyCrtEntry();
 
+            vrslVersion = GetVRSLVersion();
             vrslOutsideLinked = IsVRSLOnAnotherManager();
             FindExternal();
         }
@@ -681,6 +684,10 @@ namespace Texel
                 }
             }
 
+            if (vrslVersion != null && String.Compare(vrslVersion, "2.7.0") < 0)
+                EditorGUILayout.HelpBox($"Detected VRSL version {vrslVersion}.  VRSL should be updated to 2.7.0 or greater for integration to be handled correctly.", MessageType.Error, true);
+
+
             GUILayout.BeginHorizontal();
             GUILayout.Space(15);
             if (GUILayout.Button(new GUIContent("Link VRSL to this manager", "Finds VRSL in the scene and automatically configures rendering video data to it.")))
@@ -688,6 +695,24 @@ namespace Texel
             GUILayout.EndHorizontal();
 
             EditorGUI.indentLevel--;
+        }
+
+        static string GetVRSLVersion()
+        {
+            string path = Application.dataPath;
+            path = path.Replace("Assets", "");
+            path += "Packages" + "\\" + "com.acchosen.vr-stage-lighting" + "\\";
+            path += "Runtime" + "\\" + "VERSION.txt";
+
+            try
+            {
+                StreamReader reader = new StreamReader(path);
+                string versionNum = reader.ReadToEnd();
+                return versionNum;
+            } catch
+            {
+                return null;
+            }
         }
 
         private void FindExternal()

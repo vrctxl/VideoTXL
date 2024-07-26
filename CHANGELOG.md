@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.4.12] - 07-25-24
+- Added VRSL version check and warning message in screen manager
+- YouTube URLs now default to loading on AVPro/Stream video sources when video source is set to Auto
+
+  NOTE: YouTube videos can no longer be played easily in the editor.  Consider finding other compatible sources
+  for testing like direct MP4 files, or look into steps to incorporate an AVPro demo into your environment
+  to be able to play back content on AVPro.
+
 ## [2.4.11] - 07-10-24
 
 - Fixed Audio Fade Zone sometimes dropping audio when entering inner collider
