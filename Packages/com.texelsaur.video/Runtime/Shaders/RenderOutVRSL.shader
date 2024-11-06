@@ -1,6 +1,7 @@
 Shader "VideoTXL/RenderOutVRSL" {
 	Properties {
 		_MainTex ("MainTex", 2D) = "black" {}
+		[HideInInspector] _MainTexSize("MainTexSize", Vector) = (1, 1, 0, 0)
 		[HideInInspector] _BufferTex("BufferTex", 2D) = "black" {}
 		[Toggle] _ApplyGamma("Apply Gamma", Int) = 0
 		[Toggle] _FlipY("Flip Y", Int) = 0
@@ -38,6 +39,7 @@ Shader "VideoTXL/RenderOutVRSL" {
 			};
 
 			sampler2D _MainTex;
+			float4 _MainTexSize;
 			sampler2D _BufferTex;
 			int _ApplyGamma;
 			int _FlipY;
@@ -74,11 +76,13 @@ Shader "VideoTXL/RenderOutVRSL" {
 				if (_FlipY)
 					offset.y = 1 - offset.y;
 
-				float dmxW = (208.0 / 1920) * (_AspectRatio / 1.777777);
+				float arScale = 1080.0 / _MainTexSize.y;
+				float dmxW = (208.0 * arScale / 1920) * (_AspectRatio / 1.777777);
 				float dmxH = 1;
 				if (_Horizontal) {
+					arScale = 1920.0 / _MainTexSize.y;
 					dmxW = 1;
-					dmxH = (208.0 / 1080) * (_AspectRatio / 1.777777);
+					dmxH = (208.0 * arScale / 1080) * (_AspectRatio / 1.777777);
 				}
 
 				scale.x *= dmxW;

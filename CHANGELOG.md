@@ -1,6 +1,12 @@
 # Changelog
 
+## [2.4.13] - 11-06-24
+
+- Fixed VRSL integration not positioning correctly in editor preview when scaled <1
+- Fixed VRSL integration when RAW RTs are not at default dimensions
+
 ## [2.4.12] - 07-25-24
+
 - Added VRSL version check and warning message in screen manager
 - YouTube URLs now default to loading on AVPro/Stream video sources when video source is set to Auto
 

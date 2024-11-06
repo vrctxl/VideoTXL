@@ -406,6 +406,7 @@ namespace Texel
             if (vrslBlitMat)
             {
                 vrslBlitMat.SetTexture("_MainTex", vrslDmxRT);
+                vrslBlitMat.SetVector("_MainTexSize", new Vector4(vrslDmxRT.width, vrslDmxRT.height, 0, 0));
                 vrslBlitMat.SetVector("_OffsetScale", new Vector4(vrslOffsetScale.x, vrslOffsetScale.y, vrslOffsetScale.z, vrslOffsetScale.z));
                 vrslBlitMat.SetInt("_Horizontal", horizontal ? 1 : 0);
             }

@@ -11,6 +11,7 @@ using UnityEngine.SceneManagement;
 using UnityEditor.SceneManagement;
 using UdonSharp;
 using System.IO;
+using System.Reflection;
 
 namespace Texel
 {
@@ -535,6 +536,36 @@ namespace Texel
         static GUIContent unityLabel = new GUIContent("Unity");
         static GUIContent avproLabel = new GUIContent("AVPro");
 
+        private static bool isVRSLHorizontal (UdonBehaviour vrslController, RenderTexture rt)
+        {
+            bool resolvedSize = false;
+            bool vertical = false;
+            
+            if (rt == null || vrslController == null)
+                return true;
+
+            try
+            {
+                UdonSharpBehaviour proxy = UdonSharpEditorUtility.GetProxyBehaviour(vrslController);
+                FieldInfo dmxField = proxy.GetType().GetField("DMXMode");
+                int dmxMode = (int)dmxField.GetValue(proxy);
+                vertical = dmxMode == 1;
+                resolvedSize = true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("Could not read DMXMode from VRSL ControlPanel: " + ex.ToString());
+            }
+
+            if (!resolvedSize && rt.height == 540 && rt.width == 104)
+            {
+                vertical = true;
+                resolvedSize = true;
+            }
+
+            return !vertical;
+        }
+
         private void IntegrationsSection()
         {
             if (!TXLEditor.DrawMainHeaderHelp(new GUIContent("External Systems"), ref expandIntegrations, integrationsUrl))
@@ -572,12 +603,16 @@ namespace Texel
                     // Horz: 104 x 960
                     // Vert: 104 x 540
 
-                    bool vertical = rt.height == 540;
+                    bool resolvedSize = false;
+                    bool vertical = !isVRSLHorizontal((UdonBehaviour)vrslControllerProperty.objectReferenceValue, rt);
+                    
+                    float hScale = 1920f / rt.height;
                     float dmxW = 1;
-                    float dmxH = (208f / 1080) * (aspectRatio / 1.77777f);
+                    float dmxH = (208f * hScale / 1080) * (aspectRatio / 1.77777f);
                     if (vertical)
                     {
-                        dmxW = (208f / 1920) * (aspectRatio / 1.77777f);
+                        float vScale = 1080f / rt.height;
+                        dmxW = (208f * vScale / 1920) * (aspectRatio / 1.77777f);
                         dmxH = 1;
                     }
 
@@ -608,16 +643,18 @@ namespace Texel
                     if (!vertical)
                     {
                         float diffH = asRect.height - (asRect.height * dmxH);
+                        float rangeH = asRect.height - (asRect.height * dmxH * offsetScale.z);
                         asRect.height = (asRect.height - diffH) * offsetScale.z;
-                        asRect.y += diffH * (1 - offsetScale.y);
+                        asRect.y += rangeH * (1 - offsetScale.y);
                         asRect.width *= offsetScale.z;
                         asRect.x += (boxRect.width - 2 - asRect.width) * offsetScale.x;
                     }
                     else
                     {
                         float diffW = asRect.width - (asRect.width * dmxW);
+                        float rangeW = asRect.width - (asRect.width * dmxW * offsetScale.z);
                         asRect.width = (asRect.width - diffW) * offsetScale.z;
-                        asRect.x += diffW * offsetScale.x;
+                        asRect.x += rangeW * offsetScale.x;
                         asRect.height *= offsetScale.z;
                         asRect.y += (boxRect.height - 2 - asRect.height) * (1 - offsetScale.y);
                     }
@@ -1650,9 +1687,11 @@ namespace Texel
             if (logoTex == null && manager.logoTexture is Texture2D)
                 logoTex = (Texture2D)manager.logoTexture;
 
-            bool horizontal = manager.vrslDmxRT.height == 960;
+            bool horizontal = isVRSLHorizontal(manager.vrslController, manager.vrslDmxRT);
+            RenderTexture rt = manager.vrslDmxRT;
 
             vrslEditorBlitMat.SetTexture("_MainTex", logoTex);
+            vrslEditorBlitMat.SetVector("_MainTexSize", new Vector4(rt.width, rt.height, 0, 0));
             vrslEditorBlitMat.SetVector("_OffsetScale", new Vector4(manager.vrslOffsetScale.x, manager.vrslOffsetScale.y, manager.vrslOffsetScale.z, manager.vrslOffsetScale.z));
             vrslEditorBlitMat.SetInt("_Horizontal", horizontal ? 1 : 0);
             vrslEditorBlitMat.SetInt("_DoubleBuffered", 0);
