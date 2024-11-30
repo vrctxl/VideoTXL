@@ -91,7 +91,8 @@ namespace Texel
             {
                 SphereCollider innerSphere = (SphereCollider)innerZone;
                 SphereCollider outerSphere = (SphereCollider)outerZone;
-                if (innerSphere && outerSphere && innerSphere.center == outerSphere.center)
+
+                if (innerZone.GetType() == typeof(SphereCollider) && outerZone.GetType() == typeof(SphereCollider) && innerSphere.center == outerSphere.center)
                 {
                     DebugLog("Converting colliders to simple spherical interpolation");
                     legacyCollider = false;
