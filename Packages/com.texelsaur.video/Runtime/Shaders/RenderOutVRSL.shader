@@ -76,13 +76,14 @@ Shader "VideoTXL/RenderOutVRSL" {
 				if (_FlipY)
 					offset.y = 1 - offset.y;
 
+				float dmxAspectRatio = _MainTexSize.y / _MainTexSize.x;
 				float arScale = 1080.0 / _MainTexSize.y;
-				float dmxW = (208.0 * arScale / 1920) * (_AspectRatio / 1.777777);
+				float dmxW = ((1080.0 / dmxAspectRatio) / 1920) * (_AspectRatio / 1.777777);
 				float dmxH = 1;
 				if (_Horizontal) {
 					arScale = 1920.0 / _MainTexSize.y;
 					dmxW = 1;
-					dmxH = (208.0 * arScale / 1080) * (_AspectRatio / 1.777777);
+					dmxH = ((1920.0 / dmxAspectRatio) / 1080) * (_AspectRatio / 1.777777);
 				}
 
 				scale.x *= dmxW;

@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.4.14] - 11-30-24
+
+- Fixed regression in VRSL integration
+- Fixed audio fade zone throwing udon error when using non-sphere colliders
+
 ## [2.4.13] - 11-06-24
 
 - Fixed VRSL integration not positioning correctly in editor preview when scaled <1

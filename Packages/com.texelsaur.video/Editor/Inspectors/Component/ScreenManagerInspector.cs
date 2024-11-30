@@ -594,6 +594,9 @@ namespace Texel
                     vrslSourceAspectRatioProperty.floatValue = aspectRatio;
                 }
 
+                // standard AR: 9.230 (horz)
+                // OC AR: 5.807 (horz)
+
                 RenderTexture rt = (RenderTexture)vrslDmxRTProperty.objectReferenceValue;
                 if (rt != null)
                 {
@@ -603,16 +606,20 @@ namespace Texel
                     // Horz: 104 x 960
                     // Vert: 104 x 540
 
+                    float dmxAspectRatio = (float)rt.height / rt.width;
+                    // Horz AR: 9.230
+                    // Vert AR: 5.192
+
                     bool resolvedSize = false;
                     bool vertical = !isVRSLHorizontal((UdonBehaviour)vrslControllerProperty.objectReferenceValue, rt);
-                    
-                    float hScale = 1920f / rt.height;
+
+                    float hPixels = 1920f / dmxAspectRatio;
                     float dmxW = 1;
-                    float dmxH = (208f * hScale / 1080) * (aspectRatio / 1.77777f);
+                    float dmxH = (hPixels / 1080) * (aspectRatio / 1.77777f);
                     if (vertical)
                     {
-                        float vScale = 1080f / rt.height;
-                        dmxW = (208f * vScale / 1920) * (aspectRatio / 1.77777f);
+                        float vPixels = 1080f / dmxAspectRatio;
+                        dmxW = (vPixels / 1920) * (aspectRatio / 1.77777f);
                         dmxH = 1;
                     }
 
