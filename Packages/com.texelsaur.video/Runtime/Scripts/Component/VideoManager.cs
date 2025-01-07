@@ -41,6 +41,7 @@ namespace Texel
         [SerializeField] internal bool enableAVProInEditor = false;
         [SerializeField] internal bool defaultReactStreamStop = true;
         [SerializeField] internal float defaultStreamStopThreshold = 10;
+        [SerializeField] internal bool youtubeAutoUnityInEditor = true;
 
         public const int VIDEO_READY_EVENT = 0;
         public const int VIDEO_START_EVENT = 1;
@@ -300,6 +301,11 @@ namespace Texel
         public bool AVProInEditor
         {
             get { return enableAVProInEditor; }
+        }
+
+        public bool YoutubeAutoUnityInEditor
+        {
+            get { return youtubeAutoUnityInEditor; }
         }
 
         public void _OnVideoReady(int id)

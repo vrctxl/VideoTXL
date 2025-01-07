@@ -17,6 +17,7 @@ namespace Texel
         SerializedProperty enableAVProInEditorProperty;
         SerializedProperty defaultReactStreamStopProperty;
         SerializedProperty defaultstreamStopThresholdProperty;
+        SerializedProperty youtubeAutoUnityInEditorProperty;
 
         SerializedProperty debugLogProperty;
         SerializedProperty debugStateProperty;
@@ -35,6 +36,7 @@ namespace Texel
             enableAVProInEditorProperty = serializedObject.FindProperty(nameof(VideoManager.enableAVProInEditor));
             defaultReactStreamStopProperty = serializedObject.FindProperty(nameof(VideoManager.defaultReactStreamStop));
             defaultstreamStopThresholdProperty = serializedObject.FindProperty(nameof(VideoManager.defaultStreamStopThreshold));
+            youtubeAutoUnityInEditorProperty = serializedObject.FindProperty(nameof(VideoManager.youtubeAutoUnityInEditor));
 
             debugLogProperty = serializedObject.FindProperty(nameof(VideoManager.debugLog));
             debugStateProperty = serializedObject.FindProperty(nameof(VideoManager.debugState));
@@ -77,6 +79,7 @@ namespace Texel
             EditorGUILayout.PropertyField(enableAVProInEditorProperty, new GUIContent("Enable AVPro In Editor", "Enables loading videos with an AVPro video source active.  This is NOT supported in a default SDK environment.  If you know what you're doing and you've taken the necessary steps to run AVPro in your editor, enable this option."));
             if (enableAVProInEditorProperty.boolValue)
                 EditorGUILayout.HelpBox("The above setting does NOT add AVPro playback support to your editor environment.  It will just allow the video player to attempt loading URLs on AVPro video sources.  You must take additional steps on your own to support AVPro playback in the editor.", MessageType.Warning);
+            EditorGUILayout.PropertyField(youtubeAutoUnityInEditorProperty, new GUIContent("YouTube Prefer Unity In Editor", "Changes the 'auto' behavior when loading YouTube videos to prefer using a Unity-based video source when available in the editor, instead of AVPro.  YouTube videos are only supported at 360p resolution on Unity Video, but they play natively in the editor."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Default Options", EditorStyles.boldLabel);

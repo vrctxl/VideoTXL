@@ -925,6 +925,8 @@ namespace Texel
 
                 Vector2Int size = sizeProp.vector2IntValue;
                 Vector2Int newSize = DrawSizeField(ref rect, 1, labelCrtSize, new Vector2Int(size.x > 0 ? size.x : crt.width, size.y > 0 ? size.y : crt.height));
+                newSize.x = Math.Min(newSize.x, 8192);
+                newSize.y = Math.Min(newSize.y, 8192);
                 sizeProp.vector2IntValue = newSize;
 
                 if (newSize.x != crt.width || newSize.y != crt.height)

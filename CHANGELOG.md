@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.15] - 01-07-25
+
+- Added "YouTube Prefer Unity In Editor" option to Video Manager, enabled by default
+- Partial fix for CRT showing wrong placeholder frame when double buffered and tri-filtered
+- Added 8k upper bound on setting CRT resolution in screen manager inspector
+- Added EVENT_POSTINIT_DONE event to Sync and Local video players
+
 ## [2.4.14] - 11-30-24
 
 - Fixed regression in VRSL integration
