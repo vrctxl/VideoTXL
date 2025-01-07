@@ -1344,6 +1344,8 @@ namespace Texel
                 }
             }
 
+            SendCustomEventDelayedFrames(nameof(_CrtManualUpdate), 1);
+
             if (vrslBlitMat)
             {
                 vrslBlitMat.SetTexture("_MainTex", validCurrent);
@@ -1354,6 +1356,19 @@ namespace Texel
                 _SetMatFloatProperty(vrslBlitMat, "_AspectRatio", currentAspectRatio);
 
                 //_SetMatFloatProperty(vrslBlitMat, "_DoubleBuffered", currentAVPro && vrslDoubleBufferAVPro ? 1 : 0);
+            }
+        }
+
+        public void _CrtManualUpdate()
+        {
+            for (int i = 0; i < renderOutCrt.Length; i++)
+            {
+                CustomRenderTexture crt = renderOutCrt[i];
+                if (!crt)
+                    continue;
+
+                if (crt.updateMode == CustomRenderTextureUpdateMode.OnDemand)
+                    crt.Update();
             }
         }
 

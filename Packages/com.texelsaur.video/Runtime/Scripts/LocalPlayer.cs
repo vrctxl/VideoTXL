@@ -122,6 +122,8 @@ namespace Texel
 
             if (initTrigger)
                 _TriggerPlay();
+
+            _UpdateHandlers(EVENT_POSTINIT_DONE);
         }
 
         public override void _SetVideoManager(VideoManager manager)

@@ -39,7 +39,8 @@ namespace Texel
         public const int EVENT_BIND_VIDEOMANAGER = 6;
         public const int EVENT_UNBIND_VIDEOMANAGER = 7;
         public const int EVENT_VIDEO_SOURCE_CHANGE = 8;
-        protected const int EVENT_COUNT = 9;
+        public const int EVENT_POSTINIT_DONE = 9;
+        protected const int EVENT_COUNT = 10;
 
         public const int VIDEO_STATE_STOPPED = 0;
         public const int VIDEO_STATE_LOADING = 1;
