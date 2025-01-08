@@ -406,6 +406,7 @@ namespace Texel
             if (vrslBlitMat)
             {
                 vrslBlitMat.SetTexture("_MainTex", vrslDmxRT);
+                vrslBlitMat.SetVector("_MainTexSize", new Vector4(vrslDmxRT.width, vrslDmxRT.height, 0, 0));
                 vrslBlitMat.SetVector("_OffsetScale", new Vector4(vrslOffsetScale.x, vrslOffsetScale.y, vrslOffsetScale.z, vrslOffsetScale.z));
                 vrslBlitMat.SetInt("_Horizontal", horizontal ? 1 : 0);
             }
@@ -1343,6 +1344,8 @@ namespace Texel
                 }
             }
 
+            SendCustomEventDelayedFrames(nameof(_CrtManualUpdate), 1);
+
             if (vrslBlitMat)
             {
                 vrslBlitMat.SetTexture("_MainTex", validCurrent);
@@ -1353,6 +1356,19 @@ namespace Texel
                 _SetMatFloatProperty(vrslBlitMat, "_AspectRatio", currentAspectRatio);
 
                 //_SetMatFloatProperty(vrslBlitMat, "_DoubleBuffered", currentAVPro && vrslDoubleBufferAVPro ? 1 : 0);
+            }
+        }
+
+        public void _CrtManualUpdate()
+        {
+            for (int i = 0; i < renderOutCrt.Length; i++)
+            {
+                CustomRenderTexture crt = renderOutCrt[i];
+                if (!crt)
+                    continue;
+
+                if (crt.updateMode == CustomRenderTextureUpdateMode.OnDemand)
+                    crt.Update();
             }
         }
 

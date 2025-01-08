@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.4.15] - 01-07-25
+
+- Added "YouTube Prefer Unity In Editor" option to Video Manager, enabled by default
+- Partial fix for CRT showing wrong placeholder frame when double buffered and tri-filtered
+- Added 8k upper bound on setting CRT resolution in screen manager inspector
+- Added EVENT_POSTINIT_DONE event to Sync and Local video players
+
+## [2.4.14] - 11-30-24
+
+- Fixed regression in VRSL integration
+- Fixed audio fade zone throwing udon error when using non-sphere colliders
+
+## [2.4.13] - 11-06-24
+
+- Fixed VRSL integration not positioning correctly in editor preview when scaled <1
+- Fixed VRSL integration when RAW RTs are not at default dimensions
+
+## [2.4.12] - 07-25-24
+
+- Added VRSL version check and warning message in screen manager
+- YouTube URLs now default to loading on AVPro/Stream video sources when video source is set to Auto
+
+  NOTE: YouTube videos can no longer be played easily in the editor.  Consider finding other compatible sources
+  for testing like direct MP4 files, or look into steps to incorporate an AVPro demo into your environment
+  to be able to play back content on AVPro.
+
 ## [2.4.11] - 07-10-24
 
 - Fixed Audio Fade Zone sometimes dropping audio when entering inner collider
