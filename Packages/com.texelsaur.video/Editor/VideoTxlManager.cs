@@ -154,6 +154,28 @@ namespace Texel
                 MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/UI/PlaylistLoadButton.prefab");
         }
 
+        [MenuItem("GameObject/TXL/VideoTXL/UI/Queue UI", false, 302)]
+        public static void AddQueueUIToScene()
+        {
+            TXLVideoPlayer vp = GetVideoPlayer();
+            if (vp)
+            {
+                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/UI/QueueUI.prefab", vp.transform);
+                if (vp is SyncPlayer && ((SyncPlayer)vp).urlSource is PlaylistQueue)
+                {
+                    PlaylistUI ui = playlistObj.GetComponent<PlaylistUI>();
+                    if (ui)
+                        ui.playlist = ((SyncPlayer)vp).urlSource as VideoUrlListSource;
+
+                    PlaylistQueueUI queueUI = playlistObj.GetComponent<PlaylistQueueUI>();
+                    if (queueUI)
+                        queueUI.queue = ((SyncPlayer)vp).urlSource as PlaylistQueue;
+                }
+            }
+            else
+                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/UI/QueueUI.prefab");
+        }
+
         [MenuItem("GameObject/TXL/VideoTXL/Video Sources/Add Unity Video Source", true, 220)]
         public static bool AddUnityVideoSourceTest()
         {
@@ -450,6 +472,20 @@ namespace Texel
             }
 
             MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistCatalog.prefab");
+        }
+
+        [MenuItem("GameObject/TXL/VideoTXL/Playlists and URL Sources/Queue", false, 243)]
+        public static void AddQueueToScene()
+        {
+            TXLVideoPlayer vp = GetVideoPlayer();
+            if (vp)
+            {
+                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Queue.prefab", vp.transform);
+                if (vp is SyncPlayer && ((SyncPlayer)vp).urlSource == null)
+                    ((SyncPlayer)vp).urlSource = playlistObj.GetComponent<PlaylistQueue>();
+            }
+            else
+                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Queue.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Components/Access Control", false, 250)]

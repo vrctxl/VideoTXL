@@ -1,4 +1,5 @@
-﻿using UdonSharp;
+﻿using System;
+using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 using VRC.Udon;
@@ -19,9 +20,83 @@ namespace Texel
         public const int EVENT_OPTION_CHANGE = 1;
         protected const int EVENT_COUNT = 2;
 
+        [SerializeField] protected SourceManager sourceManager;
+        [SerializeField] protected VideoUrlSource nextSource;
+        protected int maxSourceChain = 5;
+
+        protected int sourceIndex = -1;
+
         protected override int EventCount { get => EVENT_COUNT; }
 
         public virtual void _SetVideoPlayer(TXLVideoPlayer videoPlayer) { }
+
+        public void _SetSourceManager(SourceManager manager, int index)
+        {
+            sourceManager = manager;
+            sourceIndex = index;
+        }
+
+        public virtual VideoUrlSource NextSource
+        {
+            get { return nextSource; }
+        }
+
+        public VideoUrlSource[] _BuildSourceList(int maxEntries = 0)
+        {
+            if (maxEntries == 0)
+                maxEntries = maxSourceChain;
+            else
+                maxEntries = Math.Min(maxEntries, maxSourceChain);
+
+            VideoUrlSource[] list = new VideoUrlSource[maxEntries];
+
+            VideoUrlSource next = this;
+            int count = 0;
+
+            while (next != null && count < list.Length)
+            {
+                list[count++] = next;
+                next = next.NextSource;
+            }
+
+            Array compactList = Array.CreateInstance(GetType(), count);
+            Array.Copy(list, compactList, count);
+
+            return (VideoUrlSource[])compactList;
+        }
+
+        /*public VideoUrlSource NextValidSource
+        {
+            get
+            {
+                VideoUrlSource next = NextSource;
+                for (int c = 0; c < maxSourceChain && next != null; c++)
+                {
+                    if (next.IsValid)
+                        return next;
+                    next = next.NextSource;
+                }
+
+                return null;
+            }
+        }
+
+        public VideoUrlSource NextReadySource
+        {
+            get
+            {
+                VideoUrlSource next = NextSource;
+                for (int c = 0; c < maxSourceChain && next != null; c++)
+                {
+                    if (next.IsReady)
+                        return next;
+                    next = next.NextSource;
+                }
+
+                return null;
+
+            }
+        }*/
 
         public virtual TXLVideoPlayer VideoPlayer
         {
@@ -34,6 +109,11 @@ namespace Texel
         }
 
         public virtual bool IsValid
+        {
+            get { return false; }
+        }
+
+        public virtual bool IsReady
         {
             get { return false; }
         }
@@ -51,6 +131,11 @@ namespace Texel
         }
 
         public virtual VideoUrlListSource ListSource
+        {
+            get { return null; }
+        }
+
+        public virtual PlaylistQueue TargetQueue
         {
             get { return null; }
         }
@@ -96,6 +181,16 @@ namespace Texel
         }
 
         public virtual bool _MoveTo(int index)
+        {
+            return false;
+        }
+
+        public virtual bool _CanAddTrack()
+        {
+            return false;
+        }
+
+        public virtual bool _AddTrack(VRCUrl url)
         {
             return false;
         }

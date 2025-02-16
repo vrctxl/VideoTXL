@@ -7,6 +7,12 @@ using VRC.Udon;
 
 namespace Texel
 {
+    enum QueueEntryType : byte
+    {
+        URL,
+        Playlist,
+    }
+
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class PlaylistQueue : VideoUrlListSource
     {
@@ -15,7 +21,9 @@ namespace Texel
         public bool removeTracks = true;
 
         [UdonSynced]
-        VRCUrl[] syncQueue;
+        VRCUrl[] syncUrls;
+        [UdonSynced]
+        Vector3[] syncEntries;
         [UdonSynced]
         short syncTrackCount = 0;
         [UdonSynced]
@@ -31,6 +39,8 @@ namespace Texel
         int syncTrackChangeUpdate = 0;
         int prevTrackChangeUpdate = 0;
 
+        private Playlist[] playlistSources = new Playlist[0];
+
         void Start()
         {
             _EnsureInit();
@@ -40,7 +50,8 @@ namespace Texel
         {
             base._Init();
 
-            syncQueue = new VRCUrl[0];
+            syncUrls = new VRCUrl[0];
+            syncEntries = new Vector3[0];
         }
 
         public override void _SetVideoPlayer(TXLVideoPlayer videoPlayer)
@@ -49,6 +60,12 @@ namespace Texel
             this.videoPlayer = videoPlayer;
 
             _UpdateHandlers(VideoUrlSource.EVENT_BIND_VIDEOPLAYER);
+        }
+
+        public int _RegisterPlaylistSource(Playlist playlist)
+        {
+            playlistSources = (Playlist[])UtilityTxl.ArrayAddElement(playlistSources, playlist, playlist.GetType());
+            return playlistSources.Length - 1;
         }
 
         public override TXLVideoPlayer VideoPlayer
@@ -64,6 +81,11 @@ namespace Texel
         public override bool IsValid
         {
             get { return syncEnabled && syncTrackCount > 0; }
+        }
+
+        public override bool IsReady
+        {
+            get { return syncEnabled && syncTrackCount > 0 && syncCurrentIndex >= 0; }
         }
 
         public override bool AutoAdvance
@@ -116,7 +138,11 @@ namespace Texel
             if (CurrentIndex < 0 || !IsEnabled || CurrentIndex >= syncTrackCount)
                 return VRCUrl.Empty;
 
-            return syncQueue[CurrentIndex];
+            int playlistIndex = (int)syncEntries[CurrentIndex].x;
+            if (playlistIndex == -1)
+                return syncUrls[CurrentIndex];
+
+            return _GetPlaylistUrl(CurrentIndex);
         }
 
         public override VRCUrl _GetTrackURL(int index)
@@ -124,7 +150,42 @@ namespace Texel
             if (index < 0 || index >= syncTrackCount)
                 return null;
 
-            return syncQueue[index];
+            if (syncEntries[index].x == -1)
+                return syncUrls[index];
+
+            return _GetPlaylistUrl(index);
+        }
+
+        private VRCUrl _GetPlaylistUrl(int entryIndex)
+        {
+            PlaylistData data = _GetPlaylistData(entryIndex);
+            int trackIndex = (int)syncEntries[entryIndex].z;
+            if (trackIndex > -1 && data && trackIndex < data.playlist.Length)
+                return data.playlist[trackIndex];
+
+            return VRCUrl.Empty;
+        }
+
+        private PlaylistData _GetPlaylistData(int entryIndex)
+        {
+            int playlistIndex = (int)syncEntries[entryIndex].x;
+            if (playlistIndex < playlistSources.Length)
+            {
+                Playlist playlist = playlistSources[playlistIndex];
+                int catalogIndex = (int)syncEntries[entryIndex].y;
+
+                PlaylistData data = playlist.playlistData;
+                if (catalogIndex > -1 && playlist.playlistCatalog)
+                {
+                    PlaylistCatalog catalog = playlist.playlistCatalog;
+                    if (catalogIndex < catalog.playlists.Length)
+                        data = catalog.playlists[catalogIndex];
+                }
+
+                return data;
+            }
+
+            return null;
         }
 
         public override VRCUrl _GetTrackQuestURL(int index)
@@ -198,24 +259,30 @@ namespace Texel
             {
                 int limit = syncTrackCount - nextIndex;
                 for (int i = 0; i < limit; i++)
-                    syncQueue[i] = syncQueue[i + nextIndex];
+                {
+                    syncUrls[i] = syncUrls[i + nextIndex];
+                    syncEntries[i] = syncEntries[i + nextIndex];
+                }
                 for (int i = limit; i < syncTrackCount; i++)
-                    syncQueue[i] = VRCUrl.Empty;
+                {
+                    syncUrls[i] = VRCUrl.Empty;
+                    syncEntries[i] = new Vector3(-1, -1, -1);
+                }
 
                 syncTrackCount -= (short)nextIndex;
                 syncQueueUpdate += 1;
 
                 _UpdateHandlers(EVENT_LIST_CHANGE);
+                nextIndex -= 1;
             }
 
-            nextIndex -= 1;
             if (nextIndex >= syncTrackCount)
                 nextIndex = -1;
 
             if (nextIndex != originalIndex)
                 CurrentIndex = (short)nextIndex;
-            else
-                _UpdateHandlers(EVENT_TRACK_CHANGE);
+
+            _UpdateHandlers(EVENT_TRACK_CHANGE);
 
             syncTrackChangeUpdate += 1;
 
@@ -297,20 +364,56 @@ namespace Texel
             }
         }
 
-        public void _AddTrack(VRCUrl url)
+        public override bool _CanAddTrack()
         {
-            _AddTrack(url, VRCUrl.Empty, "");
+            return true;
         }
 
-        public void _AddTrack(VRCUrl url, VRCUrl questUrl, string title)
+        public override bool _AddTrack(VRCUrl url)
+        {
+            return _AddTrack(url, VRCUrl.Empty, "");
+        }
+
+        public bool _AddTrack(VRCUrl url, VRCUrl questUrl, string title)
+        {
+            if (!URLUtil.WellFormedUrl(url))
+                return false;
+
+            if (!_TakeControl())
+                return false;
+
+            _EnsureSyncCapacity();
+
+            syncUrls[syncTrackCount] = url;
+            syncEntries[syncTrackCount] = new Vector3(-1, -1, -1);
+
+            return _CommitAddTrack();
+        }
+
+        public bool _AddTrack(int playlistIndex, int catalogIndex, int trackIndex)
         {
             if (!_TakeControl())
-                return;
+                return false;
 
-            if (syncTrackCount >= syncQueue.Length)
-                syncQueue = (VRCUrl[])UtilityTxl.ArrayMinSize(syncQueue, syncTrackCount + 1, url.GetType());
+            _EnsureSyncCapacity();
 
-            syncQueue[syncTrackCount] = url;
+            syncUrls[syncTrackCount] = VRCUrl.Empty;
+            syncEntries[syncTrackCount] = new Vector3(playlistIndex, catalogIndex, trackIndex);
+
+            return _CommitAddTrack();
+        }
+
+        private void _EnsureSyncCapacity()
+        {
+            if (syncTrackCount >= syncEntries.Length)
+            {
+                syncEntries = (Vector3[])UtilityTxl.ArrayMinSize(syncEntries, syncTrackCount + 1, typeof(Vector3));
+                syncUrls = (VRCUrl[])UtilityTxl.ArrayMinSize(syncUrls, syncTrackCount + 1, typeof(VRCUrl));
+            }
+        }
+
+        private bool _CommitAddTrack()
+        {
             syncQueueUpdate += 1;
             syncTrackCount += 1;
 
@@ -323,6 +426,7 @@ namespace Texel
                 CurrentIndex = 0;
 
             RequestSerialization();
+            return true;
         }
 
         bool _TakeControl()

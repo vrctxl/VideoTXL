@@ -48,5 +48,10 @@ namespace Texel
         {
             return null;
         }
+
+        public virtual bool _Enqueue(int index)
+        {
+            return false;
+        }
     }
 }

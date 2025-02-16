@@ -23,6 +23,7 @@ namespace Texel
         public GameObject urlInputControl;
         public GameObject progressSliderControl;
         public GameObject syncSliderControl;
+        public GameObject queueInputControl;
 
         public Image stopIcon;
         public Image pauseIcon;
@@ -39,6 +40,7 @@ namespace Texel
         public Image playlistIcon;
         public Image masterIcon;
         public Image whitelistIcon;
+        public Image queueIcon;
 
         public GameObject muteToggleOn;
         public GameObject muteToggleOff;
@@ -73,6 +75,7 @@ namespace Texel
         bool loadActive = false;
         VRCUrl pendingSubmit;
         bool pendingFromLoadOverride = false;
+        bool addToQueue = false;
 
         VRCPlayerApi[] _playerBuffer = new VRCPlayerApi[100];
 
@@ -156,6 +159,8 @@ namespace Texel
             nextIcon.color = disabledColor;
             prevIcon.color = disabledColor;
             playlistIcon.color = disabledColor;
+            if (queueIcon)
+                queueIcon.color = disabledColor;
         }
 
         bool inVolumeControllerUpdate = false;
@@ -226,10 +231,20 @@ namespace Texel
             if (pendingFromLoadOverride && !loadActive)
                 return;
 
-            videoPlayer._ChangeUrl(url);
+            bool loadOnQueue = addToQueue;
+            if (!videoPlayer.urlSource || !videoPlayer.urlSource._CanAddTrack())
+                loadOnQueue = false;
+
+            if (loadOnQueue)
+                videoPlayer.urlSource._AddTrack(url);
+            else
+                videoPlayer._ChangeUrl(url);
+
             //if (Utilities.IsValid(videoPlayer.playlist))
             //    videoPlayer.playlist._SetEnabled(false);
             loadActive = false;
+            addToQueue = false;
+
             _UpdateAll();
         }
 
@@ -241,12 +256,15 @@ namespace Texel
 
         public void _HandleUrlInputChange()
         {
+            /*Debug.Log("_HandleURLInputChange");
             if (!Utilities.IsValid(videoPlayer))
                 return;
 
             VRCUrl url = urlInput.GetUrl();
             if (url.Get().Length > 0)
                 videoPlayer._UpdateQueuedUrl(urlInput.GetUrl());
+
+            addToQueue = false;*/
         }
 
         public void _HandleStop()
@@ -344,6 +362,15 @@ namespace Texel
                 videoPlayer._TriggerRepeatMode();
             else
                 _SetStatusOverride(_MakeOwnerMessage(), 3);
+        }
+
+        public void _HandleQueueToggle()
+        {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
+            addToQueue = !addToQueue;
+            _UpdateAll();
         }
 
         bool _draggingProgressSlider = false;
@@ -624,6 +651,13 @@ namespace Texel
             bool canControl = videoPlayer._CanTakeControl();
             bool enableControl = !videoPlayer.locked || canControl;
 
+            bool queueSupported = false;
+            if (videoPlayer.urlSource)
+                queueSupported = videoPlayer.urlSource._CanAddTrack();
+
+            if (queueInputControl)
+                queueInputControl.SetActive(false);
+
             int playerState = videoPlayer.playerState;
 
             if (enableControl && loadActive)
@@ -631,8 +665,23 @@ namespace Texel
                 loadIcon.color = activeColor;
                 urlInputControl.SetActive(true);
                 urlInput.readOnly = !canControl;
-                SetPlaceholderText("Enter Video URL...");
                 SetStatusText("");
+
+                if (queueInputControl)
+                    queueInputControl.SetActive(queueSupported);
+
+                if (queueSupported && addToQueue)
+                {
+                    if (queueIcon)
+                        queueIcon.color = activeColor;
+                    SetPlaceholderText("Add Video URL to Queue...");
+                }
+                else
+                {
+                    if (queueIcon)
+                        queueIcon.color = normalColor;
+                    SetPlaceholderText("Enter Video URL...");
+                }
             }
             else
                 loadIcon.color = enableControl ? normalColor : disabledColor;
@@ -978,7 +1027,7 @@ namespace Texel
             if (!Utilities.IsValid(syncSlider))
                 syncSlider = (Slider)_FindComponent("MainPanel/LowerRow/InputProgress/SyncSlider", typeof(Slider));
             if (!Utilities.IsValid(urlInputControl))
-                urlInputControl = _FindGameObject("MainPanel/LowerRow/InputProgress/InputField");
+                urlInputControl = _FindGameObject("MainPanel/LowerRow/InputProgress/InputArea");
             if (!Utilities.IsValid(urlInput))
                 urlInput = (VRCUrlInputField)_FindComponent("MainPanel/LowerRow/InputProgress/InputField", typeof(VRCUrlInputField));
             if (!Utilities.IsValid(urlText))

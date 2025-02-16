@@ -20,6 +20,7 @@ namespace Texel
 
         public void _HandleUrlInput()
         {
+            Debug.Log("_HandleUrlInput");
             if (!Utilities.IsValid(queue))
                 return;
 
@@ -31,6 +32,7 @@ namespace Texel
 
         public void _HandleUrlInputDelay()
         {
+            Debug.Log("_HandleUrlInputDelay");
             VRCUrl url = urlInput.GetUrl();
             urlInput.SetUrl(VRCUrl.Empty);
 
@@ -46,12 +48,14 @@ namespace Texel
 
         public void _HandleUrlInputClick()
         {
+            Debug.Log("_HandleUrlInputClick");
             //if (!videoPlayer._CanTakeControl())
             //    _SetStatusOverride(MakeOwnerMessage(), 3);
         }
 
         public void _HandleUrlInputChange()
         {
+            Debug.Log("_HandleUrlInputChange");
             if (!queue)
                 return;
 

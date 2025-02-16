@@ -32,6 +32,8 @@ namespace Texel
         public PlaylistCatalog playlistCatalog;
         [Tooltip("Default playlist track set")]
         public PlaylistData playlistData;
+        [Tooltip("Optional queue playlist entries can be queued up on")]
+        public PlaylistQueue queue;
 
         VRCUrl[] playlist;
         VRCUrl[] questPlaylist;
@@ -59,6 +61,7 @@ namespace Texel
         short prevCurrentIndexSerial = 0;
         short prevPlaylistSerial = 0;
         short prevShuffleSerial = 0;
+        int queueIndex = -1;
 
         bool _initDeserialize = false;
 
@@ -87,6 +90,9 @@ namespace Texel
             base._Init();
 
             DebugLog("Common initialization");
+
+            if (queue)
+                queueIndex = queue._RegisterPlaylistSource(this);
 
             _LoadDataLow(playlistData);
 
@@ -148,6 +154,8 @@ namespace Texel
         public override void _SetVideoPlayer(TXLVideoPlayer videoPlayer)
         {
             this.videoPlayer = videoPlayer;
+            if (queue)
+                queue._SetVideoPlayer(videoPlayer);
 
             _MasterInit();
 
@@ -167,6 +175,16 @@ namespace Texel
         public override bool IsValid
         {
             get { return syncEnabled && trackCount > 0; }
+        }
+
+        public override bool IsReady
+        {
+            get { return syncEnabled && trackCount > 0 && syncCurrentIndex >= 0; }
+        }
+
+        public override PlaylistQueue TargetQueue
+        {
+            get { return queue; }
         }
 
         public override bool _CanMoveNext()
@@ -516,6 +534,14 @@ namespace Texel
                 return index;
 
             return syncTrackerOrder[index];
+        }
+
+        public override bool _Enqueue(int index)
+        {
+            if (!queue || !queue._CanAddTrack())
+                return false;
+
+            return queue._AddTrack(queueIndex, CatalogueIndex, CurrentIndex);
         }
 
         public void _SetEnabled(bool state)

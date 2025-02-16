@@ -120,6 +120,10 @@ namespace Texel
         bool _inSustainZone = false;
         bool _initDeserialize = false;
 
+        [HideInInspector] public int internalArgSourceIndex;
+
+        VideoUrlSource[] urlSourceList;
+
         // Realtime state
 
         [NonSerialized]
@@ -162,10 +166,29 @@ namespace Texel
             //if (Utilities.IsValid(playlist))
             //    playlist._Register(Playlist.EVENT_LIST_CHANGE, this, "_OnPlaylistListChange");
 
+            if (Utilities.IsValid(sourceManager))
+            {
+                sourceManager._BindVideoPlayer(this);
+                sourceManager._Register(SourceManager.EVENT_TRACK_CHANGE, this, nameof(_OnSourceTrackChange), nameof(internalArgSourceIndex));
+            }
+
             if (urlSource)
             {
-                urlSource._SetVideoPlayer(this);
-                urlSource._Register(VideoUrlListSource.EVENT_TRACK_CHANGE, this, nameof(_OnTrackChange));
+                string[] callbacks =
+                {
+                    nameof(_OnTrackChange),
+                    nameof(_OnTrackChange1),
+                    nameof(_OnTrackChange2),
+                    nameof(_OnTrackChange3),
+                    nameof(_OnTrackChange4),
+                };
+
+                urlSourceList = urlSource._BuildSourceList(callbacks.Length);
+                for (int i = 0; i < urlSourceList.Length; i++)
+                {
+                    urlSourceList[i]._SetVideoPlayer(this);
+                    urlSourceList[i]._Register(VideoUrlListSource.EVENT_TRACK_CHANGE, this, callbacks[i]);
+                }
             }
 
             _syncLocked = defaultLocked;
@@ -771,22 +794,59 @@ namespace Texel
 
         public void _OnTrackChange()
         {
-            DebugTrace("Event OnTrackChange");
+            _OnTrackChange(0);
+        }
+
+        public void _OnTrackChange1()
+        {
+            _OnTrackChange(1);
+        }
+
+        public void _OnTrackChange2()
+        {
+            _OnTrackChange(2);
+        }
+
+        public void _OnTrackChange3()
+        {
+            _OnTrackChange(3);
+        }
+
+        public void _OnTrackChange4()
+        {
+            _OnTrackChange(4);
+        }
+
+        void _OnTrackChange(int sourceIndex)
+        {
+            DebugTrace($"Event OnTrackChange source={sourceIndex}");
             if (Networking.IsOwner(gameObject))
-                _PlayPlaylistUrl();
+                _PlayPlaylistUrl(urlSourceList[sourceIndex]);
+        }
+
+        public void _OnSourceTrackChange()
+        {
+            _PlayPlaylistUrl(sourceManager._GetSource(internalArgSourceIndex));
         }
 
         public void _PlayPlaylistUrl()
         {
-            DebugTrace("Play Playlist Url");
+            if (sourceManager)
+                _PlayPlaylistUrl(sourceManager._GetReadySource());
+        }
+
+        void _PlayPlaylistUrl(VideoUrlSource source)
+        {
+            DebugTrace($"Play Playlist Url from {source}");
+
             _overrideLock = true;
             _skipAdvanceNextTrack = false;
             _syncQueuedUrl = VRCUrl.Empty;
 
-            if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
+            if (source && source.IsValid)
             {
-                _PlayVideoFallback(urlSource._GetCurrentUrl(), urlSource._GetCurrentQuestUrl());
-                urlSource._PlayCurrentUrl();
+                _PlayVideoFallback(source._GetCurrentUrl(), source._GetCurrentQuestUrl());
+                source._PlayCurrentUrl();
             }
 
             _overrideLock = false;
@@ -1046,22 +1106,31 @@ namespace Texel
         bool _PlayNextIfAvailable()
         {
             bool loadedTrack = false;
-            if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
-            {
-                string currentUrl = _syncUrl != null ? _syncUrl.Get() : "";
-                string playlistUrl = urlSource._GetCurrentUrl() != null ? urlSource._GetCurrentUrl().Get() : "";
-                bool currentTrackFromList = currentUrl == playlistUrl;
-                bool canAdvance = urlSource.ResumeAfterLoad || currentTrackFromList;
 
-                if (urlSource.AutoAdvance && canAdvance)
+            VideoUrlSource source = urlSource;
+            string currentUrl = _syncUrl != null ? _syncUrl.Get() : "";
+
+            for (int c = 0; c < 5 && source != null; c++, source = source.NextSource)
+            {
+                if (!source.IsValid || !source.AutoAdvance)
+                    continue;
+
+                if (!source.ResumeAfterLoad)
                 {
-                    if (_skipAdvanceNextTrack || urlSource._MoveNext())
-                    {
-                        // Next track will load via event
-                        loadedTrack = true;
-                    }
+                    string playlistUrl = source._GetCurrentUrl() != null ? source._GetCurrentUrl().Get() : "";
+                    bool currentTrackFromList = currentUrl == playlistUrl;
+                    if (!currentTrackFromList)
+                        continue;
+                }
+
+                if (_skipAdvanceNextTrack || source._MoveNext())
+                {
+                    loadedTrack = true;
+                    break;
                 }
             }
+
+            DebugLog($"PlayNextIf src={source} loadedTrack={loadedTrack}");
 
             if (loadedTrack)
             {

@@ -5,6 +5,7 @@ using UnityEngine;
 using VRC.SDK3.Components.Video;
 using VRC.SDKBase;
 using VRC.Udon;
+using System.Text.RegularExpressions;
 
 #if AUDIOLINK_V1
 using AudioLink;
@@ -55,6 +56,7 @@ namespace Texel
 
         protected VideoManager videoMux;
         protected AudioManager audioManager;
+        protected SourceManager sourceManager;
 
         [HideInInspector]
         public bool prefabInitialized = false;
@@ -160,6 +162,11 @@ namespace Texel
             get { return audioManager; }
         }
 
+        public SourceManager SourceManager
+        {
+            get { return sourceManager; }
+        }
+
         public virtual void _SetVideoManager(VideoManager manager)
         {
             if (videoMux)
@@ -180,6 +187,16 @@ namespace Texel
             audioManager._Register(AudioManager.EVENT_AUDIOLINK_CHANGED, this, nameof(_AudioLinkOnBind));
             _AudioLinkOnBind();
 #endif
+        }
+
+        internal static string _ParseYoutube(string url)
+        {
+            string pattern = @"(?:https?:\/\/)?(?:www\.)?youtu\.?be(?:\.com)?\/?.*(?:watch|embed)?(?:.*v=|v\/|\/)([\w\-_]+)\&?";
+            Match match = Regex.Match(url, pattern);
+            if (match.Success)
+                return $"YouTube [{match.Groups[1]}]";
+
+            return null;
         }
 
         // AudioLink API

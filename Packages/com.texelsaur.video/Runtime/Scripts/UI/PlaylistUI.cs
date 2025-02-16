@@ -179,6 +179,11 @@ namespace Texel
                 Debug.LogWarning("[VideoTXL] Tried to select playlist track, but the playlist is not associated with a video player!");
         }
 
+        public void _EnqueueTrack(int track)
+        {
+            playlist._Enqueue(track);
+        }
+
         void _UnselectEntries()
         {
             for (int i = 0; i < entries.Length; i++)
