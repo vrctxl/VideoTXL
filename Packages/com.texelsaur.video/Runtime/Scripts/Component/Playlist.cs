@@ -329,7 +329,7 @@ namespace Texel
 
         void _PostLoadTrack()
         {
-            CurrentIndex = (short)((AutoAdvance && !trackCatalogMode) ? 0 : -1);
+            CurrentIndex = (short)((AutoAdvance && !trackCatalogMode && immediate) ? 0 : -1);
             if (immediate)
                 CurrentIndexSerial += 1;
             else
@@ -361,7 +361,7 @@ namespace Texel
             set
             {
                 syncCurrentIndexSerial = value;
-                _UpdateHandlers(VideoUrlListSource.EVENT_TRACK_CHANGE);
+                _EventTrackChange();
             }
         }
 
@@ -417,14 +417,14 @@ namespace Texel
             else
                 CurrentIndex = (short)-1;
 
+            CurrentIndexSerial += 1;
+
             RequestSerialization();
 
             if (CurrentIndex >= 0)
                 DebugLog($"Move next track {CurrentIndex}");
             else
                 DebugLog($"Playlist completed");
-
-            CurrentIndexSerial += 1;
 
             return CurrentIndex >= 0;
         }

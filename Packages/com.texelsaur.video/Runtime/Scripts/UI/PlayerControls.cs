@@ -55,6 +55,7 @@ namespace Texel
         public Text placeholderText;
         public Text modeText;
         public Text queuedText;
+        public Text titleText;
 
         public Text playlistText;
 
@@ -78,6 +79,9 @@ namespace Texel
         bool addToQueue = false;
 
         VRCPlayerApi[] _playerBuffer = new VRCPlayerApi[100];
+
+        [NonSerialized]
+        public VRCUrl internalArgUrl;
 
         void Start()
         {
@@ -124,6 +128,9 @@ namespace Texel
 
                 if (Utilities.IsValid(videoPlayer.accessControl))
                     videoPlayer.accessControl._Register(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateAccess));
+
+                if (Utilities.IsValid(videoPlayer.urlInfoResolver))
+                    videoPlayer.urlInfoResolver._Register(UrlInfoResolver.EVENT_URL_INFO, this, nameof(_OnUrlInfoReady), nameof(internalArgUrl));
             }
 
             if (Utilities.IsValid(playlistPanel))
@@ -209,6 +216,11 @@ namespace Texel
             _UpdatePlaylistInfo();
         }
 
+        public void _OnUrlInfoReady()
+        {
+            _UpdateInfo();
+        }
+
         public void _HandleUrlInput()
         {
             if (!Utilities.IsValid(videoPlayer))
@@ -232,11 +244,18 @@ namespace Texel
                 return;
 
             bool loadOnQueue = addToQueue;
-            if (!videoPlayer.urlSource || !videoPlayer.urlSource._CanAddTrack())
+            VideoUrlSource addSource = null;
+
+            if (!videoPlayer.sourceManager)
+                loadOnQueue = false;
+            else
+                addSource = videoPlayer.sourceManager._GetSource(videoPlayer.sourceManager._GetCanAddTrack());
+
+            if (!addSource)
                 loadOnQueue = false;
 
             if (loadOnQueue)
-                videoPlayer.urlSource._AddTrack(url);
+                addSource._AddTrack(url);
             else
                 videoPlayer._ChangeUrl(url);
 
@@ -495,18 +514,18 @@ namespace Texel
 
         public void _HandlePlaylistNext()
         {
-            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.urlSource))
+            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.sourceManager))
                 return;
 
-            videoPlayer.urlSource._MoveNext();
+            videoPlayer.sourceManager._MoveNext();
         }
 
         public void _HandlePlaylistPrev()
         {
-            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.urlSource))
+            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.sourceManager))
                 return;
 
-            videoPlayer.urlSource._MovePrev();
+            videoPlayer.sourceManager._MovePrev();
         }
 
         public void _SetStatusOverride(string msg, float timeout)
@@ -575,8 +594,21 @@ namespace Texel
 
         public void _UpdateInfo()
         {
-            string queuedUrl = videoPlayer.queuedUrl.Get();
-            queuedText.text = (queuedUrl != "") ? "QUEUED" : "";
+            if (titleText)
+                titleText.text = _GetTitleText();
+
+            //string queuedUrl = videoPlayer.queuedUrl.Get();
+            //queuedText.text = (queuedUrl != "") ? "QUEUED" : "";
+        }
+
+        string _GetTitleText()
+        {
+            if (videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_STOPPED)
+                return "";
+            if (videoPlayer.urlInfoResolver)
+                return videoPlayer.urlInfoResolver._GetFormatted(videoPlayer.currentUrl);
+
+            return "";
         }
 
         // TODO: Genericize to url source
@@ -608,21 +640,26 @@ namespace Texel
                 }
             }
 
-            VideoUrlListSource playlist = (VideoUrlListSource)videoPlayer.urlSource;
+            SourceManager sourceManager = videoPlayer.SourceManager;
 
-            if (Utilities.IsValid(playlist) && playlist.Count > 0)
+            if (sourceManager && sourceManager.Count > 0)
             {
-                nextIcon.color = (enableControl && playlist.IsEnabled && playlist._CanMoveNext()) ? normalColor : disabledColor;
-                prevIcon.color = (enableControl && playlist.IsEnabled && playlist._CanMovePrev()) ? normalColor : disabledColor;
+                nextIcon.color = (enableControl && sourceManager.CanMoveNext) ? normalColor : disabledColor;
+                prevIcon.color = (enableControl && sourceManager.CanMovePrev) ? normalColor : disabledColor;
                 playlistIcon.color = enableControl ? normalColor : disabledColor;
 
-                bool playlistActive = playlist.IsEnabled && playlist.CurrentIndex >= 0 && playlist.Count > 0;
+                VideoUrlSource source = sourceManager._GetSource(sourceManager._GetReadySource());
+
+                bool playlistActive = source && source.ListSource;
                 if (!playlistActive)
                     playlistText.text = "";
                 //else if (playlist.trackCatalogMode)
                 //    playlistText.text = $"TRACK: {playlist.CurrentIndex + 1}";
                 else
-                    playlistText.text = $"TRACK: {playlist.CurrentIndex + 1} / {playlist.Count}";
+                    playlistText.text = $"TRACK: {source.ListSource.CurrentIndex + 1} / {source.ListSource.Count}";
+
+                if (playlistActive && Utilities.IsValid(playlistPanel))
+                    playlistIcon.color = playlistPanel.activeSelf ? activeColor : normalColor;
             }
             else
             {
@@ -631,9 +668,6 @@ namespace Texel
                 playlistIcon.color = disabledColor;
                 playlistText.text = "";
             }
-
-            if (Utilities.IsValid(playlist) && Utilities.IsValid(playlistPanel))
-                playlistIcon.color = playlistPanel.activeSelf ? activeColor : normalColor;
         }
 
         public void _UpdateAll()
@@ -652,8 +686,8 @@ namespace Texel
             bool enableControl = !videoPlayer.locked || canControl;
 
             bool queueSupported = false;
-            if (videoPlayer.urlSource)
-                queueSupported = videoPlayer.urlSource._CanAddTrack();
+            if (videoPlayer.sourceManager)
+                queueSupported = videoPlayer.sourceManager._GetCanAddTrack() >= 0;
 
             if (queueInputControl)
                 queueInputControl.SetActive(false);
@@ -865,6 +899,7 @@ namespace Texel
             }
 
             _UpdatePlaylistInfo();
+            _UpdateInfo();
         }
 
         void SetStatusText(string msg)

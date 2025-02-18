@@ -53,5 +53,13 @@ namespace Texel
         {
             return false;
         }
+
+        protected void _EventTrackChange()
+        {
+            if (sourceManager)
+                sourceManager._OnSourceTrackChange(sourceIndex);
+
+            _UpdateHandlers(EVENT_TRACK_CHANGE);
+        }
     }
 }

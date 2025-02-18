@@ -11,6 +11,14 @@ namespace Texel
         [SerializeField] internal TXLVideoPlayer videoPlayer;
         [SerializeField] internal VideoUrlSource[] sources;
 
+        [Tooltip("Log debug statements to a world object")]
+        [SerializeField] internal DebugLog debugLog;
+        [SerializeField] internal bool vrcLogging = false;
+        [SerializeField] internal bool eventLogging = false;
+        [SerializeField] internal bool lowLevelLogging = false;
+
+        private int nextSourceIndex = 0;
+
         public const int EVENT_BIND_VIDEOPLAYER = 0;
         public const int EVENT_TRACK_CHANGE = 1;
         protected const int EVENT_COUNT = 2;
@@ -27,6 +35,11 @@ namespace Texel
             base._Init();
 
             sources = (VideoUrlSource[])UtilityTxl.ArrayCompact(sources);
+            foreach (VideoUrlSource source in sources)
+                source._SetSourceManager(this, nextSourceIndex++);
+
+            if (eventLogging)
+                eventDebugLog = debugLog;
         }
 
         public void _BindVideoPlayer(TXLVideoPlayer videoPlayer) {
@@ -35,6 +48,11 @@ namespace Texel
                 source._SetVideoPlayer(videoPlayer);
 
             _UpdateHandlers(EVENT_BIND_VIDEOPLAYER);
+        }
+
+        public int Count
+        {
+            get { return sources.Length; }
         }
 
         public TXLVideoPlayer VideoPlayer
@@ -54,26 +72,37 @@ namespace Texel
             return sources[index];
         }
 
-        public VideoUrlSource _GetValidSource()
+        public int _GetValidSource(int startIndex = 0)
         {
-            foreach (VideoUrlSource source in sources)
+            for (int i = startIndex; i < sources.Length; i++)
             {
-                if (source.IsValid)
-                    return source;
+                if (sources[i].IsValid)
+                    return i;
             }
 
-            return null;
+            return -1;
         }
 
-        public VideoUrlSource _GetReadySource()
+        public int _GetReadySource(int startIndex = 0)
         {
-            foreach (VideoUrlSource source in sources)
+            for (int i = startIndex; i < sources.Length; i++)
             {
-                if (source.IsReady)
-                    return source;
+                if (sources[i].IsReady)
+                    return i;
             }
 
-            return null;
+            return -1;
+        }
+
+        public int _GetCanAddTrack(int startIndex = 0)
+        {
+            for (int i = startIndex; i < sources.Length; i++)
+            {
+                if (sources[i]._CanAddTrack())
+                    return i;
+            }
+
+            return -1;
         }
 
         public bool CanMoveNext
@@ -126,9 +155,58 @@ namespace Texel
             return false;
         }
 
+        public bool _AdvanceNext(string currentUrl = null)
+        {
+            _DebugLowLevel("AdvanceNext");
+
+            foreach (VideoUrlSource source in sources)
+            {
+                if (!source.IsValid || !source.AutoAdvance)
+                    continue;
+
+                if (currentUrl != null && !source.ResumeAfterLoad)
+                {
+                    string playlistUrl = source._GetCurrentUrl() != null ? source._GetCurrentUrl().Get() : "";
+                    bool currentTrackFromList = currentUrl == playlistUrl;
+                    if (!currentTrackFromList)
+                        continue;
+                }
+
+                if (source._CanMoveNext() && source._MoveNext())
+                {
+                    _DebugLowLevel($"Advanced source {source}");
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public void _OnSourceTrackChange(int sourceIndex)
         {
             _UpdateHandlers(EVENT_TRACK_CHANGE, sourceIndex);
+        }
+
+        void _DebugLog(string message)
+        {
+            if (vrcLogging)
+                Debug.Log("[VideoTXL:SourceManager] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write("SourceManager", message);
+        }
+
+        void _DebugError(string message, bool force = false)
+        {
+            if (vrcLogging || force)
+                Debug.LogError("[VideoTXL:SourceManager] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write("SourceManager", message);
+        }
+
+        void _DebugLowLevel(string message)
+        {
+            if (lowLevelLogging)
+                _DebugLog(message);
         }
     }
 }

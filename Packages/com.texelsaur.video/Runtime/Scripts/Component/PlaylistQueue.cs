@@ -282,7 +282,7 @@ namespace Texel
             if (nextIndex != originalIndex)
                 CurrentIndex = (short)nextIndex;
 
-            _UpdateHandlers(EVENT_TRACK_CHANGE);
+            _EventTrackChange();
 
             syncTrackChangeUpdate += 1;
 
@@ -342,7 +342,7 @@ namespace Texel
                 if (syncCurrentIndex != value)
                 {
                     syncCurrentIndex = value;
-                    _UpdateHandlers(EVENT_TRACK_CHANGE);
+                    _EventTrackChange();
                 }
             }
         }
@@ -360,7 +360,7 @@ namespace Texel
             if (syncTrackChangeUpdate != prevTrackChangeUpdate)
             {
                 prevTrackChangeUpdate = syncTrackChangeUpdate;
-                _UpdateHandlers(EVENT_TRACK_CHANGE);
+                _EventTrackChange();
             }
         }
 

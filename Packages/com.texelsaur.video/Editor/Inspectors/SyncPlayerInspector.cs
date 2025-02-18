@@ -20,7 +20,9 @@ namespace Texel
         SerializedProperty urlSourceProperty;
         SerializedProperty defaultUrlSourceTypeProperty;
         //SerializedProperty playlistPoperty;
+        SerializedProperty sourceManagerProperty;
         SerializedProperty remapperProperty;
+        SerializedProperty urlInfoResolverProperty;
         SerializedProperty accessControlProperty;
         SerializedProperty debugLogProperty;
         SerializedProperty debugStageProperty;
@@ -58,7 +60,9 @@ namespace Texel
             urlSourceProperty = serializedObject.FindProperty(nameof(SyncPlayer.urlSource));
             defaultUrlSourceTypeProperty = serializedObject.FindProperty("defaultUrlSourceType");
             //playlistPoperty = serializedObject.FindProperty(nameof(SyncPlayer.playlist));
+            sourceManagerProperty = serializedObject.FindProperty(nameof(SyncPlayer.sourceManager));
             remapperProperty = serializedObject.FindProperty(nameof(SyncPlayer.urlRemapper));
+            urlInfoResolverProperty = serializedObject.FindProperty(nameof(SyncPlayer.urlInfoResolver));
             accessControlProperty = serializedObject.FindProperty(nameof(SyncPlayer.accessControl));
             debugLogProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugLog));
             debugStageProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugState));
@@ -203,9 +207,11 @@ namespace Texel
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Optional Components", EditorStyles.boldLabel);
 
+            EditorGUILayout.PropertyField(sourceManagerProperty, new GUIContent("URL Source Manager", "Manager for queues, playlists, and other URL sources."));
             //EditorGUILayout.PropertyField(urlSourceProperty, new GUIContent("URL Sources", "Pre-populated playlist to iterate through.  If default URL is set, the playlist will be disabled by default, otherwise it will auto-play."));
             //EditorGUILayout.PropertyField(playlistPoperty, new GUIContent("Playlist", "Pre-populated playlist to iterate through.  If default URL is set, the playlist will be disabled by default, otherwise it will auto-play."));
             EditorGUILayout.PropertyField(remapperProperty, new GUIContent("URL Remapper", "Set of input URLs to remap to alternate URLs on a per-platform basis."));
+            EditorGUILayout.PropertyField(urlInfoResolverProperty, new GUIContent("URL Info Resolver", "A resolver and cache for finding additional info about a URL, like title or author."));
             EditorGUILayout.PropertyField(accessControlProperty, new GUIContent("Access Control", "Control access to player controls based on player type or whitelist."));
 
             EditorGUILayout.PropertyField(playbackZoneProperty, new GUIContent("Playback Zone Membership", "Optional zone membership object tied to a trigger zone the player must be in to sustain playback.  Disables playing audio on world load."));

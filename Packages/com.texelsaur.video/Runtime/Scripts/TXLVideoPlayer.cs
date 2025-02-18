@@ -6,10 +6,13 @@ using VRC.SDK3.Components.Video;
 using VRC.SDKBase;
 using VRC.Udon;
 using System.Text.RegularExpressions;
+using System.Runtime.CompilerServices;
 
 #if AUDIOLINK_V1
 using AudioLink;
 #endif
+
+[assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
 
 namespace Texel
 {
@@ -56,7 +59,8 @@ namespace Texel
 
         protected VideoManager videoMux;
         protected AudioManager audioManager;
-        protected SourceManager sourceManager;
+
+        [SerializeField] protected internal SourceManager sourceManager;
 
         [HideInInspector]
         public bool prefabInitialized = false;

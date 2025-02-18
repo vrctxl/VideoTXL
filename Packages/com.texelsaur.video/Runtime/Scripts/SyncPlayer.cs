@@ -1,10 +1,13 @@
 ﻿
 using System;
+using System.Runtime.CompilerServices;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components.Video;
 using VRC.SDKBase;
 using VRC.Udon.Common;
+
+[assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
 
 namespace Texel
 {
@@ -18,6 +21,7 @@ namespace Texel
         //public Playlist playlist;
         public VideoUrlSource urlSource;
         public UrlRemapper urlRemapper;
+        public UrlInfoResolver urlInfoResolver;
         public AccessControl accessControl;
 
         public CompoundZoneTrigger playbackZone;
@@ -172,7 +176,7 @@ namespace Texel
                 sourceManager._Register(SourceManager.EVENT_TRACK_CHANGE, this, nameof(_OnSourceTrackChange), nameof(internalArgSourceIndex));
             }
 
-            if (urlSource)
+            /*if (urlSource)
             {
                 string[] callbacks =
                 {
@@ -189,7 +193,7 @@ namespace Texel
                     urlSourceList[i]._SetVideoPlayer(this);
                     urlSourceList[i]._Register(VideoUrlListSource.EVENT_TRACK_CHANGE, this, callbacks[i]);
                 }
-            }
+            }*/
 
             _syncLocked = defaultLocked;
             _SyncRepeatMode = loop ? TXLRepeatMode.All : TXLRepeatMode.None;
@@ -220,7 +224,8 @@ namespace Texel
             {
                 if (_IsUrlValid(defaultUrl))
                     _PlayVideoAfterFallback(defaultUrl, defaultQuestUrl, 3);
-                else if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
+                else if (sourceManager)
+//                else if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
                     SendCustomEventDelayedFrames("_PlayPlaylistUrl", 3);
             }
 
@@ -299,7 +304,8 @@ namespace Texel
             if (enableLoop)
             {
                 bool activePlaylist = false;
-                if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
+                //if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
+                if (sourceManager && sourceManager._GetValidSource() >= 0)
                     activePlaylist = true;
 
                 if (activePlaylist && syncRepeatMode != TXLRepeatMode.Single)
@@ -318,7 +324,8 @@ namespace Texel
         TXLRepeatMode _CheckRepeatMode(TXLRepeatMode mode)
         {
             bool activePlaylist = false;
-            if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
+            //if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
+            if (sourceManager && sourceManager._GetValidSource() >= 0)
                 activePlaylist = true;
 
             if (mode == TXLRepeatMode.Single && !activePlaylist)
@@ -635,12 +642,12 @@ namespace Texel
             _StopVideo();
         }
 
-        public void _SkipNextAdvance()
+        /*public void _SkipNextAdvance()
         {
             DebugTrace("Skip Next Advance");
             if (Networking.IsOwner(gameObject))
                 _skipAdvanceNextTrack = true;
-        }
+        }*/
 
         public void _UpdateQueuedUrl(VRCUrl url)
         {
@@ -698,6 +705,9 @@ namespace Texel
         {
             if (!_IsUrlValid(url))
                 return;
+
+            if (urlInfoResolver)
+                urlInfoResolver._ResolveInfo(url);
 
             DebugLog("Play video " + url);
             bool isOwner = Networking.IsOwner(gameObject);
@@ -826,13 +836,15 @@ namespace Texel
 
         public void _OnSourceTrackChange()
         {
-            _PlayPlaylistUrl(sourceManager._GetSource(internalArgSourceIndex));
+            DebugTrace($"Event OnSourceTrackChange source={internalArgSourceIndex}");
+            if (Networking.IsOwner(gameObject))
+                _PlayPlaylistUrl(sourceManager._GetSource(internalArgSourceIndex));
         }
 
         public void _PlayPlaylistUrl()
         {
             if (sourceManager)
-                _PlayPlaylistUrl(sourceManager._GetReadySource());
+                _PlayPlaylistUrl(sourceManager._GetSource(sourceManager._GetReadySource()));
         }
 
         void _PlayPlaylistUrl(VideoUrlSource source)
@@ -1107,10 +1119,15 @@ namespace Texel
         {
             bool loadedTrack = false;
 
-            VideoUrlSource source = urlSource;
-            string currentUrl = _syncUrl != null ? _syncUrl.Get() : "";
+            //VideoUrlSource source = urlSource;
+            if (sourceManager)
+            {
+                string currentUrl = _syncUrl != null ? _syncUrl.Get() : "";
+                loadedTrack = sourceManager._AdvanceNext(currentUrl);
+            }
 
-            for (int c = 0; c < 5 && source != null; c++, source = source.NextSource)
+
+            /*for (int c = 0; c < 5 && source != null; c++, source = source.NextSource)
             {
                 if (!source.IsValid || !source.AutoAdvance)
                     continue;
@@ -1130,11 +1147,11 @@ namespace Texel
                 }
             }
 
-            DebugLog($"PlayNextIf src={source} loadedTrack={loadedTrack}");
+            DebugLog($"PlayNextIf src={source} loadedTrack={loadedTrack}");*/
 
             if (loadedTrack)
             {
-                _skipAdvanceNextTrack = false;
+                //_skipAdvanceNextTrack = false;
                 return true;
             }
 
