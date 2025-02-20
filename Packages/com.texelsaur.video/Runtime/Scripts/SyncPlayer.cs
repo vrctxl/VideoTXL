@@ -334,6 +334,11 @@ namespace Texel
             return mode;
         }
 
+        public override UrlInfoResolver UrlInfoResolver
+        {
+            get { return urlInfoResolver; }
+        }
+
         public override TXLRepeatMode RepeatMode
         {
             get { return syncRepeatMode; }

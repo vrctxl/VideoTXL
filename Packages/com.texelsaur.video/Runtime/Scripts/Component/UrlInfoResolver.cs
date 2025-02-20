@@ -110,6 +110,16 @@ namespace Texel
             return type;
         }
 
+        public string _GetTitle(DataDictionary info)
+        {
+            return _GetInfoString(info, "t");
+        }
+
+        public string _GetAuthor(DataDictionary info)
+        {
+            return _GetInfoString(info, "a");
+        }
+
         public string _GetFormatted(VRCUrl url)
         {
             DataDictionary info = _GetInfo(url);
@@ -161,6 +171,37 @@ namespace Texel
             return true;
         }
 
+        public bool _AddInfo(VRCUrl url, string title = null, string author = null)
+        {
+            if (_HasInfo(url))
+                return false;
+
+            DataDictionary info = new DataDictionary();
+
+            int type = _GetUrlType(url);
+            string typecode = _GetTypeCode(type);
+            if (typecode != "")
+                info.SetValue("s", typecode);
+
+            if (title != null && title != "")
+                info.SetValue("t", title);
+
+            if (author != null && author != "")
+                info.SetValue("a", author);
+
+            if (type == TYPE_YOUTUBE)
+            {
+                string id = URLUtil.GetYoutubeID(url);
+                if (id != null && id != "")
+                    info.SetValue("i", id);
+            }
+
+            infoCache.SetValue(url.Get(), info);
+            _UpdateHandlers(EVENT_URL_INFO, url);
+
+            return true;
+        }
+
         public override void OnStringLoadSuccess(IVRCStringDownload result)
         {
             _DebugLog($"String load bytes={result.ResultBytes.Length}");
@@ -193,8 +234,10 @@ namespace Texel
 
         protected DataDictionary _ParseYoutube(VRCUrl url, string rawdata)
         {
+            string typecode = _GetTypeCode(TYPE_YOUTUBE);
+
             DataDictionary info = new DataDictionary();
-            info.SetValue("s", "YT");
+            info.SetValue("s", typecode);
 
             string id = URLUtil.GetYoutubeID(url);
             if (id != null)
@@ -220,10 +263,10 @@ namespace Texel
                 info.SetValue("a", author);
             }
 
-            string formatted = _Format(url.Get(), "YT", id, title, author);
+            string formatted = _Format(url.Get(), typecode, id, title, author);
             info.SetValue("f", formatted);
 
-            _DebugLog($"Parsed YT i={id}, t={title}, a={author}");
+            _DebugLog($"Parsed {typecode} i={id}, t={title}, a={author}");
 
             return info;
         }
@@ -250,6 +293,13 @@ namespace Texel
                 main = $"[{s}] {main}";
 
             return main;
+        }
+
+        protected virtual string _GetTypeCode(int type)
+        {
+            if (type == TYPE_YOUTUBE)
+                return "YT";
+            return "";
         }
 
         void _DebugLog(string message)

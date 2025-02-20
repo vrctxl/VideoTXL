@@ -2,6 +2,7 @@
 using System;
 using UdonSharp;
 using UnityEngine;
+using VRC.SDK3.Data;
 using VRC.SDKBase;
 using VRC.Udon;
 
@@ -25,6 +26,10 @@ namespace Texel
         [UdonSynced]
         Vector3[] syncEntries;
         [UdonSynced]
+        string[] syncTitles;
+        [UdonSynced]
+        string[] syncAuthors;
+        [UdonSynced]
         short syncTrackCount = 0;
         [UdonSynced]
         short syncCurrentIndex = -1;
@@ -39,6 +44,10 @@ namespace Texel
         int syncTrackChangeUpdate = 0;
         int prevTrackChangeUpdate = 0;
 
+        bool usingTitles = false;
+        bool usingAuthors = false;
+        [HideInInspector] public VRCUrl internalArgUrl;
+
         private Playlist[] playlistSources = new Playlist[0];
 
         void Start()
@@ -52,12 +61,24 @@ namespace Texel
 
             syncUrls = new VRCUrl[0];
             syncEntries = new Vector3[0];
+
+            // Info data
+            syncTitles = new string[0];
+            syncAuthors = new string[0];
         }
 
         public override void _SetVideoPlayer(TXLVideoPlayer videoPlayer)
         {
             Debug.Log($"<color='00FFFF'>[VideoTXL:PlaylistQueue]</color> _SetVideoPlayer {videoPlayer}");
             this.videoPlayer = videoPlayer;
+
+            if (videoPlayer.UrlInfoResolver)
+            {
+                usingTitles = true;
+                usingAuthors = true;
+
+                videoPlayer.UrlInfoResolver._Register(UrlInfoResolver.EVENT_URL_INFO, this, nameof(_InternalOnInfoResolve), nameof(internalArgUrl));
+            }
 
             _UpdateHandlers(VideoUrlSource.EVENT_BIND_VIDEOPLAYER);
         }
@@ -66,6 +87,29 @@ namespace Texel
         {
             playlistSources = (Playlist[])UtilityTxl.ArrayAddElement(playlistSources, playlist, playlist.GetType());
             return playlistSources.Length - 1;
+        }
+
+        public void _InternalOnInfoResolve()
+        {
+            int index = _FindUrlIndex(internalArgUrl);
+            if (index == -1)
+                return;
+
+            if (usingTitles && syncTitles[index] != "")
+                return;
+            if (usingAuthors && syncAuthors[index] != "")
+                return;
+
+            if (_UpdateInfoFromResolver(internalArgUrl, index))
+            {
+                if (!_TakeControl())
+                    return;
+
+                syncQueueUpdate += 1;
+
+                _UpdateHandlers(EVENT_LIST_CHANGE);
+                RequestSerialization();
+            }
         }
 
         public override TXLVideoPlayer VideoPlayer
@@ -195,6 +239,17 @@ namespace Texel
 
         public override string _GetTrackName(int index)
         {
+            if (syncEntries[index].x == -1) {
+                if (videoPlayer && videoPlayer.UrlInfoResolver)
+                    return videoPlayer.UrlInfoResolver._GetFormatted(syncUrls[index]);
+                return "";
+            }
+
+            PlaylistData data = _GetPlaylistData(index);
+            int trackIndex = (int)syncEntries[index].z;
+            if (trackIndex > -1 && data && trackIndex < data.playlist.Length)
+                return data.trackNames[trackIndex];
+
             return "";
         }
 
@@ -262,11 +317,19 @@ namespace Texel
                 {
                     syncUrls[i] = syncUrls[i + nextIndex];
                     syncEntries[i] = syncEntries[i + nextIndex];
+                    if (usingTitles)
+                        syncTitles[i] = syncTitles[i + nextIndex];
+                    if (usingAuthors)
+                        syncAuthors[i] = syncAuthors[i + nextIndex];
                 }
                 for (int i = limit; i < syncTrackCount; i++)
                 {
                     syncUrls[i] = VRCUrl.Empty;
                     syncEntries[i] = new Vector3(-1, -1, -1);
+                    if (usingTitles)
+                        syncTitles[i] = "";
+                    if (usingAuthors)
+                        syncAuthors[i] = "";
                 }
 
                 syncTrackCount -= (short)nextIndex;
@@ -354,6 +417,8 @@ namespace Texel
             if (syncQueueUpdate != prevQueueUpdate)
             {
                 prevQueueUpdate = syncQueueUpdate;
+                _PopulateResolver();
+
                 _UpdateHandlers(EVENT_LIST_CHANGE);
             }
 
@@ -361,6 +426,33 @@ namespace Texel
             {
                 prevTrackChangeUpdate = syncTrackChangeUpdate;
                 _EventTrackChange();
+            }
+        }
+
+        void _PopulateResolver()
+        {
+            if (!usingTitles && !usingAuthors)
+                return;
+
+            UrlInfoResolver resolver = videoPlayer.UrlInfoResolver;
+            if (!resolver)
+                return;
+
+            for (int i = 0; i < syncTrackCount; i++)
+            {
+                if (syncEntries[i].x == -1)
+                    continue;
+
+                bool hasTitle = usingTitles && syncTitles[i] != "";
+                bool hasAuthor = usingAuthors && syncAuthors[i] != "";
+                if (!hasTitle && !hasAuthor)
+                    continue;
+
+                VRCUrl url = syncUrls[i];
+                if (resolver._HasInfo(url))
+                    continue;
+
+                resolver._AddInfo(url, usingTitles ? syncTitles[i] : null, usingAuthors ? syncAuthors[i] : null);
             }
         }
 
@@ -387,7 +479,76 @@ namespace Texel
             syncUrls[syncTrackCount] = url;
             syncEntries[syncTrackCount] = new Vector3(-1, -1, -1);
 
+            if (usingTitles || usingAuthors)
+            {
+                if (usingTitles && title != null && title != "")
+                {
+                    syncTitles[syncTrackCount] = title;
+                    if (usingAuthors)
+                        syncAuthors[syncTrackCount] = "";
+                }
+                else
+                    _updateOrResolveInfo(url, syncTrackCount);
+            }
+
             return _CommitAddTrack();
+        }
+
+        int _FindUrlIndex(VRCUrl url)
+        {
+            if (url == null)
+                return -1;
+
+            string val = url.Get();
+            if (val == "")
+                return -1;
+
+            for (int i = 0; i < syncTrackCount; i++)
+            {
+                if (syncEntries[i].x == -1)
+                    continue;
+                if (syncUrls[i].Get() == val)
+                    return i;
+            }
+
+            return -1;
+        }
+
+        void _updateOrResolveInfo(VRCUrl url, int index)
+        {
+            bool foundInfo = _UpdateInfoFromResolver(url, index);
+
+            if (!foundInfo && (usingTitles || usingAuthors))
+            {
+                UrlInfoResolver resolver = videoPlayer.UrlInfoResolver;
+                resolver._ResolveInfo(url);
+            }
+        }
+
+        bool _UpdateInfoFromResolver(VRCUrl url, int index)
+        {
+            if (usingTitles || usingAuthors)
+            {
+                UrlInfoResolver resolver = videoPlayer.UrlInfoResolver;
+                DataDictionary info = resolver._GetInfo(url);
+                string infoTitle = null;
+                string infoAuthor = null;
+
+                if (info != null)
+                {
+                    infoTitle = resolver._GetTitle(info);
+                    infoAuthor = resolver._GetAuthor(info);
+                }
+
+                if (usingTitles)
+                    syncTitles[index] = infoTitle ?? "";
+                if (usingAuthors)
+                    syncAuthors[index] = infoAuthor ?? "";
+
+                return info != null;
+            }
+
+            return false;
         }
 
         public bool _AddTrack(int playlistIndex, int catalogIndex, int trackIndex)
@@ -400,6 +561,11 @@ namespace Texel
             syncUrls[syncTrackCount] = VRCUrl.Empty;
             syncEntries[syncTrackCount] = new Vector3(playlistIndex, catalogIndex, trackIndex);
 
+            if (usingTitles)
+                syncTitles[syncTrackCount] = "";
+            if (usingAuthors)
+                syncAuthors[syncTrackCount] = "";
+
             return _CommitAddTrack();
         }
 
@@ -409,6 +575,11 @@ namespace Texel
             {
                 syncEntries = (Vector3[])UtilityTxl.ArrayMinSize(syncEntries, syncTrackCount + 1, typeof(Vector3));
                 syncUrls = (VRCUrl[])UtilityTxl.ArrayMinSize(syncUrls, syncTrackCount + 1, typeof(VRCUrl));
+
+                if (usingTitles)
+                    syncTitles = (string[])UtilityTxl.ArrayMinSize(syncTitles, syncTrackCount + 1, typeof(string));
+                if (usingAuthors)
+                    syncAuthors = (string[])UtilityTxl.ArrayMinSize(syncAuthors, syncTrackCount + 1, typeof(string));
             }
         }
 

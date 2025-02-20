@@ -171,6 +171,11 @@ namespace Texel
             get { return sourceManager; }
         }
 
+        public virtual UrlInfoResolver UrlInfoResolver
+        {
+            get { return null; }
+        }
+
         public virtual void _SetVideoManager(VideoManager manager)
         {
             if (videoMux)
