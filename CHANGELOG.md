@@ -14,7 +14,7 @@
 
 ## [2.4.13] - 11-06-24
 
-- Fixed VRSL integration not positioning correctly in editor preview when scaled <1
+- Fixed VRSL integration not positioning correctly in editor preview when scaled less than 1
 - Fixed VRSL integration when RAW RTs are not at default dimensions
 
 ## [2.4.12] - 07-25-24
