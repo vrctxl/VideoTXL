@@ -50,16 +50,6 @@ namespace Texel
             queueUI._HandleDelete(track);
         }
 
-        /*public void _Select()
-        {
-            queueUI._SelectTrack(track);
-        }
-
-        public void _Enqueue()
-        {
-            queueUI._EnqueueTrack(track);
-        }*/
-
         public int Track
         {
             get { return track; }
@@ -124,10 +114,10 @@ namespace Texel
 
         public void _PointerEnter()
         {
-            if (priorityButton)
+            if (priorityButton && queueUI.HasPriorityAccess)
                 priorityButton.gameObject.SetActive(true);
 
-            if (deleteButton)
+            if (deleteButton && queueUI.HasDeleteAccess)
                 deleteButton.gameObject.SetActive(true);
         }
 

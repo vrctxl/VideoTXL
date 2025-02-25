@@ -22,7 +22,7 @@ namespace Texel
         protected const int EVENT_COUNT = 3;
 
         [SerializeField] protected string sourceName;
-        [SerializeField] protected SourceManager sourceManager;
+        [SerializeField, HideInInspector] protected SourceManager sourceManager;
 
         protected int sourceIndex = -1;
 
@@ -101,11 +101,6 @@ namespace Texel
         public virtual VRCUrl _GetCurrentQuestUrl()
         {
             return VRCUrl.Empty;
-        }
-
-        public virtual void _PlayCurrentUrl()
-        {
-
         }
 
         public virtual bool _CanMoveNext()

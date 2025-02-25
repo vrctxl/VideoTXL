@@ -16,10 +16,6 @@ namespace Texel
     [DefaultExecutionOrder(-1)]
     public class SyncPlayer : TXLVideoPlayer
     {
-        [SerializeField] UrlSourceType defaultUrlSourceType = UrlSourceType.None;
-
-        //public Playlist playlist;
-        public VideoUrlSource urlSource;
         public UrlRemapper urlRemapper;
         public UrlInfoResolver urlInfoResolver;
         public AccessControl accessControl;
@@ -167,33 +163,11 @@ namespace Texel
 
             _UpdatePlayerState(VIDEO_STATE_STOPPED);
 
-            //if (Utilities.IsValid(playlist))
-            //    playlist._Register(Playlist.EVENT_LIST_CHANGE, this, "_OnPlaylistListChange");
-
             if (Utilities.IsValid(sourceManager))
             {
                 sourceManager._BindVideoPlayer(this);
                 sourceManager._Register(SourceManager.EVENT_URL_READY, this, nameof(_OnSourceUrlReady));
             }
-
-            /*if (urlSource)
-            {
-                string[] callbacks =
-                {
-                    nameof(_OnTrackChange),
-                    nameof(_OnTrackChange1),
-                    nameof(_OnTrackChange2),
-                    nameof(_OnTrackChange3),
-                    nameof(_OnTrackChange4),
-                };
-
-                urlSourceList = urlSource._BuildSourceList(callbacks.Length);
-                for (int i = 0; i < urlSourceList.Length; i++)
-                {
-                    urlSourceList[i]._SetVideoPlayer(this);
-                    urlSourceList[i]._Register(VideoUrlListSource.EVENT_TRACK_CHANGE, this, callbacks[i]);
-                }
-            }*/
 
             _syncLocked = defaultLocked;
             _SyncRepeatMode = loop ? TXLRepeatMode.All : TXLRepeatMode.None;
@@ -225,7 +199,6 @@ namespace Texel
                 if (_IsUrlValid(defaultUrl))
                     _PlayVideoAfterFallback(defaultUrl, defaultQuestUrl, 3);
                 else if (sourceManager)
-//                else if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
                     SendCustomEventDelayedFrames("_PlayPlaylistUrl", 3);
             }
 
@@ -304,7 +277,6 @@ namespace Texel
             if (enableLoop)
             {
                 bool activePlaylist = false;
-                //if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
                 if (sourceManager && sourceManager._GetValidSource() >= 0)
                     activePlaylist = true;
 
@@ -324,7 +296,6 @@ namespace Texel
         TXLRepeatMode _CheckRepeatMode(TXLRepeatMode mode)
         {
             bool activePlaylist = false;
-            //if (urlSource && urlSource.IsEnabled && urlSource.IsValid)
             if (sourceManager && sourceManager._GetValidSource() >= 0)
                 activePlaylist = true;
 
@@ -435,21 +406,6 @@ namespace Texel
                 _UpdatePlayerState(VIDEO_STATE_STOPPED);
             }
         }
-
-        /*public void _OnPlaylistListChange()
-        {
-            DebugTrace("Event OnPlaylistListChange");
-            _UpdateHandlers(EVENT_VIDEO_PLAYLIST_UPDATE);
-
-            if (Networking.IsOwner(gameObject))
-            {
-                if (!Utilities.IsValid(playlist))
-                    return;
-
-                if (playlist.PlaylistEnabled && playlist.holdOnReady)
-                    _PlayPlaylistUrl();
-            }
-        }*/
 
         public override void _ValidateVideoSources()
         {
@@ -849,7 +805,8 @@ namespace Texel
         public void _PlayPlaylistUrl()
         {
             if (sourceManager)
-                _PlayPlaylistUrl(sourceManager._GetSource(sourceManager._GetReadySource()));
+                sourceManager._AdvanceNext();
+                //_PlayPlaylistUrl(sourceManager._GetSource(sourceManager._GetReadySource()));
         }
 
         void _PlaySourceUrl()
@@ -875,10 +832,7 @@ namespace Texel
             _syncQueuedUrl = VRCUrl.Empty;
 
             if (source && source.IsValid)
-            {
                 _PlayVideoFallback(source._GetCurrentUrl(), source._GetCurrentQuestUrl());
-                source._PlayCurrentUrl();
-            }
 
             _overrideLock = false;
         }
@@ -1138,41 +1092,14 @@ namespace Texel
         {
             bool loadedTrack = false;
 
-            //VideoUrlSource source = urlSource;
             if (sourceManager)
             {
                 string currentUrl = _syncUrl != null ? _syncUrl.Get() : "";
                 loadedTrack = sourceManager._AdvanceNext(currentUrl);
             }
 
-
-            /*for (int c = 0; c < 5 && source != null; c++, source = source.NextSource)
-            {
-                if (!source.IsValid || !source.AutoAdvance)
-                    continue;
-
-                if (!source.ResumeAfterLoad)
-                {
-                    string playlistUrl = source._GetCurrentUrl() != null ? source._GetCurrentUrl().Get() : "";
-                    bool currentTrackFromList = currentUrl == playlistUrl;
-                    if (!currentTrackFromList)
-                        continue;
-                }
-
-                if (_skipAdvanceNextTrack || source._MoveNext())
-                {
-                    loadedTrack = true;
-                    break;
-                }
-            }
-
-            DebugLog($"PlayNextIf src={source} loadedTrack={loadedTrack}");*/
-
             if (loadedTrack)
-            {
-                //_skipAdvanceNextTrack = false;
                 return true;
-            }
 
             if (syncRepeatMode != TXLRepeatMode.None)
             {
@@ -1201,33 +1128,6 @@ namespace Texel
                 //_syncVideoExpectedEndTime = 0;
                 _syncOwnerPlaying = false;
                 RequestSerialization();
-
-                /*bool hasPlaylist = Utilities.IsValid(playlist) && playlist.PlaylistEnabled;
-                //if (_IsUrlValid(_syncQueuedUrl))
-                //    SendCustomEventDelayedFrames("_PlayQueuedUrl", 1);
-                if (hasPlaylist && playlist.autoAdvance)
-                {
-                    if (_skipAdvanceNextTrack || playlist._MoveNext())
-                        SendCustomEventDelayedFrames("_PlayPlaylistUrl", 1);
-                    _skipAdvanceNextTrack = false;
-                }
-                else if (!hasPlaylist && _syncRepeatPlaylist)
-                    SendCustomEventDelayedFrames("_LoopVideo", 1);
-                else
-                {
-                    if (hasPlaylist && playlist.trackCatalogMode)
-                    {
-                        playlist._MoveTo(-1);
-                        _UpdateHandlers(EVENT_VIDEO_PLAYLIST_UPDATE);
-                    }
-
-                    _syncUrl = VRCUrl.Empty;
-                    _syncQuestUrl = VRCUrl.Empty;
-                    _syncVideoStartNetworkTime = 0;
-                    //_syncVideoExpectedEndTime = 0;
-                    _syncOwnerPlaying = false;
-                    RequestSerialization();
-                }*/
 
                 _overrideLock = false;
             }

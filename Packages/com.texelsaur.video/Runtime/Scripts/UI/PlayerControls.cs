@@ -480,7 +480,7 @@ namespace Texel
 
         public void _HandlePlaylist()
         {
-            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.urlSource))
+            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.sourceManager))
                 return;
 
 

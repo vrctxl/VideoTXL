@@ -68,6 +68,16 @@ namespace Texel
             SendCustomEventDelayedFrames(nameof(_OnListChange), 1);
         }
 
+        public bool HasPriorityAccess
+        {
+            get { return queue && queue.HasPriorityAccess; }
+        }
+
+        public bool HasDeleteAccess
+        {
+            get { return queue && queue.HasDeleteAccess; }
+        }
+
         public void _HandleUrlInput()
         {
             Debug.Log("_HandleUrlInput");

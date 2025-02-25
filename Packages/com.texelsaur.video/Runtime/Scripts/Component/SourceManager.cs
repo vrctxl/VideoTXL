@@ -6,6 +6,7 @@ using VRC.Udon;
 
 namespace Texel
 {
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class SourceManager : EventBase
     {
         [SerializeField] internal TXLVideoPlayer videoPlayer;

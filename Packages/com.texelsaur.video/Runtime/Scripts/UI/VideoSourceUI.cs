@@ -15,6 +15,7 @@ namespace Texel
         [SerializeField] internal GameObject templateRoot;
         [SerializeField] internal GameObject buttonTemplate;
 
+        SourceManager boundSourceManager;
         GameObject[] contentPanels;
         GameObject[] contentButtons;
 
@@ -26,9 +27,14 @@ namespace Texel
                 _BindSourceManager(sourceManager);
         }
 
+        public SourceManager SourceManager
+        {
+            get { return boundSourceManager; }
+        }
+
         public void _BindSourceManager(SourceManager sourceManager)
         {
-            if (!sourceManager || this.sourceManager == sourceManager)
+            if (!sourceManager || boundSourceManager == sourceManager)
                 return;
 
             if (templateRoot && (sourceTemplates == null || sourceTemplates.Length == 0))
@@ -36,14 +42,14 @@ namespace Texel
             else
                 sourceTemplates = new VideoSourceUIBase[0];
 
-            this.sourceManager = sourceManager;
+            boundSourceManager = sourceManager;
 
-            contentPanels = new GameObject[sourceManager.Count];
-            contentButtons = new GameObject[sourceManager.Count];
+            contentPanels = new GameObject[boundSourceManager.Count];
+            contentButtons = new GameObject[boundSourceManager.Count];
             
-            for (int i = 0; i < sourceManager.Count; i++)
+            for (int i = 0; i < boundSourceManager.Count; i++)
             {
-                VideoUrlSource source = sourceManager._GetSource(i);
+                VideoUrlSource source = boundSourceManager._GetSource(i);
                 if (!source)
                     continue;
 

@@ -19,6 +19,12 @@ namespace Texel
     {
         TXLVideoPlayer videoPlayer;
 
+        [Header("Permissions")]
+        [Tooltip("Optional. ACL to control access to the move-to-front button.  If not set, uses the video player's ACL settings.")]
+        [SerializeField] protected internal AccessControl priorityAccess;
+        [Tooltip("Optional. ACL to control access to the delete button.  If not set, uses the video player's ACL settings.")]
+        [SerializeField] protected internal AccessControl deleteAccess;
+
         // public bool removeTracks = true;
         [UdonSynced]
         VRCUrl syncReadyUrl;
@@ -32,8 +38,6 @@ namespace Texel
         string[] syncAuthors;
         [UdonSynced]
         short syncTrackCount = 0;
-        [UdonSynced]
-        short syncCurrentIndex = -1;
         [UdonSynced, FieldChangeCallback("SourceEnabled")]
         bool syncEnabled = true;
 
@@ -146,7 +150,7 @@ namespace Texel
 
         public override bool IsReady
         {
-            get { return syncEnabled && syncTrackCount > 0 && syncCurrentIndex >= 0; }
+            get { return syncEnabled && syncTrackCount > 0; }
         }
 
         public override bool AutoAdvance
@@ -173,20 +177,38 @@ namespace Texel
             get { return syncTrackCount; }
         }
 
+        public bool HasPriorityAccess
+        {
+            get
+            {
+                if (priorityAccess)
+                    return priorityAccess._LocalHasAccess();
+                if (videoPlayer)
+                    return videoPlayer._CanTakeControl();
+                return false;
+            }
+        }
+
+        public bool HasDeleteAccess
+        {
+            get
+            {
+                if (deleteAccess)
+                    return deleteAccess._LocalHasAccess();
+                if (videoPlayer)
+                    return videoPlayer._CanTakeControl();
+                return false;
+            }
+        }
+
         public override bool _CanMoveNext()
         {
-            if (syncTrackCount == 0)
-                return false;
-
-            return CurrentIndex < syncTrackCount - 1 || RepeatMode != TXLRepeatMode.None;
+            return syncTrackCount > 0;
         }
 
         public override bool _CanMovePrev()
         {
-            if (syncTrackCount == 0)
-                return false;
-
-            return CurrentIndex > 0 || RepeatMode != TXLRepeatMode.None;
+            return false;
         }
 
         public override bool _CanMoveTo(int index)
@@ -197,15 +219,6 @@ namespace Texel
         public override VRCUrl _GetCurrentUrl()
         {
             return syncReadyUrl;
-
-            /*if (CurrentIndex < 0 || !IsEnabled || CurrentIndex >= syncTrackCount)
-                return VRCUrl.Empty;
-
-            int playlistIndex = (int)syncEntries[CurrentIndex].x;
-            if (playlistIndex == -1)
-                return syncUrls[CurrentIndex];
-
-            return _GetPlaylistUrl(CurrentIndex);*/
         }
 
         public override VRCUrl _GetTrackURL(int index)
@@ -272,38 +285,6 @@ namespace Texel
             return "";
         }
 
-        public override void _PlayCurrentUrl()
-        {
-            /*if (!_TakeControl())
-                return;
-
-            if (!removeTracks || syncTrackCount <= 0)
-                return;
-
-            int originalIndex = CurrentIndex;
-
-            short shift = (short)(CurrentIndex + 1);
-            int limit = syncTrackCount - shift;
-
-            for (int i = 0; i < limit; i++)
-                syncQueue[i] = syncQueue[i + shift];
-            for (int i = limit; i < syncTrackCount; i++)
-                syncQueue[i] = VRCUrl.Empty;
-
-            syncTrackCount -= shift;
-            syncQueueUpdate += 1;
-
-            CurrentIndex = -1;
-            if (Networking.IsOwner(gameObject))
-                _UpdateHandlers(EVENT_LIST_CHANGE);
-
-            syncTrackChangeUpdate += 1;
-            //if (Networking.IsOwner(gameObject))
-            //    _UpdateHandlers(EVENT_TRACK_CHANGE);
-
-            RequestSerialization();*/
-        }
-
         public override bool _MoveNext()
         {
             Debug.Log($"<color='0x00FFFF'>[VideoTXL:PlaylistQueue]</color> _MoveNext");
@@ -312,22 +293,6 @@ namespace Texel
 
             if (syncTrackCount == 0)
                 return false;
-
-            /*if (!removeTracks)
-            {
-                TXLRepeatMode repeat = RepeatMode;
-                if (CurrentIndex < syncTrackCount - 1)
-                    CurrentIndex += 1;
-                else if (repeat == TXLRepeatMode.All)
-                    CurrentIndex = 0;
-                else if (repeat == TXLRepeatMode.Single)
-                    CurrentIndex = CurrentIndex;
-                else
-                    CurrentIndex = -1;
-
-                RequestSerialization();
-                return CurrentIndex >= 0;
-            }*/
 
             syncReadyUrl = _GetTrackURL(0);
             _PopTracks(0, 1);
@@ -341,52 +306,6 @@ namespace Texel
             RequestSerialization();
 
             return true;
-
-            /*int originalIndex = CurrentIndex;
-            int nextIndex = originalIndex + 1;
-
-            if (originalIndex > -1)
-            {
-                int limit = syncTrackCount - nextIndex;
-                for (int i = 0; i < limit; i++)
-                {
-                    syncUrls[i] = syncUrls[i + nextIndex];
-                    syncEntries[i] = syncEntries[i + nextIndex];
-                    if (usingTitles)
-                        syncTitles[i] = syncTitles[i + nextIndex];
-                    if (usingAuthors)
-                        syncAuthors[i] = syncAuthors[i + nextIndex];
-                }
-                for (int i = limit; i < syncTrackCount; i++)
-                {
-                    syncUrls[i] = VRCUrl.Empty;
-                    syncEntries[i] = new Vector3(-1, -1, -1);
-                    if (usingTitles)
-                        syncTitles[i] = "";
-                    if (usingAuthors)
-                        syncAuthors[i] = "";
-                }
-
-                syncTrackCount -= (short)nextIndex;
-                syncQueueUpdate += 1;
-
-                _UpdateHandlers(EVENT_LIST_CHANGE);
-                nextIndex -= 1;
-            }
-
-            if (nextIndex >= syncTrackCount)
-                nextIndex = -1;
-
-            if (nextIndex != originalIndex)
-                CurrentIndex = (short)nextIndex;
-
-            _EventTrackChange();
-
-            syncTrackChangeUpdate += 1;
-
-            RequestSerialization();
-
-            return CurrentIndex >= 0;*/
         }
 
         void _PopTracks(int startAt = 0, int popCount = 1)
@@ -422,58 +341,18 @@ namespace Texel
 
         public override bool _MovePrev()
         {
-            /*if (!_TakeControl())
-                return false;
-
-            if (!removeTracks)
-            {
-                TXLRepeatMode repeat = RepeatMode;
-                if (CurrentIndex > 0)
-                    CurrentIndex -= 1;
-                else if (repeat == TXLRepeatMode.Single)
-                    CurrentIndex = CurrentIndex;
-                else if (repeat == TXLRepeatMode.All)
-                    CurrentIndex = (short)(syncTrackCount - 1);
-                else
-                    CurrentIndex = -1;
-
-                RequestSerialization();
-                return CurrentIndex >= 0;
-            }*/
-
             return false;
         }
 
         public override bool _MoveTo(int index)
         {
-            /*if (!_TakeControl())
-                return false;
-
-            if (!removeTracks)
-            {
-                if (index < 0 || index >= syncTrackCount)
-                    return false;
-
-                CurrentIndex = (short)index;
-
-                RequestSerialization();
-                return CurrentIndex >= 0;
-            }*/
-
             return false;
         }
 
         public override short CurrentIndex
         {
-            get { return syncCurrentIndex; }
-            protected set
-            {
-                if (syncCurrentIndex != value)
-                {
-                    syncCurrentIndex = value;
-                    _EventTrackChange();
-                }
-            }
+            get { return -1; }
+            protected set {  }
         }
 
         public override void OnDeserialization()
@@ -533,7 +412,7 @@ namespace Texel
             if (index < 0 || index >= syncTrackCount)
                 return false;
 
-            if (!_TakeControl())
+            if (!_TakeControl(deleteAccess))
                 return false;
 
             _PopTracks(index, 1);
@@ -551,7 +430,7 @@ namespace Texel
             if (index == destIndex)
                 return false;
 
-            if (!_TakeControl())
+            if (!_TakeControl(priorityAccess))
                 return false;
 
             VRCUrl dstUrl = syncUrls[index];
@@ -739,16 +618,15 @@ namespace Texel
             if (Networking.IsOwner(gameObject))
                 _UpdateHandlers(EVENT_LIST_CHANGE);
 
-            if (CurrentIndex == -1 && !isPlaying)
-                CurrentIndex = 0;
-
             RequestSerialization();
             return true;
         }
 
-        bool _TakeControl()
+        bool _TakeControl(AccessControl acl = null)
         {
-            if (videoPlayer && videoPlayer.SupportsOwnership && !videoPlayer._TakeControl())
+            if (acl && !acl._LocalHasAccess())
+                return false;
+            if (!acl && videoPlayer && videoPlayer.SupportsOwnership && !videoPlayer._TakeControl())
                 return false;
 
             if (!Networking.IsOwner(gameObject))
