@@ -237,6 +237,7 @@ namespace Texel
 
                 script.Title = title;
                 script.Url = urlStr;
+                script.PlayerName = queue._GetTrackPlayer(i);
             }
         }
     }

@@ -25,6 +25,11 @@ namespace Texel
         [Tooltip("Optional. ACL to control access to the delete button.  If not set, uses the video player's ACL settings.")]
         [SerializeField] protected internal AccessControl deleteAccess;
 
+        [Header("Sync")]
+        [SerializeField] protected internal bool syncTrackTitles = true;
+        [SerializeField] protected internal bool syncTrackAuthors = true;
+        [SerializeField] protected internal bool syncPlayerNames = true;
+
         // public bool removeTracks = true;
         [UdonSynced]
         VRCUrl syncReadyUrl;
@@ -36,6 +41,8 @@ namespace Texel
         string[] syncTitles;
         [UdonSynced]
         string[] syncAuthors;
+        [UdonSynced]
+        string[] syncPlayers;
         [UdonSynced]
         short syncTrackCount = 0;
         [UdonSynced, FieldChangeCallback("SourceEnabled")]
@@ -55,6 +62,7 @@ namespace Texel
 
         bool usingTitles = false;
         bool usingAuthors = false;
+        bool usingPlayers = false;
         [HideInInspector] public VRCUrl internalArgUrl;
 
         private Playlist[] playlistSources = new Playlist[0];
@@ -75,6 +83,11 @@ namespace Texel
             // Info data
             syncTitles = new string[0];
             syncAuthors = new string[0];
+            syncPlayers = new string[0];
+
+            usingTitles = false;
+            usingAuthors = false;
+            usingPlayers = syncPlayerNames;
         }
 
         public override void _SetVideoPlayer(TXLVideoPlayer videoPlayer)
@@ -84,8 +97,8 @@ namespace Texel
 
             if (videoPlayer.UrlInfoResolver)
             {
-                usingTitles = true;
-                usingAuthors = true;
+                usingTitles = syncTrackTitles;
+                usingAuthors = syncTrackAuthors;
 
                 videoPlayer.UrlInfoResolver._Register(UrlInfoResolver.EVENT_URL_INFO, this, nameof(_InternalOnInfoResolve), nameof(internalArgUrl));
             }
@@ -285,6 +298,14 @@ namespace Texel
             return "";
         }
 
+        public string _GetTrackPlayer(int index)
+        {
+            if (!usingPlayers)
+                return "";
+
+            return syncPlayers[index];
+        }
+
         public override bool _MoveNext()
         {
             Debug.Log($"<color='0x00FFFF'>[VideoTXL:PlaylistQueue]</color> _MoveNext");
@@ -321,6 +342,8 @@ namespace Texel
                     syncTitles[i] = syncTitles[i + popCount];
                 if (usingAuthors)
                     syncAuthors[i] = syncAuthors[i + popCount];
+                if (usingPlayers)
+                    syncPlayers[i] = syncPlayers[i + popCount];
             }
 
             for (int i = limit; i < syncTrackCount; i++)
@@ -331,6 +354,8 @@ namespace Texel
                     syncTitles[i] = "";
                 if (usingAuthors)
                     syncAuthors[i] = "";
+                if (usingPlayers)
+                    syncPlayers[i] = "";
             }
 
             syncTrackCount -= (short)popCount;
@@ -441,6 +466,9 @@ namespace Texel
             string dstAuthor = "";
             if (usingAuthors)
                 dstAuthor = syncAuthors[index];
+            string dstPlayer = "";
+            if (usingPlayers)
+                dstPlayer = syncPlayers[index];
 
             if (destIndex < index)
             {
@@ -452,6 +480,8 @@ namespace Texel
                         syncTitles[i] = syncTitles[i - 1];
                     if (usingAuthors)
                         syncAuthors[i] = syncAuthors[i - 1];
+                    if (usingPlayers)
+                        syncPlayers[i] = syncPlayers[i - 1];
                 }
             } else
             {
@@ -463,6 +493,8 @@ namespace Texel
                         syncTitles[i] = syncTitles[i + 1];
                     if (usingAuthors)
                         syncAuthors[i] = syncAuthors[i + 1];
+                    if (usingPlayers)
+                        syncPlayers[i] = syncPlayers[i + 1];
                 }
             }
 
@@ -472,6 +504,8 @@ namespace Texel
                 syncTitles[destIndex] = dstTitle;
             if (usingAuthors)
                 syncAuthors[destIndex] = dstAuthor;
+            if (usingPlayers)
+                syncPlayers[destIndex] = dstPlayer;
 
             syncQueueUpdate += 1;
             _UpdateHandlers(EVENT_LIST_CHANGE);
@@ -514,6 +548,15 @@ namespace Texel
                 }
                 else
                     _updateOrResolveInfo(url, syncTrackCount);
+            }
+
+            if (usingPlayers)
+            {
+                VRCPlayerApi player = Networking.LocalPlayer;
+                if (Utilities.IsValid(player))
+                    syncPlayers[syncTrackCount] = Networking.LocalPlayer.displayName;
+                else
+                    syncPlayers[syncTrackCount] = "";
             }
 
             return _CommitAddTrack();
@@ -591,6 +634,15 @@ namespace Texel
             if (usingAuthors)
                 syncAuthors[syncTrackCount] = "";
 
+            if (usingPlayers)
+            {
+                VRCPlayerApi player = Networking.LocalPlayer;
+                if (Utilities.IsValid(player))
+                    syncPlayers[syncTrackCount] = Networking.LocalPlayer.displayName;
+                else
+                    syncPlayers[syncTrackCount] = "";
+            }
+
             return _CommitAddTrack();
         }
 
@@ -605,6 +657,8 @@ namespace Texel
                     syncTitles = (string[])UtilityTxl.ArrayMinSize(syncTitles, syncTrackCount + 1, typeof(string));
                 if (usingAuthors)
                     syncAuthors = (string[])UtilityTxl.ArrayMinSize(syncAuthors, syncTrackCount + 1, typeof(string));
+                if (usingPlayers)
+                    syncPlayers = (string[])UtilityTxl.ArrayMinSize(syncPlayers, syncTrackCount + 1, typeof(string));
             }
         }
 
