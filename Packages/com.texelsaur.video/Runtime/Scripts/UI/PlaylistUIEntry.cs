@@ -9,9 +9,10 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class PlaylistUIEntry : UdonSharpBehaviour
     {
-        public PlaylistUI playlistUI;
-        public int track = 0;
+        [HideInInspector] public PlaylistUI playlistUI;
+        [HideInInspector] public int track = 0;
 
+        public Text trackNoText;
         public Text selectedText;
         public Text unselectedText;
         public Text urlText;
@@ -72,6 +73,18 @@ namespace Texel
                     trackerFill.gameObject.SetActive(selected);
                     trackerFill.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 0);
                 }
+            }
+        }
+
+        public int Track
+        {
+            get { return track; }
+            set
+            {
+                track = value;
+
+                if (trackNoText)
+                    trackNoText.text = (track + 1).ToString();
             }
         }
 

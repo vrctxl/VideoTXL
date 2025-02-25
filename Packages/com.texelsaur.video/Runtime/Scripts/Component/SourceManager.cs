@@ -19,9 +19,14 @@ namespace Texel
 
         private int nextSourceIndex = 0;
 
+        private int readySourceIndex;
+        private VRCUrl readyUrl;
+        private VRCUrl readyQuestUrl;
+
         public const int EVENT_BIND_VIDEOPLAYER = 0;
         public const int EVENT_TRACK_CHANGE = 1;
-        protected const int EVENT_COUNT = 2;
+        public const int EVENT_URL_READY = 2;
+        protected const int EVENT_COUNT = 3;
 
         void Start()
         {
@@ -33,6 +38,8 @@ namespace Texel
         protected override void _Init()
         {
             base._Init();
+
+            _ResetReady();
 
             sources = (VideoUrlSource[])UtilityTxl.ArrayCompact(sources);
             foreach (VideoUrlSource source in sources)
@@ -58,6 +65,26 @@ namespace Texel
         public TXLVideoPlayer VideoPlayer
         {
             get { return videoPlayer; }
+        }
+
+        public VideoUrlSource ReadySource
+        {
+            get
+            {
+                if (readySourceIndex < 0 || readySourceIndex >= sources.Length)
+                    return null;
+                return sources[readySourceIndex];
+            }
+        }
+
+        public VRCUrl ReadyUrl
+        {
+            get { return readyUrl; }
+        }
+
+        public VRCUrl ReadyQuestUrl
+        {
+            get { return readyQuestUrl; }
         }
 
         public VideoUrlSource FirstSource
@@ -135,6 +162,8 @@ namespace Texel
 
         public bool _MoveNext()
         {
+            _ResetReady();
+
             foreach (VideoUrlSource source in sources)
             {
                 if (source._CanMoveNext())
@@ -146,6 +175,8 @@ namespace Texel
 
         public bool _MovePrev()
         {
+            _ResetReady();
+
             foreach (VideoUrlSource source in sources)
             {
                 if (source._CanMovePrev())
@@ -158,6 +189,7 @@ namespace Texel
         public bool _AdvanceNext(string currentUrl = null)
         {
             _DebugLowLevel("AdvanceNext");
+            _ResetReady();
 
             foreach (VideoUrlSource source in sources)
             {
@@ -182,9 +214,31 @@ namespace Texel
             return false;
         }
 
-        public void _OnSourceTrackChange(int sourceIndex)
+        void _ResetReady()
+        {
+            readySourceIndex = -1;
+            readyUrl = VRCUrl.Empty;
+            readyQuestUrl = VRCUrl.Empty;
+        }
+
+        protected internal void _OnSourceTrackChange(int sourceIndex)
         {
             _UpdateHandlers(EVENT_TRACK_CHANGE, sourceIndex);
+        }
+
+        protected internal void _OnUrlReady(int sourceIndex)
+        {
+            _DebugLog($"OnURLReady source={sourceIndex}");
+            _ResetReady();
+
+            if (sourceIndex < 0 || sourceIndex >= sources.Length)
+                return;
+
+            readySourceIndex = sourceIndex;
+            readyUrl = sources[sourceIndex]._GetCurrentUrl();
+            readyQuestUrl = sources[sourceIndex]._GetCurrentQuestUrl();
+
+            _UpdateHandlers(EVENT_URL_READY);
         }
 
         void _DebugLog(string message)

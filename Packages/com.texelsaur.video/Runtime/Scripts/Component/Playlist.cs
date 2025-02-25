@@ -162,6 +162,19 @@ namespace Texel
             _UpdateHandlers(VideoUrlSource.EVENT_BIND_VIDEOPLAYER);
         }
 
+        public override string SourceDefaultName
+        {
+            get { return "PLAYLIST"; }
+        }
+
+        public override string TrackDisplay
+        {
+            get
+            {
+                return IsReady ? $"TRACK: {CurrentIndex + 1} / {Count}" : "";
+            }
+        }
+
         public override TXLVideoPlayer VideoPlayer
         {
             get { return videoPlayer; }
@@ -185,6 +198,11 @@ namespace Texel
         public override PlaylistQueue TargetQueue
         {
             get { return queue; }
+        }
+
+        public override string ListName
+        {
+            get { return playlistData ? playlistData.playlistName : ""; }
         }
 
         public override bool _CanMoveNext()
@@ -362,6 +380,9 @@ namespace Texel
             {
                 syncCurrentIndexSerial = value;
                 _EventTrackChange();
+
+                if (IsReady)
+                    _EventUrlReady();
             }
         }
 
@@ -541,7 +562,7 @@ namespace Texel
             if (!queue || !queue._CanAddTrack())
                 return false;
 
-            return queue._AddTrack(queueIndex, CatalogueIndex, CurrentIndex);
+            return queue._AddTrack(queueIndex, CatalogueIndex, index);
         }
 
         public void _SetEnabled(bool state)

@@ -8,7 +8,7 @@ using VRC.Udon;
 namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-    public class PlaylistUI : UdonSharpBehaviour
+    public class PlaylistUI : VideoSourceUIBase
     {
         //public Playlist playlist;
         public VideoUrlListSource playlist;
@@ -33,6 +33,27 @@ namespace Texel
                 _InitFromPlaylist(playlist);
         }
 
+        public override bool _CompatibleSource(VideoUrlSource source)
+        {
+            if (source == null)
+                return false;
+
+            Playlist playlist = source.GetComponent<Playlist>();
+            return playlist != null;
+        }
+
+        public override void _SetSource(VideoUrlSource source)
+        {
+            if (source == null)
+                return;
+
+            VideoUrlListSource listSource = source.GetComponent<VideoUrlListSource>();
+            if (source != listSource)
+                return;
+
+            _InitFromPlaylist(listSource);
+        }
+
         /*public void _InitFromPlayer(SyncPlayer player)
         {
             if (!Utilities.IsValid(player) || !Utilities.IsValid(player.playlist))
@@ -50,10 +71,10 @@ namespace Texel
             {
                 this.playlist = playlist;
 
-                playlist._Register(Playlist.EVENT_BIND_VIDEOPLAYER, this, nameof(_OnBindVideoPlayer));
-                playlist._Register(Playlist.EVENT_LIST_CHANGE, this, nameof(_OnListChange));
-                playlist._Register(Playlist.EVENT_TRACK_CHANGE, this, nameof(_OnTrackChange));
-                playlist._Register(Playlist.EVENT_OPTION_CHANGE, this, nameof(_OnOptionChange));
+                playlist._Register(VideoUrlSource.EVENT_BIND_VIDEOPLAYER, this, nameof(_OnBindVideoPlayer));
+                playlist._Register(VideoUrlListSource.EVENT_LIST_CHANGE, this, nameof(_OnListChange));
+                playlist._Register(VideoUrlListSource.EVENT_TRACK_CHANGE, this, nameof(_OnTrackChange));
+                playlist._Register(VideoUrlSource.EVENT_OPTION_CHANGE, this, nameof(_OnOptionChange));
 
                 if (Utilities.IsValid(playlist.VideoPlayer))
                 {
@@ -220,7 +241,7 @@ namespace Texel
 
                 PlaylistUIEntry script = (PlaylistUIEntry)entry.GetComponent(typeof(UdonBehaviour));
                 script.playlistUI = this;
-                script.track = i;
+                script.Track = i;
 
                 string url = "";
                 string title = "";

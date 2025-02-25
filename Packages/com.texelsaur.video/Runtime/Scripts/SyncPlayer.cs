@@ -173,7 +173,7 @@ namespace Texel
             if (Utilities.IsValid(sourceManager))
             {
                 sourceManager._BindVideoPlayer(this);
-                sourceManager._Register(SourceManager.EVENT_TRACK_CHANGE, this, nameof(_OnSourceTrackChange), nameof(internalArgSourceIndex));
+                sourceManager._Register(SourceManager.EVENT_URL_READY, this, nameof(_OnSourceUrlReady));
             }
 
             /*if (urlSource)
@@ -807,7 +807,7 @@ namespace Texel
             _overrideLock = false;
         }
 
-        public void _OnTrackChange()
+        /*public void _OnTrackChange()
         {
             _OnTrackChange(0);
         }
@@ -837,19 +837,33 @@ namespace Texel
             DebugTrace($"Event OnTrackChange source={sourceIndex}");
             if (Networking.IsOwner(gameObject))
                 _PlayPlaylistUrl(urlSourceList[sourceIndex]);
-        }
+        }*/
 
-        public void _OnSourceTrackChange()
+        public void _OnSourceUrlReady()
         {
-            DebugTrace($"Event OnSourceTrackChange source={internalArgSourceIndex}");
+            DebugTrace($"Event OnSourceUrlReady");
             if (Networking.IsOwner(gameObject))
-                _PlayPlaylistUrl(sourceManager._GetSource(internalArgSourceIndex));
+                _PlaySourceUrl();
         }
 
         public void _PlayPlaylistUrl()
         {
             if (sourceManager)
                 _PlayPlaylistUrl(sourceManager._GetSource(sourceManager._GetReadySource()));
+        }
+
+        void _PlaySourceUrl()
+        {
+            DebugTrace($"Play Source URL");
+
+            _overrideLock = true;
+            _skipAdvanceNextTrack = false;
+            _syncQueuedUrl = VRCUrl.Empty;
+
+            if (sourceManager && sourceManager.ReadyUrl != VRCUrl.Empty)
+                _PlayVideoFallback(sourceManager.ReadyUrl, sourceManager.ReadyQuestUrl);
+
+            _overrideLock = false;
         }
 
         void _PlayPlaylistUrl(VideoUrlSource source)
@@ -1448,6 +1462,9 @@ namespace Texel
             }
 
             // There was some code here to bypass load owner sync bla bla
+
+            if (urlInfoResolver)
+                urlInfoResolver._ResolveInfo(_syncUrl);
 
             _loadedVideoNumber = _syncVideoNumber;
             _UpdateLastUrl();

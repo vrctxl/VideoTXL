@@ -19,8 +19,9 @@ namespace Texel
     {
         TXLVideoPlayer videoPlayer;
 
-        public bool removeTracks = true;
-
+        // public bool removeTracks = true;
+        [UdonSynced]
+        VRCUrl syncReadyUrl;
         [UdonSynced]
         VRCUrl[] syncUrls;
         [UdonSynced]
@@ -44,6 +45,10 @@ namespace Texel
         int syncTrackChangeUpdate = 0;
         int prevTrackChangeUpdate = 0;
 
+        [UdonSynced]
+        int syncReadyUrlUpdate = 0;
+        int prevReadyUrlUpdate = 0;
+
         bool usingTitles = false;
         bool usingAuthors = false;
         [HideInInspector] public VRCUrl internalArgUrl;
@@ -59,6 +64,7 @@ namespace Texel
         {
             base._Init();
 
+            syncReadyUrl = VRCUrl.Empty;
             syncUrls = new VRCUrl[0];
             syncEntries = new Vector3[0];
 
@@ -92,6 +98,7 @@ namespace Texel
         public void _InternalOnInfoResolve()
         {
             int index = _FindUrlIndex(internalArgUrl);
+            Debug.Log($"<color='00FFFF'>[VideoTXL:PlaylistQueue]</color> _OnInfoResolve index={index}");
             if (index == -1)
                 return;
 
@@ -110,6 +117,16 @@ namespace Texel
                 _UpdateHandlers(EVENT_LIST_CHANGE);
                 RequestSerialization();
             }
+        }
+
+        public override string SourceDefaultName
+        {
+            get { return "QUEUE"; }
+        }
+
+        public override string TrackDisplay
+        {
+            get { return IsValid ? $"+{syncTrackCount} Queued" : ""; }
         }
 
         public override TXLVideoPlayer VideoPlayer
@@ -179,14 +196,16 @@ namespace Texel
 
         public override VRCUrl _GetCurrentUrl()
         {
-            if (CurrentIndex < 0 || !IsEnabled || CurrentIndex >= syncTrackCount)
+            return syncReadyUrl;
+
+            /*if (CurrentIndex < 0 || !IsEnabled || CurrentIndex >= syncTrackCount)
                 return VRCUrl.Empty;
 
             int playlistIndex = (int)syncEntries[CurrentIndex].x;
             if (playlistIndex == -1)
                 return syncUrls[CurrentIndex];
 
-            return _GetPlaylistUrl(CurrentIndex);
+            return _GetPlaylistUrl(CurrentIndex);*/
         }
 
         public override VRCUrl _GetTrackURL(int index)
@@ -291,7 +310,10 @@ namespace Texel
             if (!_TakeControl())
                 return false;
 
-            if (!removeTracks)
+            if (syncTrackCount == 0)
+                return false;
+
+            /*if (!removeTracks)
             {
                 TXLRepeatMode repeat = RepeatMode;
                 if (CurrentIndex < syncTrackCount - 1)
@@ -305,9 +327,22 @@ namespace Texel
 
                 RequestSerialization();
                 return CurrentIndex >= 0;
-            }
+            }*/
 
-            int originalIndex = CurrentIndex;
+            syncReadyUrl = _GetTrackURL(0);
+            _PopTracks(0, 1);
+
+            _EventTrackChange();
+            _EventUrlReady();
+
+            syncReadyUrlUpdate += 1;
+            syncTrackChangeUpdate += 1;
+
+            RequestSerialization();
+
+            return true;
+
+            /*int originalIndex = CurrentIndex;
             int nextIndex = originalIndex + 1;
 
             if (originalIndex > -1)
@@ -351,12 +386,43 @@ namespace Texel
 
             RequestSerialization();
 
-            return CurrentIndex >= 0;
+            return CurrentIndex >= 0;*/
+        }
+
+        void _PopTracks(int startAt = 0, int popCount = 1)
+        {
+            popCount = Math.Min(popCount, syncTrackCount);
+            int limit = syncTrackCount - popCount;
+
+            for (int i = startAt; i < limit; i++)
+            {
+                syncUrls[i] = syncUrls[i + popCount];
+                syncEntries[i] = syncEntries[i + popCount];
+                if (usingTitles)
+                    syncTitles[i] = syncTitles[i + popCount];
+                if (usingAuthors)
+                    syncAuthors[i] = syncAuthors[i + popCount];
+            }
+
+            for (int i = limit; i < syncTrackCount; i++)
+            {
+                syncUrls[i] = VRCUrl.Empty;
+                syncEntries[i] = new Vector3(-1, -1, -1);
+                if (usingTitles)
+                    syncTitles[i] = "";
+                if (usingAuthors)
+                    syncAuthors[i] = "";
+            }
+
+            syncTrackCount -= (short)popCount;
+            syncQueueUpdate += 1;
+
+            _UpdateHandlers(EVENT_LIST_CHANGE);
         }
 
         public override bool _MovePrev()
         {
-            if (!_TakeControl())
+            /*if (!_TakeControl())
                 return false;
 
             if (!removeTracks)
@@ -373,14 +439,14 @@ namespace Texel
 
                 RequestSerialization();
                 return CurrentIndex >= 0;
-            }
+            }*/
 
             return false;
         }
 
         public override bool _MoveTo(int index)
         {
-            if (!_TakeControl())
+            /*if (!_TakeControl())
                 return false;
 
             if (!removeTracks)
@@ -392,7 +458,7 @@ namespace Texel
 
                 RequestSerialization();
                 return CurrentIndex >= 0;
-            }
+            }*/
 
             return false;
         }
@@ -427,6 +493,12 @@ namespace Texel
                 prevTrackChangeUpdate = syncTrackChangeUpdate;
                 _EventTrackChange();
             }
+
+            if (syncReadyUrlUpdate != prevReadyUrlUpdate)
+            {
+                prevReadyUrlUpdate = syncReadyUrlUpdate;
+                _EventUrlReady();
+            }
         }
 
         void _PopulateResolver()
@@ -454,6 +526,80 @@ namespace Texel
 
                 resolver._AddInfo(url, usingTitles ? syncTitles[i] : null, usingAuthors ? syncAuthors[i] : null);
             }
+        }
+
+        public bool _RemoveTrack(int index)
+        {
+            if (index < 0 || index >= syncTrackCount)
+                return false;
+
+            if (!_TakeControl())
+                return false;
+
+            _PopTracks(index, 1);
+            RequestSerialization();
+
+            return true;
+        }
+
+        public bool _MoveTrack(int index, int destIndex)
+        {
+            if (index < 0 || index >= syncTrackCount)
+                return false;
+            if (destIndex < 0 || destIndex >= syncTrackCount)
+                return false;
+            if (index == destIndex)
+                return false;
+
+            if (!_TakeControl())
+                return false;
+
+            VRCUrl dstUrl = syncUrls[index];
+            Vector3 dstEntry = syncEntries[index];
+            string dstTitle = "";
+            if (usingTitles)
+                dstTitle = syncTitles[index];
+            string dstAuthor = "";
+            if (usingAuthors)
+                dstAuthor = syncAuthors[index];
+
+            if (destIndex < index)
+            {
+                for (int i = index; i > destIndex; i--)
+                {
+                    syncUrls[i] = syncUrls[i - 1];
+                    syncEntries[i] = syncEntries[i - 1];
+                    if (usingTitles)
+                        syncTitles[i] = syncTitles[i - 1];
+                    if (usingAuthors)
+                        syncAuthors[i] = syncAuthors[i - 1];
+                }
+            } else
+            {
+                for (int i = index; i < destIndex; i++)
+                {
+                    syncUrls[i] = syncUrls[i + 1];
+                    syncEntries[i] = syncEntries[i + 1];
+                    if (usingTitles)
+                        syncTitles[i] = syncTitles[i + 1];
+                    if (usingAuthors)
+                        syncAuthors[i] = syncAuthors[i + 1];
+                }
+            }
+
+            syncUrls[destIndex] = dstUrl;
+            syncEntries[destIndex] = dstEntry;
+            if (usingTitles)
+                syncTitles[destIndex] = dstTitle;
+            if (usingAuthors)
+                syncAuthors[destIndex] = dstAuthor;
+
+            syncQueueUpdate += 1;
+            _UpdateHandlers(EVENT_LIST_CHANGE);
+
+            RequestSerialization();
+
+            return true;
         }
 
         public override bool _CanAddTrack()
@@ -505,7 +651,7 @@ namespace Texel
 
             for (int i = 0; i < syncTrackCount; i++)
             {
-                if (syncEntries[i].x == -1)
+                if (syncEntries[i].x > -1)
                     continue;
                 if (syncUrls[i].Get() == val)
                     return i;

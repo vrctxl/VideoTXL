@@ -77,6 +77,7 @@ namespace Texel
         VRCUrl pendingSubmit;
         bool pendingFromLoadOverride = false;
         bool addToQueue = false;
+        bool sourcePanelOpen = false;
 
         VRCPlayerApi[] _playerBuffer = new VRCPlayerApi[100];
 
@@ -131,13 +132,13 @@ namespace Texel
 
                 if (Utilities.IsValid(videoPlayer.urlInfoResolver))
                     videoPlayer.urlInfoResolver._Register(UrlInfoResolver.EVENT_URL_INFO, this, nameof(_OnUrlInfoReady), nameof(internalArgUrl));
-            }
 
-            if (Utilities.IsValid(playlistPanel))
-            {
-                PlaylistUI pui = (PlaylistUI)playlistPanel.GetComponent(typeof(UdonBehaviour));
-                if (Utilities.IsValid(pui))
-                    pui._InitFromPlaylist((Playlist)videoPlayer.urlSource);
+                if (playlistPanel && videoPlayer.SourceManager)
+                {
+                    VideoSourceUI vui = playlistPanel.GetComponentInChildren<VideoSourceUI>();
+                    if (vui)
+                        vui._BindSourceManager(videoPlayer.sourceManager);
+                }
             }
 
 #if !UNITY_EDITOR
@@ -486,10 +487,15 @@ namespace Texel
             // Toggle panel if present
             if (Utilities.IsValid(playlistPanel))
             {
-                playlistPanel.SetActive(!playlistPanel.activeSelf);
-                playlistIcon.color = playlistPanel.activeSelf ? activeColor : normalColor;
+                sourcePanelOpen = !sourcePanelOpen;
 
-                SendCustomEventDelayedFrames("_ScrollPlaylistCurrent", 10);
+                int ccount = playlistPanel.transform.childCount;
+                for (int i = 0; i < ccount; i++)
+                    playlistPanel.transform.GetChild(i).gameObject.SetActive(sourcePanelOpen);
+
+                playlistIcon.color = sourcePanelOpen ? activeColor : normalColor;
+
+                //SendCustomEventDelayedFrames("_ScrollPlaylistCurrent", 10);
 
                 return;
             }
@@ -505,12 +511,12 @@ namespace Texel
             videoPlayer._ChangeUrl(videoPlayer.playlist._GetCurrentUrl());*/
         }
 
-        public void _ScrollPlaylistCurrent()
+        /*public void _ScrollPlaylistCurrent()
         {
             PlaylistUI pui = (PlaylistUI)playlistPanel.GetComponent(typeof(UdonBehaviour));
             if (Utilities.IsValid(pui))
                 pui._ScrollToCurrentTrack();
-        }
+        }*/
 
         public void _HandlePlaylistNext()
         {
@@ -642,31 +648,36 @@ namespace Texel
 
             SourceManager sourceManager = videoPlayer.SourceManager;
 
+            nextIcon.color = disabledColor;
+            prevIcon.color = disabledColor;
+            playlistIcon.color = disabledColor;
+            playlistText.text = "";
+            queuedText.text = "";
+
+            bool videoStopped = videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_STOPPED;
             if (sourceManager && sourceManager.Count > 0)
             {
                 nextIcon.color = (enableControl && sourceManager.CanMoveNext) ? normalColor : disabledColor;
                 prevIcon.color = (enableControl && sourceManager.CanMovePrev) ? normalColor : disabledColor;
                 playlistIcon.color = enableControl ? normalColor : disabledColor;
 
-                VideoUrlSource source = sourceManager._GetSource(sourceManager._GetReadySource());
+                VideoUrlSource source = sourceManager.ReadySource;
+                if (source && !videoStopped)
+                    queuedText.text = source.SourceName;
+                else
+                    queuedText.text = "";
 
                 bool playlistActive = source && source.ListSource;
-                if (!playlistActive)
+                if (!playlistActive || videoStopped)
                     playlistText.text = "";
                 //else if (playlist.trackCatalogMode)
                 //    playlistText.text = $"TRACK: {playlist.CurrentIndex + 1}";
                 else
-                    playlistText.text = $"TRACK: {source.ListSource.CurrentIndex + 1} / {source.ListSource.Count}";
+                    playlistText.text = source.TrackDisplay;
+                    //playlistText.text = $"TRACK: {source.ListSource.CurrentIndex + 1} / {source.ListSource.Count}";
 
                 if (playlistActive && Utilities.IsValid(playlistPanel))
-                    playlistIcon.color = playlistPanel.activeSelf ? activeColor : normalColor;
-            }
-            else
-            {
-                nextIcon.color = disabledColor;
-                prevIcon.color = disabledColor;
-                playlistIcon.color = disabledColor;
-                playlistText.text = "";
+                    playlistIcon.color = sourcePanelOpen ? activeColor : normalColor;
             }
         }
 

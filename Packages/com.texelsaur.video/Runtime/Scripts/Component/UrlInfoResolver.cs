@@ -276,6 +276,7 @@ namespace Texel
             text = text.Replace("&#34;", "\"");
             text = text.Replace("&#38;", "&");
             text = text.Replace("&#39;", "'");
+            text = text.Replace("&amp;", "&");
 
             return text;
         }

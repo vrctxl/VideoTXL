@@ -18,11 +18,11 @@ namespace Texel
     {
         public const int EVENT_BIND_VIDEOPLAYER = 0;
         public const int EVENT_OPTION_CHANGE = 1;
-        protected const int EVENT_COUNT = 2;
+        public const int EVENT_URL_READY = 2;
+        protected const int EVENT_COUNT = 3;
 
+        [SerializeField] protected string sourceName;
         [SerializeField] protected SourceManager sourceManager;
-        [SerializeField] protected VideoUrlSource nextSource;
-        protected int maxSourceChain = 5;
 
         protected int sourceIndex = -1;
 
@@ -36,67 +36,20 @@ namespace Texel
             sourceIndex = index;
         }
 
-        public virtual VideoUrlSource NextSource
+        public virtual string SourceName
         {
-            get { return nextSource; }
+            get { return (sourceName != null && sourceName != "") ? sourceName : SourceDefaultName; }
         }
 
-        public VideoUrlSource[] _BuildSourceList(int maxEntries = 0)
+        public virtual string SourceDefaultName
         {
-            if (maxEntries == 0)
-                maxEntries = maxSourceChain;
-            else
-                maxEntries = Math.Min(maxEntries, maxSourceChain);
-
-            VideoUrlSource[] list = new VideoUrlSource[maxEntries];
-
-            VideoUrlSource next = this;
-            int count = 0;
-
-            while (next != null && count < list.Length)
-            {
-                list[count++] = next;
-                next = next.NextSource;
-            }
-
-            Array compactList = Array.CreateInstance(GetType(), count);
-            Array.Copy(list, compactList, count);
-
-            return (VideoUrlSource[])compactList;
+            get { return ""; }
         }
 
-        /*public VideoUrlSource NextValidSource
+        public virtual string TrackDisplay
         {
-            get
-            {
-                VideoUrlSource next = NextSource;
-                for (int c = 0; c < maxSourceChain && next != null; c++)
-                {
-                    if (next.IsValid)
-                        return next;
-                    next = next.NextSource;
-                }
-
-                return null;
-            }
+            get { return ""; }
         }
-
-        public VideoUrlSource NextReadySource
-        {
-            get
-            {
-                VideoUrlSource next = NextSource;
-                for (int c = 0; c < maxSourceChain && next != null; c++)
-                {
-                    if (next.IsReady)
-                        return next;
-                    next = next.NextSource;
-                }
-
-                return null;
-
-            }
-        }*/
 
         public virtual TXLVideoPlayer VideoPlayer
         {
@@ -193,6 +146,14 @@ namespace Texel
         public virtual bool _AddTrack(VRCUrl url)
         {
             return false;
+        }
+
+        protected void _EventUrlReady()
+        {
+            if (sourceManager)
+                sourceManager._OnUrlReady(sourceIndex);
+
+            _UpdateHandlers(EVENT_URL_READY);
         }
     }
 }
