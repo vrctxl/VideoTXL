@@ -69,4 +69,19 @@ public static class URLUtil
     {
         return GetYoutubeID(url) != null;
     }
+
+    public static bool IsTwitchUrl(VRCUrl url)
+    {
+        if (url == null)
+            return false;
+
+        return IsTwitchUrl(url.Get());
+    }
+
+    public static bool IsTwitchUrl(string url)
+    {
+        string pattern = @"(?:https?:\/\/)?(?:www\.)?twitch\.tv\/([\w\-_]+)";
+        Match match = Regex.Match(url, pattern);
+        return match.Success;
+    }
 }

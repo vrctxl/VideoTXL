@@ -15,7 +15,7 @@ namespace Texel
     }
 
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
-    public class PlaylistQueue : VideoUrlListSource
+    public class PlaylistQueue : VideoUrlSource
     {
         TXLVideoPlayer videoPlayer;
 
@@ -67,6 +67,12 @@ namespace Texel
 
         private Playlist[] playlistSources = new Playlist[0];
 
+        public const int EVENT_LIST_CHANGE = VideoUrlSource.EVENT_COUNT + 0;
+        public const int EVENT_TRACK_CHANGE = VideoUrlSource.EVENT_COUNT + 1;
+        protected new const int EVENT_COUNT = VideoUrlSource.EVENT_COUNT + 2;
+
+        protected override int EventCount => EVENT_COUNT;
+
         void Start()
         {
             _EnsureInit();
@@ -92,7 +98,6 @@ namespace Texel
 
         public override void _SetVideoPlayer(TXLVideoPlayer videoPlayer)
         {
-            Debug.Log($"<color='00FFFF'>[VideoTXL:PlaylistQueue]</color> _SetVideoPlayer {videoPlayer}");
             this.videoPlayer = videoPlayer;
 
             if (videoPlayer.UrlInfoResolver)
@@ -115,7 +120,6 @@ namespace Texel
         public void _InternalOnInfoResolve()
         {
             int index = _FindUrlIndex(internalArgUrl);
-            Debug.Log($"<color='00FFFF'>[VideoTXL:PlaylistQueue]</color> _OnInfoResolve index={index}");
             if (index == -1)
                 return;
 
@@ -185,7 +189,7 @@ namespace Texel
             }
         }
 
-        public override short Count
+        public short Count
         {
             get { return syncTrackCount; }
         }
@@ -234,7 +238,7 @@ namespace Texel
             return syncReadyUrl;
         }
 
-        public override VRCUrl _GetTrackURL(int index)
+        public VRCUrl _GetTrackURL(int index)
         {
             if (index < 0 || index >= syncTrackCount)
                 return null;
@@ -277,12 +281,7 @@ namespace Texel
             return null;
         }
 
-        public override VRCUrl _GetTrackQuestURL(int index)
-        {
-            return null;
-        }
-
-        public override string _GetTrackName(int index)
+        public string _GetTrackName(int index)
         {
             if (syncEntries[index].x == -1) {
                 if (videoPlayer && videoPlayer.UrlInfoResolver)
@@ -308,7 +307,6 @@ namespace Texel
 
         public override bool _MoveNext()
         {
-            Debug.Log($"<color='0x00FFFF'>[VideoTXL:PlaylistQueue]</color> _MoveNext");
             if (!_TakeControl())
                 return false;
 
@@ -372,12 +370,6 @@ namespace Texel
         public override bool _MoveTo(int index)
         {
             return false;
-        }
-
-        public override short CurrentIndex
-        {
-            get { return -1; }
-            protected set {  }
         }
 
         public override void OnDeserialization()
@@ -698,6 +690,14 @@ namespace Texel
 
                 return TXLRepeatMode.None;
             }
+        }
+
+        protected void _EventTrackChange()
+        {
+            if (sourceManager)
+                sourceManager._OnSourceTrackChange(sourceIndex);
+
+            _UpdateHandlers(EVENT_TRACK_CHANGE);
         }
     }
 }

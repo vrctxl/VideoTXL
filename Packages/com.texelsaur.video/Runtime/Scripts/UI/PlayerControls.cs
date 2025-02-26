@@ -667,16 +667,12 @@ namespace Texel
                 else
                     queuedText.text = "";
 
-                bool playlistActive = source && source.ListSource;
-                if (!playlistActive || videoStopped)
+                if (!source || videoStopped)
                     playlistText.text = "";
-                //else if (playlist.trackCatalogMode)
-                //    playlistText.text = $"TRACK: {playlist.CurrentIndex + 1}";
                 else
                     playlistText.text = source.TrackDisplay;
-                    //playlistText.text = $"TRACK: {source.ListSource.CurrentIndex + 1} / {source.ListSource.Count}";
 
-                if (playlistActive && Utilities.IsValid(playlistPanel))
+                if (source && Utilities.IsValid(playlistPanel))
                     playlistIcon.color = sourcePanelOpen ? activeColor : normalColor;
             }
         }

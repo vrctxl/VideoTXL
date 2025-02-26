@@ -4,14 +4,6 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.Udon;
 
-public enum UrlSourceType
-{
-    None = 0,
-    Playlist = 1,
-    Queue = 2,
-    Custom = 100,
-}
-
 namespace Texel
 {
     public abstract class VideoUrlSource : EventBase
@@ -81,16 +73,6 @@ namespace Texel
         {
             get { return false; }
             set { }
-        }
-
-        public virtual VideoUrlListSource ListSource
-        {
-            get { return null; }
-        }
-
-        public virtual PlaylistQueue TargetQueue
-        {
-            get { return null; }
         }
 
         public virtual VRCUrl _GetCurrentUrl()

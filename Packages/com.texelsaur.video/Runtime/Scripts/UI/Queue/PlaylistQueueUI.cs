@@ -62,7 +62,7 @@ namespace Texel
             this.queue = queue;
             if (queue)
             {
-                queue._Register(VideoUrlListSource.EVENT_LIST_CHANGE, this, nameof(_OnListChange));
+                queue._Register(PlaylistQueue.EVENT_LIST_CHANGE, this, nameof(_OnListChange));
             }
 
             SendCustomEventDelayedFrames(nameof(_OnListChange), 1);
@@ -80,7 +80,6 @@ namespace Texel
 
         public void _HandleUrlInput()
         {
-            Debug.Log("_HandleUrlInput");
             if (!queue || !urlInput)
                 return;
 
@@ -92,7 +91,6 @@ namespace Texel
 
         public void _HandleUrlInputDelay()
         {
-            Debug.Log("_HandleUrlInputDelay");
             if (!queue || !urlInput)
                 return;
 
@@ -111,14 +109,12 @@ namespace Texel
 
         public void _HandleUrlInputClick()
         {
-            Debug.Log("_HandleUrlInputClick");
             //if (!videoPlayer._CanTakeControl())
             //    _SetStatusOverride(MakeOwnerMessage(), 3);
         }
 
         public void _HandleUrlInputChange()
         {
-            Debug.Log("_HandleUrlInputChange");
             if (!queue)
                 return;
 

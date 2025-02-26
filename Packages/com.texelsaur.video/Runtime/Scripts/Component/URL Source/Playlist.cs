@@ -8,7 +8,7 @@ using VRC.Udon.Common;
 namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
-    public class Playlist : VideoUrlListSource
+    public class Playlist : VideoUrlSource
     {
         TXLVideoPlayer videoPlayer;
 
@@ -68,15 +68,16 @@ namespace Texel
         [NonSerialized]
         public int trackCount;
 
-        [Obsolete("Use VideoUrlListSource.EVENT_LIST_CHANGE")]
-        public new const int EVENT_LIST_CHANGE = VideoUrlListSource.EVENT_LIST_CHANGE;
-        [Obsolete("Use VideoUrlListSource.EVENT_TRACK_CHANGE")]
-        public new const int EVENT_TRACK_CHANGE = VideoUrlListSource.EVENT_TRACK_CHANGE;
         [Obsolete("Use VideoUrlSource.EVENT_OPTION_CHANGE")]
         public new const int EVENT_OPTION_CHANGE = VideoUrlSource.EVENT_OPTION_CHANGE;
         [Obsolete("Use VideoUrlSource.EVENT_BIND_VIDEOPLAYER")]
         public new const int EVENT_BIND_VIDEOPLAYER = VideoUrlSource.EVENT_BIND_VIDEOPLAYER;
-        //const new int EVENT_COUNT = 4;
+
+        public const int EVENT_LIST_CHANGE = VideoUrlSource.EVENT_COUNT + 0;
+        public const int EVENT_TRACK_CHANGE = VideoUrlSource.EVENT_COUNT + 1;
+        protected new const int EVENT_COUNT = VideoUrlSource.EVENT_COUNT + 2;
+
+        protected override int EventCount => EVENT_COUNT;
 
         private void Start()
         {
@@ -128,7 +129,7 @@ namespace Texel
             _PostLoadShuffle();
             syncShuffleSerial += 1;
 
-            _UpdateHandlers(VideoUrlListSource.EVENT_LIST_CHANGE);
+            _UpdateHandlers(EVENT_LIST_CHANGE);
 
             _PostLoadTrack();
 
@@ -156,6 +157,9 @@ namespace Texel
             this.videoPlayer = videoPlayer;
             if (queue)
                 queue._SetVideoPlayer(videoPlayer);
+
+            _PopulateCatalog(playlistCatalog);
+            _PopulateInfo(playlistData);
 
             _MasterInit();
 
@@ -195,12 +199,12 @@ namespace Texel
             get { return syncEnabled && trackCount > 0 && syncCurrentIndex >= 0; }
         }
 
-        public override PlaylistQueue TargetQueue
+        public PlaylistQueue TargetQueue
         {
             get { return queue; }
         }
 
-        public override string ListName
+        public string ListName
         {
             get { return playlistData ? playlistData.playlistName : ""; }
         }
@@ -231,6 +235,7 @@ namespace Texel
             //if (!_TakeControl())
             //    return;
 
+            _PopulateInfo(data);
             _LoadDataLow(data);
 
             if (Utilities.IsValid(data))
@@ -238,7 +243,7 @@ namespace Texel
             else
                 DebugLog("Loading empty playlist data");
 
-            _UpdateHandlers(VideoUrlListSource.EVENT_LIST_CHANGE);
+            _UpdateHandlers(EVENT_LIST_CHANGE);
         }
 
         public void _LoadFromCatalogueData(PlaylistData data)
@@ -266,7 +271,7 @@ namespace Texel
             CurrentIndex = -1;
 
             _PostLoadShuffle();
-            _UpdateHandlers(VideoUrlListSource.EVENT_LIST_CHANGE);
+            _UpdateHandlers(EVENT_LIST_CHANGE);
 
             _PostLoadTrack();
 
@@ -290,7 +295,7 @@ namespace Texel
             CurrentIndex = -1;
 
             _PostLoadShuffle();
-            _UpdateHandlers(VideoUrlListSource.EVENT_LIST_CHANGE);
+            _UpdateHandlers(EVENT_LIST_CHANGE);
 
             _PostLoadTrack();
 
@@ -359,12 +364,12 @@ namespace Texel
             }
         }
 
-        public override short Count
+        public short Count
         {
             get { return (short)playlist.Length; }
         }
 
-        public override short CurrentIndex
+        public short CurrentIndex
         {
             get { return syncCurrentIndex; }
             protected set
@@ -520,7 +525,7 @@ namespace Texel
             return questPlaylist[index];
         }
 
-        public override VRCUrl _GetTrackURL(int index)
+        public VRCUrl _GetTrackURL(int index)
         {
             index = _TrackIndex(index);
             if (index < 0)
@@ -529,7 +534,7 @@ namespace Texel
             return playlist[index];
         }
 
-        public override VRCUrl _GetTrackQuestURL(int index)
+        public VRCUrl _GetTrackQuestURL(int index)
         {
             index = _TrackIndex(index);
             if (index < 0)
@@ -538,7 +543,7 @@ namespace Texel
             return questPlaylist[index];
         }
 
-        public override string _GetTrackName(int index)
+        public string _GetTrackName(int index)
         {
             index = _TrackIndex(index);
             if (index < 0)
@@ -557,7 +562,7 @@ namespace Texel
             return syncTrackerOrder[index];
         }
 
-        public override bool _Enqueue(int index)
+        public bool _Enqueue(int index)
         {
             if (!queue || !queue._CanAddTrack())
                 return false;
@@ -601,7 +606,7 @@ namespace Texel
             if (listChange)
             {
                 syncShuffleSerial += 1;
-                _UpdateHandlers(VideoUrlListSource.EVENT_LIST_CHANGE);
+                _UpdateHandlers(EVENT_LIST_CHANGE);
             }
 
             RequestSerialization();
@@ -663,6 +668,28 @@ namespace Texel
             _LoadDataLow(data);
         }
 
+        void _PopulateCatalog(PlaylistCatalog catalog)
+        {
+            if (!catalog)
+                return;
+
+            foreach (PlaylistData list in catalog.playlists)
+                _PopulateInfo(list);
+        }
+
+        void _PopulateInfo(PlaylistData data)
+        {
+            if (!data || !videoPlayer || !videoPlayer.UrlInfoResolver)
+                return;
+
+            UrlInfoResolver resolver = videoPlayer.UrlInfoResolver;
+            for (int i = 0; i < data.playlist.Length; i++)
+            {
+                if (data.trackNames[i] != null && data.trackNames[i].Length > 0)
+                    resolver._AddInfo(data.playlist[i], data.trackNames[i]);
+            }
+        }
+
         public override void OnDeserialization(DeserializationResult result)
         {
             //DebugLog($"Deserialize playlist={syncPlaylistSerial}, shuffle={syncShuffleSerial}, currentIndex={syncCurrentIndexSerial}");
@@ -684,13 +711,21 @@ namespace Texel
             }
 
             if (listChange)
-                _UpdateHandlers(VideoUrlListSource.EVENT_LIST_CHANGE);
+                _UpdateHandlers(EVENT_LIST_CHANGE);
 
             if (syncCurrentIndexSerial != prevCurrentIndexSerial)
             {
                 prevCurrentIndexSerial = syncCurrentIndexSerial;
                 CurrentIndexSerial = syncCurrentIndexSerial;
             }
+        }
+
+        protected void _EventTrackChange()
+        {
+            if (sourceManager)
+                sourceManager._OnSourceTrackChange(sourceIndex);
+
+            _UpdateHandlers(EVENT_TRACK_CHANGE);
         }
 
         void DebugLog(string message)

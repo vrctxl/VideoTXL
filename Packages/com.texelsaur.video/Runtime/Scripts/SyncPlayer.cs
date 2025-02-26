@@ -763,38 +763,6 @@ namespace Texel
             _overrideLock = false;
         }
 
-        /*public void _OnTrackChange()
-        {
-            _OnTrackChange(0);
-        }
-
-        public void _OnTrackChange1()
-        {
-            _OnTrackChange(1);
-        }
-
-        public void _OnTrackChange2()
-        {
-            _OnTrackChange(2);
-        }
-
-        public void _OnTrackChange3()
-        {
-            _OnTrackChange(3);
-        }
-
-        public void _OnTrackChange4()
-        {
-            _OnTrackChange(4);
-        }
-
-        void _OnTrackChange(int sourceIndex)
-        {
-            DebugTrace($"Event OnTrackChange source={sourceIndex}");
-            if (Networking.IsOwner(gameObject))
-                _PlayPlaylistUrl(urlSourceList[sourceIndex]);
-        }*/
-
         public void _OnSourceUrlReady()
         {
             DebugTrace($"Event OnSourceUrlReady");
@@ -806,7 +774,6 @@ namespace Texel
         {
             if (sourceManager)
                 sourceManager._AdvanceNext();
-                //_PlayPlaylistUrl(sourceManager._GetSource(sourceManager._GetReadySource()));
         }
 
         void _PlaySourceUrl()

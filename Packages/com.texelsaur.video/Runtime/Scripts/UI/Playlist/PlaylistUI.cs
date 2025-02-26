@@ -11,7 +11,7 @@ namespace Texel
     public class PlaylistUI : VideoSourceUIBase
     {
         //public Playlist playlist;
-        public VideoUrlListSource playlist;
+        public Playlist playlist;
         public GameObject playlistEntryTemplate;
 
         public bool showTrackNames = true;
@@ -47,7 +47,7 @@ namespace Texel
             if (source == null)
                 return;
 
-            VideoUrlListSource listSource = source.GetComponent<VideoUrlListSource>();
+            Playlist listSource = source.GetComponent<Playlist>();
             if (source != listSource)
                 return;
 
@@ -62,7 +62,7 @@ namespace Texel
             _InitFromPlaylist(player.playlist);
         }*/
 
-        public void _InitFromPlaylist(VideoUrlListSource playlist)
+        public void _InitFromPlaylist(Playlist playlist)
         {
             if (entries == null)
                 entries = new PlaylistUIEntry[0];
@@ -72,8 +72,8 @@ namespace Texel
                 this.playlist = playlist;
 
                 playlist._Register(VideoUrlSource.EVENT_BIND_VIDEOPLAYER, this, nameof(_OnBindVideoPlayer));
-                playlist._Register(VideoUrlListSource.EVENT_LIST_CHANGE, this, nameof(_OnListChange));
-                playlist._Register(VideoUrlListSource.EVENT_TRACK_CHANGE, this, nameof(_OnTrackChange));
+                playlist._Register(Playlist.EVENT_LIST_CHANGE, this, nameof(_OnListChange));
+                playlist._Register(Playlist.EVENT_TRACK_CHANGE, this, nameof(_OnTrackChange));
                 playlist._Register(VideoUrlSource.EVENT_OPTION_CHANGE, this, nameof(_OnOptionChange));
 
                 if (Utilities.IsValid(playlist.VideoPlayer))
@@ -88,7 +88,7 @@ namespace Texel
 
         public void _InitUI()
         {
-            _OnListChange();
+            _RebuildList();
         }
 
         public void _OnBindVideoPlayer()
@@ -142,7 +142,12 @@ namespace Texel
 
         public void _OnListChange()
         {
-            Debug.Log("TXL _OnListChange");
+            Debug.Log("TXL Event _OnListChange");
+            _RebuildList();
+        }
+
+        void _RebuildList()
+        {
             _ClearList();
 
             if (!Utilities.IsValid(playlist))
