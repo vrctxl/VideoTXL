@@ -32,6 +32,8 @@ namespace Texel
         public PlaylistCatalog playlistCatalog;
         [Tooltip("Default playlist track set")]
         public PlaylistData playlistData;
+        [Tooltip("Optional queue playlist entries can be queued up on")]
+        public PlaylistQueue queue;
 
         VRCUrl[] playlist;
         VRCUrl[] questPlaylist;
@@ -59,30 +61,39 @@ namespace Texel
         short prevCurrentIndexSerial = 0;
         short prevPlaylistSerial = 0;
         short prevShuffleSerial = 0;
+        int queueIndex = -1;
 
         bool _initDeserialize = false;
 
         [NonSerialized]
         public int trackCount;
 
-        public const int EVENT_LIST_CHANGE = 0;
-        public const int EVENT_TRACK_CHANGE = 1;
-        public const int EVENT_OPTION_CHANGE = 2;
-        public const int EVENT_BIND_VIDEOPLAYER = 3;
-        const int EVENT_COUNT = 4;
+        [Obsolete("Use VideoUrlSource.EVENT_OPTION_CHANGE")]
+        public new const int EVENT_OPTION_CHANGE = VideoUrlSource.EVENT_OPTION_CHANGE;
+        [Obsolete("Use VideoUrlSource.EVENT_BIND_VIDEOPLAYER")]
+        public new const int EVENT_BIND_VIDEOPLAYER = VideoUrlSource.EVENT_BIND_VIDEOPLAYER;
+
+        public const int EVENT_LIST_CHANGE = VideoUrlSource.EVENT_COUNT + 0;
+        public const int EVENT_TRACK_CHANGE = VideoUrlSource.EVENT_COUNT + 1;
+        protected new const int EVENT_COUNT = VideoUrlSource.EVENT_COUNT + 2;
+
+        protected override int EventCount => EVENT_COUNT;
 
         private void Start()
         {
             _EnsureInit();
         }
 
-        protected override int EventCount { get => EVENT_COUNT; }
+        //protected override int EventCount { get => EVENT_COUNT; }
 
         protected override void _Init()
         {
             base._Init();
 
             DebugLog("Common initialization");
+
+            if (queue)
+                queueIndex = queue._RegisterPlaylistSource(this);
 
             _LoadDataLow(playlistData);
 
@@ -144,13 +155,31 @@ namespace Texel
         public override void _SetVideoPlayer(TXLVideoPlayer videoPlayer)
         {
             this.videoPlayer = videoPlayer;
+            if (queue)
+                queue._SetVideoPlayer(videoPlayer);
+
+            _PopulateCatalog(playlistCatalog);
+            _PopulateInfo(playlistData);
 
             _MasterInit();
 
-            _UpdateHandlers(EVENT_BIND_VIDEOPLAYER);
+            _UpdateHandlers(VideoUrlSource.EVENT_BIND_VIDEOPLAYER);
         }
 
-        public TXLVideoPlayer VideoPlayer
+        public override string SourceDefaultName
+        {
+            get { return "PLAYLIST"; }
+        }
+
+        public override string TrackDisplay
+        {
+            get
+            {
+                return IsReady ? $"TRACK: {CurrentIndex + 1} / {Count}" : "";
+            }
+        }
+
+        public override TXLVideoPlayer VideoPlayer
         {
             get { return videoPlayer; }
         }
@@ -163,6 +192,21 @@ namespace Texel
         public override bool IsValid
         {
             get { return syncEnabled && trackCount > 0; }
+        }
+
+        public override bool IsReady
+        {
+            get { return syncEnabled && trackCount > 0 && syncCurrentIndex >= 0; }
+        }
+
+        public PlaylistQueue TargetQueue
+        {
+            get { return queue; }
+        }
+
+        public string ListName
+        {
+            get { return playlistData ? playlistData.playlistName : ""; }
         }
 
         public override bool _CanMoveNext()
@@ -191,6 +235,7 @@ namespace Texel
             //if (!_TakeControl())
             //    return;
 
+            _PopulateInfo(data);
             _LoadDataLow(data);
 
             if (Utilities.IsValid(data))
@@ -307,7 +352,7 @@ namespace Texel
 
         void _PostLoadTrack()
         {
-            CurrentIndex = (short)((AutoAdvance && !trackCatalogMode) ? 0 : -1);
+            CurrentIndex = (short)((AutoAdvance && !trackCatalogMode && immediate) ? 0 : -1);
             if (immediate)
                 CurrentIndexSerial += 1;
             else
@@ -317,6 +362,11 @@ namespace Texel
                 else
                     CurrentIndexSerial += 1;
             }
+        }
+
+        public short Count
+        {
+            get { return (short)playlist.Length; }
         }
 
         public short CurrentIndex
@@ -334,7 +384,10 @@ namespace Texel
             set
             {
                 syncCurrentIndexSerial = value;
-                _UpdateHandlers(EVENT_TRACK_CHANGE);
+                _EventTrackChange();
+
+                if (IsReady)
+                    _EventUrlReady();
             }
         }
 
@@ -344,7 +397,7 @@ namespace Texel
             set
             {
                 syncEnabled = value;
-                _UpdateHandlers(EVENT_OPTION_CHANGE);
+                _UpdateHandlers(VideoUrlSource.EVENT_OPTION_CHANGE);
             }
         }
 
@@ -354,7 +407,7 @@ namespace Texel
             set
             {
                 syncShuffle = value;
-                _UpdateHandlers(EVENT_OPTION_CHANGE);
+                _UpdateHandlers(VideoUrlSource.EVENT_OPTION_CHANGE);
             }
         }
 
@@ -369,8 +422,13 @@ namespace Texel
             set
             {
                 syncAutoAdvance = value;
-                _UpdateHandlers(EVENT_OPTION_CHANGE);
+                _UpdateHandlers(VideoUrlSource.EVENT_OPTION_CHANGE);
             }
+        }
+
+        public override bool ResumeAfterLoad
+        {
+            get { return resumeAfterLoad; }
         }
 
         public override bool _MoveNext()
@@ -385,14 +443,14 @@ namespace Texel
             else
                 CurrentIndex = (short)-1;
 
+            CurrentIndexSerial += 1;
+
             RequestSerialization();
 
             if (CurrentIndex >= 0)
                 DebugLog($"Move next track {CurrentIndex}");
             else
                 DebugLog($"Playlist completed");
-
-            CurrentIndexSerial += 1;
 
             return CurrentIndex >= 0;
         }
@@ -504,6 +562,14 @@ namespace Texel
             return syncTrackerOrder[index];
         }
 
+        public bool _Enqueue(int index)
+        {
+            if (!queue || !queue._CanAddTrack())
+                return false;
+
+            return queue._AddTrack(queueIndex, CatalogueIndex, index);
+        }
+
         public void _SetEnabled(bool state)
         {
             if (!_TakeControl())
@@ -586,7 +652,7 @@ namespace Texel
         bool _Repeats()
         {
             if (videoPlayer)
-                return videoPlayer.repeatPlaylist;
+                return videoPlayer.RepeatMode == TXLRepeatMode.All;
 
             return false;
         }
@@ -600,6 +666,28 @@ namespace Texel
                 data = playlistCatalog.playlists[syncCatalogueIndex];
 
             _LoadDataLow(data);
+        }
+
+        void _PopulateCatalog(PlaylistCatalog catalog)
+        {
+            if (!catalog)
+                return;
+
+            foreach (PlaylistData list in catalog.playlists)
+                _PopulateInfo(list);
+        }
+
+        void _PopulateInfo(PlaylistData data)
+        {
+            if (!data || !videoPlayer || !videoPlayer.UrlInfoResolver)
+                return;
+
+            UrlInfoResolver resolver = videoPlayer.UrlInfoResolver;
+            for (int i = 0; i < data.playlist.Length; i++)
+            {
+                if (data.trackNames[i] != null && data.trackNames[i].Length > 0)
+                    resolver._AddInfo(data.playlist[i], data.trackNames[i]);
+            }
         }
 
         public override void OnDeserialization(DeserializationResult result)
@@ -630,6 +718,14 @@ namespace Texel
                 prevCurrentIndexSerial = syncCurrentIndexSerial;
                 CurrentIndexSerial = syncCurrentIndexSerial;
             }
+        }
+
+        protected void _EventTrackChange()
+        {
+            if (sourceManager)
+                sourceManager._OnSourceTrackChange(sourceIndex);
+
+            _UpdateHandlers(EVENT_TRACK_CHANGE);
         }
 
         void DebugLog(string message)

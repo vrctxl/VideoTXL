@@ -56,6 +56,7 @@ namespace Texel
         SerializedProperty urlInputControlProperty;
         SerializedProperty progressSliderControlProperty;
         SerializedProperty syncSliderControlProperty;
+        SerializedProperty queueInputControlProperty;
 
         [ObjectPath("MainPanel/UpperRow/ControlGroup/StopButton/IconStop"), ComponentType(typeof(Image))]
         SerializedProperty stopIconProperty;
@@ -74,6 +75,7 @@ namespace Texel
         SerializedProperty playlistIconProperty;
         SerializedProperty masterIconProperty;
         SerializedProperty whitelistIconProperty;
+        SerializedProperty queueIconProperty;
 
         SerializedProperty muteToggleOnProperty;
         SerializedProperty muteToggleOffProperty;
@@ -88,6 +90,7 @@ namespace Texel
         SerializedProperty placeholderTextProperty;
         SerializedProperty modeTextProperty;
         SerializedProperty queuedTextProperty;
+        SerializedProperty titleTextProperty;
 
         SerializedProperty playlistTextProperty;
 
@@ -159,6 +162,7 @@ namespace Texel
             "MainPanel/LowerRow/InputProgress/LoadButton/IconLoad",
             "MainPanel/LowerRow/InputProgress/MasterLockButton/IconLocked",
             "MainPanel/LowerRow/InputProgress/MasterLockButton/IconUnlocked",
+            "MainPanel/LowerRow/InputProgress/InputArea/QueueButton/IconQueue",
             "InfoPanel/Fields/CurrentVideo/InputField/PlayButton/IconPlay",
             "InfoPanel/Fields/LastVideo/InputField/PlayButton/IconPlay",
         };
@@ -177,6 +181,7 @@ namespace Texel
             "MainPanel/LowerRow/InputProgress/QueuedText",
             "MainPanel/LowerRow/InputProgress/PlaylistText",
             "MainPanel/LowerRow/InputProgress/SourceMode",
+            "MainPanel/LowerRow/InputProgress/TitleText",
         };
         string[] subTextIconPaths = new string[]
         {
@@ -196,6 +201,7 @@ namespace Texel
             progressSliderControlProperty = serializedObject.FindProperty(nameof(PlayerControls.progressSliderControl));
             syncSliderControlProperty = serializedObject.FindProperty(nameof(PlayerControls.syncSliderControl));
             urlInputControlProperty = serializedObject.FindProperty(nameof(PlayerControls.urlInputControl));
+            queueInputControlProperty = serializedObject.FindProperty(nameof(PlayerControls.queueInputControl));
 
             stopIconProperty = serializedObject.FindProperty(nameof(PlayerControls.stopIcon));
             pauseIconProperty = serializedObject.FindProperty(nameof(PlayerControls.pauseIcon));
@@ -212,6 +218,7 @@ namespace Texel
             playlistIconProperty = serializedObject.FindProperty(nameof(PlayerControls.playlistIcon));
             masterIconProperty = serializedObject.FindProperty(nameof(PlayerControls.masterIcon));
             whitelistIconProperty = serializedObject.FindProperty(nameof(PlayerControls.whitelistIcon));
+            queueIconProperty = serializedObject.FindProperty(nameof(PlayerControls.queueIcon));
 
             muteToggleOnProperty = serializedObject.FindProperty(nameof(PlayerControls.muteToggleOn));
             muteToggleOffProperty = serializedObject.FindProperty(nameof(PlayerControls.muteToggleOff));
@@ -226,6 +233,7 @@ namespace Texel
             syncSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.syncSlider));
             modeTextProperty = serializedObject.FindProperty(nameof(PlayerControls.modeText));
             queuedTextProperty = serializedObject.FindProperty(nameof(PlayerControls.queuedText));
+            titleTextProperty = serializedObject.FindProperty(nameof(PlayerControls.titleText));
 
             playlistTextProperty = serializedObject.FindProperty(nameof(PlayerControls.playlistText));
 
@@ -262,6 +270,7 @@ namespace Texel
                 EditorGUILayout.PropertyField(urlInputControlProperty);
                 EditorGUILayout.PropertyField(progressSliderControlProperty);
                 EditorGUILayout.PropertyField(syncSliderControlProperty);
+                EditorGUILayout.PropertyField(queueInputControlProperty);
                 EditorGUILayout.PropertyField(stopIconProperty);
                 EditorGUILayout.PropertyField(pauseIconProperty);
                 EditorGUILayout.PropertyField(lockedIconProperty);
@@ -274,6 +283,7 @@ namespace Texel
                 EditorGUILayout.PropertyField(infoIconProperty);
                 EditorGUILayout.PropertyField(nextIconProperty);
                 EditorGUILayout.PropertyField(prevIconProperty);
+                EditorGUILayout.PropertyField(queueIconProperty);
                 EditorGUILayout.PropertyField(playlistIconProperty);
                 EditorGUILayout.PropertyField(masterIconProperty);
                 EditorGUILayout.PropertyField(whitelistIconProperty);
@@ -289,6 +299,7 @@ namespace Texel
                 EditorGUILayout.PropertyField(placeholderTextProperty);
                 EditorGUILayout.PropertyField(modeTextProperty);
                 EditorGUILayout.PropertyField(queuedTextProperty);
+                EditorGUILayout.PropertyField(titleTextProperty);
                 EditorGUILayout.PropertyField(playlistTextProperty);
                 EditorGUILayout.PropertyField(optionsPanelProperty);
                 EditorGUILayout.PropertyField(playlistPanelProperty);

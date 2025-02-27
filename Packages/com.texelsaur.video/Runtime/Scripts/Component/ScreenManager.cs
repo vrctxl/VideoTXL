@@ -1191,6 +1191,7 @@ namespace Texel
             if (Utilities.IsValid(replacementTex))
             {
                 currentTexture = replacementTex;
+                currentGamma = !currentTexture.isDataSRGB;
             }
             else
             {

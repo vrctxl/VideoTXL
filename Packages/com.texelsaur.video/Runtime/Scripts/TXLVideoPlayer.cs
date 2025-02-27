@@ -5,10 +5,14 @@ using UnityEngine;
 using VRC.SDK3.Components.Video;
 using VRC.SDKBase;
 using VRC.Udon;
+using System.Text.RegularExpressions;
+using System.Runtime.CompilerServices;
 
 #if AUDIOLINK_V1
 using AudioLink;
 #endif
+
+[assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
 
 namespace Texel
 {
@@ -56,6 +60,8 @@ namespace Texel
         protected VideoManager videoMux;
         protected AudioManager audioManager;
 
+        [SerializeField] protected internal SourceManager sourceManager;
+
         [HideInInspector]
         public bool prefabInitialized = false;
 
@@ -95,7 +101,10 @@ namespace Texel
         [NonSerialized]
         public VRCUrl lastUrl = VRCUrl.Empty;
         [NonSerialized]
+        [Obsolete("Queued URL has been replaced by Source Manager")]
         public VRCUrl queuedUrl = VRCUrl.Empty;
+        [NonSerialized]
+        public VideoUrlSource currentUrlSource = null;
 
         public bool IsQuest { get; private set; }
 
@@ -160,6 +169,16 @@ namespace Texel
             get { return audioManager; }
         }
 
+        public SourceManager SourceManager
+        {
+            get { return sourceManager; }
+        }
+
+        public virtual UrlInfoResolver UrlInfoResolver
+        {
+            get { return null; }
+        }
+
         public virtual void _SetVideoManager(VideoManager manager)
         {
             if (videoMux)
@@ -180,6 +199,16 @@ namespace Texel
             audioManager._Register(AudioManager.EVENT_AUDIOLINK_CHANGED, this, nameof(_AudioLinkOnBind));
             _AudioLinkOnBind();
 #endif
+        }
+
+        internal static string _ParseYoutube(string url)
+        {
+            string pattern = @"(?:https?:\/\/)?(?:www\.)?youtu\.?be(?:\.com)?\/?.*(?:watch|embed)?(?:.*v=|v\/|\/)([\w\-_]+)\&?";
+            Match match = Regex.Match(url, pattern);
+            if (match.Success)
+                return $"YouTube [{match.Groups[1]}]";
+
+            return null;
         }
 
         // AudioLink API

@@ -124,12 +124,14 @@ namespace Texel
             TXLVideoPlayer vp = GetVideoPlayer();
             if (vp)
             {
-                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/UI/PlaylistUI.prefab", vp.transform);
-                if (vp is SyncPlayer && ((SyncPlayer)vp).urlSource is Playlist)
+                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/UI/Playlist UI.prefab", vp.transform);
+                if (vp is SyncPlayer && vp.SourceManager)
                 {
+                    Playlist found = vp.SourceManager.sources.First(s => s is Playlist) as Playlist;
                     PlaylistUI ui = playlistObj.GetComponent<PlaylistUI>();
-                    if (ui)
-                        ui.playlist = ((SyncPlayer)vp).urlSource as Playlist;
+
+                    if (found && ui)
+                        ui.playlist = found;
                 }
             }
             else
@@ -143,15 +145,37 @@ namespace Texel
             if (vp)
             {
                 GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/UI/PlaylistLoadButton.prefab", vp.transform);
-                if (vp is SyncPlayer && ((SyncPlayer)vp).urlSource is Playlist)
+                if (vp is SyncPlayer && vp.SourceManager)
                 {
+                    Playlist found = vp.sourceManager.sources.First(s => s is Playlist) as Playlist;
                     PlaylistLoadData ui = playlistObj.GetComponent<PlaylistLoadData>();
-                    if (ui)
-                        ui.playlist = ((SyncPlayer)vp).urlSource as Playlist;
+
+                    if (found && ui)
+                        ui.playlist = found;
                 }
             }
             else
                 MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/UI/PlaylistLoadButton.prefab");
+        }
+
+        [MenuItem("GameObject/TXL/VideoTXL/UI/Queue UI", false, 302)]
+        public static void AddQueueUIToScene()
+        {
+            TXLVideoPlayer vp = GetVideoPlayer();
+            if (vp)
+            {
+                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/UI/QueueUI.prefab", vp.transform);
+                if (vp is SyncPlayer && vp.SourceManager)
+                {
+                    PlaylistQueue found = vp.SourceManager.sources.First(s => s is PlaylistQueue) as PlaylistQueue;
+                    PlaylistQueueUI queueUI = playlistObj.GetComponent<PlaylistQueueUI>();
+
+                    if (found && queueUI)
+                        queueUI.queue = found;
+                }
+            }
+            else
+                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/UI/QueueUI.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Video Sources/Add Unity Video Source", true, 220)]
@@ -346,20 +370,34 @@ namespace Texel
             AddAudioProfile("Packages/com.texelsaur.video/Runtime/Prefabs/Audio Groups/Default AudioDMX.prefab", GetAudioManagerRoot());
         }
 
-        [MenuItem("GameObject/TXL/VideoTXL/Playlists and URL Sources/Playlist", false, 240)]
+        [MenuItem("GameObject/TXL/VideoTXL/Playlists and URL Sources/Source Manager", false, 240)]
+        public static void AddSourceManagerToScene()
+        {
+            TXLVideoPlayer vp = GetVideoPlayer();
+            if (vp)
+            {
+                GameObject managerObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Source Manager.prefab", vp.transform);
+                if (vp is SyncPlayer && !vp.SourceManager)
+                    vp.sourceManager = managerObj.GetComponent<SourceManager>();
+            }
+            else
+                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Source Manager.prefab");
+        }
+
+        [MenuItem("GameObject/TXL/VideoTXL/Playlists and URL Sources/Playlist", false, 340)]
         public static void AddPlaylistToScene()
         {
             TXLVideoPlayer vp = GetVideoPlayer();
             if (vp)
             {
                 GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Playlist.prefab", vp.transform);
-                if (vp is SyncPlayer && ((SyncPlayer)vp).urlSource == null)
-                    ((SyncPlayer)vp).urlSource = playlistObj.GetComponent<Playlist>();
+                if (vp is SyncPlayer && vp.SourceManager)
+                    vp.SourceManager.sources = vp.SourceManager.sources.Append(playlistObj.GetComponent<Playlist>()).ToArray();
             } else
                 MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Playlist.prefab");
         }
 
-        [MenuItem("GameObject/TXL/VideoTXL/Playlists and URL Sources/Playlist Data", false, 241)]
+        [MenuItem("GameObject/TXL/VideoTXL/Playlists and URL Sources/Playlist Data", false, 341)]
         public static void AddPlaylistDataToScene()
         {
             PlaylistCatalog catalog = MenuUtil.GetObjectOrParent<PlaylistCatalog>();
@@ -407,16 +445,20 @@ namespace Texel
 
         static void AddPlaylistData(TXLVideoPlayer vp)
         {
-            if (vp is SyncPlayer && ((SyncPlayer)vp).urlSource is Playlist)
+            if (vp is SyncPlayer && vp.SourceManager)
             {
-                AddPlaylistData(((SyncPlayer)vp).urlSource as Playlist);
-                return;
+                Playlist found = vp.SourceManager.sources.First(s => s is Playlist) as Playlist;
+                if (found)
+                {
+                    AddPlaylistData(found);
+                    return;
+                }
             }
 
             MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistData.prefab", vp.transform);
         }
 
-        [MenuItem("GameObject/TXL/VideoTXL/Playlists and URL Sources/Playlist Catalog", false, 242)]
+        [MenuItem("GameObject/TXL/VideoTXL/Playlists and URL Sources/Playlist Catalog", false, 342)]
         public static void AddPlaylistCatalogToScene()
         {
             Transform parent = null;
@@ -427,8 +469,12 @@ namespace Texel
                 if (vp)
                 {
                     parent = vp.transform;
-                    if (vp is SyncPlayer && ((SyncPlayer)vp).urlSource is Playlist)
-                        playlist = ((SyncPlayer)vp).urlSource as Playlist;
+                    if (vp is SyncPlayer && vp.SourceManager)
+                    {
+                        Playlist found = vp.SourceManager.sources.First(s => s is Playlist) as Playlist;
+                        if (found)
+                            playlist = found;
+                    }
                 }
             }
 
@@ -450,6 +496,20 @@ namespace Texel
             }
 
             MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistCatalog.prefab");
+        }
+
+        [MenuItem("GameObject/TXL/VideoTXL/Playlists and URL Sources/Queue", false, 343)]
+        public static void AddQueueToScene()
+        {
+            TXLVideoPlayer vp = GetVideoPlayer();
+            if (vp)
+            {
+                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Queue.prefab", vp.transform);
+                if (vp is SyncPlayer && vp.SourceManager)
+                    vp.SourceManager.sources = vp.SourceManager.sources.Append(playlistObj.GetComponent<PlaylistQueue>()).ToArray();
+            }
+            else
+                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Queue.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Components/Access Control", false, 250)]
@@ -480,7 +540,21 @@ namespace Texel
                 MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/URL Remapper.prefab");
         }
 
-        [MenuItem("GameObject/TXL/VideoTXL/Components/Dependent Source", false, 252)]
+        [MenuItem("GameObject/TXL/VideoTXL/Components/URL Info Resolver", false, 252)]
+        public static void AddUrlInfoResolverToScene()
+        {
+            TXLVideoPlayer vp = GetVideoPlayer();
+            if (vp)
+            {
+                GameObject resolverObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/URL Info Resolver.prefab", vp.transform);
+                if (vp is SyncPlayer && ((SyncPlayer)vp).urlInfoResolver == null)
+                    ((SyncPlayer)vp).urlInfoResolver = resolverObj.GetComponent<UrlInfoResolver>();
+            }
+            else
+                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/URL Info Resolver.prefab");
+        }
+
+        [MenuItem("GameObject/TXL/VideoTXL/Components/Dependent Source", false, 253)]
         public static void AddDependentSourceToScene()
         {
             TXLVideoPlayer vp = GetVideoPlayer();
@@ -494,7 +568,7 @@ namespace Texel
                 MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Dependent Source.prefab");
         }
 
-        [MenuItem("GameObject/TXL/VideoTXL/Components/Sync Playback Zone", false, 253)]
+        [MenuItem("GameObject/TXL/VideoTXL/Components/Sync Playback Zone", false, 254)]
         public static void AddSyncPlaybackZoneToScene()
         {
             TXLVideoPlayer vp = GetVideoPlayer();

@@ -17,10 +17,9 @@ namespace Texel
     {
         SerializedProperty prefabInitializedProperty;
 
-        SerializedProperty urlSourceProperty;
-        SerializedProperty defaultUrlSourceTypeProperty;
-        //SerializedProperty playlistPoperty;
+        SerializedProperty sourceManagerProperty;
         SerializedProperty remapperProperty;
+        SerializedProperty urlInfoResolverProperty;
         SerializedProperty accessControlProperty;
         SerializedProperty debugLogProperty;
         SerializedProperty debugStageProperty;
@@ -55,10 +54,9 @@ namespace Texel
         {
             prefabInitializedProperty = serializedObject.FindProperty(nameof(SyncPlayer.prefabInitialized));
 
-            urlSourceProperty = serializedObject.FindProperty(nameof(SyncPlayer.urlSource));
-            defaultUrlSourceTypeProperty = serializedObject.FindProperty("defaultUrlSourceType");
-            //playlistPoperty = serializedObject.FindProperty(nameof(SyncPlayer.playlist));
+            sourceManagerProperty = serializedObject.FindProperty(nameof(SyncPlayer.sourceManager));
             remapperProperty = serializedObject.FindProperty(nameof(SyncPlayer.urlRemapper));
+            urlInfoResolverProperty = serializedObject.FindProperty(nameof(SyncPlayer.urlInfoResolver));
             accessControlProperty = serializedObject.FindProperty(nameof(SyncPlayer.accessControl));
             debugLogProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugLog));
             debugStageProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugState));
@@ -141,77 +139,22 @@ namespace Texel
 
             EditorGUI.BeginChangeCheck();
 
-            if (urlSourceProperty.objectReferenceValue != null && defaultUrlSourceTypeProperty.intValue == 0)
-            {
-                VideoUrlSource source = (VideoUrlSource)urlSourceProperty.objectReferenceValue;
-                if (source is Playlist)
-                    defaultUrlSourceTypeProperty.intValue = (int)UrlSourceType.Playlist;
-                else
-                    defaultUrlSourceTypeProperty.intValue = (int)UrlSourceType.Custom;
-
-                serializedObject.ApplyModifiedProperties();
-            }
-
-            EditorGUILayout.LabelField("URLs (Playlists, Other Sources)", EditorStyles.boldLabel);
-            UrlSourceType prevSourceType = (UrlSourceType)defaultUrlSourceTypeProperty.intValue;
+            EditorGUILayout.LabelField("URLs & URL Sources", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(defaultUrlProperty, new GUIContent("Default URL", "Optional default URL to play on world load.  If a separate URL Source is also provided, the default URL will play first."));
-            EditorGUILayout.PropertyField(defaultUrlSourceTypeProperty, new GUIContent("Default URL Source", "The type of URL source to load by deafult."));
-
-            UrlSourceType newSourceType = (UrlSourceType)defaultUrlSourceTypeProperty.intValue;
-            if (prevSourceType != newSourceType)
-            {
-                bool compat = false;
-                VideoUrlSource urlSource = (VideoUrlSource)urlSourceProperty.objectReferenceValue;
-
-                switch (newSourceType)
-                {
-                    case UrlSourceType.Playlist:
-                        if (urlSource is Playlist)
-                            compat = true;
-                        break;
-                    case UrlSourceType.Custom:
-                        if (urlSource is VideoUrlSource)
-                            compat = true;
-                        break;
-                }
-
-                if (!compat)
-                    urlSourceProperty.objectReferenceValue = null;
-            }
-
-            //int urlSourceIndex = Array.IndexOf(Enum.GetValues(typeof(UrlSourceType)))
-            EditorGUI.indentLevel += 1;
-            switch ((UrlSourceType)defaultUrlSourceTypeProperty.intValue)
-            {
-                case UrlSourceType.Playlist:
-                    urlSourceProperty.objectReferenceValue = EditorGUILayout.ObjectField(new GUIContent("Playlist", "A Playlist URL Source."), urlSourceProperty.objectReferenceValue, typeof(Playlist), true);
-                    //EditorGUILayout.ObjectField(urlSourceProperty, typeof(Playlist), new GUIContent("Playlist Source", "A Playlist URL Source."));
-                    //EditorGUILayout.PropertyField(defaultUrlSourcePlaylistProperty, new GUIContent("Playlist Source", "A Playlist URL Source."));
-                    break;
-                //case UrlSourceType.Queue:
-                //    EditorGUILayout.PropertyField(defaultUrlSourceQueueProperty, new GUIContent("Queue Source", "A Queue URL Source."));
-                //    break;
-                case UrlSourceType.Custom:
-                    urlSourceProperty.objectReferenceValue = EditorGUILayout.ObjectField(new GUIContent("Custom URL Source", "Any source that descends from the VideoUrlSource base class."), urlSourceProperty.objectReferenceValue, typeof(VideoUrlSource), true);
-                    //EditorGUILayout.PropertyField(urlSourceProperty, new GUIContent("URL Source", "Any source that descents from the VideoUrlSource base class."));
-                    break;
-            }
-            EditorGUI.indentLevel -= 1;
+            EditorGUILayout.PropertyField(sourceManagerProperty, new GUIContent("URL Source Manager", "Manager for queues, playlists, and other URL sources."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Optional Components", EditorStyles.boldLabel);
 
-            //EditorGUILayout.PropertyField(urlSourceProperty, new GUIContent("URL Sources", "Pre-populated playlist to iterate through.  If default URL is set, the playlist will be disabled by default, otherwise it will auto-play."));
-            //EditorGUILayout.PropertyField(playlistPoperty, new GUIContent("Playlist", "Pre-populated playlist to iterate through.  If default URL is set, the playlist will be disabled by default, otherwise it will auto-play."));
             EditorGUILayout.PropertyField(remapperProperty, new GUIContent("URL Remapper", "Set of input URLs to remap to alternate URLs on a per-platform basis."));
+            EditorGUILayout.PropertyField(urlInfoResolverProperty, new GUIContent("URL Info Resolver", "A resolver and cache for finding additional info about a URL, like title or author."));
             EditorGUILayout.PropertyField(accessControlProperty, new GUIContent("Access Control", "Control access to player controls based on player type or whitelist."));
 
             EditorGUILayout.PropertyField(playbackZoneProperty, new GUIContent("Playback Zone Membership", "Optional zone membership object tied to a trigger zone the player must be in to sustain playback.  Disables playing audio on world load."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Default Options", EditorStyles.boldLabel);
-            //EditorGUILayout.PropertyField(defaultUrlProperty, new GUIContent("Default URL", "Optional default URL to play on world load."));
             EditorGUILayout.PropertyField(defaultLockedProperty, new GUIContent("Default Locked", "Whether player controls are locked to master and instance owner by default."));
             EditorGUILayout.PropertyField(loopProperty, new GUIContent("Loop", "Automatically loop track when finished."));
             EditorGUILayout.PropertyField(retryOnErrorProperty, new GUIContent("Retry on Error", "Whether to keep playing the same URL if an error occurs."));
