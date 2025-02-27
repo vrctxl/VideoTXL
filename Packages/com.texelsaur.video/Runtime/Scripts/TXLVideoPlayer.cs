@@ -101,7 +101,10 @@ namespace Texel
         [NonSerialized]
         public VRCUrl lastUrl = VRCUrl.Empty;
         [NonSerialized]
+        [Obsolete("Queued URL has been replaced by Source Manager")]
         public VRCUrl queuedUrl = VRCUrl.Empty;
+        [NonSerialized]
+        public VideoUrlSource currentUrlSource = null;
 
         public bool IsQuest { get; private set; }
 

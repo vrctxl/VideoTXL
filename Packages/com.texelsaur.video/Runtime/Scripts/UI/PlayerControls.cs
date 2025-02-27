@@ -661,7 +661,7 @@ namespace Texel
                 prevIcon.color = (enableControl && sourceManager.CanMovePrev) ? normalColor : disabledColor;
                 playlistIcon.color = enableControl ? normalColor : disabledColor;
 
-                VideoUrlSource source = sourceManager.ReadySource;
+                VideoUrlSource source = videoPlayer.currentUrlSource;
                 if (source && !videoStopped)
                     queuedText.text = source.SourceName;
                 else
@@ -672,7 +672,7 @@ namespace Texel
                 else
                     playlistText.text = source.TrackDisplay;
 
-                if (source && Utilities.IsValid(playlistPanel))
+                if (Utilities.IsValid(playlistPanel))
                     playlistIcon.color = sourcePanelOpen ? activeColor : normalColor;
             }
         }

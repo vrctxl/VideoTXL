@@ -54,6 +54,7 @@ namespace Texel
 
         public bool _HasInfo(string url)
         {
+            _EnsureInit();
             return infoCache.ContainsKey(url);
         }
 
@@ -64,6 +65,7 @@ namespace Texel
 
         public DataDictionary _GetInfo(string url)
         {
+            _EnsureInit();
             if (infoCache.TryGetValue(url, out DataToken value))
             {
                 if (value.TokenType == TokenType.DataDictionary)
@@ -80,6 +82,7 @@ namespace Texel
 
         public string _GetError(string url)
         {
+            _EnsureInit();
             if (errorCache.TryGetValue(url, out DataToken value))
             {
                 if (value.TokenType == TokenType.String)
@@ -96,6 +99,7 @@ namespace Texel
 
         public int _GetUrlType(string url)
         {
+            _EnsureInit();
             if (typeCache.TryGetValue(url, out DataToken value))
             {
                 if (value.TokenType == TokenType.Int)

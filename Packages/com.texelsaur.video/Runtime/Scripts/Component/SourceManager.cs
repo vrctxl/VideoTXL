@@ -100,6 +100,20 @@ namespace Texel
             return sources[index];
         }
 
+        public int _GetSourceIndex(VideoUrlSource source)
+        {
+            if (!source)
+                return -1;
+
+            for (int i = 0; i < sources.Length; i++)
+            {
+                if (sources[i] == source)
+                    return i;
+            }
+
+            return -1;
+        }
+
         public int _GetValidSource(int startIndex = 0)
         {
             for (int i = startIndex; i < sources.Length; i++)

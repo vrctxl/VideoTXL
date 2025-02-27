@@ -24,6 +24,7 @@ namespace Texel
         //PlaylistData data;
         PlaylistUIEntry[] entries;
         RectTransform[] entriesRT;
+        int lastSelectedEntry = -1;
 
         void Start()
         {
@@ -80,6 +81,7 @@ namespace Texel
                 {
                     backingVideoPlayer = playlist.VideoPlayer;
                     backingVideoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_TRACKING_UPDATE, this, nameof(_OnVideoTrackingUpdate));
+                    backingVideoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, nameof(_OnVideoInfo));
                 }
             }
 
@@ -95,11 +97,12 @@ namespace Texel
         {
             backingVideoPlayer = playlist.VideoPlayer;
             backingVideoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_TRACKING_UPDATE, this, nameof(_OnVideoTrackingUpdate));
+            backingVideoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, nameof(_OnVideoInfo));
         }
 
         public void _OnTrackChange()
         {
-            _UnselectEntries();
+            _UnselectLastEntry();
 
             int track = playlist.CurrentIndex;
             if (track < 0 || track >= entries.Length)
@@ -110,6 +113,7 @@ namespace Texel
                 return;
 
             entry.Selected = true;
+            lastSelectedEntry = track;
 
             Canvas.ForceUpdateCanvases();
             ScrollReposition(entriesRT[track]);
@@ -171,11 +175,20 @@ namespace Texel
         public void _OnOptionChange()
         {
             if (!playlist.IsEnabled)
-                _UnselectEntries();
+                _UnselectLastEntry();
+        }
+
+        public void _OnVideoInfo()
+        {
+            if (backingVideoPlayer && backingVideoPlayer.currentUrlSource != playlist)
+                _UnselectLastEntry();
         }
 
         public void _OnVideoTrackingUpdate()
         {
+            if (backingVideoPlayer && backingVideoPlayer.SourceManager && backingVideoPlayer.SourceManager.ReadySource != playlist)
+                return;
+
             int track = playlist.CurrentIndex;
             if (track < 0 || track >= entries.Length)
                 return;
@@ -217,6 +230,18 @@ namespace Texel
                 if (Utilities.IsValid(entries[i]))
                     entries[i].Selected = false;
             }
+        }
+
+        void _UnselectLastEntry()
+        {
+            if (lastSelectedEntry > -1 && lastSelectedEntry < entries.Length)
+            {
+                PlaylistUIEntry entry = entries[lastSelectedEntry];
+                if (Utilities.IsValid(entry))
+                    entry.Selected = false;
+            }
+
+            lastSelectedEntry = -1;
         }
 
         void _ClearList()

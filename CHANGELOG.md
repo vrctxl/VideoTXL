@@ -9,9 +9,13 @@
 - Added Playlist Queue URL source
 - Added URL Info Resolver component, which can resolve title and author info when loading a YouTube URL 
 - SyncPlayer prefab is updated with a Source Manager added by default with a Queue source
+- Removed legacy single-track queue from SyncPlayer, which has not worked since the VRChat keyboard update
 - Player Controls UI includes an "add to queue" toggle when pressing the [+] change URL button, if a queue is present on an attached source manager
+- Player Controls UI includes a "title" field on the upper part of the display area
+- Player Controls UI will show "QUEUE" or "PLAYLIST" in the lower left if a URL is from those sources, replacing the legacy "QUEUED" behavior
 - Playlist UI rows updated to show track number
 - Playlist UI rows show an "add to queue" button if the backing playlist is associated with a target queue
+- Default volume of AVPro "Reserved Audio Source" components changed from 0.01 to 0.001
 
 ## [2.4.15] - 01-07-25
 
