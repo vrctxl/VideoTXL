@@ -666,6 +666,9 @@ namespace Texel
             if (!isOwner && !_TakeControl())
                 return;
 
+            if (currentUrlSource)
+                currentUrlSource._OnVideoStop();
+
             string urlStr = url.Get();
 
             _syncVideoSource = _syncVideoSourceOverride;
@@ -915,6 +918,9 @@ namespace Texel
             _pendingLoadTime = 0;
             _videoReady = false;
 
+            if (currentUrlSource)
+                currentUrlSource._OnVideoStop();
+
             if (Networking.IsOwner(gameObject))
             {
                 _syncVideoStartNetworkTime = 0;
@@ -952,6 +958,9 @@ namespace Texel
             //   - If owner playing state is already synced, play video
             //   - Otherwise, wait until owner playing state is synced and play later in update()
             //   TODO: Streamline by always doing this in update instead?
+
+            if (currentUrlSource)
+                currentUrlSource._OnVideoReady();
 
             _UpdateHandlers(EVENT_VIDEO_READY);
 
@@ -999,6 +1008,9 @@ namespace Texel
                 if (seekableSource)
                     videoMux._VideoSetTime(_videoTargetTime);
 
+                if (currentUrlSource)
+                    currentUrlSource._OnVideoStart();
+
                 SyncVideoImmediate();
             }
             else
@@ -1015,6 +1027,9 @@ namespace Texel
                 {
                     _UpdatePlayerState(VIDEO_STATE_PLAYING);
 
+                    if (currentUrlSource)
+                        currentUrlSource._OnVideoStart();
+
                     SyncVideoImmediate();
                 }
             }
@@ -1030,6 +1045,20 @@ namespace Texel
 
             _UpdatePlayerState(VIDEO_STATE_STOPPED);
             _lastVideoPosition = 0;
+
+            if (currentUrlSource)
+            {
+                VideoEndAction action = currentUrlSource._OnVideoEnd();
+                if (action == VideoEndAction.Retry)
+                {
+                    SendCustomEventDelayedFrames(nameof(_LoopVideo), 1);
+                    return;
+                } else if (action == VideoEndAction.Stop)
+                {
+                    _StopVideo();
+                    return;
+                }
+            }
 
             _ConditionalPlayNext();
         }
@@ -1148,6 +1177,18 @@ namespace Texel
             if (shouldFallback)
                 _SetStreamFallback();
 
+            VideoErrorAction action = VideoErrorAction.Default;
+            if (currentUrlSource)
+            {
+                if (videoErrorClass == VideoErrorClass.VRChat)
+                    action = currentUrlSource._OnVideoError(videoError);
+                else if (videoErrorClass == VideoErrorClass.TXL)
+                    action = currentUrlSource._OnVideoError(videoMux.LastErrorTXL);
+            }
+
+            if (action == VideoErrorAction.Default && retryOnError)
+                action = VideoErrorAction.Retry;
+
             if (Networking.IsOwner(gameObject))
             {
                 if (shouldFallback)
@@ -1159,7 +1200,14 @@ namespace Texel
                     return;
                 }
 
-                if (retryOnError)
+                if (action == VideoErrorAction.Retry)
+                    _StartVideoLoadDelay(retryTimeout);
+                else if (action == VideoErrorAction.Advance)
+                    _ConditionalPlayNext();
+                else
+                    _StopVideo();
+
+                /*if (retryOnError)
                 {
                     _StartVideoLoadDelay(retryTimeout);
                 }
@@ -1170,12 +1218,15 @@ namespace Texel
                     _videoTargetTime = 0;
                     _syncOwnerPlaying = false;
                     RequestSerialization();
-                }
+                }*/
             }
             else
             {
-                if (!shouldFallback && retryOnError)
+                if (!shouldFallback && action == VideoErrorAction.Retry)
                     _StartVideoLoadDelay(retryTimeout);
+
+                //if (!shouldFallback && retryOnError)
+                //    _StartVideoLoadDelay(retryTimeout);
             }
         }
 

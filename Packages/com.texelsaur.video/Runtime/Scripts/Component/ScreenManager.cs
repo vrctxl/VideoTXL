@@ -942,13 +942,8 @@ namespace Texel
             _ResetCheckScreenMaterial();
         }
 
-        int _CalculateScreenIndex(bool captureValid)
+        int _ScreenIndexByMode(int mode)
         {
-            int mode = _screenMode;
-
-            if (latchErrorState && _inError)
-                mode = SCREEN_MODE_ERROR;
-
             switch (mode)
             {
                 case SCREEN_MODE_UNINITIALIZED: return SCREEN_INDEX_LOGO;
@@ -976,6 +971,24 @@ namespace Texel
                     }
                     return SCREEN_INDEX_PLAYBACK;
             }
+        }
+
+        int _CalculateScreenIndex(bool captureValid)
+        {
+            int mode = _screenMode;
+
+            if (latchErrorState && _inError)
+                mode = SCREEN_MODE_ERROR;
+
+            int index = _ScreenIndexByMode(mode);
+
+            if (index == SCREEN_INDEX_PLAYBACK || index == SCREEN_INDEX_AUDIO)
+            {
+                if (videoPlayer && videoPlayer.currentUrlSource && videoPlayer.currentUrlSource.DisplayOverride == VideoDisplayOverride.Logo)
+                    index = SCREEN_INDEX_LOGO;
+            }
+
+            return index;
         }
 
         void _UpdateScreenMaterial(int screenMode)

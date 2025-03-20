@@ -2,6 +2,18 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.2]
+
+- Fixed erros in several TXL GameObject menu add entries
+- Added option to player controls to set default URL entry mode (queue vs. normal)
+- Added option to player controls to remember URL entry mode (queue vs. normal)
+- Added option for URL sources to override video display with the logo image
+- Updated logic on how different sources take precedence or interrupt
+- Added EVENT_INTERRUPT event to VideoUrlSource when a source wants to interrupt current playback
+- Added stream URL source with extra rules for error handling or fallback behavior, still missing UI
+
+### [2.5.0-beta.1]
+
 - BREAKING: Removed URL Source (Playlist, Queue, Custom) from SyncPlayer
 - BREAKING: "PlaylistUI" UI prefab has been removed and deleted from "PlayerControls" prefab
 - BREAKING: "Video Source UI" prefab has been added to PlayerControls as replacement for old PlaylistUI

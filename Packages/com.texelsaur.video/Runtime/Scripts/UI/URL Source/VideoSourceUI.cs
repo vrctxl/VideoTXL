@@ -46,6 +46,8 @@ namespace Texel
 
             contentPanels = new GameObject[boundSourceManager.Count];
             contentButtons = new GameObject[boundSourceManager.Count];
+
+            int firstTemplateSource = -1;
             
             for (int i = 0; i < boundSourceManager.Count; i++)
             {
@@ -65,6 +67,9 @@ namespace Texel
 
                 if (!template)
                     continue;
+
+                if (firstTemplateSource == -1)
+                    firstTemplateSource = 1;
 
                 if (buttonRoot && buttonTemplate) {
                     GameObject button = Instantiate(buttonTemplate);
@@ -104,7 +109,7 @@ namespace Texel
 
             Canvas.ForceUpdateCanvases();
 
-            _Select(0);
+            _Select(firstTemplateSource);
         }
 
         public void _Select(int index)

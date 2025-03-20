@@ -10,12 +10,23 @@ using System;
 
 namespace Texel
 {
+    public enum UrlEntryMode
+    {
+        LoadUrl,
+        AddToQueue,
+    }
+
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class PlayerControls : UdonSharpBehaviour
     {
         public SyncPlayer videoPlayer;
         public AudioManager audioManager;
         public ControlColorProfile colorProfile;
+
+        [Tooltip("Which URL entry mode the controls object will start in")]
+        public UrlEntryMode defaultUrlMode;
+        [Tooltip("Whether the control will remember the user's URL entry mode after inputting a URL, or revert to the default")]
+        public bool rememberUrlMode;
 
         public VRCUrlInputField urlInput;
 
@@ -76,7 +87,8 @@ namespace Texel
         bool loadActive = false;
         VRCUrl pendingSubmit;
         bool pendingFromLoadOverride = false;
-        bool addToQueue = false;
+        UrlEntryMode urlMode;
+        //bool addToQueue = false;
         bool sourcePanelOpen = false;
 
         VRCPlayerApi[] _playerBuffer = new VRCPlayerApi[100];
@@ -93,6 +105,8 @@ namespace Texel
             }
 
             videoPlayer._EnsureInit();
+
+            urlMode = defaultUrlMode;
 
             if (optionsPanel)
                 optionsPanel._SetControls(this);
@@ -237,6 +251,7 @@ namespace Texel
         {
             VRCUrl url = urlInput.GetUrl();
             urlInput.SetUrl(VRCUrl.Empty);
+            urlText.text = "";
 
             // Hack to get around Unity always firing OnEndEdit event for submit and lost focus
             // If loading override was on, but it's off immediately after submit, assume user closed override
@@ -244,7 +259,7 @@ namespace Texel
             if (pendingFromLoadOverride && !loadActive)
                 return;
 
-            bool loadOnQueue = addToQueue;
+            bool loadOnQueue = urlMode == UrlEntryMode.AddToQueue;
             VideoUrlSource addSource = null;
 
             if (!videoPlayer.sourceManager)
@@ -263,7 +278,9 @@ namespace Texel
             //if (Utilities.IsValid(videoPlayer.playlist))
             //    videoPlayer.playlist._SetEnabled(false);
             loadActive = false;
-            addToQueue = false;
+
+            if (!rememberUrlMode)
+                urlMode = defaultUrlMode;
 
             _UpdateAll();
         }
@@ -389,7 +406,11 @@ namespace Texel
             if (!Utilities.IsValid(videoPlayer))
                 return;
 
-            addToQueue = !addToQueue;
+            if (urlMode == UrlEntryMode.AddToQueue)
+                urlMode = UrlEntryMode.LoadUrl;
+            else if (urlMode == UrlEntryMode.LoadUrl)
+                urlMode = UrlEntryMode.AddToQueue;
+
             _UpdateAll();
         }
 
@@ -711,7 +732,7 @@ namespace Texel
                 if (queueInputControl)
                     queueInputControl.SetActive(queueSupported);
 
-                if (queueSupported && addToQueue)
+                if (queueSupported && urlMode == UrlEntryMode.AddToQueue)
                 {
                     if (queueIcon)
                         queueIcon.color = activeColor;

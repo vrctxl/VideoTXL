@@ -124,11 +124,17 @@ namespace Texel
             TXLVideoPlayer vp = GetVideoPlayer();
             if (vp)
             {
-                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/UI/Playlist UI.prefab", vp.transform);
                 if (vp is SyncPlayer && vp.SourceManager)
                 {
-                    Playlist found = vp.SourceManager.sources.First(s => s is Playlist) as Playlist;
-                    PlaylistUI ui = playlistObj.GetComponent<PlaylistUI>();
+                    Playlist found = vp.SourceManager.sources.FirstOrDefault(s => s is Playlist) as Playlist;
+                    if (!found)
+                    {
+                        if (!EditorUtility.DisplayDialog("Playlist Not Found", "The associated video player is not currently configured with a playlist.  The prefab will need to be manually associated with a playlist.", "Place prefab anyway", "Cancel"))
+                            return;
+                    }
+
+                    GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/UI/Playlist UI.prefab", vp.transform);
+                    PlaylistUI ui = playlistObj.GetComponentInChildren<PlaylistUI>();
 
                     if (found && ui)
                         ui.playlist = found;
@@ -147,7 +153,7 @@ namespace Texel
                 GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/UI/PlaylistLoadButton.prefab", vp.transform);
                 if (vp is SyncPlayer && vp.SourceManager)
                 {
-                    Playlist found = vp.sourceManager.sources.First(s => s is Playlist) as Playlist;
+                    Playlist found = vp.sourceManager.sources.FirstOrDefault(s => s is Playlist) as Playlist;
                     PlaylistLoadData ui = playlistObj.GetComponent<PlaylistLoadData>();
 
                     if (found && ui)
@@ -164,18 +170,24 @@ namespace Texel
             TXLVideoPlayer vp = GetVideoPlayer();
             if (vp)
             {
-                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/UI/QueueUI.prefab", vp.transform);
                 if (vp is SyncPlayer && vp.SourceManager)
                 {
-                    PlaylistQueue found = vp.SourceManager.sources.First(s => s is PlaylistQueue) as PlaylistQueue;
-                    PlaylistQueueUI queueUI = playlistObj.GetComponent<PlaylistQueueUI>();
+                    PlaylistQueue found = vp.SourceManager.sources.FirstOrDefault(s => s is PlaylistQueue) as PlaylistQueue;
+                    if (!found)
+                    {
+                        if (!EditorUtility.DisplayDialog("Queue Not Found", "The associated video player is not currently configured with a queue.  The prefab will need to be manually associated with a queue.", "Place prefab anyway", "Cancel"))
+                            return;
+                    }
+
+                    GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/UI/Queue UI.prefab", vp.transform);
+                    PlaylistQueueUI queueUI = playlistObj.GetComponentInChildren<PlaylistQueueUI>();
 
                     if (found && queueUI)
                         queueUI.queue = found;
                 }
             }
             else
-                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/UI/QueueUI.prefab");
+                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.video/Runtime/Prefabs/UI/Queue UI.prefab");
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Video Sources/Add Unity Video Source", true, 220)]
@@ -447,7 +459,7 @@ namespace Texel
         {
             if (vp is SyncPlayer && vp.SourceManager)
             {
-                Playlist found = vp.SourceManager.sources.First(s => s is Playlist) as Playlist;
+                Playlist found = vp.SourceManager.sources.FirstOrDefault(s => s is Playlist) as Playlist;
                 if (found)
                 {
                     AddPlaylistData(found);
@@ -471,7 +483,7 @@ namespace Texel
                     parent = vp.transform;
                     if (vp is SyncPlayer && vp.SourceManager)
                     {
-                        Playlist found = vp.SourceManager.sources.First(s => s is Playlist) as Playlist;
+                        Playlist found = vp.SourceManager.sources.FirstOrDefault(s => s is Playlist) as Playlist;
                         if (found)
                             playlist = found;
                     }

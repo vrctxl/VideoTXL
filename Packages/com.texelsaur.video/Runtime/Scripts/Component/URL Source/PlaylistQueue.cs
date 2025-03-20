@@ -98,6 +98,8 @@ namespace Texel
 
         public override void _SetVideoPlayer(TXLVideoPlayer videoPlayer)
         {
+            _EnsureInit();
+
             this.videoPlayer = videoPlayer;
 
             if (videoPlayer.UrlInfoResolver)
@@ -135,7 +137,7 @@ namespace Texel
 
                 syncQueueUpdate += 1;
 
-                _UpdateHandlers(EVENT_LIST_CHANGE);
+                _EventListChange();
                 RequestSerialization();
             }
         }
@@ -359,7 +361,7 @@ namespace Texel
             syncTrackCount -= (short)popCount;
             syncQueueUpdate += 1;
 
-            _UpdateHandlers(EVENT_LIST_CHANGE);
+            _EventListChange();
         }
 
         public override bool _MovePrev()
@@ -381,7 +383,7 @@ namespace Texel
                 prevQueueUpdate = syncQueueUpdate;
                 _PopulateResolver();
 
-                _UpdateHandlers(EVENT_LIST_CHANGE);
+                _EventListChange();
             }
 
             if (syncTrackChangeUpdate != prevTrackChangeUpdate)
@@ -500,7 +502,7 @@ namespace Texel
                 syncPlayers[destIndex] = dstPlayer;
 
             syncQueueUpdate += 1;
-            _UpdateHandlers(EVENT_LIST_CHANGE);
+            _EventListChange();
 
             RequestSerialization();
 
@@ -662,9 +664,13 @@ namespace Texel
             bool isPlaying = videoPlayer && (videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_LOADING || videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_PLAYING);
 
             if (Networking.IsOwner(gameObject))
-                _UpdateHandlers(EVENT_LIST_CHANGE);
+            {
+                _EventListChange();
+                _EventInterupt();
+            }
 
             RequestSerialization();
+
             return true;
         }
 
@@ -698,6 +704,19 @@ namespace Texel
                 sourceManager._OnSourceTrackChange(sourceIndex);
 
             _UpdateHandlers(EVENT_TRACK_CHANGE);
+        }
+
+        protected void _EventListChange()
+        {
+            _UpdateHandlers(EVENT_LIST_CHANGE);
+        }
+
+        protected void _EventInterupt()
+        {
+            if (sourceManager)
+                sourceManager._OnSourceInterrupt(sourceIndex);
+
+            _UpdateHandlers(EVENT_INTERRUPT);
         }
     }
 }
