@@ -1,20 +1,45 @@
 ﻿using System;
 using UdonSharp;
 using UnityEngine;
+using VRC.SDK3.Components.Video;
 using VRC.SDKBase;
 using VRC.Udon;
 
 namespace Texel
 {
+    public enum VideoEndAction
+    {
+        Default,
+        Retry,
+        Stop,
+        Advance,
+    }
+
+    public enum VideoErrorAction
+    {
+        Default,    // Let video player make its own decision
+        Retry,      // Instruct video player to retry loading the same URL
+        Stop,       // Instruct video player to stop all playback
+        Advance     // Instruct video player to move to next available track/source
+    }
+
+    public enum VideoDisplayOverride
+    {
+        None,
+        Logo,
+    }
+
     public abstract class VideoUrlSource : EventBase
     {
         public const int EVENT_BIND_VIDEOPLAYER = 0;
         public const int EVENT_OPTION_CHANGE = 1;
         public const int EVENT_URL_READY = 2;
-        protected const int EVENT_COUNT = 3;
+        public const int EVENT_INTERRUPT = 3;
+        protected const int EVENT_COUNT = 4;
 
         [SerializeField] protected string sourceName;
         [SerializeField, HideInInspector] protected SourceManager sourceManager;
+        [SerializeField] protected VideoDisplayOverride overrideDisplay; 
 
         protected int sourceIndex = -1;
 
@@ -75,6 +100,16 @@ namespace Texel
             set { }
         }
 
+        public virtual VideoDisplayOverride DisplayOverride
+        {
+            get { return overrideDisplay; }
+        }
+
+        public virtual bool Interruptable
+        {
+            get { return false; }
+        }
+
         public virtual VRCUrl _GetCurrentUrl()
         {
             return VRCUrl.Empty;
@@ -123,6 +158,27 @@ namespace Texel
         public virtual bool _AddTrack(VRCUrl url)
         {
             return false;
+        }
+
+        public virtual void _OnVideoStop() { }
+
+        public virtual void _OnVideoReady() { }
+
+        public virtual void _OnVideoStart() { }
+
+        public virtual VideoEndAction _OnVideoEnd()
+        {
+            return VideoEndAction.Default;
+        }
+
+        public virtual VideoErrorAction _OnVideoError(VideoError error)
+        {
+            return VideoErrorAction.Default;
+        }
+
+        public virtual VideoErrorAction _OnVideoError(VideoErrorTXL error)
+        {
+            return VideoErrorAction.Default;
         }
 
         protected void _EventUrlReady()

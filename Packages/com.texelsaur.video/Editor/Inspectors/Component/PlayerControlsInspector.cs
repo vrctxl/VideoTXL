@@ -48,6 +48,9 @@ namespace Texel
         [ObjectPath("../ColorProfile")]
         SerializedProperty colorProfileProperty;
 
+        SerializedProperty defaultUrlModeProperty;
+        SerializedProperty rememberUrlModeProperty;
+
         [ObjectPath("MainPanel/LowerRow/InputProgress/InputField")]
         SerializedProperty urlInputProperty;
 
@@ -195,6 +198,9 @@ namespace Texel
             volumeControllerProperty = serializedObject.FindProperty(nameof(PlayerControls.audioManager));
             colorProfileProperty = serializedObject.FindProperty(nameof(PlayerControls.colorProfile));
 
+            defaultUrlModeProperty = serializedObject.FindProperty(nameof(PlayerControls.defaultUrlMode));
+            rememberUrlModeProperty = serializedObject.FindProperty(nameof(PlayerControls.rememberUrlMode));
+
             urlInputProperty = serializedObject.FindProperty(nameof(PlayerControls.urlInput));
 
             volumeSliderControlProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeSliderControl));
@@ -257,6 +263,9 @@ namespace Texel
                 UpdateColors();
 
             EditorGUILayout.Space();
+
+            EditorGUILayout.PropertyField(defaultUrlModeProperty);
+            EditorGUILayout.PropertyField(rememberUrlModeProperty);
 
             CheckUrlInputValid();
 

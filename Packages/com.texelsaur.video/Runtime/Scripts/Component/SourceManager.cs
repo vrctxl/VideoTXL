@@ -181,8 +181,9 @@ namespace Texel
 
             foreach (VideoUrlSource source in sources)
             {
-                if (source._CanMoveNext())
-                    return source._MoveNext();
+                _DebugLowLevel($"Source {source} valid={source.IsValid} aa={source.AutoAdvance} canMove={source._CanMoveNext()}");
+                if (source._CanMoveNext() && source._MoveNext())
+                    return true;
             }
 
             return false;
@@ -194,8 +195,8 @@ namespace Texel
 
             foreach (VideoUrlSource source in sources)
             {
-                if (source._CanMovePrev())
-                    return source._MovePrev();
+                if (source._CanMovePrev() && source._MovePrev())
+                    return true;
             }
 
             return false;
@@ -208,6 +209,7 @@ namespace Texel
 
             foreach (VideoUrlSource source in sources)
             {
+                _DebugLowLevel($"Source {source} valid={source.IsValid} aa={source.AutoAdvance} canMove={source._CanMoveNext()}");
                 if (!source.IsValid || !source.AutoAdvance)
                     continue;
 
@@ -239,6 +241,21 @@ namespace Texel
         protected internal void _OnSourceTrackChange(int sourceIndex)
         {
             _UpdateHandlers(EVENT_TRACK_CHANGE, sourceIndex);
+        }
+
+        public void _OnSourceInterrupt(int sourceIndex)
+        {
+            if (sourceIndex < 0 || sourceIndex >= sources.Length)
+                return;
+
+            if (readySourceIndex >= 0 && !sources[readySourceIndex].Interruptable)
+                return;
+
+            if (!sources[sourceIndex]._CanMoveNext())
+                return;
+
+            if (Networking.IsOwner(videoPlayer.gameObject))
+                _AdvanceNext(videoPlayer.currentUrl.Get());
         }
 
         protected internal void _OnUrlReady(int sourceIndex)

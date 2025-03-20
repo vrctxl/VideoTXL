@@ -460,8 +460,13 @@ namespace Texel
             if (!_TakeControl())
                 return false;
 
+            bool onSource = videoPlayer && videoPlayer.currentUrlSource == this;
+
             if (!trackCatalogMode && CurrentIndex >= 0)
-                CurrentIndex -= 1;
+            {
+                if (onSource)
+                    CurrentIndex -= 1;
+            }
             else if (!trackCatalogMode && _Repeats())
                 CurrentIndex = (short)(playlist.Length - 1);
             else
