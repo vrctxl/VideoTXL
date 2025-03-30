@@ -16,6 +16,7 @@ namespace Texel
         public GameObject layoutGroup;
         public VRCUrlInputField urlInput;
 
+        bool initialized = false;
         bool loadActive = false;
         VRCUrl pendingSubmit;
         bool pendingFromLoadOverride = false;
@@ -28,6 +29,39 @@ namespace Texel
 
             _ClearEntries();
             _BindQueue(queue);
+
+            initialized = true;
+        }
+
+        private void OnEnable()
+        {
+            if (!initialized)
+                return;
+
+            _RegisterListeners();
+
+            SendCustomEventDelayedFrames(nameof(_OnListChange), 1);
+        }
+
+        private void OnDisable()
+        {
+            _UnregisterListeners();
+        }
+
+        void _RegisterListeners()
+        {
+            if (queue)
+            {
+                queue._Register(PlaylistQueue.EVENT_LIST_CHANGE, this, nameof(_OnListChange));
+            }
+        }
+
+        void _UnregisterListeners()
+        {
+            if (queue)
+            {
+                queue._Unregister(PlaylistQueue.EVENT_LIST_CHANGE, this, nameof(_OnListChange));
+            }
         }
 
         public override bool _CompatibleSource(VideoUrlSource source)
@@ -60,7 +94,7 @@ namespace Texel
             }
 
             this.queue = queue;
-            if (queue)
+            if (queue && gameObject.activeInHierarchy)
             {
                 queue._Register(PlaylistQueue.EVENT_LIST_CHANGE, this, nameof(_OnListChange));
             }

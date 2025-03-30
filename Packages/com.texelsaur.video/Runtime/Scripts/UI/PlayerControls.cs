@@ -70,7 +70,7 @@ namespace Texel
 
         public Text playlistText;
 
-        public OptionsUI optionsPanel; 
+        public OptionsUI optionsPanel;
         public GameObject playlistPanel;
 
         Color normalColor = new Color(1f, 1f, 1f, .8f);
@@ -84,6 +84,7 @@ namespace Texel
         [NonSerialized]
         public string instanceOwner = "";
 
+        bool initialized = false;
         bool loadActive = false;
         VRCUrl pendingSubmit;
         bool pendingFromLoadOverride = false;
@@ -130,22 +131,12 @@ namespace Texel
             if (Utilities.IsValid(audioManager))
                 audioManager._RegisterControls(this);
 
+            if (gameObject.activeInHierarchy)
+                _RegisterListeners();
+
             if (Utilities.IsValid(videoPlayer))
             {
-                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_VideoStateUpdate");
-                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_LOCK_UPDATE, this, "_VideoLockUpdate");
-                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_TRACKING_UPDATE, this, "_VideoTrackingUpdate");
-                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, "_OnVideoInfoUpdate");
-                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_PLAYLIST_UPDATE, this, "_VideoPlaylistUpdate");
-                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_READY, this, "_VideoStateUpdate");
-
                 unlockedIcon.color = normalColor;
-
-                if (Utilities.IsValid(videoPlayer.accessControl))
-                    videoPlayer.accessControl._Register(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateAccess));
-
-                if (Utilities.IsValid(videoPlayer.urlInfoResolver))
-                    videoPlayer.urlInfoResolver._Register(UrlInfoResolver.EVENT_URL_INFO, this, nameof(_OnUrlInfoReady), nameof(internalArgUrl));
 
                 if (playlistPanel && videoPlayer.SourceManager)
                 {
@@ -161,7 +152,63 @@ namespace Texel
             SendCustomEventDelayedFrames("_RefreshPlayerAccessIcon", 1);
 #endif
 
+            initialized = true;
+
             _UpdateAll();
+        }
+
+        private void OnEnable()
+        {
+            if (!initialized)
+                return;
+
+            _RegisterListeners();
+
+            _RefreshPlayerAccessIcon();
+            _UpdateAll();
+        }
+
+        private void OnDisable()
+        {
+            _UnregisterListeners();
+        }
+
+        void _RegisterListeners()
+        {
+            if (Utilities.IsValid(videoPlayer))
+            {
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_VideoStateUpdate");
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_LOCK_UPDATE, this, "_VideoLockUpdate");
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_TRACKING_UPDATE, this, "_VideoTrackingUpdate");
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, "_OnVideoInfoUpdate");
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_PLAYLIST_UPDATE, this, "_VideoPlaylistUpdate");
+                videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_READY, this, "_VideoStateUpdate");
+
+                if (Utilities.IsValid(videoPlayer.accessControl))
+                    videoPlayer.accessControl._Register(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateAccess));
+
+                if (Utilities.IsValid(videoPlayer.urlInfoResolver))
+                    videoPlayer.urlInfoResolver._Register(UrlInfoResolver.EVENT_URL_INFO, this, nameof(_OnUrlInfoReady), nameof(internalArgUrl));
+            }
+        }
+
+        void _UnregisterListeners()
+        {
+            if (Utilities.IsValid(videoPlayer))
+            {
+                videoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_VideoStateUpdate");
+                videoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_LOCK_UPDATE, this, "_VideoLockUpdate");
+                videoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_TRACKING_UPDATE, this, "_VideoTrackingUpdate");
+                videoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, "_OnVideoInfoUpdate");
+                videoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_PLAYLIST_UPDATE, this, "_VideoPlaylistUpdate");
+                videoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_READY, this, "_VideoStateUpdate");
+
+                if (Utilities.IsValid(videoPlayer.accessControl))
+                    videoPlayer.accessControl._Unregister(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateAccess));
+
+                if (Utilities.IsValid(videoPlayer.urlInfoResolver))
+                    videoPlayer.urlInfoResolver._Unregister(UrlInfoResolver.EVENT_URL_INFO, this, nameof(_OnUrlInfoReady));
+            }
         }
 
         void _DisableAllVideoControls()
@@ -478,7 +525,7 @@ namespace Texel
 
             videoPlayer._SetSourceMode(mode);
         }
-        
+
         public void _ToggleVolumeMute()
         {
             if (inVolumeControllerUpdate)
@@ -651,13 +698,15 @@ namespace Texel
                 repeatIcon.color = normalColor;
                 if (repeatOneIcon)
                     repeatOneIcon.enabled = false;
-            } else if (repeatMode == TXLRepeatMode.All)
+            }
+            else if (repeatMode == TXLRepeatMode.All)
             {
                 repeatIcon.enabled = true;
                 repeatIcon.color = activeColor;
                 if (repeatOneIcon)
                     repeatOneIcon.enabled = false;
-            } else if (repeatMode == TXLRepeatMode.Single)
+            }
+            else if (repeatMode == TXLRepeatMode.Single)
             {
                 repeatIcon.enabled = false;
                 if (repeatOneIcon)
@@ -704,7 +753,8 @@ namespace Texel
             {
                 SetPlaceholderText("Invalid video player controls setup");
                 return;
-            } else if (!videoPlayer.VideoManager)
+            }
+            else if (!videoPlayer.VideoManager)
             {
                 SetPlaceholderText("Invalid video player setup");
                 return;

@@ -674,6 +674,9 @@ namespace Texel
             AudioSource audioLinkSource = null;
             AudioSource vrslSource = null;
 
+            AudioSource first2DSource = null;
+            AudioSource firstSource = null;
+
             for (int i = 0; i < activeAudioGroup.channelReference.Length; i++)
             {
                 AudioChannel channel = activeAudioGroup.channelReference[i];
@@ -682,6 +685,11 @@ namespace Texel
                     AudioSource channelSource = activeAudioGroup.channelAudio[i];
                     if (channelSource)
                     {
+                        if (!firstSource)
+                            firstSource = channelSource;
+                        if (!first2DSource && channelSource.spatialBlend < 0.1f)
+                            first2DSource = channelSource;
+
                         if (channel.audioLinkSource)
                             audioLinkSource = channelSource;
                         if (channel.vrslAudioDMXSource)
@@ -691,7 +699,14 @@ namespace Texel
             }
 
             if (!audioLinkSource)
-                audioLinkSource = selectedVideoSource.avproReservedChannel;
+            {
+                if (first2DSource)
+                    audioLinkSource = first2DSource;
+                else if (firstSource)
+                    audioLinkSource = firstSource;
+                else
+                    audioLinkSource = selectedVideoSource.avproReservedChannel;
+            }
 
             _UpdateAudioLink(audioLinkSource);
             _UpdateVRSL(vrslSource);

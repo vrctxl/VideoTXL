@@ -62,6 +62,8 @@ namespace Texel
         short prevPlaylistSerial = 0;
         short prevShuffleSerial = 0;
         int queueIndex = -1;
+        int listChangeSerial = 0;
+        int trackChangeSerial = 0;
 
         bool _initDeserialize = false;
 
@@ -129,7 +131,7 @@ namespace Texel
             _PostLoadShuffle();
             syncShuffleSerial += 1;
 
-            _UpdateHandlers(EVENT_LIST_CHANGE);
+            _EventListChange();
 
             _PostLoadTrack();
 
@@ -209,6 +211,16 @@ namespace Texel
             get { return playlistData ? playlistData.playlistName : ""; }
         }
 
+        public int ListChangeSerial
+        {
+            get { return listChangeSerial; }
+        }
+
+        public int TrackChangeSerial
+        {
+            get { return trackChangeSerial; }
+        }
+
         public override bool _CanMoveNext()
         {
             if (trackCatalogMode || trackCount == 0)
@@ -243,7 +255,7 @@ namespace Texel
             else
                 DebugLog("Loading empty playlist data");
 
-            _UpdateHandlers(EVENT_LIST_CHANGE);
+            _EventListChange();
         }
 
         public void _LoadFromCatalogueData(PlaylistData data)
@@ -271,7 +283,7 @@ namespace Texel
             CurrentIndex = -1;
 
             _PostLoadShuffle();
-            _UpdateHandlers(EVENT_LIST_CHANGE);
+            _EventListChange();
 
             _PostLoadTrack();
 
@@ -295,7 +307,7 @@ namespace Texel
             CurrentIndex = -1;
 
             _PostLoadShuffle();
-            _UpdateHandlers(EVENT_LIST_CHANGE);
+            _EventListChange();
 
             _PostLoadTrack();
 
@@ -611,7 +623,7 @@ namespace Texel
             if (listChange)
             {
                 syncShuffleSerial += 1;
-                _UpdateHandlers(EVENT_LIST_CHANGE);
+                _EventListChange();
             }
 
             RequestSerialization();
@@ -716,7 +728,7 @@ namespace Texel
             }
 
             if (listChange)
-                _UpdateHandlers(EVENT_LIST_CHANGE);
+                _EventListChange();
 
             if (syncCurrentIndexSerial != prevCurrentIndexSerial)
             {
@@ -727,10 +739,19 @@ namespace Texel
 
         protected void _EventTrackChange()
         {
+            trackChangeSerial += 1;
+
             if (sourceManager)
                 sourceManager._OnSourceTrackChange(sourceIndex);
 
             _UpdateHandlers(EVENT_TRACK_CHANGE);
+        }
+
+        protected void _EventListChange()
+        {
+            listChangeSerial += 1;
+
+            _UpdateHandlers(EVENT_LIST_CHANGE);
         }
 
         void DebugLog(string message)

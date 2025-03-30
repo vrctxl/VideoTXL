@@ -69,7 +69,7 @@ namespace Texel
                     continue;
 
                 if (firstTemplateSource == -1)
-                    firstTemplateSource = 1;
+                    firstTemplateSource = i;
 
                 if (buttonRoot && buttonTemplate) {
                     GameObject button = Instantiate(buttonTemplate);
@@ -119,6 +119,20 @@ namespace Texel
                 if (contentPanels[i])
                     contentPanels[i].SetActive(i == index);
             }
+        }
+
+        public void _SelectActive()
+        {
+            if (!boundSourceManager || !boundSourceManager.VideoPlayer)
+                return;
+
+            VideoUrlSource active = boundSourceManager.VideoPlayer.currentUrlSource;
+            if (!active)
+                return;
+
+            int activeIndex = boundSourceManager._GetSourceIndex(active);
+            if (contentPanels[activeIndex] && contentButtons[activeIndex])
+                _Select(activeIndex);
         }
     }
 }

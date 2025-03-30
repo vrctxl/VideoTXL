@@ -314,18 +314,17 @@ namespace Texel
         public void _BindVideoPlayer(TXLVideoPlayer videoPlayer)
         {
             _EnsureInit();
-
-            TXLVideoPlayer prevPlayer = this.videoPlayer;
-            if (prevPlayer)
-            {
-                prevPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, nameof(_InternalOnVideoStateUpdate));
-                prevPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_SOURCE_CHANGE, this, nameof(_InternalOnSourceChanged));
-            }
+            _UnregisterVideoPlayerListeners();
 
             captureRenderer = null;
             _screenSource = VideoSource.VIDEO_SOURCE_NONE;
 
             this.videoPlayer = videoPlayer;
+            _RegisterVideoPlayerListeners();
+        }
+
+        void _RegisterVideoPlayerListeners()
+        {
             if (videoPlayer)
             {
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, nameof(_InternalOnVideoStateUpdate));
@@ -334,6 +333,15 @@ namespace Texel
 
             _InternalOnSourceChanged();
             _InternalOnVideoStateUpdate();
+        }
+
+        void _UnregisterVideoPlayerListeners()
+        {
+            if (videoPlayer)
+            {
+                videoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, nameof(_InternalOnVideoStateUpdate));
+                videoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_SOURCE_CHANGE, this, nameof(_InternalOnSourceChanged));
+            }
         }
 
         void _InitVRSL()
@@ -418,8 +426,15 @@ namespace Texel
             _ResetCheckScreenMaterial();
         }
 
+        private void OnEnable()
+        {
+            if (Initialized)
+                _RegisterVideoPlayerListeners();
+        }
+
         private void OnDisable()
         {
+            _UnregisterVideoPlayerListeners();
 
 #if COMPILER_UDONSHARP
             _RestoreMaterialOverrides();
@@ -1129,6 +1144,8 @@ namespace Texel
         public void _InternalCheckUpdateScreenMaterial()
         {
             pendingUpdates -= 1;
+            if (!gameObject.activeInHierarchy)
+                return;
 
             if (_screenMode != SCREEN_MODE_NORMAL)
             {

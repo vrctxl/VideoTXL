@@ -2,9 +2,21 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.3]
+
+- Audio Manager now uses ReservedAudioSource for AudioLink as last resort
+- Audio profiles updated to select explicit AudioLink source for AVPro
+- Screen manager will temporarily unregister its listeners when disabled
+- Playlist exposes ListChangeSerial and TrackChangeSerial properties
+- Added additional URLs list to Stream Source
+- Added synced custom URL to Stream Source
+- Player Controls (for SyncPlayer) will temporarily unregister its listeners when disabled
+- Playlist UI and Playlist Queue UI will temporarily unregister its listeners when disabled
+- Video Source UI will automatically select the active playing source when opened
+
 ### [2.5.0-beta.2]
 
-- Fixed erros in several TXL GameObject menu add entries
+- Fixed errors in several TXL GameObject menu add entries
 - Added option to player controls to set default URL entry mode (queue vs. normal)
 - Added option to player controls to remember URL entry mode (queue vs. normal)
 - Added option for URL sources to override video display with the logo image
