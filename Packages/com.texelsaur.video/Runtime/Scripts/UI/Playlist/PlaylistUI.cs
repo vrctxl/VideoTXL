@@ -20,10 +20,12 @@ namespace Texel
         public GameObject layoutGroup;
         public Text titleText;
 
+        bool initialized = false;
         TXLVideoPlayer backingVideoPlayer;
         //PlaylistData data;
         PlaylistUIEntry[] entries;
         RectTransform[] entriesRT;
+        int lastListChangeSerial = -1;
         int lastSelectedEntry = -1;
 
         void Start()
@@ -32,6 +34,8 @@ namespace Texel
 
             if (Utilities.IsValid(playlist))
                 _InitFromPlaylist(playlist);
+
+            initialized = true;
         }
 
         public override bool _CompatibleSource(VideoUrlSource source)
@@ -68,10 +72,60 @@ namespace Texel
             if (entries == null)
                 entries = new PlaylistUIEntry[0];
 
+            this.playlist = playlist;
+
+            if (gameObject.activeInHierarchy)
+            {
+                _RegisterListeners();
+
+                SendCustomEventDelayedFrames("_InitUI", 1);
+            }
+        }
+
+        public void _InitUI()
+        {
+            _RebuildList();
+        }
+
+        private void OnEnable()
+        {
+            if (!initialized)
+                return;
+
+            _RegisterListeners();
+
+            if (playlist && lastListChangeSerial < playlist.ListChangeSerial) {
+                lastListChangeSerial = playlist.ListChangeSerial;
+                _RebuildList();
+            }
+        }
+
+        private void OnDisable()
+        {
+            _UnregisterListeners();
+        }
+
+        public void _OnBindVideoPlayer()
+        {
+            if (backingVideoPlayer)
+            {
+                backingVideoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_TRACKING_UPDATE, this, nameof(_OnVideoTrackingUpdate));
+                backingVideoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, nameof(_OnVideoInfo));
+            }
+
+            backingVideoPlayer = null;
+            if (playlist && gameObject.activeInHierarchy)
+            {
+                backingVideoPlayer = playlist.VideoPlayer;
+                backingVideoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_TRACKING_UPDATE, this, nameof(_OnVideoTrackingUpdate));
+                backingVideoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, nameof(_OnVideoInfo));
+            }
+        }
+
+        void _RegisterListeners()
+        {
             if (Utilities.IsValid(playlist))
             {
-                this.playlist = playlist;
-
                 playlist._Register(VideoUrlSource.EVENT_BIND_VIDEOPLAYER, this, nameof(_OnBindVideoPlayer));
                 playlist._Register(Playlist.EVENT_LIST_CHANGE, this, nameof(_OnListChange));
                 playlist._Register(Playlist.EVENT_TRACK_CHANGE, this, nameof(_OnTrackChange));
@@ -84,20 +138,24 @@ namespace Texel
                     backingVideoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, nameof(_OnVideoInfo));
                 }
             }
-
-            SendCustomEventDelayedFrames("_InitUI", 1);
         }
 
-        public void _InitUI()
+        void _UnregisterListeners()
         {
-            _RebuildList();
-        }
+            if (Utilities.IsValid(playlist))
+            {
+                playlist._Unregister(VideoUrlSource.EVENT_BIND_VIDEOPLAYER, this, nameof(_OnBindVideoPlayer));
+                playlist._Unregister(Playlist.EVENT_LIST_CHANGE, this, nameof(_OnListChange));
+                playlist._Unregister(Playlist.EVENT_TRACK_CHANGE, this, nameof(_OnTrackChange));
+                playlist._Unregister(VideoUrlSource.EVENT_OPTION_CHANGE, this, nameof(_OnOptionChange));
 
-        public void _OnBindVideoPlayer()
-        {
-            backingVideoPlayer = playlist.VideoPlayer;
-            backingVideoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_TRACKING_UPDATE, this, nameof(_OnVideoTrackingUpdate));
-            backingVideoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, nameof(_OnVideoInfo));
+                if (Utilities.IsValid(playlist.VideoPlayer))
+                {
+                    backingVideoPlayer = playlist.VideoPlayer;
+                    backingVideoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_TRACKING_UPDATE, this, nameof(_OnVideoTrackingUpdate));
+                    backingVideoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, nameof(_OnVideoInfo));
+                }
+            }
         }
 
         public void _OnTrackChange()
@@ -147,7 +205,11 @@ namespace Texel
         public void _OnListChange()
         {
             Debug.Log("TXL Event _OnListChange");
-            _RebuildList();
+
+            if (lastListChangeSerial < playlist.ListChangeSerial)
+                _RebuildList();
+
+            lastListChangeSerial = playlist.ListChangeSerial;
         }
 
         void _RebuildList()

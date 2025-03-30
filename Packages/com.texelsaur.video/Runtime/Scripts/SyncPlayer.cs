@@ -1699,6 +1699,7 @@ namespace Texel
             VRCPlayerApi owner = Networking.GetOwner(gameObject);
             debugState._SetValue("isQuest", IsQuest.ToString());
             debugState._SetValue("owner", Utilities.IsValid(owner) ? owner.displayName : "--");
+            debugState._SetValue("currentUrlSource", Utilities.IsValid(currentUrlSource) ? currentUrlSource.ToString() : "--");
             debugState._SetValue("syncVideoSource", _syncVideoSource.ToString());
             debugState._SetValue("syncVideoSourceOverride", _syncVideoSourceOverride.ToString());
             debugState._SetValue("syncUrl", _syncUrl.ToString());

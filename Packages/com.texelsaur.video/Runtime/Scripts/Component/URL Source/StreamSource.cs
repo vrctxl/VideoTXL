@@ -13,6 +13,8 @@ namespace Texel
         TXLVideoPlayer videoPlayer;
 
         [SerializeField] internal VRCUrl defaultStreamUrl;
+        [SerializeField] internal VRCUrl[] additionalStreamUrls;
+        [SerializeField] internal bool allowCustomUrl = false;
 
         [SerializeField] internal bool loadOnStart = false;
         [SerializeField] internal bool interruptible = false;
@@ -23,6 +25,8 @@ namespace Texel
 
         [UdonSynced]
         VRCUrl syncStreamUrl;
+        [UdonSynced, FieldChangeCallback(nameof(SyncCustomUrl))]
+        VRCUrl syncCustomUrl;
         [UdonSynced, FieldChangeCallback(nameof(SyncReady))]
         bool syncReady;
         [UdonSynced]
@@ -149,6 +153,28 @@ namespace Texel
                     if (syncReady && URLUtil.WellFormedUrl(syncStreamUrl))
                         _EventUrlReady();
                 }
+            }
+        }
+
+        internal VRCUrl SyncCustomUrl
+        {
+            get { return syncCustomUrl; }
+            set
+            {
+                syncCustomUrl = value;
+            }
+        }
+
+        public VRCUrl CustomUrl
+        {
+            get { return syncCustomUrl; }
+            set
+            {
+                if (!_TakeControl())
+                    return;
+
+                SyncCustomUrl = value;
+                RequestSerialization();
             }
         }
 
