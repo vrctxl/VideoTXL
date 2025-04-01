@@ -17,7 +17,7 @@ namespace Texel
 
         SourceManager boundSourceManager;
         GameObject[] contentPanels;
-        GameObject[] contentButtons;
+        VideoSourceUIButton[] contentButtons;
 
         VideoSourceUIBase[] sourceTemplates;
 
@@ -45,7 +45,7 @@ namespace Texel
             boundSourceManager = sourceManager;
 
             contentPanels = new GameObject[boundSourceManager.Count];
-            contentButtons = new GameObject[boundSourceManager.Count];
+            contentButtons = new VideoSourceUIButton[boundSourceManager.Count];
 
             int firstTemplateSource = -1;
             
@@ -73,10 +73,10 @@ namespace Texel
 
                 if (buttonRoot && buttonTemplate) {
                     GameObject button = Instantiate(buttonTemplate);
-                    contentButtons[i] = button;
 
                     VideoSourceUIButton script = button.GetComponent<VideoSourceUIButton>();
                     script._Init(this, i, source.SourceName);
+                    contentButtons[i] = script;
 
                     button.transform.SetParent(buttonRoot.transform);
 
@@ -118,6 +118,8 @@ namespace Texel
             {
                 if (contentPanels[i])
                     contentPanels[i].SetActive(i == index);
+                if (contentButtons[i])
+                    contentButtons[i]._SetActive(i == index);
             }
         }
 

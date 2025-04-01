@@ -68,6 +68,7 @@ namespace Texel
         [Tooltip("The screen material to apply when an untrusted URL has been loaded and untrusted URLs are blocked.  Falls back to Error Material.")]
         [SerializeField] internal Material errorBlockedMaterial;
 
+        int meshCount = 0;
         [SerializeField] internal MeshRenderer[] screenMesh;
         [SerializeField] internal int[] screenMaterialIndex;
 
@@ -97,9 +98,11 @@ namespace Texel
         [Tooltip("The screen texture to apply in Unity's editor runtime")]
         [SerializeField] internal Texture editorTexture;
 
+        int materialCount = 0;
         [SerializeField] internal Material[] materialUpdateList;
         [SerializeField] internal ScreenPropertyMap[] materialPropertyList;
 
+        int propBlockCount = 0;
         [SerializeField] internal MeshRenderer[] propMeshList;
         [SerializeField] internal int[] propMaterialOverrideList;
         [SerializeField] internal int[] propMaterialIndexList;
@@ -111,6 +114,7 @@ namespace Texel
         [SerializeField] internal CustomRenderTexture outputCRT;
         [SerializeField] internal ScreenPropertyMap outputMaterialProperties;
 
+        int crtCount = 0;
         [SerializeField] internal CustomRenderTexture[] renderOutCrt;
         [SerializeField] internal ScreenPropertyMap[] renderOutMatProps;
         [SerializeField] internal Vector2Int[] renderOutSize;
@@ -150,21 +154,6 @@ namespace Texel
         string[] shaderPropFitList;
         string[] shaderPropAspectRatioList;
         string[] shaderPropDoubleBufferedList;
-
-        int[] globalPropMainTexList;
-        int[] globalPropAVProList;
-        int[] globalPropInvertList;
-        int[] globalPropGammaList;
-        int[] globalPropFitList;
-        int[] globalPropAspectRatioList;
-
-        Material[] _originalScreenMaterial;
-        Texture[] _originalMaterialTexture;
-        int[] _originalMatAVPro;
-        int[] _originalMatInvert;
-        int[] _originalMatGamma;
-        int[] _originalMatFit;
-        float[] _originalMatAspectRatio;
 
         public const int SCREEN_MODE_UNINITIALIZED = -1;
         public const int SCREEN_MODE_NORMAL = 0;
@@ -210,7 +199,7 @@ namespace Texel
         float currentAspectRatio;
         bool currentValid = false;
         Vector2Int currentRes;
-        RenderTexture vrslBuffer;
+        
 
         int globalTexPropertyId = -1;
 
@@ -283,7 +272,7 @@ namespace Texel
             _InitVRSL();
 
 #if COMPILER_UDONSHARP
-            _InitMaterialOverrides();
+            _SetupMeshMaterials();
             _InitTextureOverrides();
 #endif
 
@@ -344,81 +333,7 @@ namespace Texel
             }
         }
 
-        void _InitVRSL()
-        {
-            if (!vrslDmxRT)
-                return;
-
-            _RefreshVRSL();        
-        }
-
-        void _UpdateVRSLBuffer()
-        {
-            if (!vrslDmxRT)
-                return;
-
-            bool shouldBuffer = false;
-            if (vrslDoubleBufferAVPro && _screenSource == VideoSource.VIDEO_SOURCE_AVPRO)
-                shouldBuffer = true;
-            if (vrslDoubleBufferUnity && _screenSource == VideoSource.VIDEO_SOURCE_UNITY)
-                shouldBuffer = true;
-
-            if (shouldBuffer)
-            {
-                if (!vrslBuffer)
-                {
-                    vrslBuffer = new RenderTexture(vrslDmxRT.descriptor);
-                    vrslBuffer.Create();
-                    _DebugLog($"Initialized VRSL buffer {vrslBuffer.width}x{vrslBuffer.height}");
-                }
-
-                if (vrslBlitMat)
-                {
-                    vrslBlitMat.SetTexture("_BufferTex", vrslBuffer);
-                    vrslBlitMat.SetInt("_DoubleBuffered", shouldBuffer ? 1 : 0);
-                }
-            }
-            else
-            {
-                if (vrslBuffer)
-                {
-                    vrslBuffer.Release();
-                    vrslBuffer = null;
-                    _DebugLog("Released VRSL buffer");
-                }
-
-                if (vrslBlitMat)
-                {
-                    vrslBlitMat.SetTexture("_BufferTex", Texture2D.blackTexture);
-                    vrslBlitMat.SetInt("_DoubleBuffered", 0);
-                }
-            }
-        }
-
-        void _RefreshVRSL()
-        {
-            if (!vrslDmxRT)
-                return;
-
-            bool horizontal = false;
-            if (vrslController)
-            {
-                int mode = (int)vrslController.GetProgramVariable("DMXMode");
-                horizontal = mode == 0;
-            }
-            else
-                horizontal = vrslDmxRT.height == 960;
-
-            _UpdateVRSLBuffer();
-
-            if (vrslBlitMat)
-            {
-                vrslBlitMat.SetTexture("_MainTex", vrslDmxRT);
-                vrslBlitMat.SetVector("_MainTexSize", new Vector4(vrslDmxRT.width, vrslDmxRT.height, 0, 0));
-                vrslBlitMat.SetVector("_OffsetScale", new Vector4(vrslOffsetScale.x, vrslOffsetScale.y, vrslOffsetScale.z, vrslOffsetScale.z));
-                vrslBlitMat.SetInt("_Horizontal", horizontal ? 1 : 0);
-            }
-        }
+        
 
         public override void OnImageLoadSuccess(IVRCImageDownload result)
         {
@@ -437,8 +352,8 @@ namespace Texel
             _UnregisterVideoPlayerListeners();
 
 #if COMPILER_UDONSHARP
-            _RestoreMaterialOverrides();
-            _RestoreTextureOverrides();
+            _RestoreMeshMaterialOverrides();
+            _RestoreSharedMaterialOverrides();
 #endif
         }
 
@@ -481,11 +396,7 @@ namespace Texel
             get { return currentAspectRatio; }
         }
 
-        public bool VRSLEnabled
-        {
-            get { return vrslEnabled; }
-            set { vrslEnabled = value; }
-        }
+        
 
         public bool _GetVRSLDoubleBuffered(VideoSourceBackend type)
         {
@@ -506,65 +417,7 @@ namespace Texel
 
             _UpdateVRSLBuffer();
         }
-
-        public bool _GetCRTDoubleBuffered(VideoSourceBackend type, int crtIndex)
-        {
-            if (crtIndex < 0 || crtIndex >= renderOutCrt.Length)
-                return false;
-
-            if (type == VideoSourceBackend.AVPro)
-                return renderOutDoubleBufferAVPro[crtIndex];
-            if (type == VideoSourceBackend.Unity)
-                return renderOutDoubleBufferUnity[crtIndex];
-
-            return false;
-        }
-
-        public void _SetCRTDoubleBuffered(VideoSourceBackend type, int crtIndex, bool state)
-        {
-            if (crtIndex < 0 || crtIndex >= renderOutCrt.Length)
-                return;
-
-            if (type == VideoSourceBackend.AVPro)
-                renderOutDoubleBufferAVPro[crtIndex] = state;
-            if (type == VideoSourceBackend.Unity)
-                renderOutDoubleBufferUnity[crtIndex] = state;
-
-            _UpdateCRTDoubleBuffer(crtIndex);
-        }
-
-        void _InitMaterialOverrides()
-        {
-            useMaterialOverrides = true;
-
-            if (!Utilities.IsValid(screenMesh) || screenMesh.Length == 0)
-            {
-                useMaterialOverrides = false;
-                return;
-            }
-
-            // Capture original screen materials
-            _originalScreenMaterial = new Material[screenMesh.Length];
-            for (int i = 0; i < screenMesh.Length; i++)
-            {
-                if (screenMesh[i] == null)
-                {
-                    screenMaterialIndex[i] = -1;
-                    continue;
-                }
-
-                int index = screenMaterialIndex[i];
-                Material[] materials = screenMesh[i].sharedMaterials;
-                if (index < 0 || index >= materials.Length)
-                {
-                    screenMaterialIndex[i] = -1;
-                    continue;
-                }
-
-                _originalScreenMaterial[i] = materials[index];
-            }
-        }
-
+        
         void _InitTextureOverrides()
         {
             useTextureOverrides = true;
@@ -583,20 +436,7 @@ namespace Texel
             // Legacy upgrade
             if (useRenderOut && !hasCrtUpdates)
             {
-                renderOutCrt = new CustomRenderTexture[1];
-                renderOutMatProps = new ScreenPropertyMap[1];
-                renderOutSize = new Vector2Int[1];
-                renderOutTargetAspect = new float[1];
-                renderOutResize = new bool[1];
-                renderOutExpandSize = new bool[1];
-
-                renderOutCrt[0] = outputCRT;
-                renderOutMatProps[0] = outputMaterialProperties;
-                renderOutSize[0] = outputCRT ? new Vector2Int(outputCRT.width, outputCRT.height) : Vector2Int.zero;
-                renderOutTargetAspect[0] = 0;
-                renderOutResize[0] = false;
-                renderOutExpandSize[0] = false;
-
+                _LegacyCRTUpgrade();
                 hasCrtUpdates = true;
             }
 
@@ -617,175 +457,19 @@ namespace Texel
             shaderPropDoubleBufferedList = new string[totalPropLength];
 
             // Material Props
-            if (hasMaterialUpdates)
-            {
-                for (int i = 0; i < materialUpdateList.Length; i++)
-                {
-                    if (materialUpdateList[i] == null)
-                        continue;
-
-                    ScreenPropertyMap propMap = materialPropertyList[i];
-                    if (propMap)
-                        _LoadPropertyMap(baseIndexMat + i, propMap);
-                    else
-                        _TryLoadDefaultProps(baseIndexMat + i, materialUpdateList[i]);
-                }
-            }
+            _SetupSharedMaterials();
 
             // Property Block Props
-            if (hasPropupdates)
-            {
-                for (int i = 0; i < propMeshList.Length; i++)
-                {
-                    if (propMeshList[i] == null)
-                        continue;
-
-
-                    ScreenPropertyMap propMap = propPropertyList[i];
-                    if (propMap)
-                        _LoadPropertyMap(baseIndexProp + i, propMap);
-                    else
-                    {
-                        Material[] mats = propMeshList[i].sharedMaterials;
-                        bool useMatIndex = propMaterialOverrideList[i] == 1;
-                        int matIndex = propMaterialIndexList[i];
-
-                        if (useMatIndex && matIndex < mats.Length && mats[matIndex])
-                            _TryLoadDefaultProps(baseIndexProp + i, mats[matIndex]);
-                        else if (!useMatIndex)
-                        {
-                            for (int j = 0; j < mats.Length; j++)
-                            {
-                                if (_TryLoadDefaultProps(baseIndexProp + i, mats[j]))
-                                    break;
-                            }
-                        }
-                    }
-                }
-            }
+            _SetupPropertyBlocks();
 
             // Output Material
-            if (hasCrtUpdates)
-            {
-                for (int i = 0; i < renderOutCrt.Length; i++)
-                {
-                    if (renderOutCrt[i] == null)
-                        continue;
-
-                    ScreenPropertyMap propMap = renderOutMatProps[i];
-                    if (propMap)
-                        _LoadPropertyMap(baseIndexCrt + i, propMap);
-                    else
-                        _TryLoadDefaultProps(baseIndexCrt + i, renderOutCrt[i].material);
-                }
-            }
+            _SetupCRTs();
 
             // Global Shader Props
-            int globalLength = globalPropertyList.Length;
-            globalPropMainTexList = new int[globalLength];
-            globalPropAVProList = new int[globalLength];
-            globalPropInvertList = new int[globalLength];
-            globalPropGammaList = new int[globalLength];
-            globalPropFitList = new int[globalLength];
-            globalPropAspectRatioList = new int[globalLength];
-
-            if (hasGlobalUpdates)
-            {
-                for (int i = 0; i < globalPropertyList.Length; i++)
-                {
-                    if (globalPropertyList[i] == null)
-                        continue;
-
-                    _LoadGlobalPropertyMap(i, globalPropertyList[i]);
-                }
-            }
+            _SetupGlobalProperties();
 
             // Capture original material textures
-            _originalMaterialTexture = new Texture[materialUpdateList.Length];
-            _originalMatAVPro = new int[materialUpdateList.Length];
-            _originalMatInvert = new int[materialUpdateList.Length];
-            _originalMatGamma = new int[materialUpdateList.Length];
-            _originalMatFit = new int[materialUpdateList.Length];
-            _originalMatAspectRatio = new float[materialUpdateList.Length];
-
-            for (int i = 0; i < materialUpdateList.Length; i++)
-            {
-                if (materialUpdateList[i] == null)
-                    continue;
-
-                string name = shaderPropMainTexList[baseIndexMat + i];
-                if (name == null || name.Length == 0)
-                    continue;
-
-                _originalMaterialTexture[i] = materialUpdateList[i].GetTexture(name);
-                _originalMatAVPro[i] = _GetMatIntProperty(materialUpdateList[i], shaderPropAVProList[baseIndexMat + i]);
-                _originalMatInvert[i] = _GetMatIntProperty(materialUpdateList[i], shaderPropInvertList[baseIndexMat + i]);
-                _originalMatGamma[i] = _GetMatIntProperty(materialUpdateList[i], shaderPropGammaList[baseIndexMat + i]);
-                _originalMatFit[i] = _GetMatIntProperty(materialUpdateList[i], shaderPropFitList[baseIndexMat + i]);
-                _originalMatAspectRatio[i] = _GetMatFloatProperty(materialUpdateList[i], shaderPropAspectRatioList[baseIndexMat + i]);
-            }
-        }
-
-        void _InitGlobalTex()
-        {
-            if (renderOutCrt == null || renderOutGlobalTex == null)
-                return;
-
-            globalTexPropertyId = VRCShader.PropertyToID("_Udon_VideoTex");
-
-            int count = Math.Min(renderOutCrt.Length, renderOutGlobalTex.Length);
-            for (int i = 0; i < count; i++)
-            {
-                if (renderOutCrt[i] && renderOutGlobalTex[i])
-                {
-                    VRCShader.SetGlobalTexture(globalTexPropertyId, renderOutCrt[i]);
-                    break;
-                }
-            }
-        }
-
-        void _InitCRTDoubleBuffer()
-        {
-            if (renderOutDoubleBufferAVPro == null || renderOutDoubleBufferAVPro.Length < renderOutCrt.Length)
-            {
-                renderOutDoubleBufferAVPro = new bool[renderOutCrt.Length];
-                for (int i = 0; i < renderOutCrt.Length; i++)
-                {
-                    if (renderOutCrt[i])
-                        renderOutDoubleBufferAVPro[i] = renderOutCrt[i].doubleBuffered;
-                }
-            }
-
-            if (renderOutDoubleBufferUnity == null || renderOutDoubleBufferUnity.Length < renderOutCrt.Length)
-            {
-                renderOutDoubleBufferUnity = new bool[renderOutCrt.Length];
-                for (int i = 0; i < renderOutCrt.Length; i++)
-                {
-                    if (renderOutCrt[i])
-                        renderOutDoubleBufferUnity[i] = renderOutCrt[i].doubleBuffered;
-                }
-            }
-
-            _UpdateCRTDoubleBuffer();
-        }
-
-        void _UpdateCRTDoubleBuffer()
-        {
-            for (int i = 0; i < renderOutCrt.Length; i++)
-                _UpdateCRTDoubleBuffer(i);
-        }
-
-        void _UpdateCRTDoubleBuffer(int crtIndex)
-        {
-            if (!renderOutCrt[crtIndex])
-                return;
-
-            bool useDB = _screenSource == VideoSource.VIDEO_SOURCE_AVPRO ? renderOutDoubleBufferAVPro[crtIndex] : renderOutDoubleBufferUnity[crtIndex];
-            renderOutCrt[crtIndex].doubleBuffered = useDB;
-
-            Material mat = renderOutCrt[crtIndex].material;
-            if (mat && shaderPropDoubleBufferedList[baseIndexCrt + crtIndex] != "")
-                mat.SetInt(shaderPropDoubleBufferedList[baseIndexCrt + crtIndex], useDB ? 1 : 0);
+            _CaptureSharedMaterialOverrides();
         }
 
         bool _TryLoadDefaultProps(int i, Material mat)
@@ -821,18 +505,7 @@ namespace Texel
             shaderPropDoubleBufferedList[i] = propMap.doubleBuffered;
         }
 
-        void _LoadGlobalPropertyMap(int i, ScreenPropertyMap propMap)
-        {
-            if (!propMap)
-                return;
-
-            _ResolvePropertyId(globalPropMainTexList, i, propMap.screenTexture);
-            _ResolvePropertyId(globalPropAVProList, i, propMap.avProCheck);
-            _ResolvePropertyId(globalPropInvertList, i, propMap.invertY);
-            _ResolvePropertyId(globalPropGammaList, i, propMap.applyGamma);
-            _ResolvePropertyId(globalPropFitList, i, propMap.screenFit);
-            _ResolvePropertyId(globalPropAspectRatioList, i, propMap.aspectRatio);
-        }
+        
 
         void _ResolvePropertyId(int[] idArray, int i, string name)
         {
@@ -865,48 +538,6 @@ namespace Texel
             shaderPropFitList[i] = "_FitMode";
             shaderPropAspectRatioList[i] = "_TexAspectRatio";
             shaderPropDoubleBufferedList[i] = "_DoubleBuffered";
-        }
-
-        void _RestoreMaterialOverrides()
-        {
-            if (!useMaterialOverrides)
-                return;
-
-            for (int i = 0; i < screenMesh.Length; i++)
-            {
-                int index = screenMaterialIndex[i];
-                if (index < 0 || !Utilities.IsValid(screenMesh[i]))
-                    continue;
-
-                Material[] materials = screenMesh[i].sharedMaterials;
-                materials[index] = _originalScreenMaterial[i];
-                screenMesh[i].sharedMaterials = materials;
-            }
-        }
-
-        void _RestoreTextureOverrides()
-        {
-            if (!useTextureOverrides)
-                return;
-
-            for (int i = 0; i < materialUpdateList.Length; i++)
-            {
-                Material mat = materialUpdateList[i];
-                string name = shaderPropMainTexList[baseIndexMat + i];
-                if (mat == null || name == null || name.Length == 0)
-                    continue;
-
-                mat.SetTexture(name, _originalMaterialTexture[i]);
-                //string avProProp = materialAVPropertyList[i];
-                //if (avProProp != null && avProProp.Length > 0)
-                //    mat.SetInt(avProProp, 0);
-
-                _SetMatIntProperty(mat, shaderPropAVProList[baseIndexMat + i], _originalMatAVPro[i]);
-                _SetMatIntProperty(mat, shaderPropInvertList[baseIndexMat + i], _originalMatInvert[i]);
-                _SetMatIntProperty(mat, shaderPropGammaList[baseIndexMat + i], _originalMatGamma[i]);
-                _SetMatIntProperty(mat, shaderPropFitList[baseIndexMat + i], _originalMatFit[i]);
-                _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexMat + i], _originalMatAspectRatio[i]);
-            }
         }
 
         public void _InternalOnVideoStateUpdate()
@@ -1095,8 +726,8 @@ namespace Texel
             _ResetCaptureData();
             currentValid = false;
 
-            captureTexture = CaptureValid();
-            currentValid = Utilities.IsValid(captureTexture);
+            bool textureChanged = _ValidateCapture();
+            currentValid = Utilities.IsValid(validatedTexture);
 
             int screenIndex = _CalculateScreenIndex(currentValid);
 
@@ -1106,7 +737,7 @@ namespace Texel
             if (useTextureOverrides)
             {
                 Texture replacement = _GetResolvedTextureOverride((ScreenOverrideType)screenIndex);
-                _UpdateCaptureData(replacement, captureTexture);
+                _UpdateCaptureData(replacement, validatedTexture);
                 _UpdateMaterials();
                 _UpdatePropertyBlocks();
                 _UpdateGlobalProperties();
@@ -1141,6 +772,7 @@ namespace Texel
             SendCustomEventDelayedFrames(nameof(_InternalCheckUpdateScreenMaterial), frames);
         }
 
+        Texture lastReplacement;
         public void _InternalCheckUpdateScreenMaterial()
         {
             pendingUpdates -= 1;
@@ -1155,9 +787,9 @@ namespace Texel
 
             _EnsureInit();
 
-            captureTexture = CaptureValid();
+            bool textureChanged = _ValidateCapture();
             bool prevValid = currentValid;
-            currentValid = Utilities.IsValid(captureTexture);
+            currentValid = Utilities.IsValid(validatedTexture);
             _DebugLowLevel($"Check Update Screen Material: valid={currentValid}");
 
             int screenIndex = _CalculateScreenIndex(currentValid);
@@ -1168,10 +800,15 @@ namespace Texel
             if (useTextureOverrides)
             {
                 Texture replacement = _GetResolvedTextureOverride((ScreenOverrideType)screenIndex);
-                _UpdateCaptureData(replacement, captureTexture);
-                _UpdateMaterials();
-                _UpdatePropertyBlocks();
-                _UpdateGlobalProperties();
+                if (textureChanged || replacement != lastReplacement)
+                {
+                    lastReplacement = replacement;
+
+                    _UpdateCaptureData(replacement, validatedTexture);
+                    _UpdateMaterials();
+                    _UpdatePropertyBlocks();
+                    _UpdateGlobalProperties();
+                }
             }
 
             if (!currentValid)
@@ -1239,75 +876,14 @@ namespace Texel
                     currentGamma = true;
                 }
 
-                if (currentTexture)
-                {
-                    currentAspectRatio = (float)currentTexture.width / currentTexture.height;
-                    currentRes = new Vector2Int(currentTexture.width, currentTexture.height);
-
-                    for (int i = 0; i < renderOutCrt.Length; i++)
-                    {
-                        if (!renderOutResize[i])
-                            continue;
-
-                        CustomRenderTexture crt = renderOutCrt[i];
-                        if (!crt)
-                            continue;
-
-                        if (crt.width == currentTexture.width && crt.height == currentTexture.height)
-                            continue;
-
-                        float aspect = renderOutTargetAspect[i];
-                        int newWidth = currentTexture.width;
-                        int newHeight = currentTexture.height;
-
-                        if (renderOutExpandSize[i] && aspect > 0)
-                        {
-                            if (aspect > currentAspectRatio)
-                                newWidth = (int)Math.Round(newHeight * aspect);
-                            else
-                                newHeight = (int)Math.Round(newWidth / aspect);
-
-                            if (newWidth > 4096 || newHeight > 4096)
-                            {
-                                newWidth = currentTexture.width;
-                                newHeight = currentTexture.height;
-                            }
-                        }
-
-                        crt.Release();
-                        crt.width = newWidth;
-                        crt.height = newHeight;
-                        crt.Create();
-                    }
-                }
+                _UpdateCRTCaptureData();
             }
 
             if (lastTex != currentTexture)
                 _UpdateHandlers(EVENT_UPDATE);
         }
 
-        void _UpdateObjects(Material replacementMat)
-        {
-            for (int i = 0; i < screenMesh.Length; i++)
-            {
-                int index = screenMaterialIndex[i];
-                if (index < 0)
-                    continue;
-
-                Material newMat = replacementMat;
-                if (newMat == null)
-                    newMat = _GetPlaybackMaterial(i);
-                if (newMat == null && logoMaterial != null)
-                    newMat = logoMaterial;
-
-                if (newMat != null)
-                {
-                    Material[] materials = screenMesh[i].sharedMaterials;
-                    materials[index] = newMat;
-                    screenMesh[i].sharedMaterials = materials;
-                }
-            }
-        }
+        
 
         private Texture ValidCurrentTexture
         {
@@ -1316,146 +892,15 @@ namespace Texel
 
         private void Update()
         {
-            if (vrslEnabled && vrslDmxRT && vrslBlitMat)
-            {
-                if (vrslBuffer)
-                    VRCGraphics.Blit(vrslDmxRT, vrslBuffer);
-
-                //Texture tex = ValidCurrentTexture;
-                VRCGraphics.Blit(null, vrslDmxRT, vrslBlitMat);
-            }
+            _BlitVRSL();
         }
 
         void _UpdateMaterials()
         {
-            Texture validCurrent = ValidCurrentTexture;
+            _UpdateSharedMaterials();
+            _UpdateCRTs();
 
-            int fit = _VideoScreenFit();
-            for (int i = 0; i < materialUpdateList.Length; i++)
-            {
-                Material mat = materialUpdateList[i];
-                string name = shaderPropMainTexList[baseIndexMat + i];
-                if (mat == null || name == null || name.Length == 0)
-                    continue;
-
-                mat.SetTexture(name, validCurrent);
-
-                _SetMatIntProperty(mat, shaderPropAVProList[baseIndexMat + i], currentAVPro ? 1 : 0);
-                _SetMatIntProperty(mat, shaderPropInvertList[baseIndexMat + i], currentInvert ? 1 : 0);
-                _SetMatIntProperty(mat, shaderPropGammaList[baseIndexMat + i], currentGamma ? 1 : 0);
-                _SetMatIntProperty(mat, shaderPropFitList[baseIndexMat + i], fit);
-                _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexMat + i], currentAspectRatio);
-            }
-
-            for (int i = 0; i < renderOutCrt.Length; i++)
-            {
-                CustomRenderTexture crt = renderOutCrt[i];
-                if (!crt)
-                    continue;
-
-                Material mat = crt.material;
-                if (Utilities.IsValid(mat))
-                {
-                    mat.SetTexture(shaderPropMainTexList[baseIndexCrt + i], validCurrent);
-
-                    _SetMatIntProperty(mat, shaderPropAVProList[baseIndexCrt + i], currentAVPro ? 1 : 0);
-                    _SetMatIntProperty(mat, shaderPropGammaList[baseIndexCrt + i], currentGamma ? 1 : 0);
-                    _SetMatIntProperty(mat, shaderPropInvertList[baseIndexCrt + i], currentInvert ? 1 : 0);
-                    _SetMatIntProperty(mat, shaderPropFitList[baseIndexCrt + i], fit);
-                    _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexCrt + i], currentAspectRatio);
-
-                    bool isRT = validCurrent.GetType() == typeof(RenderTexture) || validCurrent.GetType() == typeof(CustomRenderTexture);
-                    if (_screenMode == SCREEN_MODE_NORMAL || isRT)
-                        crt.updateMode = CustomRenderTextureUpdateMode.Realtime;
-                    else
-                    {
-                        crt.updateMode = CustomRenderTextureUpdateMode.OnDemand;
-                        crt.Update(crt.doubleBuffered ? 2 : 1);
-                    }
-                }
-            }
-
-            SendCustomEventDelayedFrames(nameof(_CrtManualUpdate), 1);
-
-            if (vrslBlitMat)
-            {
-                vrslBlitMat.SetTexture("_MainTex", validCurrent);
-                //vrslBlitMat.SetTexture("_BufferTex", vrslBuffer);
-
-                _SetMatIntProperty(vrslBlitMat, "_ApplyGamma", currentGamma ? 1 : 0);
-                _SetMatIntProperty(vrslBlitMat, "_FlipY", currentInvert ? 1 : 0);
-                _SetMatFloatProperty(vrslBlitMat, "_AspectRatio", currentAspectRatio);
-
-                //_SetMatFloatProperty(vrslBlitMat, "_DoubleBuffered", currentAVPro && vrslDoubleBufferAVPro ? 1 : 0);
-            }
-        }
-
-        public void _CrtManualUpdate()
-        {
-            for (int i = 0; i < renderOutCrt.Length; i++)
-            {
-                CustomRenderTexture crt = renderOutCrt[i];
-                if (!crt)
-                    continue;
-
-                if (crt.updateMode == CustomRenderTextureUpdateMode.OnDemand)
-                    crt.Update();
-            }
-        }
-
-        void _UpdatePropertyBlocks()
-        {
-            Texture validCurrent = ValidCurrentTexture;
-
-            int fit = _VideoScreenFit();
-            for (int i = 0; i < propMeshList.Length; i++)
-            {
-                MeshRenderer renderer = propMeshList[i];
-                string texName = shaderPropMainTexList[baseIndexProp + i];
-                if (renderer == null || name == null || name.Length == 0)
-                    continue;
-
-                bool useMatIndex = propMaterialOverrideList[i] == 1;
-                if (useMatIndex)
-                    renderer.GetPropertyBlock(block, propMaterialIndexList[i]);
-                else
-                    renderer.GetPropertyBlock(block);
-
-                block.SetTexture(texName, validCurrent);
-
-                _SetIntProperty(shaderPropAVProList[baseIndexProp + i], currentAVPro ? 1 : 0);
-                _SetIntProperty(shaderPropGammaList[baseIndexProp + i], currentGamma ? 1 : 0);
-                _SetIntProperty(shaderPropInvertList[baseIndexProp + i], currentInvert ? 1 : 0);
-                _SetIntProperty(shaderPropFitList[baseIndexProp + i], fit);
-                _SetFloatProperty(shaderPropAspectRatioList[baseIndexProp + i], currentAspectRatio);
-
-                if (useMatIndex)
-                    renderer.SetPropertyBlock(block, propMaterialIndexList[i]);
-                else
-                    renderer.SetPropertyBlock(block);
-            }
-        }
-
-        void _UpdateGlobalProperties()
-        {
-            Texture validCurrent = ValidCurrentTexture;
-
-            int fit = _VideoScreenFit();
-            for (int i = 0; i < globalPropMainTexList.Length; i++)
-            {
-                if (globalPropMainTexList[i] != 0)
-                    VRCShader.SetGlobalTexture(globalPropMainTexList[i], validCurrent);
-                if (globalPropAVProList[i] != 0)
-                    VRCShader.SetGlobalInteger(globalPropAVProList[i], currentAVPro ? 1 : 0);
-                if (globalPropGammaList[i] != 0)
-                    VRCShader.SetGlobalInteger(globalPropGammaList[i], currentGamma ? 1 : 0);
-                if (globalPropInvertList[i] != 0)
-                    VRCShader.SetGlobalInteger(globalPropInvertList[i], currentInvert ? 1 : 0);
-                if (globalPropFitList[i] != 0)
-                    VRCShader.SetGlobalInteger(globalPropFitList[i], fit);
-                if (globalPropAspectRatioList[i] != 0)
-                    VRCShader.SetGlobalFloat(globalPropAspectRatioList[i], currentAspectRatio);
-            }
+            _UpdateVRSL();
         }
 
         void _SetIntProperty(string prop, int value)
@@ -1496,34 +941,73 @@ namespace Texel
             return 0;
         }
 
-        Material _GetPlaybackMaterial(int meshIndex)
+        Texture validatedTexture = null;
+        int validatedW = 0;
+        int validatedH = 0;
+
+        void _ResetValidatedTexture()
         {
-            return Utilities.IsValid(playbackMaterial) ? playbackMaterial : _originalScreenMaterial[meshIndex];
+            validatedTexture = null;
+            validatedW = 0;
+            validatedH = 0;
         }
 
-        Texture CaptureValid()
+        bool _UpdateValidatedTexture(Texture texture)
+        {
+            if (texture == validatedTexture)
+            {
+                if (texture)
+                {
+                    int w = texture.width;
+                    int h = texture.height;
+                    if (validatedW - w + validatedH - h != 0)
+                    {
+                        validatedW = w;
+                        validatedH = h;
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            validatedTexture = texture;
+            if (texture)
+            {
+                validatedW = texture.width;
+                validatedH = texture.height;
+            } else
+            {
+                validatedW = 0;
+                validatedH = 0;
+            }
+
+            return true;
+        }
+
+        bool _ValidateCapture()
         {
             if (!Utilities.IsValid(captureRenderer))
             {
                 _DebugLowLevel("No valid capture renderer");
-                return null;
+                return false;
             }
 
             if (_screenSource == VideoSource.VIDEO_SOURCE_AVPRO)
             {
                 Material mat = captureRenderer.sharedMaterial;
                 if (mat == null)
-                    return null;
+                    return _UpdateValidatedTexture(null);
 
                 Texture tex = mat.GetTexture("_MainTex");
                 if (tex == null)
-                    return null;
+                    return _UpdateValidatedTexture(null);
                 if (tex.width < 16 || tex.height < 16)
-                    return null;
+                    return _UpdateValidatedTexture(null);
 
                 if (!currentValid)
                     _DebugLog($"Resolution {tex.width} x {tex.height}");
-                return tex;
+
+                return _UpdateValidatedTexture(tex);
             }
 
             if (_screenSource == VideoSource.VIDEO_SOURCE_UNITY)
@@ -1531,19 +1015,725 @@ namespace Texel
                 captureRenderer.GetPropertyBlock(block);
                 Texture tex = block.GetTexture("_MainTex");
                 if (tex == null)
-                    return null;
+                    return _UpdateValidatedTexture(null);
                 if (tex.width < 16 || tex.height < 16)
-                    return null;
+                    return _UpdateValidatedTexture(null);
 
                 if (!currentValid)
                     _DebugLog($"Resolution {tex.width} x {tex.height}");
-                return tex;
+
+                return _UpdateValidatedTexture(tex);
             }
 
             _DebugLowLevel("No valid screen source selected");
 
-            return null;
+            return _UpdateValidatedTexture(null);
         }
+
+        #region Mesh Materials
+
+        Material[] originalScreenMaterial;
+        Material[] activePlaybackMaterial;
+        Material lastReplacementMat;
+
+        void _SetupMeshMaterials()
+        {
+            useMaterialOverrides = true;
+
+            if (!Utilities.IsValid(screenMesh) || screenMesh.Length == 0)
+            {
+                useMaterialOverrides = false;
+                return;
+            }
+
+            // Capture original screen materials
+            meshCount = screenMesh.Length;
+            originalScreenMaterial = new Material[meshCount];
+            activePlaybackMaterial = new Material[meshCount];
+
+            for (int i = 0; i < meshCount; i++)
+            {
+                if (screenMesh[i] == null)
+                {
+                    screenMaterialIndex[i] = -1;
+                    continue;
+                }
+
+                int index = screenMaterialIndex[i];
+                Material[] materials = screenMesh[i].sharedMaterials;
+                if (index < 0 || index >= materials.Length)
+                {
+                    screenMaterialIndex[i] = -1;
+                    continue;
+                }
+
+                originalScreenMaterial[i] = materials[index];
+                activePlaybackMaterial[i] = playbackMaterial ? playbackMaterial : materials[index];
+            }
+        }
+
+        void _RestoreMeshMaterialOverrides()
+        {
+            if (meshCount == 0)
+                return;
+
+            for (int i = 0; i < meshCount; i++)
+            {
+                int index = screenMaterialIndex[i];
+                if (index < 0 || !Utilities.IsValid(screenMesh[i]))
+                    continue;
+
+                Material[] materials = screenMesh[i].sharedMaterials;
+                materials[index] = originalScreenMaterial[i];
+                screenMesh[i].sharedMaterials = materials;
+            }
+        }
+
+        void _UpdateObjects(Material replacementMat)
+        {
+            if (replacementMat == lastReplacementMat)
+                return;
+
+            lastReplacementMat = replacementMat;
+
+            for (int i = 0; i < meshCount; i++)
+            {
+                int index = screenMaterialIndex[i];
+                if (index < 0)
+                    continue;
+
+                Material newMat = replacementMat;
+                if (newMat == null)
+                    newMat = activePlaybackMaterial[i];
+                if (newMat == null && logoMaterial != null)
+                    newMat = logoMaterial;
+
+                if (newMat != null)
+                {
+                    Material[] materials = screenMesh[i].sharedMaterials;
+                    materials[index] = newMat;
+                    screenMesh[i].sharedMaterials = materials;
+                }
+            }
+        }
+
+        #endregion
+
+        #region CRT
+
+        void _SetupCRTs()
+        {
+            crtCount = renderOutCrt.Length;
+            if (crtCount == 0)
+                return;
+
+            for (int i = 0; i < crtCount; i++)
+            {
+                if (renderOutCrt[i] == null)
+                    continue;
+
+                ScreenPropertyMap propMap = renderOutMatProps[i];
+                if (propMap)
+                    _LoadPropertyMap(baseIndexCrt + i, propMap);
+                else
+                    _TryLoadDefaultProps(baseIndexCrt + i, renderOutCrt[i].material);
+            }
+        }
+
+        void _UpdateCRTs()
+        {
+            if (crtCount == 0)
+                return;
+
+            Texture validCurrent = ValidCurrentTexture;
+            int fit = _VideoScreenFit();
+
+            for (int i = 0; i < crtCount; i++)
+            {
+                CustomRenderTexture crt = renderOutCrt[i];
+                if (!crt)
+                    continue;
+
+                Material mat = crt.material;
+                if (Utilities.IsValid(mat))
+                {
+                    mat.SetTexture(shaderPropMainTexList[baseIndexCrt + i], validCurrent);
+
+                    _SetMatIntProperty(mat, shaderPropAVProList[baseIndexCrt + i], currentAVPro ? 1 : 0);
+                    _SetMatIntProperty(mat, shaderPropGammaList[baseIndexCrt + i], currentGamma ? 1 : 0);
+                    _SetMatIntProperty(mat, shaderPropInvertList[baseIndexCrt + i], currentInvert ? 1 : 0);
+                    _SetMatIntProperty(mat, shaderPropFitList[baseIndexCrt + i], fit);
+                    _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexCrt + i], currentAspectRatio);
+
+                    bool isRT = validCurrent.GetType() == typeof(RenderTexture) || validCurrent.GetType() == typeof(CustomRenderTexture);
+                    if (_screenMode == SCREEN_MODE_NORMAL || isRT)
+                        crt.updateMode = CustomRenderTextureUpdateMode.Realtime;
+                    else
+                    {
+                        crt.updateMode = CustomRenderTextureUpdateMode.OnDemand;
+                        crt.Update(crt.doubleBuffered ? 2 : 1);
+                    }
+                }
+            }
+
+            SendCustomEventDelayedFrames(nameof(_CrtManualUpdate), 1);
+        }
+
+        void _UpdateCRTCaptureData()
+        {
+            if (crtCount == 0 || !currentTexture)
+                return;
+
+            currentAspectRatio = (float)currentTexture.width / currentTexture.height;
+            currentRes = new Vector2Int(currentTexture.width, currentTexture.height);
+
+            for (int i = 0; i <crtCount; i++)
+            {
+                if (!renderOutResize[i])
+                    continue;
+
+                CustomRenderTexture crt = renderOutCrt[i];
+                if (!crt)
+                    continue;
+
+                if (crt.width == currentTexture.width && crt.height == currentTexture.height)
+                    continue;
+
+                float aspect = renderOutTargetAspect[i];
+                int newWidth = currentTexture.width;
+                int newHeight = currentTexture.height;
+
+                if (renderOutExpandSize[i] && aspect > 0)
+                {
+                    if (aspect > currentAspectRatio)
+                        newWidth = (int)Math.Round(newHeight * aspect);
+                    else
+                        newHeight = (int)Math.Round(newWidth / aspect);
+
+                    if (newWidth > 4096 || newHeight > 4096)
+                    {
+                        newWidth = currentTexture.width;
+                        newHeight = currentTexture.height;
+                    }
+                }
+
+                crt.Release();
+                crt.width = newWidth;
+                crt.height = newHeight;
+                crt.Create();
+            }
+        }
+
+        public void _CrtManualUpdate()
+        {
+            for (int i = 0; i < crtCount; i++)
+            {
+                CustomRenderTexture crt = renderOutCrt[i];
+                if (!crt)
+                    continue;
+
+                if (crt.updateMode == CustomRenderTextureUpdateMode.OnDemand)
+                    crt.Update();
+            }
+        }
+
+        public bool _GetCRTDoubleBuffered(VideoSourceBackend type, int crtIndex)
+        {
+            if (crtIndex < 0 || crtIndex >= crtCount)
+                return false;
+
+            if (type == VideoSourceBackend.AVPro)
+                return renderOutDoubleBufferAVPro[crtIndex];
+            if (type == VideoSourceBackend.Unity)
+                return renderOutDoubleBufferUnity[crtIndex];
+
+            return false;
+        }
+
+        public void _SetCRTDoubleBuffered(VideoSourceBackend type, int crtIndex, bool state)
+        {
+            if (crtIndex < 0 || crtIndex >= crtCount)
+                return;
+
+            if (type == VideoSourceBackend.AVPro)
+                renderOutDoubleBufferAVPro[crtIndex] = state;
+            if (type == VideoSourceBackend.Unity)
+                renderOutDoubleBufferUnity[crtIndex] = state;
+
+            _UpdateCRTDoubleBuffer(crtIndex);
+        }
+
+        // Legacy Upgrade
+        void _InitCRTDoubleBuffer()
+        {
+            if (renderOutDoubleBufferAVPro == null || renderOutDoubleBufferAVPro.Length < crtCount)
+            {
+                renderOutDoubleBufferAVPro = new bool[crtCount];
+                for (int i = 0; i < crtCount; i++)
+                {
+                    if (renderOutCrt[i])
+                        renderOutDoubleBufferAVPro[i] = renderOutCrt[i].doubleBuffered;
+                }
+            }
+
+            if (renderOutDoubleBufferUnity == null || renderOutDoubleBufferUnity.Length < crtCount)
+            {
+                renderOutDoubleBufferUnity = new bool[crtCount];
+                for (int i = 0; i < crtCount; i++)
+                {
+                    if (renderOutCrt[i])
+                        renderOutDoubleBufferUnity[i] = renderOutCrt[i].doubleBuffered;
+                }
+            }
+
+            _UpdateCRTDoubleBuffer();
+        }
+
+        void _UpdateCRTDoubleBuffer()
+        {
+            for (int i = 0; i < crtCount; i++)
+                _UpdateCRTDoubleBuffer(i);
+        }
+
+        void _UpdateCRTDoubleBuffer(int crtIndex)
+        {
+            if (!renderOutCrt[crtIndex])
+                return;
+
+            bool useDB = _screenSource == VideoSource.VIDEO_SOURCE_AVPRO ? renderOutDoubleBufferAVPro[crtIndex] : renderOutDoubleBufferUnity[crtIndex];
+            renderOutCrt[crtIndex].doubleBuffered = useDB;
+
+            Material mat = renderOutCrt[crtIndex].material;
+            if (mat && shaderPropDoubleBufferedList[baseIndexCrt + crtIndex] != "")
+                mat.SetInt(shaderPropDoubleBufferedList[baseIndexCrt + crtIndex], useDB ? 1 : 0);
+        }
+
+        void _InitGlobalTex()
+        {
+            if (renderOutCrt == null || renderOutGlobalTex == null)
+                return;
+
+            globalTexPropertyId = VRCShader.PropertyToID("_Udon_VideoTex");
+
+            int count = Math.Min(renderOutCrt.Length, renderOutGlobalTex.Length);
+            for (int i = 0; i < count; i++)
+            {
+                if (renderOutCrt[i] && renderOutGlobalTex[i])
+                {
+                    VRCShader.SetGlobalTexture(globalTexPropertyId, renderOutCrt[i]);
+                    break;
+                }
+            }
+        }
+
+        void _LegacyCRTUpgrade()
+        {
+            renderOutCrt = new CustomRenderTexture[1];
+            renderOutMatProps = new ScreenPropertyMap[1];
+            renderOutSize = new Vector2Int[1];
+            renderOutTargetAspect = new float[1];
+            renderOutResize = new bool[1];
+            renderOutExpandSize = new bool[1];
+
+            renderOutCrt[0] = outputCRT;
+            renderOutMatProps[0] = outputMaterialProperties;
+            renderOutSize[0] = outputCRT ? new Vector2Int(outputCRT.width, outputCRT.height) : Vector2Int.zero;
+            renderOutTargetAspect[0] = 0;
+            renderOutResize[0] = false;
+            renderOutExpandSize[0] = false;
+        }
+
+        #endregion
+
+        #region Shared Materials
+
+        Texture[] _originalMaterialTexture;
+        int[] _originalMatAVPro;
+        int[] _originalMatInvert;
+        int[] _originalMatGamma;
+        int[] _originalMatFit;
+        float[] _originalMatAspectRatio;
+
+        void _SetupSharedMaterials()
+        {
+            materialCount = materialUpdateList.Length;
+            if (materialCount == 0)
+                return;
+
+            for (int i = 0; i < materialCount; i++)
+            {
+                if (materialUpdateList[i] == null)
+                    continue;
+
+                ScreenPropertyMap propMap = materialPropertyList[i];
+                if (propMap)
+                    _LoadPropertyMap(baseIndexMat + i, propMap);
+                else
+                    _TryLoadDefaultProps(baseIndexMat + i, materialUpdateList[i]);
+            }
+        }
+
+        void _UpdateSharedMaterials()
+        {
+            if (materialCount == 0)
+                return;
+
+            Texture validCurrent = ValidCurrentTexture;
+            int fit = _VideoScreenFit();
+
+            for (int i = 0; i < materialCount; i++)
+            {
+                Material mat = materialUpdateList[i];
+                string name = shaderPropMainTexList[baseIndexMat + i];
+                if (mat == null || name == null || name.Length == 0)
+                    continue;
+
+                mat.SetTexture(name, validCurrent);
+
+                _SetMatIntProperty(mat, shaderPropAVProList[baseIndexMat + i], currentAVPro ? 1 : 0);
+                _SetMatIntProperty(mat, shaderPropInvertList[baseIndexMat + i], currentInvert ? 1 : 0);
+                _SetMatIntProperty(mat, shaderPropGammaList[baseIndexMat + i], currentGamma ? 1 : 0);
+                _SetMatIntProperty(mat, shaderPropFitList[baseIndexMat + i], fit);
+                _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexMat + i], currentAspectRatio);
+            }
+        }
+
+        void _CaptureSharedMaterialOverrides()
+        {
+            if (materialCount == 0)
+                return;
+
+            _originalMaterialTexture = new Texture[materialCount];
+            _originalMatAVPro = new int[materialCount];
+            _originalMatInvert = new int[materialCount];
+            _originalMatGamma = new int[materialCount];
+            _originalMatFit = new int[materialCount];
+            _originalMatAspectRatio = new float[materialCount];
+
+            for (int i = 0; i < materialCount; i++)
+            {
+                if (materialUpdateList[i] == null)
+                    continue;
+
+                string name = shaderPropMainTexList[baseIndexMat + i];
+                if (name == null || name.Length == 0)
+                    continue;
+
+                _originalMaterialTexture[i] = materialUpdateList[i].GetTexture(name);
+                _originalMatAVPro[i] = _GetMatIntProperty(materialUpdateList[i], shaderPropAVProList[baseIndexMat + i]);
+                _originalMatInvert[i] = _GetMatIntProperty(materialUpdateList[i], shaderPropInvertList[baseIndexMat + i]);
+                _originalMatGamma[i] = _GetMatIntProperty(materialUpdateList[i], shaderPropGammaList[baseIndexMat + i]);
+                _originalMatFit[i] = _GetMatIntProperty(materialUpdateList[i], shaderPropFitList[baseIndexMat + i]);
+                _originalMatAspectRatio[i] = _GetMatFloatProperty(materialUpdateList[i], shaderPropAspectRatioList[baseIndexMat + i]);
+            }
+        }
+
+        void _RestoreSharedMaterialOverrides()
+        {
+            if (materialCount == 0)
+                return;
+
+            for (int i = 0; i < materialCount; i++)
+            {
+                Material mat = materialUpdateList[i];
+                string name = shaderPropMainTexList[baseIndexMat + i];
+                if (mat == null || name == null || name.Length == 0)
+                    continue;
+
+                mat.SetTexture(name, _originalMaterialTexture[i]);
+                //string avProProp = materialAVPropertyList[i];
+                //if (avProProp != null && avProProp.Length > 0)
+                //    mat.SetInt(avProProp, 0);
+
+                _SetMatIntProperty(mat, shaderPropAVProList[baseIndexMat + i], _originalMatAVPro[i]);
+                _SetMatIntProperty(mat, shaderPropInvertList[baseIndexMat + i], _originalMatInvert[i]);
+                _SetMatIntProperty(mat, shaderPropGammaList[baseIndexMat + i], _originalMatGamma[i]);
+                _SetMatIntProperty(mat, shaderPropFitList[baseIndexMat + i], _originalMatFit[i]);
+                _SetMatFloatProperty(mat, shaderPropAspectRatioList[baseIndexMat + i], _originalMatAspectRatio[i]);
+            }
+        }
+
+        #endregion
+
+        #region Property Blocks
+
+        void _SetupPropertyBlocks()
+        {
+            propBlockCount = propMeshList.Length;
+            if (propBlockCount == 0)
+                return;
+
+            for (int i = 0; i < propBlockCount; i++)
+            {
+                if (propMeshList[i] == null)
+                    continue;
+
+                ScreenPropertyMap propMap = propPropertyList[i];
+                if (propMap)
+                    _LoadPropertyMap(baseIndexProp + i, propMap);
+                else
+                {
+                    Material[] mats = propMeshList[i].sharedMaterials;
+                    bool useMatIndex = propMaterialOverrideList[i] == 1;
+                    int matIndex = propMaterialIndexList[i];
+
+                    if (useMatIndex && matIndex < mats.Length && mats[matIndex])
+                        _TryLoadDefaultProps(baseIndexProp + i, mats[matIndex]);
+                    else if (!useMatIndex)
+                    {
+                        for (int j = 0; j < mats.Length; j++)
+                        {
+                            if (_TryLoadDefaultProps(baseIndexProp + i, mats[j]))
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+
+        void _UpdatePropertyBlocks()
+        {
+            if (propBlockCount == 0)
+                return;
+
+            Texture validCurrent = ValidCurrentTexture;
+            int fit = _VideoScreenFit();
+
+            for (int i = 0; i < propMeshList.Length; i++)
+            {
+                MeshRenderer renderer = propMeshList[i];
+                string texName = shaderPropMainTexList[baseIndexProp + i];
+                if (renderer == null || name == null || name.Length == 0)
+                    continue;
+
+                bool useMatIndex = propMaterialOverrideList[i] == 1;
+                if (useMatIndex)
+                    renderer.GetPropertyBlock(block, propMaterialIndexList[i]);
+                else
+                    renderer.GetPropertyBlock(block);
+
+                block.SetTexture(texName, validCurrent);
+
+                _SetIntProperty(shaderPropAVProList[baseIndexProp + i], currentAVPro ? 1 : 0);
+                _SetIntProperty(shaderPropGammaList[baseIndexProp + i], currentGamma ? 1 : 0);
+                _SetIntProperty(shaderPropInvertList[baseIndexProp + i], currentInvert ? 1 : 0);
+                _SetIntProperty(shaderPropFitList[baseIndexProp + i], fit);
+                _SetFloatProperty(shaderPropAspectRatioList[baseIndexProp + i], currentAspectRatio);
+
+                if (useMatIndex)
+                    renderer.SetPropertyBlock(block, propMaterialIndexList[i]);
+                else
+                    renderer.SetPropertyBlock(block);
+            }
+        }
+
+        #endregion
+
+        #region Global Shader Properties
+
+        int globalPropCount = 0;
+        int[] globalPropMainTexList;
+        int[] globalPropAVProList;
+        int[] globalPropInvertList;
+        int[] globalPropGammaList;
+        int[] globalPropFitList;
+        int[] globalPropAspectRatioList;
+
+        void _SetupGlobalProperties()
+        {
+            globalPropCount = globalPropertyList.Length;
+            if (globalPropCount == 0)
+                return;
+
+            if (globalPropCount > 0)
+            {
+                globalPropMainTexList = new int[globalPropCount];
+                globalPropAVProList = new int[globalPropCount];
+                globalPropInvertList = new int[globalPropCount];
+                globalPropGammaList = new int[globalPropCount];
+                globalPropFitList = new int[globalPropCount];
+                globalPropAspectRatioList = new int[globalPropCount];
+
+                for (int i = 0; i < globalPropCount; i++)
+                {
+                    if (globalPropertyList[i] == null)
+                        continue;
+
+                    _LoadGlobalPropertyMap(i, globalPropertyList[i]);
+                }
+            }
+        }
+
+        void _LoadGlobalPropertyMap(int i, ScreenPropertyMap propMap)
+        {
+            if (!propMap)
+                return;
+
+            _ResolvePropertyId(globalPropMainTexList, i, propMap.screenTexture);
+            _ResolvePropertyId(globalPropAVProList, i, propMap.avProCheck);
+            _ResolvePropertyId(globalPropInvertList, i, propMap.invertY);
+            _ResolvePropertyId(globalPropGammaList, i, propMap.applyGamma);
+            _ResolvePropertyId(globalPropFitList, i, propMap.screenFit);
+            _ResolvePropertyId(globalPropAspectRatioList, i, propMap.aspectRatio);
+        }
+
+        void _UpdateGlobalProperties()
+        {
+            if (globalPropCount <= 0)
+                return;
+
+            Texture validCurrent = ValidCurrentTexture;
+
+            int fit = _VideoScreenFit();
+            for (int i = 0; i < globalPropCount; i++)
+            {
+                if (globalPropMainTexList[i] != 0)
+                    VRCShader.SetGlobalTexture(globalPropMainTexList[i], validCurrent);
+                if (globalPropAVProList[i] != 0)
+                    VRCShader.SetGlobalInteger(globalPropAVProList[i], currentAVPro ? 1 : 0);
+                if (globalPropGammaList[i] != 0)
+                    VRCShader.SetGlobalInteger(globalPropGammaList[i], currentGamma ? 1 : 0);
+                if (globalPropInvertList[i] != 0)
+                    VRCShader.SetGlobalInteger(globalPropInvertList[i], currentInvert ? 1 : 0);
+                if (globalPropFitList[i] != 0)
+                    VRCShader.SetGlobalInteger(globalPropFitList[i], fit);
+                if (globalPropAspectRatioList[i] != 0)
+                    VRCShader.SetGlobalFloat(globalPropAspectRatioList[i], currentAspectRatio);
+            }
+        }
+
+        #endregion
+
+        #region VRSL
+
+        bool vrslReady = false;
+        RenderTexture vrslBuffer;
+
+        void _InitVRSL()
+        {
+            _CalculateVRSLReady();
+
+            if (!vrslDmxRT)
+                return;
+
+            _RefreshVRSL();
+        }
+
+        void _UpdateVRSL()
+        {
+            if (!vrslBlitMat)
+                return;
+
+            Texture validCurrent = ValidCurrentTexture;
+
+            vrslBlitMat.SetTexture("_MainTex", validCurrent);
+            //vrslBlitMat.SetTexture("_BufferTex", vrslBuffer);
+
+            _SetMatIntProperty(vrslBlitMat, "_ApplyGamma", currentGamma ? 1 : 0);
+            _SetMatIntProperty(vrslBlitMat, "_FlipY", currentInvert ? 1 : 0);
+            _SetMatFloatProperty(vrslBlitMat, "_AspectRatio", currentAspectRatio);
+
+            //_SetMatFloatProperty(vrslBlitMat, "_DoubleBuffered", currentAVPro && vrslDoubleBufferAVPro ? 1 : 0);
+        }
+
+        public bool VRSLEnabled
+        {
+            get { return vrslEnabled; }
+            set
+            {
+                vrslEnabled = value;
+                _CalculateVRSLReady();
+            }
+        }
+
+        void _CalculateVRSLReady()
+        {
+            vrslReady = vrslEnabled && vrslDmxRT && vrslBlitMat;
+        }
+
+        void _BlitVRSL()
+        {
+            if (vrslReady)
+            {
+                if (vrslBuffer)
+                    VRCGraphics.Blit(vrslDmxRT, vrslBuffer);
+
+                //Texture tex = ValidCurrentTexture;
+                VRCGraphics.Blit(null, vrslDmxRT, vrslBlitMat);
+            }
+        }
+
+        void _UpdateVRSLBuffer()
+        {
+            if (!vrslDmxRT)
+                return;
+
+            bool shouldBuffer = false;
+            if (vrslDoubleBufferAVPro && _screenSource == VideoSource.VIDEO_SOURCE_AVPRO)
+                shouldBuffer = true;
+            if (vrslDoubleBufferUnity && _screenSource == VideoSource.VIDEO_SOURCE_UNITY)
+                shouldBuffer = true;
+
+            if (shouldBuffer)
+            {
+                if (!vrslBuffer)
+                {
+                    vrslBuffer = new RenderTexture(vrslDmxRT.descriptor);
+                    vrslBuffer.Create();
+                    _DebugLog($"Initialized VRSL buffer {vrslBuffer.width}x{vrslBuffer.height}");
+                }
+
+                if (vrslBlitMat)
+                {
+                    vrslBlitMat.SetTexture("_BufferTex", vrslBuffer);
+                    vrslBlitMat.SetInt("_DoubleBuffered", shouldBuffer ? 1 : 0);
+                }
+            }
+            else
+            {
+                if (vrslBuffer)
+                {
+                    vrslBuffer.Release();
+                    vrslBuffer = null;
+                    _DebugLog("Released VRSL buffer");
+                }
+
+                if (vrslBlitMat)
+                {
+                    vrslBlitMat.SetTexture("_BufferTex", Texture2D.blackTexture);
+                    vrslBlitMat.SetInt("_DoubleBuffered", 0);
+                }
+            }
+        }
+
+        void _RefreshVRSL()
+        {
+            if (!vrslDmxRT)
+                return;
+
+            bool horizontal = false;
+            if (vrslController)
+            {
+                int mode = (int)vrslController.GetProgramVariable("DMXMode");
+                horizontal = mode == 0;
+            }
+            else
+                horizontal = vrslDmxRT.height == 960;
+
+            _UpdateVRSLBuffer();
+
+            if (vrslBlitMat)
+            {
+                vrslBlitMat.SetTexture("_MainTex", vrslDmxRT);
+                vrslBlitMat.SetVector("_MainTexSize", new Vector4(vrslDmxRT.width, vrslDmxRT.height, 0, 0));
+                vrslBlitMat.SetVector("_OffsetScale", new Vector4(vrslOffsetScale.x, vrslOffsetScale.y, vrslOffsetScale.z, vrslOffsetScale.z));
+                vrslBlitMat.SetInt("_Horizontal", horizontal ? 1 : 0);
+            }
+        }
+
+        #endregion
+
+        #region Debug
 
         void _DebugLog(string message)
         {
@@ -1596,7 +1786,7 @@ namespace Texel
             debugState._SetValue("lastErrorCode", _lastErrorCode.ToString());
             debugState._SetValue("checkFrameCount", _checkFrameCount.ToString());
             debugState._SetValue("pendingUpdates", pendingUpdates.ToString());
-            debugState._SetValue("captureTexture", captureTexture ? captureTexture.ToString() : "--");
+            debugState._SetValue("validatedTexture", validatedTexture ? validatedTexture.ToString() : "--");
             debugState._SetValue("currentTexture", currentTexture ? currentTexture.ToString() : "--");
             debugState._SetValue("currentAVPro", currentAVPro.ToString());
             debugState._SetValue("currentGamma", currentGamma.ToString());
@@ -1606,5 +1796,7 @@ namespace Texel
             debugState._SetValue("currentResolution", $"{currentRes.x}x{currentRes.y}");
             debugState._SetValue("currentValid", currentValid.ToString());
         }
+
+        #endregion
     }
 }
