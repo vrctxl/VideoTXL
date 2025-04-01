@@ -561,6 +561,13 @@ namespace Texel
                 for (int i = 0; i < ccount; i++)
                     playlistPanel.transform.GetChild(i).gameObject.SetActive(sourcePanelOpen);
 
+                if (sourcePanelOpen)
+                {
+                    VideoSourceUI ui = playlistPanel.GetComponentInChildren<VideoSourceUI>();
+                    if (ui)
+                        ui._SelectActive();
+                }
+
                 playlistIcon.color = sourcePanelOpen ? activeColor : normalColor;
 
                 //SendCustomEventDelayedFrames("_ScrollPlaylistCurrent", 10);

@@ -2,6 +2,12 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.4]
+
+- Fixed video source UI auomatically selecting active playing source (again)
+- Added highlight for button of selected source
+- Screen Manager performance improvements
+
 ### [2.5.0-beta.3]
 
 - Audio Manager now uses ReservedAudioSource for AudioLink as last resort
