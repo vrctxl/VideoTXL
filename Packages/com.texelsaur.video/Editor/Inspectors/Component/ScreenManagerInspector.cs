@@ -152,6 +152,8 @@ namespace Texel
         SerializedProperty latchErrorStateProperty;
         SerializedProperty overrideAspectRatioProperty;
         SerializedProperty aspectRatioProperty;
+        SerializedProperty monitorCaptureSourceProperty;
+        SerializedProperty monitorCaptureSourceIntervalProperty;
         SerializedProperty logoTextureProperty;
         SerializedProperty loadingTextureProperty;
         SerializedProperty syncTextureProperty;
@@ -184,6 +186,7 @@ namespace Texel
         SerializedProperty vrslBlitMatProperty;
         SerializedProperty vrslDoubleBufferAVProProperty;
         SerializedProperty vrslDoubleBufferUnityProperty;
+        SerializedProperty vrslModeProperty;
 
         SerializedProperty _udonSharpBackingUdonBehaviourProperty;
 
@@ -296,6 +299,8 @@ namespace Texel
             latchErrorStateProperty = serializedObject.FindProperty(nameof(ScreenManager.latchErrorState));
             overrideAspectRatioProperty = serializedObject.FindProperty(nameof(ScreenManager.overrideAspectRatio));
             aspectRatioProperty = serializedObject.FindProperty(nameof(ScreenManager.aspectRatio));
+            monitorCaptureSourceProperty = serializedObject.FindProperty(nameof(ScreenManager.monitorCaptureSource));
+            monitorCaptureSourceIntervalProperty = serializedObject.FindProperty(nameof(ScreenManager.monitorCaptureSourceInterval));
             logoTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.logoTexture));
             loadingTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.loadingTexture));
             syncTextureProperty = serializedObject.FindProperty(nameof(ScreenManager.syncTexture));
@@ -330,6 +335,7 @@ namespace Texel
             vrslBlitMatProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslBlitMat));
             vrslDoubleBufferAVProProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslDoubleBufferAVPro));
             vrslDoubleBufferUnityProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslDoubleBufferUnity));
+            vrslModeProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslMode));
 
             _udonSharpBackingUdonBehaviourProperty = serializedObject.FindProperty("_udonSharpBackingUdonBehaviour");
 
@@ -475,6 +481,14 @@ namespace Texel
                 EditorGUI.indentLevel--;
             }
 
+            EditorGUILayout.PropertyField(monitorCaptureSourceProperty);
+            if (monitorCaptureSourceProperty.boolValue)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(monitorCaptureSourceIntervalProperty, new GUIContent("Interval"));
+                EditorGUI.indentLevel--;
+            }
+
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(downloadLogoImageProperty, new GUIContent("Download Logo Texture", "When enabled, attempts to download an image from a URL to use as the logo texture, replacing the existing override.  The existing override will continue to be used until the download completes or if the download fails."));
             if (downloadLogoImageProperty.boolValue)
@@ -536,8 +550,11 @@ namespace Texel
         static GUIContent unityLabel = new GUIContent("Unity");
         static GUIContent avproLabel = new GUIContent("AVPro");
 
-        private static bool isVRSLHorizontal (UdonBehaviour vrslController, RenderTexture rt)
+        private static bool isVRSLHorizontal (VRSLMode mode, UdonBehaviour vrslController, RenderTexture rt)
         {
+            if (mode == VRSLMode.Horizontal || mode == VRSLMode.Vertical)
+                return mode == VRSLMode.Horizontal;
+
             bool resolvedSize = false;
             bool vertical = false;
             
@@ -578,6 +595,9 @@ namespace Texel
             if (vrslEnabledProperty.boolValue)
             {
                 EditorGUILayout.PropertyField(vrslControllerProperty, new GUIContent("Local UI Control Panel", "The VRSL_LocalUIControlPanel in your scene"));
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(vrslModeProperty, new GUIContent("VRSL Mode", "The mode (orientation) of the DMX blade"));
+                EditorGUI.indentLevel--;
                 EditorGUILayout.PropertyField(vrslDmxRTProperty, new GUIContent("DMX Raw RT", "The VRSL raw RenderTexture for either horizontal, vertical, or legacy configuration"));
                 EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(vrslBlitMatProperty, new GUIContent("DMX Copy material", "The material used to copy the DMX section of the video feed to the DMX Raw RT.  Do not change unless you know what you're doing."));
@@ -611,7 +631,7 @@ namespace Texel
                     // Vert AR: 5.192
 
                     bool resolvedSize = false;
-                    bool vertical = !isVRSLHorizontal((UdonBehaviour)vrslControllerProperty.objectReferenceValue, rt);
+                    bool vertical = !isVRSLHorizontal((VRSLMode)vrslModeProperty.intValue, (UdonBehaviour)vrslControllerProperty.objectReferenceValue, rt);
 
                     float hPixels = 1920f / dmxAspectRatio;
                     float dmxW = 1;
@@ -1696,7 +1716,7 @@ namespace Texel
             if (logoTex == null && manager.logoTexture is Texture2D)
                 logoTex = (Texture2D)manager.logoTexture;
 
-            bool horizontal = isVRSLHorizontal(manager.vrslController, manager.vrslDmxRT);
+            bool horizontal = isVRSLHorizontal(manager.vrslMode, manager.vrslController, manager.vrslDmxRT);
             RenderTexture rt = manager.vrslDmxRT;
 
             vrslEditorBlitMat.SetTexture("_MainTex", logoTex);

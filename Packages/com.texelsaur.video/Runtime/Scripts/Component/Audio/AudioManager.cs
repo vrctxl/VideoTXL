@@ -2,6 +2,7 @@
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.SDK3.Rendering;
 using VRC.Udon;
 
 namespace Texel
@@ -80,6 +81,7 @@ namespace Texel
         bool videoMute = false;
 
         AudioSource vrslNullSource = null;
+        bool enabledAudioLink = false;
 
         const int UNITY = 0;
         const int AVPRO = 1;
@@ -721,6 +723,12 @@ namespace Texel
         void _UpdateAudioLink(AudioSource source)
         {
             _UpdateExternal(audioLinkSystem, "audioSource", source);
+
+            if (audioLinkSystem && audioLinkSystem.gameObject.activeInHierarchy && source && !enabledAudioLink)
+            {
+                audioLinkSystem.SendCustomEvent("EnableAudioLink");
+                enabledAudioLink = true;
+            }
         }
 
         void _UpdateVRSL(AudioSource source)

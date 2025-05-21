@@ -692,6 +692,14 @@ namespace Texel
             return "";
         }
 
+        bool _IsQueueSupported()
+        {
+            if (videoPlayer.sourceManager)
+                return videoPlayer.sourceManager._GetCanAddTrack() >= 0;
+
+            return false;
+        }
+
         // TODO: Genericize to url source
         public void _UpdatePlaylistInfo()
         {
@@ -770,9 +778,7 @@ namespace Texel
             bool canControl = videoPlayer._CanTakeControl();
             bool enableControl = !videoPlayer.locked || canControl;
 
-            bool queueSupported = false;
-            if (videoPlayer.sourceManager)
-                queueSupported = videoPlayer.sourceManager._GetCanAddTrack() >= 0;
+            bool queueSupported = _IsQueueSupported();
 
             if (queueInputControl)
                 queueInputControl.SetActive(false);
@@ -928,7 +934,10 @@ namespace Texel
                         urlInput.readOnly = !canControl;
                         if (canControl)
                         {
-                            SetPlaceholderText("Enter Video URL...");
+                            if (_IsQueueSupported() && urlMode == UrlEntryMode.AddToQueue)
+                                SetPlaceholderText("Add Video URL to Queue...");
+                            else
+                                SetPlaceholderText("Enter Video URL...");
                             SetStatusText("");
                         }
                         else
