@@ -4,6 +4,7 @@ using UnityEngine;
 using VRC.SDK3.Components.Video;
 using VRC.SDKBase;
 using VRC.Udon;
+using VRC.Udon.Common;
 
 namespace Texel
 {
@@ -12,9 +13,14 @@ namespace Texel
     {
         TXLVideoPlayer videoPlayer;
 
+        [SerializeField] internal string defaultStreamName;
         [SerializeField] internal VRCUrl defaultStreamUrl;
+        // [SerializeField] internal VRCUrl defaultStreamQuestUrl;
+        [SerializeField] internal string[] additionalStreamNames;
         [SerializeField] internal VRCUrl[] additionalStreamUrls;
+        // [SerializeField] internal VRCUrl[] additionalStreamQuestUrls;
         [SerializeField] internal bool allowCustomUrl = false;
+        [SerializeField] internal bool allowCustomQuestUrl = false;
 
         [SerializeField] internal bool loadOnStart = false;
         [SerializeField] internal bool interruptible = false;
@@ -25,10 +31,16 @@ namespace Texel
 
         [UdonSynced]
         VRCUrl syncStreamUrl;
+        [UdonSynced]
+        VRCUrl syncStreamQuestUrl;
         [UdonSynced, FieldChangeCallback(nameof(SyncCustomUrl))]
-        VRCUrl syncCustomUrl;
+        VRCUrl syncCustomUrl = VRCUrl.Empty;
+        [UdonSynced, FieldChangeCallback(nameof(SyncCustomQuestUrl))]
+        VRCUrl syncCustomQuestUrl = VRCUrl.Empty;
         [UdonSynced, FieldChangeCallback(nameof(SyncReady))]
         bool syncReady;
+        [UdonSynced]
+        int syncStreamUrlSerial = 0;
         [UdonSynced]
         bool syncLoadSuccess;
         [UdonSynced]
@@ -37,6 +49,15 @@ namespace Texel
         int syncErrorCount;
         [UdonSynced]
         bool syncEnabled;
+
+        private int prevStreamUrlSerial = 0;
+        private int urlChangeSerial = 0;
+
+        public const int EVENT_URL_CHANGE = VideoUrlSource.EVENT_COUNT + 0;
+        public const int EVENT_CUSTOM_URL_CHANGE = VideoUrlSource.EVENT_COUNT + 1;
+        protected new const int EVENT_COUNT = VideoUrlSource.EVENT_COUNT + 2;
+
+        protected override int EventCount => EVENT_COUNT;
 
         void Start()
         {
@@ -48,6 +69,15 @@ namespace Texel
             base._Init();
 
             syncStreamUrl = VRCUrl.Empty;
+
+            int validElements = Mathf.Min(additionalStreamNames.Length, additionalStreamUrls.Length);
+
+            if (additionalStreamNames.Length < validElements)
+                additionalStreamNames = (string[])UtilityTxl.ArrayMinSize(additionalStreamNames, validElements, typeof(string));
+            if (additionalStreamUrls.Length < validElements)
+                additionalStreamUrls = (VRCUrl[])UtilityTxl.ArrayMinSize(additionalStreamUrls, validElements, typeof(VRCUrl));
+            // if (additionalStreamQuestUrls.Length < validElements)
+            //     additionalStreamQuestUrls = (VRCUrl[])UtilityTxl.ArrayMinSize(additionalStreamQuestUrls, validElements, typeof(VRCUrl));
 
             if (Networking.IsOwner(gameObject))
             {
@@ -120,6 +150,11 @@ namespace Texel
             get { return interruptible; }
         }
 
+        public override TXLVideoPlayer VideoPlayer
+        {
+            get { return videoPlayer; }
+        }
+
         public override bool _CanMoveNext()
         {
             return IsValid && !syncReady;
@@ -142,6 +177,11 @@ namespace Texel
             return true;
         }
 
+        public int UrlChangeSerial
+        {
+            get { return prevStreamUrlSerial; }
+        }
+
         internal bool SyncReady
         {
             set
@@ -156,16 +196,36 @@ namespace Texel
             }
         }
 
+        public string DefaultStreamName
+        {
+            get { return defaultStreamName; }
+        }
+
+        public VRCUrl DefaulStreamtUrl
+        {
+            get { return defaultStreamUrl; }
+        }
+
+        /* public VRCUrl DefaultStreamQuestUrl
+        {
+            get { return defaultStreamQuestUrl; }
+        } */
+
         internal VRCUrl SyncCustomUrl
         {
             get { return syncCustomUrl; }
             set
             {
-                syncCustomUrl = value;
+                if (syncCustomUrl != value)
+                {
+                    syncCustomUrl = value;
+
+                    _UpdateHandlers(EVENT_CUSTOM_URL_CHANGE);
+                }
             }
         }
 
-        public VRCUrl CustomUrl
+        public VRCUrl CustomStreamUrl
         {
             get { return syncCustomUrl; }
             set
@@ -178,6 +238,62 @@ namespace Texel
             }
         }
 
+        internal VRCUrl SyncCustomQuestUrl
+        {
+            get { return syncCustomQuestUrl; }
+            set
+            {
+                if (syncCustomQuestUrl != value)
+                {
+                    syncCustomQuestUrl = value;
+
+                    _UpdateHandlers(EVENT_CUSTOM_URL_CHANGE);
+                }
+            }
+        }
+
+        public VRCUrl CustomStreamQuestUrl
+        {
+            get { return syncCustomQuestUrl; }
+            set
+            {
+                if (!_TakeControl())
+                    return;
+
+                SyncCustomQuestUrl = value;
+                RequestSerialization();
+            }
+        }
+
+        public int AdditionalUrlCount
+        {
+            get { return additionalStreamUrls.Length; }
+        }
+
+        public string _GetAdditionalStreamName(int index)
+        {
+            if (index < 0 || index >= additionalStreamUrls.Length)
+                return null;
+
+            return additionalStreamNames[index];
+        }
+
+        public VRCUrl _GetAdditionalStreamUrl(int index)
+        {
+            if (index < 0 || index >= additionalStreamUrls.Length)
+                return null;
+
+            return additionalStreamUrls[index];
+        }
+
+        /* public VRCUrl _GetAdditionalStreamQuestUrl(int index)
+        {
+            if (index < 0 || index >= additionalStreamQuestUrls.Length)
+                return null;
+
+            return additionalStreamQuestUrls[index];
+        } */
+
         public override void _SetVideoPlayer(TXLVideoPlayer videoPlayer)
         {
             this.videoPlayer = videoPlayer;
@@ -188,6 +304,11 @@ namespace Texel
         public override VRCUrl _GetCurrentUrl()
         {
             return syncStreamUrl;
+        }
+
+        public override VRCUrl _GetCurrentQuestUrl()
+        {
+            return syncStreamQuestUrl;
         }
 
         public override void _OnVideoReady()
@@ -257,22 +378,38 @@ namespace Texel
             return result;
         }
 
-        public void _SetUrl(VRCUrl url)
+        public void _SetUrl(VRCUrl url, VRCUrl questUrl = null)
         {
             if (!URLUtil.WellFormedUrl(url))
+                return;
+            if (!URLUtil.EmptyUrl(questUrl) && !URLUtil.WellFormedUrl(questUrl))
                 return;
 
             if (!_TakeControl())
                 return;
 
             syncEnabled = true;
-            syncReady = false;
             syncErrorCount = 0;
             syncLoadSuccess = false;
             syncEndSuccess = false;
+            SyncReady = false;
+
             syncStreamUrl = url;
-            
+            syncStreamQuestUrl = questUrl;
+            syncStreamUrlSerial += 1;
+
             RequestSerialization();
+
+            _MoveNext();
+        }
+
+        public override void OnDeserialization(DeserializationResult result)
+        {
+            if (syncStreamUrlSerial > prevStreamUrlSerial)
+            {
+                prevStreamUrlSerial = syncStreamUrlSerial;
+                _EventUrlChange();
+            }
         }
 
         bool _TakeControl()
@@ -284,6 +421,11 @@ namespace Texel
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
             return true;
+        }
+
+        protected void _EventUrlChange()
+        {
+            _UpdateHandlers(EVENT_URL_CHANGE);
         }
     }
 }

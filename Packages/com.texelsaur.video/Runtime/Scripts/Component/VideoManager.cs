@@ -336,7 +336,7 @@ namespace Texel
             if (!_GateEvent(id, "Video end event"))
                 return;
 
-            if (!VideoIsSeekable && defaultReactStreamStop && (Time.time - playStartTime) < defaultStreamStopThreshold)
+            if (!VideoIsSeekable && (!defaultReactStreamStop || (Time.time - playStartTime) < defaultStreamStopThreshold))
             {
                 _DebugLog("Video end encountered within stream start threshold, ignoring");
                 return;

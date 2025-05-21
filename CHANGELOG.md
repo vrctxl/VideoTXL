@@ -2,6 +2,16 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.5]
+
+- Fixed queue input not accepting non-HTTP URLs
+- Default enter video text indicates queue if queue entry is active
+- Added explicit VRSL mode select to screen manager
+- Added toggle and interval for checking capture source to screen manager
+- Force-enable audiolink when audiolink is bound to video player
+- AVPro reserved audio source is muted by default
+- Stream source and UI progress, but not ready for full use
+
 ### [2.5.0-beta.4]
 
 - Fixed video source UI auomatically selecting active playing source (again)

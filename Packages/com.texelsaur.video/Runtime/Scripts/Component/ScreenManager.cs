@@ -29,6 +29,7 @@ namespace Texel
 
     public enum VRSLMode
     {
+        Infer = -1,
         Horizontal = 0,
         Vertical = 1,
     }
@@ -98,6 +99,11 @@ namespace Texel
         [Tooltip("The screen texture to apply in Unity's editor runtime")]
         [SerializeField] internal Texture editorTexture;
 
+        [Tooltip("Regularly check the underlying capture source for changes.  This is necessary to handle media sources that may change their resolution or format mid-playback.")]
+        [SerializeField] internal bool monitorCaptureSource = true;
+        [Tooltip("The number of seconds between each capture source check.")]
+        [SerializeField] internal float monitorCaptureSourceInterval = 2f;
+
         int materialCount = 0;
         [SerializeField] internal Material[] materialUpdateList;
         [SerializeField] internal ScreenPropertyMap[] materialPropertyList;
@@ -137,6 +143,7 @@ namespace Texel
         [SerializeField] internal bool vrslDoubleBufferAVPro = true;
         [SerializeField] internal bool vrslDoubleBufferUnity = false;
         [SerializeField] internal Material vrslBlitMat;
+        [SerializeField] internal VRSLMode vrslMode = VRSLMode.Infer;
 
         int baseIndexCrt;
         int shaderPropCrtLength;
@@ -749,7 +756,9 @@ namespace Texel
             {
                 _DebugLog("Capture valid");
                 _UpdateHandlers(EVENT_CAPTURE_VALID);
-                _QueueUpdateCheckIfNoPending(2);
+
+                if (monitorCaptureSource)
+                    _QueueUpdateCheckIfNoPending(monitorCaptureSourceInterval);
             }
         }
 
@@ -823,7 +832,8 @@ namespace Texel
                     _DebugLog("Capture valid");
                     _UpdateHandlers(EVENT_CAPTURE_VALID);
                 }
-                _QueueUpdateCheckIfNoPending(2);
+                if (monitorCaptureSource)
+                    _QueueUpdateCheckIfNoPending(monitorCaptureSourceInterval);
             }
         }
 
@@ -1712,7 +1722,11 @@ namespace Texel
                 return;
 
             bool horizontal = false;
-            if (vrslController)
+            if (vrslMode == VRSLMode.Horizontal)
+                horizontal = true;
+            else if (vrslMode == VRSLMode.Vertical)
+                horizontal = false;
+            else if (vrslController)
             {
                 int mode = (int)vrslController.GetProgramVariable("DMXMode");
                 horizontal = mode == 0;

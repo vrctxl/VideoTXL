@@ -35,7 +35,7 @@ public static class URLUtil
         if (EmptyUrl(url))
             return false;
 
-        Regex pattern = new Regex(@"^(http(s|)\:\/\/|)((([a-zA-Z0-9-_]{1,}\.){1,})([a-zA-Z]{1}[a-zA-Z0-9-]{1,}))(:[0-9]{1,}|)(\/[a-zA-Z0-9_~#?\+\&\.\/-=%-]{1,}|)+");
+        Regex pattern = new Regex(@"^([a-zA-Z]+\:\/\/|)((([a-zA-Z0-9-_]{1,}\.){1,})([a-zA-Z]{1}[a-zA-Z0-9-]{1,}))(:[0-9]{1,}|)(\/[a-zA-Z0-9_~#?\+\&\.\/-=%-]{1,}|)+");
         return pattern.IsMatch(url);
     }
 
