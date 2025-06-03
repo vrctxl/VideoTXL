@@ -1,14 +1,15 @@
 Shader "VideoTXL/RenderOutVRSL" {
 	Properties {
-		_MainTex ("MainTex", 2D) = "black" {}
+		_MainTex("MainTex", 2D) = "black" {}
 		[HideInInspector] _MainTexSize("MainTexSize", Vector) = (1, 1, 0, 0)
+		[HideInInspector] _MainTexTexelSize("MainTexTexelSize", Vector) = (1, 1, 1, 1)
 		[HideInInspector] _BufferTex("BufferTex", 2D) = "black" {}
 		[Toggle] _ApplyGamma("Apply Gamma", Int) = 0
 		[Toggle] _FlipY("Flip Y", Int) = 0
 		_AspectRatio("Aspect Ratio", Float) = 1.777777
 		[Enum(Linear,0,sRGB,1)] _TargetColorSpace("Target Color Space", Int) = 0
-		[Toggle] _DoubleBuffered ("Double Buffered", Int) = 0
-		[Toggle] _Horizontal ("Horizontal", Int) = 1
+		[Toggle] _DoubleBuffered("Double Buffered", Int) = 0
+		[Toggle] _Horizontal("Horizontal", Int) = 1
 		_OffsetScale("Offset Scale", Vector) = (0, 0, 0, 0)
 	}
 
@@ -40,6 +41,7 @@ Shader "VideoTXL/RenderOutVRSL" {
 
 			sampler2D _MainTex;
 			float4 _MainTexSize;
+			float4 _MainTexTexelSize;
 			sampler2D _BufferTex;
 			int _ApplyGamma;
 			int _FlipY;
@@ -93,8 +95,9 @@ Shader "VideoTXL/RenderOutVRSL" {
 				offset.y *= (1 - scale.y);
 
 				float2 uv = i.texcoord.xy * scale + offset;
+				float2 pointUV = (floor(uv * _MainTexTexelSize.zw) + 0.5) * _MainTexTexelSize.xy;
 
-				float4 color = tex2D(_MainTex, uv);
+				float4 color = tex2Dlod(_MainTex, float4(pointUV, 0, 0));
 
 				if (_DoubleBuffered) {
 					float4 prev = tex2D(_BufferTex, i.texcoord1.xy);
