@@ -416,6 +416,9 @@ namespace Texel
 
         public void _OnSourceChange()
         {
+            if (urlRemapper)
+                urlRemapper._SetVideoSource(videoMux.ActiveSource);
+
             playerSource = (short)videoMux.ActiveSourceType;
             _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
 

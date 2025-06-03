@@ -2,6 +2,11 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.6]
+- Fixed local player not working with all URL remapper rules
+- Updated VRSL blit material to perform point filtering
+- Included transparent screen shader
+
 ### [2.5.0-beta.5]
 
 - Fixed queue input not accepting non-HTTP URLs

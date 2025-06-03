@@ -1637,6 +1637,9 @@ namespace Texel
             Texture validCurrent = ValidCurrentTexture;
 
             vrslBlitMat.SetTexture("_MainTex", validCurrent);
+            if (validCurrent.width > 0 && validCurrent.height > 0)
+                vrslBlitMat.SetVector("_MainTexTexelSize", new Vector4(1f / validCurrent.width, 1f / validCurrent.height, validCurrent.width, validCurrent.height));
+
             //vrslBlitMat.SetTexture("_BufferTex", vrslBuffer);
 
             _SetMatIntProperty(vrslBlitMat, "_ApplyGamma", currentGamma ? 1 : 0);
@@ -1740,6 +1743,7 @@ namespace Texel
             {
                 vrslBlitMat.SetTexture("_MainTex", vrslDmxRT);
                 vrslBlitMat.SetVector("_MainTexSize", new Vector4(vrslDmxRT.width, vrslDmxRT.height, 0, 0));
+                vrslBlitMat.SetVector("_MainTexTexelSize", new Vector4(1f / vrslDmxRT.width, 1f / vrslDmxRT.height, vrslDmxRT.width, vrslDmxRT.height));
                 vrslBlitMat.SetVector("_OffsetScale", new Vector4(vrslOffsetScale.x, vrslOffsetScale.y, vrslOffsetScale.z, vrslOffsetScale.z));
                 vrslBlitMat.SetInt("_Horizontal", horizontal ? 1 : 0);
             }
