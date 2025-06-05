@@ -33,19 +33,10 @@ namespace Texel
         public bool[] applyPC;
         public bool[] applyQuest;
 
-
-        int gameMode = GAME_MODE_PC;
+        
         GamePlatform platform;
         VideoSource videoSource;
         AudioChannelGroup audioProfile;
-
-        public const int GAME_MODE_PC = 0;
-        public const int GAME_MODE_QUEST = 1;
-
-        public void _SetGameMode(int mode)
-        {
-            gameMode = mode;
-        }
 
         public void _SetPlatform(GamePlatform platform)
         {
