@@ -66,9 +66,6 @@ namespace Texel
         {
             base._Init();
 
-            if (Utilities.IsValid(urlRemapper))
-                urlRemapper._SetGameMode(IsQuest ? UrlRemapper.GAME_MODE_QUEST : UrlRemapper.GAME_MODE_PC);
-
             if (dependentSource)
                 dependentSource._BindDepdendentVideoPlayer(this);
 
@@ -79,6 +76,9 @@ namespace Texel
             }
             else
                 _urlSourceType = SOURCE_TYPE_URL;
+
+            if (Utilities.IsValid(urlRemapper))
+                urlRemapper._SetPlatform(IsQuest ? GamePlatform.Quest : GamePlatform.PC);
 
             _UpdatePlayerState(VIDEO_STATE_STOPPED);
         }

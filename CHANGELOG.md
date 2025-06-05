@@ -2,6 +2,9 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.7]
+- Fixed local player not recognizing quest platform in URL remapper
+
 ### [2.5.0-beta.6]
 - Fixed local player not working with all URL remapper rules
 - Updated VRSL blit material to perform point filtering
