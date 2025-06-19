@@ -43,8 +43,39 @@ namespace Texel.Video.Internal
     public static class EditorUrlResolver
     {
         private static string _youtubeDLPath = "";
+        private static string _ffmpegPath = "";
+        private const string _ffmpegCache = "Video Cache";
         private static HashSet<System.Diagnostics.Process> _runningYtdlProcesses = new HashSet<System.Diagnostics.Process>();
         private static HashSet<MonoBehaviour> _registeredBehaviours = new HashSet<MonoBehaviour>();
+
+        private static System.Diagnostics.Process ResolvingProcess(string resolverPath, string[] args)
+        {
+            System.Diagnostics.Process resolver = new System.Diagnostics.Process();
+
+            resolver.EnableRaisingEvents = true;
+
+            resolver.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+            resolver.StartInfo.CreateNoWindow = true;
+            resolver.StartInfo.UseShellExecute = false;
+            resolver.StartInfo.RedirectStandardInput = true;
+            resolver.StartInfo.RedirectStandardOutput = true;
+            resolver.StartInfo.RedirectStandardError = true;
+
+            resolver.StartInfo.FileName = resolverPath;
+
+            foreach (string argument in args)
+                resolver.StartInfo.Arguments += argument + " ";
+
+            return resolver;
+        }
+
+        private static string SanitizeURL(string url, string identifier, char seperator)
+        {
+            if (url.StartsWith(identifier) && url.Contains(seperator))
+                url = url.Substring(0, url.IndexOf(seperator));
+
+            return url;
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void SetupURLResolveCallback()
@@ -60,6 +91,15 @@ namespace Texel.Video.Internal
             {
                 _youtubeDLPath = string.Join("\\", splitPath.Take(splitPath.Length - 2)) + "\\VRChat\\VRChat\\Tools\\youtube-dl.exe";
             }
+
+#if UNITY_EDITOR_LINUX
+            if (!File.Exists(_youtubeDLPath))
+                _youtubeDLPath = "/usr/bin/yt-dlp";
+
+            _ffmpegPath = "/usr/bin/ffmpeg";
+            if (!File.Exists(_ffmpegPath))
+                Debug.LogWarning("[<color=#A7D147>VideoTXL FFMPEG</color>] Unable to find FFmpeg installation, URLs will not be transcoded in editor test your videos in game.");
+#endif
 
             if (!File.Exists(_youtubeDLPath))
             {
@@ -109,23 +149,51 @@ namespace Texel.Video.Internal
             //    return;
             //}
 
-            var ytdlProcess = new System.Diagnostics.Process();
+            // Catch playlist runaway
+            string urls = SanitizeURL(url.ToString(), "https://www.youtube.com/", '&');
+            urls = SanitizeURL(urls, "https://youtu.be/", '?');
 
-            ytdlProcess.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-            ytdlProcess.StartInfo.CreateNoWindow = true;
-            ytdlProcess.StartInfo.UseShellExecute = false;
-            ytdlProcess.StartInfo.RedirectStandardOutput = true;
-            ytdlProcess.StartInfo.FileName = _youtubeDLPath;
-            ytdlProcess.StartInfo.Arguments = $"--no-check-certificate --no-cache-dir --rm-cache-dir -f \"mp4[height<=?{resolution}][protocol=https]/best[height<=?{resolution}][protocol=https]\" --get-url \"{url}\"";
+            string[] ytdlpArgs = new string[7] {
+                "--no-check-certificate",
+                "--no-cache-dir",
+                "--rm-cache-dir",
+                //"--dump-json",
 
-            Debug.Log($"[<color=#A7D147>VideoTXL YTDL</color>] Attempting to resolve URL '{url}'");
+                "-f", $"\"mp4[height<=?{resolution}][protocol^=http]/best[height<=?{resolution}][protocol^=http]\"",
+
+                "--get-url", $"\"{urls}\""
+            };
+
+            System.Diagnostics.Process ytdlProcess = ResolvingProcess(_youtubeDLPath, ytdlpArgs);
+
+            Debug.Log($"[<color=#A7D147>VideoTXL YTDL</color>] Attempting to resolve URL '{urls}'");
 
             ytdlProcess.Start();
             _runningYtdlProcesses.Add(ytdlProcess);
 
-            ((MonoBehaviour)videoPlayer).StartCoroutine(URLResolveCoroutine(url.ToString(), ytdlProcess, videoPlayer, urlResolvedCallback, errorCallback));
+            ((MonoBehaviour)videoPlayer).StartCoroutine(URLResolveCoroutine(urls, ytdlProcess, videoPlayer, urlResolvedCallback, errorCallback));
 
             _registeredBehaviours.Add((MonoBehaviour)videoPlayer);
+        }
+
+        private static IEnumerator URLTranscodeCoroutine(string resolvedURL, string outputURL, string originalUrl, System.Diagnostics.Process ffmpegProcess, UnityEngine.Object videoPlayer, Action<string> urlResolvedCallback, Action<VideoError> errorCallback)
+        {
+            while (!ffmpegProcess.HasExited)
+                yield return new WaitForSeconds(0.1f);
+
+            if (File.Exists(outputURL))
+            {
+                //
+                Debug.Log($"[<color=#A7D147>VideoTXL FFMPEG</color>] Successfully transcoded URL '{originalUrl}'");
+
+                urlResolvedCallback($"file://{outputURL}");
+            }
+            else
+            {
+                //
+                Debug.LogWarning("[<color=#A7D147>VideoTXL FFMPEG</color>] Unable to transcode URL will not be played in editor test your videos in game.");
+                errorCallback(VideoError.InvalidURL);
+            }
         }
 
         private static IEnumerator URLResolveCoroutine(string originalUrl, System.Diagnostics.Process ytdlProcess, UnityEngine.Object videoPlayer, Action<string> urlResolvedCallback, Action<VideoError> errorCallback)
@@ -142,8 +210,88 @@ namespace Texel.Video.Internal
                 errorCallback(VideoError.InvalidURL);
             else
             {
-                Debug.Log($"[<color=#A7D147>VideoTXL YTDL</color>] Successfully resolved URL '{originalUrl}' to '{resolvedURL}'");
+                string debugStdout = resolvedURL;
+                if (resolvedURL.Contains("ip="))
+                {
+                    int filterStart = resolvedURL.IndexOf("ip=");
+                    int filterEnd = resolvedURL.Substring(filterStart).IndexOf("&");
+
+                    debugStdout = resolvedURL.Replace(resolvedURL.Substring(filterStart + 3, filterEnd - 3), "[REDACTED]");
+                }
+                Debug.Log($"[<color=#A7D147>VideoTXL YTDL</color>] Successfully resolved URL '{originalUrl}' to '{debugStdout}'");
+
+#if UNITY_EDITOR_LINUX
+
+                if (File.Exists(_ffmpegPath))
+                {
+                    string tempPath = Path.GetFullPath(Path.Combine("Temp", _ffmpegCache));
+
+                    if (!Directory.Exists(tempPath))
+                        Directory.CreateDirectory(tempPath);
+
+                    string urlHash = Hash128.Compute(originalUrl).ToString();
+                    string fullUrlHash = Path.Combine(tempPath, urlHash + ".webm");
+
+                    if (File.Exists(fullUrlHash))
+                    {
+                        Debug.Log($"[<color=#A7D147>VideoTXL FFMPEG</color>] Loaded cached video '{originalUrl}'");
+                        urlResolvedCallback(fullUrlHash);
+                    }
+                    else
+                    {
+                        string[] ffmpegArgs = new string[10] {
+                            "-y",
+
+                            "-i", $"\"{resolvedURL}\"",
+
+                            "-c:a", $"{ "libvorbis" }",
+
+                            "-c:v", $"{ "vp8" }",
+
+                            "-f", $"{ "webm" }",
+
+                            $"\"{fullUrlHash}\""
+                        };
+
+                        System.Diagnostics.Process ffmpegProcess = ResolvingProcess(_ffmpegPath, ffmpegArgs);
+
+                        ffmpegProcess.ErrorDataReceived += (sender, args) =>
+                        {
+                            if (args.Data != null)
+                            {
+                                if (args.Data == "Press [q] to stop, [?] for help")
+                                    Debug.Log($"[<color=#A7D147>VideoTXL FFMPEG</color>] Starting transcode '{originalUrl}'");
+                                else if (args.Data.StartsWith("frame="))
+                                {
+                                    string progressTimeString = args.Data;
+                                    int progressTimeIndex = progressTimeString.IndexOf("time=") + 5;
+                                    int progressTimeLength = progressTimeString.IndexOf("bitrate=") - progressTimeIndex;
+
+                                    string progressTime = progressTimeString.Substring(progressTimeIndex, progressTimeLength);
+                                    TimeSpan ffmpegProgress = TimeSpan.Parse(progressTime);
+
+                                    //bool infTime = _ffmpegTranscodeDuration < 1.1 && _ffmpegTranscodeDuration > 0.9;
+
+                                    string progressSeconds = ffmpegProgress.ToString();
+                                    progressSeconds = progressSeconds.Contains('.') ? progressSeconds.Substring(0, progressSeconds.IndexOf('.')) : progressSeconds;
+                                    progressSeconds += "s";
+                                    string progressPercent = ""; // infTime ? "" : $"- {Mathf.FloorToInt((float)(ffmpegProgress.TotalSeconds / _ffmpegTranscodeDuration) * 100f)}%";
+
+                                    Debug.Log($"[<color=#A7D147>VideoTXL FFMPEG</color>] Transcode progress '{originalUrl}': {progressSeconds} {progressPercent}");
+                                }
+                            }
+                        };
+
+                        ffmpegProcess.Start();
+                        ffmpegProcess.BeginErrorReadLine();
+
+                        ((MonoBehaviour)videoPlayer).StartCoroutine(URLTranscodeCoroutine(resolvedURL, fullUrlHash, originalUrl, ffmpegProcess, videoPlayer, urlResolvedCallback, errorCallback));
+                    }
+                }
+                else errorCallback(VideoError.Unknown);
+#else
                 urlResolvedCallback(resolvedURL);
+#endif
             }
         }
     }
