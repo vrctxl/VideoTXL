@@ -36,6 +36,12 @@ using VRC.SDKBase;
 
 namespace Texel.Video.Internal
 {
+    public class VideoMeta
+    {
+        public string id;
+        public Double duration;
+    }
+
     /// <summary>
     /// Allows people to put in links to YouTube videos and other supported video services and have links just work
     /// Hooks into VRC's video player URL resolve callback and uses the VRC installation of YouTubeDL to resolve URLs in the editor.
@@ -44,6 +50,8 @@ namespace Texel.Video.Internal
     {
         private static string _youtubeDLPath = "";
         private static string _ffmpegPath = "";
+        private static string _ytdlResolvedURL = "";
+        private static VideoMeta _ytdlJson;
         private const string _ffmpegCache = "Video Cache";
         private static System.Diagnostics.Process _ffmpegProcess;
         private static HashSet<System.Diagnostics.Process> _runningYtdlProcesses = new HashSet<System.Diagnostics.Process>();
@@ -160,11 +168,11 @@ namespace Texel.Video.Internal
                 _ffmpegProcess.StandardInput.Flush();
             }
 
-            string[] ytdlpArgs = new string[7] {
+            string[] ytdlpArgs = new string[8] {
                 "--no-check-certificate",
                 "--no-cache-dir",
                 "--rm-cache-dir",
-                //"--dump-json",
+                "--dump-json",
 
                 "-f", $"\"mp4[height<=?{resolution}][protocol^=http]/best[height<=?{resolution}][protocol^=http]\"",
 
@@ -175,7 +183,20 @@ namespace Texel.Video.Internal
 
             Debug.Log($"[<color=#A7D147>VideoTXL YTDL</color>] Attempting to resolve URL '{urls}'");
 
+            ytdlProcess.OutputDataReceived += (sender, args) =>
+            {
+                if (args.Data != null)
+                {
+                    if (args.Data.StartsWith("{"))
+                        _ytdlJson = JsonUtility.FromJson<VideoMeta>(args.Data);
+                    else
+                        _ytdlResolvedURL = args.Data;
+                }
+            };
+
             ytdlProcess.Start();
+            ytdlProcess.BeginOutputReadLine();
+
             _runningYtdlProcesses.Add(ytdlProcess);
 
             ((MonoBehaviour)videoPlayer).StartCoroutine(URLResolveCoroutine(urls, ytdlProcess, videoPlayer, urlResolvedCallback, errorCallback));
@@ -213,7 +234,7 @@ namespace Texel.Video.Internal
 
             _runningYtdlProcesses.Remove(ytdlProcess);
 
-            string resolvedURL = ytdlProcess.StandardOutput.ReadLine();
+            string resolvedURL = _ytdlResolvedURL;
 
             // If a URL fails to resolve, YTDL will send error to stderror and nothing will be output to stdout
             if (string.IsNullOrEmpty(resolvedURL))
@@ -282,14 +303,12 @@ namespace Texel.Video.Internal
                                     string progressTime = progressTimeString.Substring(progressTimeIndex, progressTimeLength);
                                     TimeSpan ffmpegProgress = TimeSpan.Parse(progressTime);
 
-                                    //bool infTime = _ffmpegTranscodeDuration < 1.1 && _ffmpegTranscodeDuration > 0.9;
-
                                     string progressSeconds = ffmpegProgress.ToString();
                                     progressSeconds = progressSeconds.Contains('.') ? progressSeconds.Substring(0, progressSeconds.IndexOf('.')) : progressSeconds;
                                     progressSeconds += "s";
-                                    string progressPercent = ""; // infTime ? "" : $"- {Mathf.FloorToInt((float)(ffmpegProgress.TotalSeconds / _ffmpegTranscodeDuration) * 100f)}%";
+                                    string progressPercent = _ytdlJson.duration == 0.0 ? "" : $"- {Mathf.FloorToInt((float)(ffmpegProgress.TotalSeconds / _ytdlJson.duration) * 100f)}%";
 
-                                    Debug.Log($"[<color=#A7D147>VideoTXL FFMPEG</color>] Transcode progress '{originalUrl}': {progressSeconds} {progressPercent}");
+                                    Debug.Log($"[<color=#A7D147>VideoTXL FFMPEG</color>] Transcode progress '{_ytdlJson.id}': {progressSeconds} {progressPercent}");
                                 }
                             }
                         };
