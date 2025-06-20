@@ -45,6 +45,7 @@ namespace Texel.Video.Internal
         private static string _youtubeDLPath = "";
         private static string _ffmpegPath = "";
         private const string _ffmpegCache = "Video Cache";
+        private static System.Diagnostics.Process _ffmpegProcess;
         private static HashSet<System.Diagnostics.Process> _runningYtdlProcesses = new HashSet<System.Diagnostics.Process>();
         private static HashSet<MonoBehaviour> _registeredBehaviours = new HashSet<MonoBehaviour>();
 
@@ -153,6 +154,12 @@ namespace Texel.Video.Internal
             string urls = SanitizeURL(url.ToString(), "https://www.youtube.com/", '&');
             urls = SanitizeURL(urls, "https://youtu.be/", '?');
 
+            if (_ffmpegProcess != null)
+            {
+                _ffmpegProcess.StandardInput.Write('q');
+                _ffmpegProcess.StandardInput.Flush();
+            }
+
             string[] ytdlpArgs = new string[7] {
                 "--no-check-certificate",
                 "--no-cache-dir",
@@ -194,6 +201,9 @@ namespace Texel.Video.Internal
                 Debug.LogWarning("[<color=#A7D147>VideoTXL FFMPEG</color>] Unable to transcode URL will not be played in editor test your videos in game.");
                 errorCallback(VideoError.InvalidURL);
             }
+
+            _ffmpegProcess.Dispose();
+            _ffmpegProcess = null;
         }
 
         private static IEnumerator URLResolveCoroutine(string originalUrl, System.Diagnostics.Process ytdlProcess, UnityEngine.Object videoPlayer, Action<string> urlResolvedCallback, Action<VideoError> errorCallback)
@@ -220,7 +230,9 @@ namespace Texel.Video.Internal
                 }
                 Debug.Log($"[<color=#A7D147>VideoTXL YTDL</color>] Successfully resolved URL '{originalUrl}' to '{debugStdout}'");
 
-#if UNITY_EDITOR_LINUX
+#if !UNITY_EDITOR_LINUX
+                urlResolvedCallback(resolvedURL);
+#else
 
                 if (File.Exists(_ffmpegPath))
                 {
@@ -253,9 +265,9 @@ namespace Texel.Video.Internal
                             $"\"{fullUrlHash}\""
                         };
 
-                        System.Diagnostics.Process ffmpegProcess = ResolvingProcess(_ffmpegPath, ffmpegArgs);
+                        _ffmpegProcess = ResolvingProcess(_ffmpegPath, ffmpegArgs);
 
-                        ffmpegProcess.ErrorDataReceived += (sender, args) =>
+                        _ffmpegProcess.ErrorDataReceived += (sender, args) =>
                         {
                             if (args.Data != null)
                             {
@@ -282,15 +294,13 @@ namespace Texel.Video.Internal
                             }
                         };
 
-                        ffmpegProcess.Start();
-                        ffmpegProcess.BeginErrorReadLine();
+                        _ffmpegProcess.Start();
+                        _ffmpegProcess.BeginErrorReadLine();
 
-                        ((MonoBehaviour)videoPlayer).StartCoroutine(URLTranscodeCoroutine(resolvedURL, fullUrlHash, originalUrl, ffmpegProcess, videoPlayer, urlResolvedCallback, errorCallback));
+                        ((MonoBehaviour)videoPlayer).StartCoroutine(URLTranscodeCoroutine(resolvedURL, fullUrlHash, originalUrl, _ffmpegProcess, videoPlayer, urlResolvedCallback, errorCallback));
                     }
                 }
                 else errorCallback(VideoError.Unknown);
-#else
-                urlResolvedCallback(resolvedURL);
 #endif
             }
         }
