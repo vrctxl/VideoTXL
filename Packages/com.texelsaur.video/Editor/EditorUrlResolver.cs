@@ -215,7 +215,11 @@ namespace Texel.Video.Internal
             {
                 Debug.Log($"[<color=#A7D147>VideoTXL FFMPEG</color>] Successfully transcoded URL '{originalUrl}'");
 
+#if UNITY_EDITOR_WIN
+                urlResolvedCallback($"file:\\\\{outputURL}");
+#else
                 urlResolvedCallback($"file://{outputURL}");
+#endif
             }
             else
             {
