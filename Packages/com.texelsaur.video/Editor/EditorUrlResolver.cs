@@ -282,7 +282,7 @@ namespace Texel.Video.Internal
 
                             "-y",
 
-                            "-hwaccel vulkan",
+                            "-hwaccel auto",
 
                             "-i", $"\"{resolvedURL}\"",
 
