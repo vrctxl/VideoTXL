@@ -52,7 +52,9 @@ namespace Texel.Video.Internal
         private static string _ffmpegPath = "";
         private static string _ytdlResolvedURL = "";
         private static VideoMeta _ytdlJson;
+        private static string _ffmpegError;
         private const string _ffmpegCache = "Video Cache";
+        private const string _ffErrorIdentifier = ", from 'http";
         private static System.Diagnostics.Process _ffmpegProcess;
         private static HashSet<System.Diagnostics.Process> _runningYtdlProcesses = new HashSet<System.Diagnostics.Process>();
         private static HashSet<MonoBehaviour> _registeredBehaviours = new HashSet<MonoBehaviour>();
@@ -211,15 +213,14 @@ namespace Texel.Video.Internal
 
             if (File.Exists(outputURL))
             {
-                //
                 Debug.Log($"[<color=#A7D147>VideoTXL FFMPEG</color>] Successfully transcoded URL '{originalUrl}'");
 
                 urlResolvedCallback($"file://{outputURL}");
             }
             else
             {
-                //
-                Debug.LogWarning("[<color=#A7D147>VideoTXL FFMPEG</color>] Unable to transcode URL will not be played in editor test your videos in game.");
+                Debug.LogWarning($"[<color=#A7D147>VideoTXL FFMPEG</color>] Unable to transcode URL, '{originalUrl}' will not be played in editor test your videos in game.\n{_ffmpegError}");
+
                 errorCallback(VideoError.InvalidURL);
             }
 
@@ -272,7 +273,9 @@ namespace Texel.Video.Internal
                     }
                     else
                     {
-                        string[] ffmpegArgs = new string[12] {
+                        string[] ffmpegArgs = new string[13] {
+                            "-hide_banner",
+
                             "-y",
 
                             "-hwaccel vulkan",
@@ -289,6 +292,8 @@ namespace Texel.Video.Internal
 
                             $"\"{fullUrlHash}\""
                         };
+
+                        _ffmpegError = "";
 
                         _ffmpegProcess = ResolvingProcess(_ffmpegPath, ffmpegArgs);
 
@@ -313,6 +318,17 @@ namespace Texel.Video.Internal
                                     string progressPercent = _ytdlJson.duration == 0.0 ? "" : $"- {Mathf.FloorToInt((float)(ffmpegProgress.TotalSeconds / _ytdlJson.duration) * 100f)}%";
 
                                     Debug.Log($"[<color=#A7D147>VideoTXL FFMPEG</color>] Transcode progress '{_ytdlJson.id}': {progressSeconds} {progressPercent}");
+                                }
+                                else
+                                {
+                                    if (args.Data.Contains(_ffErrorIdentifier))
+                                    {
+                                        _ffmpegError += args.Data.Substring(0, args.Data.IndexOf(_ffErrorIdentifier)) + "\n";
+                                    }
+                                    else
+                                    {
+                                        _ffmpegError += args.Data + "\n";
+                                    }
                                 }
                             }
                         };
