@@ -55,6 +55,12 @@ namespace Texel.Video.Internal
         private static string _ffmpegError;
         private const string _ffmpegCache = "Video Cache";
         private const string _ffErrorIdentifier = ", from 'http";
+
+#if UNITY_EDITOR_WIN
+        private const int _ytdlArgsCount = 7;
+#else
+        private const int _ytdlArgsCount = 8;
+#endif
         private static System.Diagnostics.Process _ffmpegProcess;
         private static HashSet<System.Diagnostics.Process> _runningYtdlProcesses = new HashSet<System.Diagnostics.Process>();
         private static HashSet<MonoBehaviour> _registeredBehaviours = new HashSet<MonoBehaviour>();
@@ -170,11 +176,13 @@ namespace Texel.Video.Internal
                 _ffmpegProcess.StandardInput.Flush();
             }
 
-            string[] ytdlpArgs = new string[8] {
+            string[] ytdlpArgs = new string[_ytdlArgsCount] {
                 "--no-check-certificate",
                 "--no-cache-dir",
                 "--rm-cache-dir",
+#if !UNITY_EDITOR_WIN
                 "--dump-json",
+#endif
 
                 "-f", $"\"mp4[height<=?{resolution}][protocol^=http]/best[height<=?{resolution}][protocol^=http]\"",
 
@@ -190,9 +198,19 @@ namespace Texel.Video.Internal
                 if (args.Data != null)
                 {
                     if (args.Data.StartsWith("{"))
+                    {
+#if UNITY_EDITOR_WIN
+                        _ytdlJson = new VideoMeta();
+                        _ytdlJson.id = urls;
+                        _ytdlJson.duration = 0;
+#else
                         _ytdlJson = JsonUtility.FromJson<VideoMeta>(args.Data);
+#endif
+                    }
                     else
+                    {
                         _ytdlResolvedURL = args.Data;
+                    }
                 }
             };
 
