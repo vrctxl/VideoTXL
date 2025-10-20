@@ -943,7 +943,7 @@ namespace Texel
                 {
                     if (lastTex && captureTex && lastTex != captureTex)
                     {
-                        if (lastTex.width != replacementTex.width || lastTex.height != replacementTex.height)
+                        if (lastTex.width != captureTex.width || lastTex.height != captureTex.height)
                             _UpdateHandlers(EVENT_RES_CHANGED);
                     }
                     else
