@@ -23,6 +23,12 @@ namespace Texel
             return cache;
         }
 
+        public static UdonBehaviour FindBehaviour(Component component, string scriptName)
+        {
+            UdonBehaviour[] allBehaviours = component.GetComponents<UdonBehaviour>();
+            return FindBehaviour(allBehaviours, scriptName);
+        }
+
         public static UdonBehaviour FindBehaviour(UdonBehaviour[] behaviors, string scriptName)
         {
             foreach (UdonBehaviour behaviour in behaviors)

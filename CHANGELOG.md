@@ -2,6 +2,17 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.8]
+- Added Input Proxy component to enable smooth integration with prefabs like Youtube Search
+- Input Proxy has one-button integration with Youtube Search prefab if it exists in scene
+- Fixed Screen Manager events not being public
+- Added several events to Screen Manager related to texture or resolution change
+- Added direct access to validated, raw captured texture in Screen Manager
+- Added CurrentTextureIsError property to Screen Manager
+- Added optional Image Download Manager field to logo download on Screen Manager
+- Added simple "Load URL" button prefab that loads a static URL
+- Fixed playlist "add to queue" function not respecting shuffle order
+
 ### [2.5.0-beta.7]
 - Fixed local player not recognizing quest platform in URL remapper
 
