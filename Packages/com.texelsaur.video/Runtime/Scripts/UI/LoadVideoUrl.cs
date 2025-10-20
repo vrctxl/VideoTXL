@@ -7,7 +7,7 @@ using VRC.Udon;
 namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-    public class LoadUrl : UdonSharpBehaviour
+    public class LoadVideoUrl : UdonSharpBehaviour
     {
         public TXLVideoPlayer videoPlayer;
         public VRCUrl url;
