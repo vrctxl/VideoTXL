@@ -2,6 +2,9 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.9]
+- Fixed oopsie with class name
+
 ### [2.5.0-beta.8]
 - Added Input Proxy component to enable smooth integration with prefabs like Youtube Search
 - Input Proxy has one-button integration with Youtube Search prefab if it exists in scene
