@@ -133,6 +133,7 @@ namespace Texel
 
         [SerializeField] internal bool downloadLogoImage;
         [SerializeField] internal VRCUrl downloadLogoImageUrl;
+        [SerializeField] internal ImageDownloadManager imageDownloadManager;
 
         // VRSL Integration
         [SerializeField] internal bool vrslEnabled;
@@ -211,10 +212,17 @@ namespace Texel
         int globalTexPropertyId = -1;
 
         VRCImageDownloader imageDownloader;
+        int imageDownloadClaim;
 
-        const int EVENT_UPDATE = 0;
-        const int EVENT_CAPTURE_VALID = 1;
-        const int EVENT_COUNT = 2;
+        [Obsolete("Use EVENT_TEX_CHANGED")]
+        public const int EVENT_UPDATE = 0;
+        public const int EVENT_TEX_CHANGED = 0;
+        public const int EVENT_CAPTURE_VALID = 1;
+        public const int EVENT_CAPTURE_INVALID = 2;
+        public const int EVENT_CAPTURE_TEX_CHANGED = 3;
+        public const int EVENT_CAPTURE_RES_CHANGED = 4;
+        public const int EVENT_RES_CHANGED = 5;
+        const int EVENT_COUNT = 6;
 
         void Start()
         {
@@ -287,12 +295,17 @@ namespace Texel
 
             if (downloadLogoImage)
             {
-                imageDownloader = new VRCImageDownloader();
+                if (imageDownloadManager != null)
+                    imageDownloadClaim = imageDownloadManager._RequestImage(downloadLogoImageUrl, this, nameof(_InternalOnImageDispatch));
+                else
+                {
+                    imageDownloader = new VRCImageDownloader();
 
-                TextureInfo info = new TextureInfo();
-                info.GenerateMipMaps = true;
+                    TextureInfo info = new TextureInfo();
+                    info.GenerateMipMaps = true;
 
-                imageDownloader.DownloadImage(downloadLogoImageUrl, null, (IUdonEventReceiver)this, info);
+                    imageDownloader.DownloadImage(downloadLogoImageUrl, null, (IUdonEventReceiver)this, info);
+                }
             }
 
             if (Utilities.IsValid(debugState))
@@ -340,7 +353,15 @@ namespace Texel
             }
         }
 
-        
+        public void _InternalOnImageDispatch()
+        {
+            Texture2D image = imageDownloadManager.CurrentImage;
+            if (image != null)
+            {
+                _SetTextureOverride(ScreenOverrideType.Logo, image);
+                _ResetCheckScreenMaterial();
+            }
+        }
 
         public override void OnImageLoadSuccess(IVRCImageDownload result)
         {
@@ -373,9 +394,16 @@ namespace Texel
             }
         }
 
+        // The current texture, which could be one of the placeholders
         public Texture CurrentTexture
         {
             get { return currentTexture; }
+        }
+
+        // The capture texture, which is the raw texture from AVPro or Unity, or null if determined invalid
+        public Texture CaptureTexture
+        {
+            get { return validatedTexture; }
         }
 
         public bool CaptureIsAVPro
@@ -403,7 +431,17 @@ namespace Texel
             get { return currentAspectRatio; }
         }
 
-        
+        public bool CurrentTextureIsError
+        {
+            get 
+            {
+                _EnsureInit();
+                return currentTexture == replacementTextures[(int)ScreenOverrideType.Error]
+                    || currentTexture == replacementTextures[(int)ScreenOverrideType.ErrorRate]
+                    || currentTexture == replacementTextures[(int)ScreenOverrideType.ErrorInvalid]
+                    || currentTexture == replacementTextures[(int)ScreenOverrideType.ErrorBlocked];
+            }
+        }
 
         public bool _GetVRSLDoubleBuffered(VideoSourceBackend type)
         {
@@ -751,7 +789,10 @@ namespace Texel
             }
 
             if (!currentValid)
+            {
+                _UpdateHandlers(EVENT_CAPTURE_INVALID);
                 _QueueUpdateCheckFrames(1);
+            }
             else
             {
                 _DebugLog("Capture valid");
@@ -822,6 +863,9 @@ namespace Texel
 
             if (!currentValid)
             {
+                if (prevValid)
+                    _UpdateHandlers(EVENT_CAPTURE_INVALID);
+
                 _checkFrameCount += 1;
                 _QueueUpdateCheckFrames(_checkFrameCount < 100 ? 1 : 10);
             }
@@ -869,6 +913,13 @@ namespace Texel
             {
                 currentTexture = replacementTex;
                 currentGamma = !currentTexture.isDataSRGB;
+
+                if (lastTex && lastTex != replacementTex)
+                {
+                    if (lastTex.width != replacementTex.width || lastTex.height != replacementTex.height)
+                        _UpdateHandlers(EVENT_RES_CHANGED);
+                } else if (!lastTex)
+                    _UpdateHandlers(EVENT_RES_CHANGED);
             }
             else
             {
@@ -887,10 +938,21 @@ namespace Texel
                 }
 
                 _UpdateCRTCaptureData();
+
+                if (lastTex || captureTex)
+                {
+                    if (lastTex && captureTex && lastTex != captureTex)
+                    {
+                        if (lastTex.width != replacementTex.width || lastTex.height != replacementTex.height)
+                            _UpdateHandlers(EVENT_RES_CHANGED);
+                    }
+                    else
+                        _UpdateHandlers(EVENT_RES_CHANGED);
+                }
             }
 
             if (lastTex != currentTexture)
-                _UpdateHandlers(EVENT_UPDATE);
+                _UpdateHandlers(EVENT_TEX_CHANGED);
         }
 
         
@@ -970,10 +1032,12 @@ namespace Texel
                 {
                     int w = texture.width;
                     int h = texture.height;
-                    if (validatedW - w + validatedH - h != 0)
+                    if (validatedW - w != 0 || validatedH - h != 0)
                     {
                         validatedW = w;
                         validatedH = h;
+
+                        _UpdateHandlers(EVENT_CAPTURE_RES_CHANGED);
                         return true;
                     }
                 }
@@ -983,14 +1047,24 @@ namespace Texel
             validatedTexture = texture;
             if (texture)
             {
-                validatedW = texture.width;
-                validatedH = texture.height;
+                int w = texture.width;
+                int h = texture.height;
+                if (validatedW - w != 0 || validatedH - h != 0)
+                {
+                    validatedW = w;
+                    validatedH = h;
+
+                    _UpdateHandlers(EVENT_CAPTURE_RES_CHANGED);
+                }
             } else
             {
                 validatedW = 0;
                 validatedH = 0;
+
+                _UpdateHandlers(EVENT_CAPTURE_RES_CHANGED);
             }
 
+            _UpdateHandlers(EVENT_CAPTURE_TEX_CHANGED);
             return true;
         }
 

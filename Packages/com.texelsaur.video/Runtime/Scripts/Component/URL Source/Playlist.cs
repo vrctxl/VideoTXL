@@ -584,6 +584,7 @@ namespace Texel
             if (!queue || !queue._CanAddTrack())
                 return false;
 
+            index = _TrackIndex(index);
             return queue._AddTrack(queueIndex, CatalogueIndex, index);
         }
 
