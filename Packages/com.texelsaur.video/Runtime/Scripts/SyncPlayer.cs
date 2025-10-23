@@ -511,6 +511,14 @@ namespace Texel
             if (!_TakeControl())
                 return;
 
+#if UNITY_EDITOR_LINUX
+            if (mode == VideoSource.VIDEO_SOURCE_AVPRO)
+            {
+                DebugLog("AVPro does not support Linux!");
+                mode = VideoSource.VIDEO_SOURCE_UNITY;
+            }
+#endif
+
             _UpdateVideoSourceOverride(mode);
             if (mode != VideoSource.VIDEO_SOURCE_NONE)
             {
@@ -1191,6 +1199,7 @@ namespace Texel
 
             if (Networking.IsOwner(gameObject))
             {
+#if !UNITY_EDITOR_LINUX
                 if (shouldFallback)
                 {
                     DebugLog("Retrying URL in stream mode");
@@ -1199,6 +1208,7 @@ namespace Texel
                     _PlayVideoAfterFallback(_syncUrl, _syncQuestUrl, _syncUrlSourceIndex, retryTimeout);
                     return;
                 }
+#endif
 
                 if (action == VideoErrorAction.Retry)
                     _StartVideoLoadDelay(retryTimeout);
