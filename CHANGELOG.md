@@ -2,6 +2,9 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.10]
+- Added "trace" debug option to Video Manager
+
 ### [2.5.0-beta.9]
 - Fixed oopsie with class name
 
