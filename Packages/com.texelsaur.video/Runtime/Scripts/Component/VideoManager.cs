@@ -29,12 +29,12 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class VideoManager : EventBase
     {
-        //public AudioManager audioManager;
         public TXLVideoPlayer videoPlayer;
         public VideoSource[] sources;
 
         public bool debugLogging = true;
         public bool eventLogging = false;
+        public bool traceLogging = false;
         public DebugLog debugLog;
         public DebugState debugState;
 
@@ -128,16 +128,13 @@ namespace Texel
             for (int i = 0; i < sources.Length; i++)
             {
                 if (sources[i] != null)
+                {
                     sources[i]._Register(this, i);
-                //GameObject copy = Instantiate(sources[i].audioSources[0].gameObject);
-                //copy.transform.SetParent(sources[i].audioSources[0].transform.parent);
+                    sources[i].traceLogging = traceLogging;
+                }
             }
 
-            //if (audioManager)
-            //    audioManager._EnsureInit();
-
             _Discover();
-            //_UpdateAudio();
 
             nextSourceIndex = sources.Length;
             activeSource = -1;
@@ -425,7 +422,11 @@ namespace Texel
             {
                 if (!activeVideoPlayer)
                     return false;
-                return activeVideoPlayer.IsPlaying;
+
+                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace: IsPlaying (VM:VideoIsPlaying, FC={Time.frameCount})");
+                bool result = activeVideoPlayer.IsPlaying;
+                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace:   IsPlaying -> {result}");
+                return result;
             }
         }
 
@@ -436,7 +437,10 @@ namespace Texel
                 if (!activeVideoPlayer)
                     return false;
 
+                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace: GetDuration (VM:IsSeekable, FC={Time.frameCount})");
                 float duration = activeVideoPlayer.GetDuration();
+                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace:   GetDuration -> {duration}");
+
                 return !float.IsInfinity(duration) && !float.IsNaN(duration) && duration > 1;
             }
         }
@@ -447,7 +451,11 @@ namespace Texel
             {
                 if (!activeVideoPlayer)
                     return 0;
-                return activeVideoPlayer.GetTime();
+
+                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace: GetTime (VM:VideoTime, FC={Time.frameCount})");
+                float result = activeVideoPlayer.GetTime();
+                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace:   GetTime -> {result}");
+                return result;
             }
         }
 
@@ -457,7 +465,11 @@ namespace Texel
             {
                 if (!activeVideoPlayer)
                     return 0;
-                return activeVideoPlayer.GetDuration();
+
+                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace: GetDuration (VM:VideoDuration, FC={Time.frameCount})");
+                float result = activeVideoPlayer.GetDuration();
+                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace:   GetDuration -> {result}");
+                return result;
             }
         }
 
@@ -576,9 +588,13 @@ namespace Texel
 
             if (prevSource >= 0)
             {
+                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace: IsPlaying (VM:_UpdateSource, FC={Time.frameCount})");
                 PreviousStatePlaying = activeVideoPlayer.IsPlaying;
+                if (traceLogging) _DebugTrace(sources[activeSource], "Trace: GetTime (VM:_UpdateSource)");
                 PreviousStateTime = activeVideoPlayer.GetTime();
+                if (traceLogging) _DebugTrace(sources[activeSource], "Trace: GetDuration (VM:_UpdateSource)");
                 PreviousStateDuration = activeVideoPlayer.GetDuration();
+                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace:   IsPlaying -> {PreviousStatePlaying}, GetTime -> {PreviousStateTime}, GetDuration -> {PreviousStateDuration}");
 
                 sources[prevSource]._VideoStop(1);
             }
@@ -783,6 +799,12 @@ namespace Texel
                 Debug.Log($"[VideoTXL:{name}] " + message);
             if (Utilities.IsValid(debugLog))
                 debugLog._Write(name, message);
+        }
+
+        void _DebugTrace(VideoSource source, string message)
+        {
+            if (traceLogging)
+                _DebugLog(source, message);
         }
 
         public void _DownstreamDebugLog(VideoSource source, string message)

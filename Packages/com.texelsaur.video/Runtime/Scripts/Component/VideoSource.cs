@@ -1,4 +1,5 @@
 ﻿
+using System;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components.Video;
@@ -49,6 +50,9 @@ namespace Texel
         public AudioSource avproReservedChannel;
         [Tooltip("Whether this source has AVPro's low latency option enabled.  Low latency is necessary for some sources like VRCDN RSTP URLs.")]
         public bool lowLatency = false;
+
+        [NonSerialized]
+        internal bool traceLogging = false;
 
         int id = 0;
         BaseVRCVideoPlayer videoPlayer;
@@ -174,9 +178,9 @@ namespace Texel
             if (videoPlayer == null)
                 return;
 
-            videoPlayer.Loop = false;
-            videoPlayer.EnableAutomaticResync = false;
-            videoPlayer.Stop();
+            _VideoSetLoop(false);
+            _SetAVSync(false);
+            _VideoStop();
         }
 
         public string _FormattedAttributes()
@@ -192,6 +196,8 @@ namespace Texel
 
         public override void OnVideoReady()
         {
+            if (traceLogging) _DebugTrace($"Trace: Event OnVideoReady, FC={Time.frameCount}");
+
             LastEvent = VideoSourceEvent.Ready;
             if (videoMux)
                 videoMux._OnVideoReady(id);
@@ -199,6 +205,8 @@ namespace Texel
 
         public override void OnVideoStart()
         {
+            if (traceLogging) _DebugTrace($"Trace: Event OnVideoStart, FC={Time.frameCount}");
+
             LastEvent = VideoSourceEvent.Start;
             if (videoMux)
                 videoMux._OnVideoStart(id);
@@ -206,6 +214,8 @@ namespace Texel
 
         public override void OnVideoEnd()
         {
+            if (traceLogging) _DebugTrace($"Trace: Event OnVideoEnd, FC={Time.frameCount}");
+
             LastEvent = VideoSourceEvent.End;
             if (videoMux)
                 videoMux._OnVideoEnd(id);
@@ -213,6 +223,8 @@ namespace Texel
 
         public override void OnVideoError(VideoError videoError)
         {
+            if (traceLogging) _DebugTrace($"Trace: Event OnVideoError ({videoError}), FC={Time.frameCount}");
+
             LastEvent = VideoSourceEvent.Error;
             if (videoMux)
                 videoMux._OnVideoError(id, videoError);
@@ -220,6 +232,8 @@ namespace Texel
 
         public override void OnVideoLoop()
         {
+            if (traceLogging) _DebugTrace($"Trace: Event OnVideoLoop, FC={Time.frameCount}");
+
             LastEvent = VideoSourceEvent.Loop;
             if (videoMux)
                 videoMux._OnVideoLoop(id);
@@ -227,6 +241,8 @@ namespace Texel
 
         public override void OnVideoPause()
         {
+            if (traceLogging) _DebugTrace($"Trace: Event OnVideoPause, FC={Time.frameCount}");
+
             LastEvent = VideoSourceEvent.Pause;
             if (videoMux)
                 videoMux._OnVideoPause(id);
@@ -234,27 +250,41 @@ namespace Texel
 
         public override void OnVideoPlay()
         {
+            if (traceLogging) _DebugTrace($"Trace: Event OnVideoPlay, FC={Time.frameCount}");
+
             LastEvent = VideoSourceEvent.Play;
-            if (videoMux)
+            if (!videoMux)
                 videoMux._OnVideoPlay(id);
         }
 
         public void _VideoPlay()
         {
-            if (videoPlayer)
-                videoPlayer.Play();
+            if (!videoPlayer)
+                return;
+
+            if (traceLogging) _DebugTrace($"Trace: Play (_VideoPlay, FC={Time.frameCount})");
+            videoPlayer.Play();
+            if (traceLogging) _DebugTrace("Trace:   Play -> Done");
         }
 
         public void _VideoPause()
         {
-            if (videoPlayer)
-                videoPlayer.Pause();
+            if (!videoPlayer)
+                return;
+
+            if (traceLogging) _DebugTrace($"Trace: Pause (_VideoPause, FC={Time.frameCount})");
+            videoPlayer.Pause();
+            if (traceLogging) _DebugTrace("Trace:   Pause -> Done");
         }
 
         public void _VideoStop()
         {
-            if (videoPlayer)
-                videoPlayer.Stop();
+            if (!videoPlayer)
+                return;
+
+            if (traceLogging) _DebugTrace($"Trace: Stop (_VideoStop, FC={Time.frameCount})");
+            videoPlayer.Stop();
+            if (traceLogging) _DebugTrace("Trace:   Stop -> Done");
         }
 
         public void _VideoStop(int frameDelay)
@@ -276,32 +306,54 @@ namespace Texel
             }
 #endif
 
-            if (videoPlayer)
-                videoPlayer.LoadURL(url);
+            if (!videoPlayer)
+                return;
+
+            if (traceLogging) _DebugTrace($"Trace: LoadURL({url}) (_VideoLoadURL, FC={Time.frameCount})");
+            videoPlayer.LoadURL(url);
+            if (traceLogging) _DebugTrace("Trace:   LoadURL -> Done");
         }
 
         public void _VideoSetTime(float time)
         {
-            if (videoPlayer)
-                videoPlayer.SetTime(time);
+            if (!videoPlayer)
+                return;
+
+            if (traceLogging) _DebugTrace($"Trace: SetTime({time}) (_VideoSetTime, FC={Time.frameCount})");
+            videoPlayer.SetTime(time);
+            if (traceLogging) _DebugTrace("Trace:   SetTime -> Done");
         }
 
         public void _VideoSetLoop(bool state)
         {
-            if (videoPlayer != null)
-                videoPlayer.Loop = state;
+            if (!videoPlayer)
+                return;
+
+            if (traceLogging) _DebugTrace($"Trace: Loop = {state} (_VideoSetLoop, FC={Time.frameCount})");
+            videoPlayer.Loop = state;
+            if (traceLogging) _DebugTrace("Trace:   Loop -> Done");
         }
 
         public void _SetAVSync(bool state)
         {
-            if (videoPlayer)
-                videoPlayer.EnableAutomaticResync = state;
+            if (!videoPlayer)
+                return;
+
+            if (traceLogging) _DebugTrace($"Trace: EnableAutomaticResync = {state} (_SetAVSync, FC={Time.frameCount})");
+            videoPlayer.EnableAutomaticResync = state;
+            if (traceLogging) _DebugTrace("Trace:   EnableAutomaticResync -> Done");
         }
 
         void _DebugLog(string message)
         {
             if (videoMux)
                 videoMux._DownstreamDebugLog(this, message);
+        }
+
+        void _DebugTrace(string message)
+        {
+            if (traceLogging)
+                _DebugLog(message);
         }
 
         public static string _VideoSourceEventName(VideoSourceEvent val)

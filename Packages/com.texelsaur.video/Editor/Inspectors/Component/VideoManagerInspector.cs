@@ -22,6 +22,7 @@ namespace Texel
         SerializedProperty debugLogProperty;
         SerializedProperty debugStateProperty;
         SerializedProperty debugLoggingProperty;
+        SerializedProperty traceLoggingProperty;
         SerializedProperty eventLoggingProperty;
 
         DateTime lastValidate;
@@ -41,6 +42,7 @@ namespace Texel
             debugLogProperty = serializedObject.FindProperty(nameof(VideoManager.debugLog));
             debugStateProperty = serializedObject.FindProperty(nameof(VideoManager.debugState));
             debugLoggingProperty = serializedObject.FindProperty(nameof(VideoManager.debugLogging));
+            traceLoggingProperty = serializedObject.FindProperty(nameof(VideoManager.traceLogging));
             eventLoggingProperty = serializedObject.FindProperty(nameof(VideoManager.eventLogging));
 
             Revalidate();
@@ -127,6 +129,7 @@ namespace Texel
                 EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
                 EditorGUILayout.PropertyField(debugStateProperty, new GUIContent("Debug State", "Track periodically refreshed internal state in a world object"));
                 EditorGUILayout.PropertyField(eventLoggingProperty, new GUIContent("Include Events", "Include additional event traffic in debug log"));
+                EditorGUILayout.PropertyField(traceLoggingProperty, new GUIContent("Include Trace", "Include low-level tracing of video component calls"));
                 EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
             }
 
