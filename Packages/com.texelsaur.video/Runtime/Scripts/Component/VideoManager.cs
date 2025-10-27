@@ -584,8 +584,6 @@ namespace Texel
                 return;
 
             prevSource = activeSource;
-            activeSource = bestSourceId;
-
             if (prevSource >= 0)
             {
                 if (traceLogging) _DebugTrace(sources[activeSource], $"Trace: IsPlaying (VM:_UpdateSource, FC={Time.frameCount})");
@@ -598,6 +596,8 @@ namespace Texel
 
                 sources[prevSource]._VideoStop(1);
             }
+
+            activeSource = bestSourceId;
 
             VideoSource source = null;
             activeVideoPlayer = null;

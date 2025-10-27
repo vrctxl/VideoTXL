@@ -9,7 +9,7 @@ namespace Texel
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class SourceManager : EventBase
     {
-        [SerializeField] internal TXLVideoPlayer videoPlayer;
+        [SerializeField, HideInInspector] internal TXLVideoPlayer videoPlayer;
         [SerializeField] internal VideoUrlSource[] sources;
 
         [Tooltip("Log debug statements to a world object")]

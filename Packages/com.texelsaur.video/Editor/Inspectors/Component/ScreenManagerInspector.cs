@@ -378,6 +378,14 @@ namespace Texel
                 serializedObject.ApplyModifiedProperties();
             }
 
+            if (renderOutGlobalTexListProperty.arraySize < renderOutCrtListProperty.arraySize)
+            {
+                renderOutGlobalTexListProperty.arraySize = renderOutCrtListProperty.arraySize;
+                for (int i = 0; i < renderOutCrtListProperty.arraySize; i++)
+                    renderOutGlobalTexListProperty.GetArrayElementAtIndex(i).boolValue = i == 0;
+                serializedObject.ApplyModifiedProperties();
+            }
+
             // CRT texture
             UpdateEditorState();
 
@@ -1688,7 +1696,7 @@ namespace Texel
 
                     crt.Update(2);
 
-                    if (manager.renderOutGlobalTex[i])
+                    if (i < manager.renderOutGlobalTex.Length && manager.renderOutGlobalTex[i])
                     {
                         if (!videoTexRT)
                             videoTexRT = new RenderTexture(crt);

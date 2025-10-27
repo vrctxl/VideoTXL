@@ -2,6 +2,13 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.11]
+- Fixed trace crash in VideoManager from beta 10
+- Hid TXLVideoPlayer field from SourceManager inspector
+- Obsoleted Zone Membership for SyncPlayer playback zones, replaced with Tracked Zone Triggers
+- Fixed array bounds error in Screen Manager Inspector that shows up in certain edge cases
+- Added proper undo/persistence to GameObject->TXL menu actions
+
 ### [2.5.0-beta.10]
 - Added "trace" debug option to Video Manager
 
