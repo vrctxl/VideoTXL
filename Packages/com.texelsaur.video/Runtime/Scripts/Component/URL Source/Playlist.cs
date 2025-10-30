@@ -1,9 +1,12 @@
 ﻿
 using System;
+using System.Runtime.CompilerServices;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 using VRC.Udon.Common;
+
+[assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
 
 namespace Texel
 {
@@ -11,8 +14,6 @@ namespace Texel
     public class Playlist : VideoUrlSource
     {
         TXLVideoPlayer videoPlayer;
-
-        [Header("Optional Components")]
 
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
@@ -177,6 +178,9 @@ namespace Texel
         {
             get
             {
+                if (IsInErrorRetry)
+                    return RetryTrackDisplay;
+
                 return IsReady ? $"TRACK: {CurrentIndex + 1} / {Count}" : "";
             }
         }
@@ -395,6 +399,7 @@ namespace Texel
             get { return syncCurrentIndexSerial; }
             set
             {
+                errorCount = 0;
                 syncCurrentIndexSerial = value;
                 _EventTrackChange();
 

@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Data;
 using VRC.SDKBase;
 using VRC.Udon;
+
+[assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
 
 namespace Texel
 {
@@ -18,13 +21,11 @@ namespace Texel
     {
         TXLVideoPlayer videoPlayer;
 
-        [Header("Permissions")]
         [Tooltip("Optional. ACL to control access to the move-to-front button.  If not set, uses the video player's ACL settings.")]
         [SerializeField] protected internal AccessControl priorityAccess;
         [Tooltip("Optional. ACL to control access to the delete button.  If not set, uses the video player's ACL settings.")]
         [SerializeField] protected internal AccessControl deleteAccess;
 
-        [Header("Sync")]
         [SerializeField] protected internal bool syncTrackTitles = true;
         [SerializeField] protected internal bool syncTrackAuthors = true;
         [SerializeField] protected internal bool syncPlayerNames = true;
@@ -148,7 +149,13 @@ namespace Texel
 
         public override string TrackDisplay
         {
-            get { return IsValid ? $"+{syncTrackCount} Queued" : ""; }
+            get 
+            {
+                if (IsInErrorRetry)
+                    return RetryTrackDisplay;
+
+                return IsValid ? $"+{syncTrackCount} Queued" : ""; 
+            }
         }
 
         public override TXLVideoPlayer VideoPlayer
@@ -320,6 +327,7 @@ namespace Texel
             _EventTrackChange();
             _EventUrlReady();
 
+            errorCount = 0;
             syncReadyUrlUpdate += 1;
             syncTrackChangeUpdate += 1;
 
@@ -393,6 +401,7 @@ namespace Texel
 
             if (syncReadyUrlUpdate != prevReadyUrlUpdate)
             {
+                errorCount = 0;
                 prevReadyUrlUpdate = syncReadyUrlUpdate;
                 _EventUrlReady();
             }

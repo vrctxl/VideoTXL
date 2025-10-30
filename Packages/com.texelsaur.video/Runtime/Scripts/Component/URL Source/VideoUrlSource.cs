@@ -1,9 +1,13 @@
-﻿using System;
+﻿using Newtonsoft.Json.Serialization;
+using System;
+using System.Runtime.CompilerServices;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components.Video;
 using VRC.SDKBase;
 using VRC.Udon;
+
+[assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
 
 namespace Texel
 {
@@ -23,6 +27,13 @@ namespace Texel
         Advance     // Instruct video player to move to next available track/source
     }
 
+    public enum VideoErrorTerminalAction
+    {
+        Default,
+        Stop,
+        Advance
+    }
+
     public enum VideoDisplayOverride
     {
         None,
@@ -37,11 +48,16 @@ namespace Texel
         public const int EVENT_INTERRUPT = 3;
         protected const int EVENT_COUNT = 4;
 
-        [SerializeField] protected string sourceName;
-        [SerializeField, HideInInspector] protected SourceManager sourceManager;
-        [SerializeField] protected VideoDisplayOverride overrideDisplay; 
+        [SerializeField] protected internal string sourceName;
+        [SerializeField, HideInInspector] protected internal SourceManager sourceManager;
+        [SerializeField] protected internal VideoDisplayOverride overrideDisplay;
+
+        [SerializeField] protected internal VideoErrorAction errorAction = VideoErrorAction.Retry;
+        [SerializeField] protected internal VideoErrorTerminalAction terminalErrorAction = VideoErrorTerminalAction.Advance;
+        [SerializeField] protected internal int maxErrorRetryCount = 1;
 
         protected int sourceIndex = -1;
+        protected int errorCount = 0;
 
         protected override int EventCount { get => EVENT_COUNT; }
 
@@ -65,7 +81,39 @@ namespace Texel
 
         public virtual string TrackDisplay
         {
-            get { return ""; }
+            get 
+            {
+                if (IsInErrorRetry)
+                    return RetryTrackDisplay;
+
+                return "";
+            }
+        }
+
+        protected virtual bool IsInErrorRetry
+        {
+            get
+            {
+                if (errorAction == VideoErrorAction.Retry && VideoPlayer)
+                {
+                    int state = VideoPlayer.playerState;
+                    if (state == TXLVideoPlayer.VIDEO_STATE_ERROR || state == TXLVideoPlayer.VIDEO_STATE_LOADING)
+                        return errorCount > 1;
+                }
+
+                return false;
+            }
+        }
+
+        protected virtual string RetryTrackDisplay
+        {
+            get
+            {
+                if (errorCount >= 1 && errorCount <= maxErrorRetryCount)
+                    return $"Retry {errorCount} / {maxErrorRetryCount}";
+
+                return "";
+            }
         }
 
         public virtual TXLVideoPlayer VideoPlayer
@@ -137,16 +185,19 @@ namespace Texel
 
         public virtual bool _MoveNext()
         {
+            errorCount = 0;
             return false;
         }
 
         public virtual bool _MovePrev()
         {
+            errorCount = 0;
             return false;
         }
 
         public virtual bool _MoveTo(int index)
         {
+            errorCount = 0;
             return false;
         }
 
@@ -160,25 +211,44 @@ namespace Texel
             return false;
         }
 
-        public virtual void _OnVideoStop() { }
+        public virtual void _OnVideoStop() 
+        {
+            errorCount = 0;
+        }
 
-        public virtual void _OnVideoReady() { }
+        public virtual void _OnVideoReady() 
+        {
+            errorCount = 0;
+        }
 
         public virtual void _OnVideoStart() { }
 
         public virtual VideoEndAction _OnVideoEnd()
         {
+            errorCount = 0;
             return VideoEndAction.Default;
         }
 
         public virtual VideoErrorAction _OnVideoError(VideoError error)
         {
-            return VideoErrorAction.Default;
+            if (error == VideoError.RateLimited)
+                return VideoErrorAction.Retry;
+
+            if (errorAction == VideoErrorAction.Retry)
+            {
+                errorCount += 1;
+                if (errorCount > maxErrorRetryCount)
+                    return _TranslateAction(terminalErrorAction);
+                else
+                    return VideoErrorAction.Retry;
+            }
+
+            return errorAction;
         }
 
         public virtual VideoErrorAction _OnVideoError(VideoErrorTXL error)
         {
-            return VideoErrorAction.Default;
+            return errorAction;
         }
 
         protected void _EventUrlReady()
@@ -187,6 +257,16 @@ namespace Texel
                 sourceManager._OnUrlReady(sourceIndex);
 
             _UpdateHandlers(EVENT_URL_READY);
+        }
+
+        protected VideoErrorAction _TranslateAction (VideoErrorTerminalAction action)
+        {
+            if (action == VideoErrorTerminalAction.Stop)
+                return VideoErrorAction.Stop;
+            if (action == VideoErrorTerminalAction.Advance)
+                return VideoErrorAction.Advance;
+
+            return VideoErrorAction.Default;
         }
     }
 }

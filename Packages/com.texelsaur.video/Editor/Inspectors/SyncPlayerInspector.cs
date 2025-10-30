@@ -62,7 +62,7 @@ namespace Texel
             debugStageProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugState));
             eventLoggingProperty = serializedObject.FindProperty(nameof(SyncPlayer.eventLogging));
             traceLoggingProperty = serializedObject.FindProperty(nameof(SyncPlayer.traceLogging));
-            playbackZoneProperty = serializedObject.FindProperty(nameof(SyncPlayer.playbackZoneMembership));
+            playbackZoneProperty = serializedObject.FindProperty(nameof(SyncPlayer.trackedZoneTrigger));
             runBuildHooksProperty = serializedObject.FindProperty(nameof(SyncPlayer.runBuildHooks));
 
             defaultUrlProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultUrl));
@@ -151,7 +151,7 @@ namespace Texel
             EditorGUILayout.PropertyField(urlInfoResolverProperty, new GUIContent("URL Info Resolver", "A resolver and cache for finding additional info about a URL, like title or author."));
             EditorGUILayout.PropertyField(accessControlProperty, new GUIContent("Access Control", "Control access to player controls based on player type or whitelist."));
 
-            EditorGUILayout.PropertyField(playbackZoneProperty, new GUIContent("Playback Zone Membership", "Optional zone membership object tied to a trigger zone the player must be in to sustain playback.  Disables playing audio on world load."));
+            EditorGUILayout.PropertyField(playbackZoneProperty, new GUIContent("Playback Zone", "Optional tracked trigger zone the player must be in to sustain playback.  Disables playing audio on world load."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Default Options", EditorStyles.boldLabel);

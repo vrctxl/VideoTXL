@@ -24,6 +24,7 @@ namespace Texel
     {
         Unknown,
         NoAVProInEditor,
+        RetryEndStream,
     }
 
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
@@ -41,6 +42,7 @@ namespace Texel
         [SerializeField] internal bool enableAVProInEditor = false;
         [SerializeField] internal bool defaultReactStreamStop = true;
         [SerializeField] internal float defaultStreamStopThreshold = 10;
+        [SerializeField] internal int liveStreamStopRetryCount = 1;
         [SerializeField] internal bool youtubeAutoUnityInEditor = true;
 
         public const int VIDEO_READY_EVENT = 0;
@@ -61,6 +63,7 @@ namespace Texel
         int activeSource;
         int prevSource;
         int nextSourceIndex = 0;
+        int retryCount = 0;
 
         int videoType = VideoSource.VIDEO_SOURCE_NONE;
         int lowLatency = VideoSource.LOW_LATENCY_UNKNOWN;
@@ -321,6 +324,7 @@ namespace Texel
                 return;
 
             playStartTime = Time.time;
+            retryCount = 0;
 
             //VideoSource source = sources[id];
             //_DebugLog(source, "Video start event");
@@ -333,10 +337,22 @@ namespace Texel
             if (!_GateEvent(id, "Video end event"))
                 return;
 
-            if (!VideoIsSeekable && (!defaultReactStreamStop || (Time.time - playStartTime) < defaultStreamStopThreshold))
+            if (!VideoIsSeekable)
             {
-                _DebugLog("Video end encountered within stream start threshold, ignoring");
-                return;
+                if (!defaultReactStreamStop || (Time.time - playStartTime) < defaultStreamStopThreshold)
+                {
+                    _DebugLog("Video end encountered within stream start threshold, ignoring");
+                    return;
+                }
+
+                if (retryCount < liveStreamStopRetryCount)
+                {
+                    retryCount += 1;
+                    _DebugLog($"Video end encountered, retry {retryCount} / {liveStreamStopRetryCount}");
+
+                    _OnVideoError(id, VideoErrorTXL.RetryEndStream);
+                    return;
+                }
             }
 
             //VideoSource source = sources[id];
@@ -351,6 +367,22 @@ namespace Texel
                 return;
             //VideoSource source = sources[id];
             //_DebugLog(source, $"Video error event: {videoError}");
+
+            if (retryCount > 0)
+            {
+                if (retryCount < liveStreamStopRetryCount)
+                {
+                    retryCount += 1;
+                    _DebugLog($"Video end encountered, retry {retryCount} / {liveStreamStopRetryCount}");
+
+                    _OnVideoError(id, VideoErrorTXL.RetryEndStream);
+                    return;
+                } else
+                {
+                    _UpdateHandlers(VIDEO_END_EVENT);
+                    return;
+                }
+            }
 
             LastErrorClass = VideoErrorClass.VRChat;
             LastError = videoError;
@@ -584,8 +616,6 @@ namespace Texel
                 return;
 
             prevSource = activeSource;
-            activeSource = bestSourceId;
-
             if (prevSource >= 0)
             {
                 if (traceLogging) _DebugTrace(sources[activeSource], $"Trace: IsPlaying (VM:_UpdateSource, FC={Time.frameCount})");
@@ -598,6 +628,8 @@ namespace Texel
 
                 sources[prevSource]._VideoStop(1);
             }
+
+            activeSource = bestSourceId;
 
             VideoSource source = null;
             activeVideoPlayer = null;

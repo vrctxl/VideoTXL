@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components.Video;
+using VRC.SDK3.Data;
 using VRC.SDKBase;
 using VRC.Udon.Common;
 
@@ -20,8 +21,11 @@ namespace Texel
         public UrlInfoResolver urlInfoResolver;
         public AccessControl accessControl;
 
+        [Obsolete("Use trackedPlaybackZone")]
         public CompoundZoneTrigger playbackZone;
+        [Obsolete("Use trackedPlaybackZone")]
         public ZoneMembership playbackZoneMembership;
+        [SerializeField] internal TrackedZoneTrigger trackedZoneTrigger;
 
         public VRCUrl defaultUrl;
         public VRCUrl defaultQuestUrl;
@@ -146,14 +150,27 @@ namespace Texel
                 eventDebugLog = debugLog;
 
             _hasAccessControl = Utilities.IsValid(accessControl);
-            _hasSustainZone = Utilities.IsValid(playbackZoneMembership);
+            _hasSustainZone = playbackZoneMembership || trackedZoneTrigger;
             if (_hasSustainZone)
             {
-                if (Utilities.IsValid(Networking.LocalPlayer))
-                    _inSustainZone = playbackZoneMembership._ContainsPlayer(Networking.LocalPlayer);
-                playbackZoneMembership._RegisterAddPlayer(this, "_OnPlaybackZoneEnter", "playerArg");
-                playbackZoneMembership._RegisterRemovePlayer(this, "_OnPlaybackZoneExit", "playerArg");
-                //playbackZone._Register((UdonBehaviour)(Component)this, "_PlaybackZoneEnter", "_PlaybackZoneExit", null);
+                if (playbackZoneMembership && !trackedZoneTrigger)
+                    trackedZoneTrigger = playbackZoneMembership.GetComponent<TrackedZoneTrigger>();
+
+                if (trackedZoneTrigger)
+                {
+                    if (Utilities.IsValid(Networking.LocalPlayer))
+                        _inSustainZone = trackedZoneTrigger._PlayerInZone(Networking.LocalPlayer);
+                    trackedZoneTrigger._Register(ZoneTrigger.EVENT_PLAYER_ENTER, this, "_OnPlaybackZoneEnter", "playerArg");
+                    trackedZoneTrigger._Register(ZoneTrigger.EVENT_PLAYER_LEAVE, this, "_OnPlaybackZoneExit", "playerArg");
+                }
+                else if (playbackZoneMembership)
+                {
+                    if (Utilities.IsValid(Networking.LocalPlayer))
+                        _inSustainZone = playbackZoneMembership._ContainsPlayer(Networking.LocalPlayer);
+                    playbackZoneMembership._RegisterAddPlayer(this, "_OnPlaybackZoneEnter", "playerArg");
+                    playbackZoneMembership._RegisterRemovePlayer(this, "_OnPlaybackZoneExit", "playerArg");
+                    //playbackZone._Register((UdonBehaviour)(Component)this, "_PlaybackZoneEnter", "_PlaybackZoneExit", null);
+                }
             }
             else
                 _inSustainZone = true;
@@ -353,8 +370,15 @@ namespace Texel
                 _inSustainZone = true;
 
                 VRCPlayerApi currentOwner = Networking.GetOwner(gameObject);
-                if (!playbackZoneMembership._ContainsPlayer(currentOwner))
-                    Networking.SetOwner(playerArg, gameObject);
+                if (trackedZoneTrigger)
+                {
+                    if (trackedZoneTrigger._PlayerInZone(currentOwner))
+                        Networking.SetOwner(playerArg, gameObject);
+                } else if (playbackZoneMembership)
+                {
+                    if (!playbackZoneMembership._ContainsPlayer(currentOwner))
+                        Networking.SetOwner(playerArg, gameObject);
+                }
 
                 if (_syncVideoExpectedEndTime != 0)
                 {
@@ -394,11 +418,27 @@ namespace Texel
 
                 if (Networking.IsOwner(gameObject))
                 {
-                    if (playbackZoneMembership._PlayerCount() > 0)
+                    if (trackedZoneTrigger)
                     {
-                        VRCPlayerApi nextPlayer = playbackZoneMembership._GetPlayer(0);
-                        if (Utilities.IsValid(nextPlayer) && nextPlayer.IsValid())
-                            Networking.SetOwner(nextPlayer, gameObject);
+                        if (trackedZoneTrigger.TrackedPlayerCount > 0)
+                        {
+                            DataList tracked = trackedZoneTrigger._GetTrackedPlayers();
+                            if (tracked.TryGetValue(0, TokenType.Reference, out DataToken playerToken))
+                            {
+                                VRCPlayerApi nextPlayer = (VRCPlayerApi)playerToken.Reference;
+                                if (Utilities.IsValid(nextPlayer) && nextPlayer.IsValid())
+                                    Networking.SetOwner(nextPlayer, gameObject);
+                            }
+                        }
+                    }
+                    else if (playbackZoneMembership)
+                    {
+                        if (playbackZoneMembership._PlayerCount() > 0)
+                        {
+                            VRCPlayerApi nextPlayer = playbackZoneMembership._GetPlayer(0);
+                            if (Utilities.IsValid(nextPlayer) && nextPlayer.IsValid())
+                                Networking.SetOwner(nextPlayer, gameObject);
+                        }
                     }
                 }
 
@@ -665,6 +705,9 @@ namespace Texel
             bool isOwner = Networking.IsOwner(gameObject);
             if (!isOwner && !_TakeControl())
                 return;
+
+            if (!_IsUrlValid(questUrl))
+                questUrl = VRCUrl.Empty;
 
             if (currentUrlSource)
                 currentUrlSource._OnVideoStop();
@@ -1157,6 +1200,7 @@ namespace Texel
                     switch (videoMux.LastErrorTXL)
                     {
                         case VideoErrorTXL.NoAVProInEditor: code = "AVPro Not Supported in Simulator"; break;
+                        case VideoErrorTXL.RetryEndStream: code = "Retry End of Stream"; break;
                         case VideoErrorTXL.Unknown: code = "Unknown Error (TXL)"; break;
                     }
                     break;
@@ -1187,6 +1231,9 @@ namespace Texel
             }
 
             if (action == VideoErrorAction.Default && retryOnError)
+                action = VideoErrorAction.Retry;
+
+            if (videoErrorClass == VideoErrorClass.TXL && videoMux.LastErrorTXL == VideoErrorTXL.RetryEndStream)
                 action = VideoErrorAction.Retry;
 
             if (Networking.IsOwner(gameObject))
@@ -1222,7 +1269,7 @@ namespace Texel
             }
             else
             {
-                if (!shouldFallback && action == VideoErrorAction.Retry)
+                if (!shouldFallback && (action == VideoErrorAction.Advance || action == VideoErrorAction.Retry))
                     _StartVideoLoadDelay(retryTimeout);
 
                 //if (!shouldFallback && retryOnError)
