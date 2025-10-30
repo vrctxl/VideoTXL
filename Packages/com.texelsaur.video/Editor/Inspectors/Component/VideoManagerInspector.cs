@@ -17,6 +17,7 @@ namespace Texel
         SerializedProperty enableAVProInEditorProperty;
         SerializedProperty defaultReactStreamStopProperty;
         SerializedProperty defaultstreamStopThresholdProperty;
+        SerializedProperty liveStreamStopRetryCountProperty;
         SerializedProperty youtubeAutoUnityInEditorProperty;
 
         SerializedProperty debugLogProperty;
@@ -37,6 +38,7 @@ namespace Texel
             enableAVProInEditorProperty = serializedObject.FindProperty(nameof(VideoManager.enableAVProInEditor));
             defaultReactStreamStopProperty = serializedObject.FindProperty(nameof(VideoManager.defaultReactStreamStop));
             defaultstreamStopThresholdProperty = serializedObject.FindProperty(nameof(VideoManager.defaultStreamStopThreshold));
+            liveStreamStopRetryCountProperty = serializedObject.FindProperty(nameof(VideoManager.liveStreamStopRetryCount));
             youtubeAutoUnityInEditorProperty = serializedObject.FindProperty(nameof(VideoManager.youtubeAutoUnityInEditor));
 
             debugLogProperty = serializedObject.FindProperty(nameof(VideoManager.debugLog));
@@ -90,6 +92,7 @@ namespace Texel
             {
                 EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(defaultstreamStopThresholdProperty, new GUIContent("Ignore Threshold", "The number of seconds from connecting to a livestream during which any stop events should be ignored.  AVPro may raise a stop event shortly after connecting to a livestream, even though the stream is still running."));
+                EditorGUILayout.PropertyField(liveStreamStopRetryCountProperty, new GUIContent("Stream End Retry Count", "Outside of the ignore threshold, the number of times the stream should try reconnecting after receiving an end of stream event."));
                 EditorGUI.indentLevel--;
             }
 

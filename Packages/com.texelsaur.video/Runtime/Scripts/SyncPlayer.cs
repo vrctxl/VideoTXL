@@ -706,6 +706,9 @@ namespace Texel
             if (!isOwner && !_TakeControl())
                 return;
 
+            if (!_IsUrlValid(questUrl))
+                questUrl = VRCUrl.Empty;
+
             if (currentUrlSource)
                 currentUrlSource._OnVideoStop();
 
@@ -1197,6 +1200,7 @@ namespace Texel
                     switch (videoMux.LastErrorTXL)
                     {
                         case VideoErrorTXL.NoAVProInEditor: code = "AVPro Not Supported in Simulator"; break;
+                        case VideoErrorTXL.RetryEndStream: code = "Retry End of Stream"; break;
                         case VideoErrorTXL.Unknown: code = "Unknown Error (TXL)"; break;
                     }
                     break;
@@ -1227,6 +1231,9 @@ namespace Texel
             }
 
             if (action == VideoErrorAction.Default && retryOnError)
+                action = VideoErrorAction.Retry;
+
+            if (videoErrorClass == VideoErrorClass.TXL && videoMux.LastErrorTXL == VideoErrorTXL.RetryEndStream)
                 action = VideoErrorAction.Retry;
 
             if (Networking.IsOwner(gameObject))
@@ -1262,7 +1269,7 @@ namespace Texel
             }
             else
             {
-                if (!shouldFallback && action == VideoErrorAction.Retry)
+                if (!shouldFallback && (action == VideoErrorAction.Advance || action == VideoErrorAction.Retry))
                     _StartVideoLoadDelay(retryTimeout);
 
                 //if (!shouldFallback && retryOnError)

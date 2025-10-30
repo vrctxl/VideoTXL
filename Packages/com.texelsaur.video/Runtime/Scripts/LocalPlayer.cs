@@ -98,7 +98,7 @@ namespace Texel
 
             if (_hasSustainZone)
             {
-                _inSustainZone = playbackZone._LocalPlayerInZone();
+                _inSustainZone = playbackZone._PlayerInZone(Networking.LocalPlayer);
                 playbackZone._Register(ZoneTrigger.EVENT_PLAYER_ENTER, this, "_PlaybackZoneEnter");
                 playbackZone._Register(ZoneTrigger.EVENT_PLAYER_LEAVE, this, "_PlaybackZoneExit");
             }
@@ -110,7 +110,7 @@ namespace Texel
                 else
                     triggerZone._Register(ZoneTrigger.EVENT_PLAYER_ENTER, this, "_TriggerPlay");
 
-                initTrigger = triggerZone._LocalPlayerInZone();
+                initTrigger = triggerZone._PlayerInZone(Networking.LocalPlayer);
             }
 
             if (playOnJoin)

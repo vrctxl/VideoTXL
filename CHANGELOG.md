@@ -8,6 +8,8 @@
 - Obsoleted Zone Membership for SyncPlayer playback zones, replaced with Tracked Zone Triggers
 - Fixed array bounds error in Screen Manager Inspector that shows up in certain edge cases
 - Added proper undo/persistence to GameObject->TXL menu actions
+- Fixed crash in SyncPlayer if state debugging is used and URL is changed with a null Quest URL
+- Added error retry options to URL sources (Playlist, Queue)
 
 ### [2.5.0-beta.10]
 - Added "trace" debug option to Video Manager
