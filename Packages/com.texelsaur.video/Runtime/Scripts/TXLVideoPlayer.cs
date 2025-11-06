@@ -32,6 +32,12 @@ namespace Texel
         Single,
     }
 
+    public enum TXLUrlType : byte
+    {
+        Normal,
+        Quest,
+    }
+
     public abstract class TXLVideoPlayer : EventBase
     {
         public const int EVENT_VIDEO_STATE_UPDATE = 0;

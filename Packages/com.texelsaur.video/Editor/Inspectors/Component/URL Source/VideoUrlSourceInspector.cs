@@ -10,7 +10,7 @@ namespace Texel
         protected SerializedProperty overrideDisplayProperty;
 
         protected SerializedProperty errorActionProperty;
-        protected SerializedProperty terminalErrorActionProperty;
+        protected SerializedProperty retriesExceededActionProperty;
         protected SerializedProperty maxErrorRetryCountProperty;
 
         protected virtual void OnEnable()
@@ -18,7 +18,7 @@ namespace Texel
             sourceNameProperty = serializedObject.FindProperty(nameof(VideoUrlSource.sourceName));
             overrideDisplayProperty = serializedObject.FindProperty(nameof(VideoUrlSource.overrideDisplay));
             errorActionProperty = serializedObject.FindProperty(nameof(VideoUrlSource.errorAction));
-            terminalErrorActionProperty = serializedObject.FindProperty(nameof(VideoUrlSource.terminalErrorAction));
+            retriesExceededActionProperty = serializedObject.FindProperty(nameof(VideoUrlSource.retriesExceededAction));
             maxErrorRetryCountProperty = serializedObject.FindProperty(nameof(VideoUrlSource.maxErrorRetryCount));
         }
 
@@ -44,7 +44,7 @@ namespace Texel
             {
                 EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(maxErrorRetryCountProperty);
-                EditorGUILayout.PropertyField(terminalErrorActionProperty);
+                EditorGUILayout.PropertyField(retriesExceededActionProperty);
                 EditorGUI.indentLevel--;
             }
         }
