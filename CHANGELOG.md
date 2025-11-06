@@ -2,6 +2,12 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.12]
+- Removed invalid rootNamespace entry from asmdefs
+- Added quest URL support to queues
+- Added methods to get current title and player from queues
+- Added retry support/properties to base URL source
+
 ### [2.5.0-beta.11]
 - Fixed trace crash in VideoManager from beta 10
 - Hid TXLVideoPlayer field from SourceManager inspector

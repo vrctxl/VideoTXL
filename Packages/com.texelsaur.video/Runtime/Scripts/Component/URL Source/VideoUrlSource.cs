@@ -27,13 +27,6 @@ namespace Texel
         Advance     // Instruct video player to move to next available track/source
     }
 
-    public enum VideoErrorTerminalAction
-    {
-        Default,
-        Stop,
-        Advance
-    }
-
     public enum VideoDisplayOverride
     {
         None,
@@ -53,7 +46,9 @@ namespace Texel
         [SerializeField] protected internal VideoDisplayOverride overrideDisplay;
 
         [SerializeField] protected internal VideoErrorAction errorAction = VideoErrorAction.Retry;
-        [SerializeField] protected internal VideoErrorTerminalAction terminalErrorAction = VideoErrorTerminalAction.Advance;
+        [Obsolete("Use retriesExceededAction")]
+        [SerializeField] protected internal VideoErrorAction terminalErrorAction = VideoErrorAction.Advance;
+        [SerializeField] protected internal VideoErrorAction retriesExceededAction = VideoErrorAction.Advance;
         [SerializeField] protected internal int maxErrorRetryCount = 1;
 
         protected int sourceIndex = -1;
@@ -88,6 +83,21 @@ namespace Texel
 
                 return "";
             }
+        }
+
+        public virtual bool SupportsRetry
+        {
+            get { return errorAction == VideoErrorAction.Retry; }
+        }
+
+        public virtual int RetryCount
+        {
+            get { return errorCount; }
+        }
+
+        public virtual int MaxRetryCount
+        {
+            get { return maxErrorRetryCount; }
         }
 
         protected virtual bool IsInErrorRetry
@@ -238,7 +248,7 @@ namespace Texel
             {
                 errorCount += 1;
                 if (errorCount > maxErrorRetryCount)
-                    return _TranslateAction(terminalErrorAction);
+                    return retriesExceededAction;
                 else
                     return VideoErrorAction.Retry;
             }
@@ -257,16 +267,6 @@ namespace Texel
                 sourceManager._OnUrlReady(sourceIndex);
 
             _UpdateHandlers(EVENT_URL_READY);
-        }
-
-        protected VideoErrorAction _TranslateAction (VideoErrorTerminalAction action)
-        {
-            if (action == VideoErrorTerminalAction.Stop)
-                return VideoErrorAction.Stop;
-            if (action == VideoErrorTerminalAction.Advance)
-                return VideoErrorAction.Advance;
-
-            return VideoErrorAction.Default;
         }
     }
 }
