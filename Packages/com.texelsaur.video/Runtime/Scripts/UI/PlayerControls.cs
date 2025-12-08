@@ -1,4 +1,3 @@
-﻿
 using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
@@ -109,7 +108,7 @@ namespace Texel
 
             urlMode = defaultUrlMode;
 
-            if (optionsPanel)
+            if (Utilities.IsValid(optionsPanel))
                 optionsPanel._SetControls(this);
 
             _PopulateMissingReferences();
@@ -122,11 +121,14 @@ namespace Texel
                 attentionColor = colorProfile.attentionColor;
             }
 
-            infoIcon.color = normalColor;
+            if (Utilities.IsValid(infoIcon))
+                infoIcon.color = normalColor;
             _DisableAllVideoControls();
 
-            queuedText.text = "";
-            playlistText.text = "";
+            if (Utilities.IsValid(queuedText))
+                queuedText.text = "";
+            if (Utilities.IsValid(playlistText))
+                playlistText.text = "";
 
             if (Utilities.IsValid(audioManager))
                 audioManager._RegisterControls(this);
@@ -136,9 +138,10 @@ namespace Texel
 
             if (Utilities.IsValid(videoPlayer))
             {
-                unlockedIcon.color = normalColor;
+                if (Utilities.IsValid(unlockedIcon))
+                    unlockedIcon.color = normalColor;
 
-                if (playlistPanel && videoPlayer.SourceManager)
+                if (Utilities.IsValid(playlistPanel) && videoPlayer.SourceManager)
                 {
                     VideoSourceUI vui = playlistPanel.GetComponentInChildren<VideoSourceUI>();
                     if (vui)
@@ -213,22 +216,32 @@ namespace Texel
 
         void _DisableAllVideoControls()
         {
-            stopIcon.color = disabledColor;
-            pauseIcon.color = disabledColor;
-            lockedIcon.color = disabledColor;
-            unlockedIcon.color = disabledColor;
-            loadIcon.color = disabledColor;
-            resyncIcon.color = disabledColor;
-            repeatIcon.color = disabledColor;
-            if (repeatOneIcon)
+            if (Utilities.IsValid(stopIcon))
+                stopIcon.color = disabledColor;
+            if (Utilities.IsValid(pauseIcon))
+                pauseIcon.color = disabledColor;
+            if (Utilities.IsValid(lockedIcon))
+                lockedIcon.color = disabledColor;
+            if (Utilities.IsValid(unlockedIcon))
+                unlockedIcon.color = disabledColor;
+            if (Utilities.IsValid(loadIcon))
+                loadIcon.color = disabledColor;
+            if (Utilities.IsValid(resyncIcon))
+                resyncIcon.color = disabledColor;
+            if (Utilities.IsValid(repeatIcon))
+                repeatIcon.color = disabledColor;
+            if (Utilities.IsValid(repeatOneIcon))
             {
                 repeatOneIcon.color = disabledColor;
                 repeatOneIcon.enabled = false;
             }
-            nextIcon.color = disabledColor;
-            prevIcon.color = disabledColor;
-            playlistIcon.color = disabledColor;
-            if (queueIcon)
+            if (Utilities.IsValid(nextIcon))
+                nextIcon.color = disabledColor;
+            if (Utilities.IsValid(prevIcon))
+                prevIcon.color = disabledColor;
+            if (Utilities.IsValid(playlistIcon))
+                playlistIcon.color = disabledColor;
+            if (Utilities.IsValid(queueIcon))
                 queueIcon.color = disabledColor;
         }
 
@@ -285,7 +298,7 @@ namespace Texel
 
         public void _HandleUrlInput()
         {
-            if (!Utilities.IsValid(videoPlayer))
+            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(urlInput))
                 return;
 
             pendingFromLoadOverride = loadActive;
@@ -296,9 +309,14 @@ namespace Texel
 
         public void _HandleUrlInputDelay()
         {
+            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(urlInput))
+                return;
+
             VRCUrl url = urlInput.GetUrl();
             urlInput.SetUrl(VRCUrl.Empty);
-            urlText.text = "";
+
+            if (Utilities.IsValid(urlText))
+                urlText.text = "";
 
             // Hack to get around Unity always firing OnEndEdit event for submit and lost focus
             // If loading override was on, but it's off immediately after submit, assume user closed override
@@ -334,6 +352,9 @@ namespace Texel
 
         public void _HandleUrlInputClick()
         {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
             if (!videoPlayer._CanTakeControl())
                 _SetStatusOverride(_MakeOwnerMessage(), 3);
         }
@@ -478,6 +499,9 @@ namespace Texel
 
         public void _HandleProgressSliderChanged()
         {
+            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(progressSlider))
+                return;
+
             if (_draggingProgressSlider || _updatingProgressSlider)
                 return;
 
@@ -490,6 +514,9 @@ namespace Texel
 
         public void _HandleSourceModeClick()
         {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
             short mode = (short)(videoPlayer.playerSourceOverride + 1);
             if (mode > 2)
                 mode = 0;
@@ -568,7 +595,8 @@ namespace Texel
                         ui._SelectActive();
                 }
 
-                playlistIcon.color = sourcePanelOpen ? activeColor : normalColor;
+                if (Utilities.IsValid(playlistIcon))
+                    playlistIcon.color = sourcePanelOpen ? activeColor : normalColor;
 
                 //SendCustomEventDelayedFrames("_ScrollPlaylistCurrent", 10);
 
@@ -624,21 +652,31 @@ namespace Texel
 
         public void _UpdateTrackingDragging()
         {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
             int playerState = videoPlayer.playerState;
             if (!_draggingProgressSlider || playerState != TXLVideoPlayer.VIDEO_STATE_PLAYING || loadActive || !videoPlayer.seekableSource)
                 return;
 
-            string durationStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration).ToString(@"hh\:mm\:ss");
-            string positionStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration * progressSlider.value).ToString(@"hh\:mm\:ss");
+            string durationStr = TimeSpan.FromSeconds(videoPlayer.trackDuration).ToString(@"hh\:mm\:ss");
+            float positionSeconds = videoPlayer.trackDuration * (Utilities.IsValid(progressSlider) ? progressSlider.value : 0f);
+            string positionStr = TimeSpan.FromSeconds(positionSeconds).ToString(@"hh\:mm\:ss");
             SetStatusText(positionStr + " / " + durationStr);
-            progressSliderControl.SetActive(true);
-            syncSliderControl.SetActive(false);
+
+            if (Utilities.IsValid(progressSliderControl))
+                progressSliderControl.SetActive(true);
+            if (Utilities.IsValid(syncSliderControl))
+                syncSliderControl.SetActive(false);
 
             SendCustomEventDelayedSeconds("_UpdateTrackingDragging", 0.1f);
         }
 
         public void _UpdateTracking()
         {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
             int playerState = videoPlayer.playerState;
             if (playerState != TXLVideoPlayer.VIDEO_STATE_PLAYING || loadActive)
                 return;
@@ -646,36 +684,51 @@ namespace Texel
             if (!videoPlayer.seekableSource)
             {
                 SetStatusText("Streaming...");
-                progressSliderControl.SetActive(false);
-                syncSliderControl.SetActive(false);
+                if (Utilities.IsValid(progressSliderControl))
+                    progressSliderControl.SetActive(false);
+                if (Utilities.IsValid(syncSliderControl))
+                    syncSliderControl.SetActive(false);
             }
             else if (!_draggingProgressSlider)
             {
                 if (videoPlayer.trackTarget - videoPlayer.trackPosition > 1)
                 {
                     SetStatusText("Synchronizing...");
-                    progressSliderControl.SetActive(false);
-                    syncSliderControl.SetActive(true);
-                    syncSlider.value = videoPlayer.trackPosition / videoPlayer.trackTarget;
+                    if (Utilities.IsValid(progressSliderControl))
+                        progressSliderControl.SetActive(false);
+                    if (Utilities.IsValid(syncSliderControl))
+                    {
+                        syncSliderControl.SetActive(true);
+                        if (Utilities.IsValid(syncSlider) && videoPlayer.trackTarget > 0)
+                            syncSlider.value = videoPlayer.trackPosition / videoPlayer.trackTarget;
+                    }
                 }
                 else
                 {
-                    string durationStr = System.TimeSpan.FromSeconds(videoPlayer.trackDuration).ToString(@"hh\:mm\:ss");
-                    string positionStr = System.TimeSpan.FromSeconds(videoPlayer.trackPosition).ToString(@"hh\:mm\:ss");
+                    string durationStr = TimeSpan.FromSeconds(videoPlayer.trackDuration).ToString(@"hh\:mm\:ss");
+                    string positionStr = TimeSpan.FromSeconds(videoPlayer.trackPosition).ToString(@"hh\:mm\:ss");
                     SetStatusText(positionStr + " / " + durationStr);
-                    progressSliderControl.SetActive(true);
-                    syncSliderControl.SetActive(false);
 
-                    _updatingProgressSlider = true;
-                    progressSlider.value = (videoPlayer.trackDuration <= 0) ? 0f : Mathf.Clamp01(videoPlayer.trackPosition / videoPlayer.trackDuration);
-                    _updatingProgressSlider = false;
+                    if (Utilities.IsValid(progressSliderControl))
+                        progressSliderControl.SetActive(true);
+                    if (Utilities.IsValid(syncSliderControl))
+                        syncSliderControl.SetActive(false);
+
+                    if (Utilities.IsValid(progressSlider))
+                    {
+                        _updatingProgressSlider = true;
+                        progressSlider.value = (videoPlayer.trackDuration <= 0)
+                            ? 0f
+                            : Mathf.Clamp01(videoPlayer.trackPosition / videoPlayer.trackDuration);
+                        _updatingProgressSlider = false;
+                    }
                 }
             }
         }
 
         public void _UpdateInfo()
         {
-            if (titleText)
+            if (Utilities.IsValid(titleText))
                 titleText.text = _GetTitleText();
 
             //string queuedUrl = videoPlayer.queuedUrl.Get();
@@ -684,9 +737,12 @@ namespace Texel
 
         string _GetTitleText()
         {
+            if (!Utilities.IsValid(videoPlayer))
+                return "";
+
             if (videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_STOPPED)
                 return "";
-            if (videoPlayer.urlInfoResolver)
+            if (Utilities.IsValid(videoPlayer.urlInfoResolver))
                 return videoPlayer.urlInfoResolver._GetFormatted(videoPlayer.currentUrl);
 
             return "";
@@ -694,6 +750,9 @@ namespace Texel
 
         bool _IsQueueSupported()
         {
+            if (!Utilities.IsValid(videoPlayer))
+                return false;
+
             if (videoPlayer.sourceManager)
                 return videoPlayer.sourceManager._GetCanAddTrack() >= 0;
 
@@ -703,28 +762,38 @@ namespace Texel
         // TODO: Genericize to url source
         public void _UpdatePlaylistInfo()
         {
+            if (!Utilities.IsValid(videoPlayer))
+                return;
+
             bool canControl = videoPlayer._CanTakeControl();
             bool enableControl = !videoPlayer.locked || canControl;
 
             TXLRepeatMode repeatMode = videoPlayer.RepeatMode;
             if (repeatMode == TXLRepeatMode.None)
             {
-                repeatIcon.enabled = true;
-                repeatIcon.color = normalColor;
-                if (repeatOneIcon)
+                if (Utilities.IsValid(repeatIcon))
+                {
+                    repeatIcon.enabled = true;
+                    repeatIcon.color = normalColor;
+                }
+                if (Utilities.IsValid(repeatOneIcon))
                     repeatOneIcon.enabled = false;
             }
             else if (repeatMode == TXLRepeatMode.All)
             {
-                repeatIcon.enabled = true;
-                repeatIcon.color = activeColor;
-                if (repeatOneIcon)
+                if (Utilities.IsValid(repeatIcon))
+                {
+                    repeatIcon.enabled = true;
+                    repeatIcon.color = activeColor;
+                }
+                if (Utilities.IsValid(repeatOneIcon))
                     repeatOneIcon.enabled = false;
             }
             else if (repeatMode == TXLRepeatMode.Single)
             {
-                repeatIcon.enabled = false;
-                if (repeatOneIcon)
+                if (Utilities.IsValid(repeatIcon))
+                    repeatIcon.enabled = false;
+                if (Utilities.IsValid(repeatOneIcon))
                 {
                     repeatOneIcon.enabled = true;
                     repeatOneIcon.color = activeColor;
@@ -733,31 +802,45 @@ namespace Texel
 
             SourceManager sourceManager = videoPlayer.SourceManager;
 
-            nextIcon.color = disabledColor;
-            prevIcon.color = disabledColor;
-            playlistIcon.color = disabledColor;
-            playlistText.text = "";
-            queuedText.text = "";
+            if (Utilities.IsValid(nextIcon))
+                nextIcon.color = disabledColor;
+            if (Utilities.IsValid(prevIcon))
+                prevIcon.color = disabledColor;
+            if (Utilities.IsValid(playlistIcon))
+                playlistIcon.color = disabledColor;
+            if (Utilities.IsValid(playlistText))
+                playlistText.text = "";
+            if (Utilities.IsValid(queuedText))
+                queuedText.text = "";
 
             bool videoStopped = videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_STOPPED;
             if (sourceManager && sourceManager.Count > 0)
             {
-                nextIcon.color = (enableControl && sourceManager.CanMoveNext) ? normalColor : disabledColor;
-                prevIcon.color = (enableControl && sourceManager.CanMovePrev) ? normalColor : disabledColor;
-                playlistIcon.color = enableControl ? normalColor : disabledColor;
+                if (Utilities.IsValid(nextIcon))
+                    nextIcon.color = (enableControl && sourceManager.CanMoveNext) ? normalColor : disabledColor;
+                if (Utilities.IsValid(prevIcon))
+                    prevIcon.color = (enableControl && sourceManager.CanMovePrev) ? normalColor : disabledColor;
+                if (Utilities.IsValid(playlistIcon))
+                    playlistIcon.color = enableControl ? normalColor : disabledColor;
 
                 VideoUrlSource source = videoPlayer.currentUrlSource;
-                if (source && !videoStopped)
-                    queuedText.text = source.SourceName;
-                else
-                    queuedText.text = "";
+                if (Utilities.IsValid(queuedText))
+                {
+                    if (source && !videoStopped)
+                        queuedText.text = source.SourceName;
+                    else
+                        queuedText.text = "";
+                }
 
-                if (!source || videoStopped)
-                    playlistText.text = "";
-                else
-                    playlistText.text = source.TrackDisplay;
+                if (Utilities.IsValid(playlistText))
+                {
+                    if (!source || videoStopped)
+                        playlistText.text = "";
+                    else
+                        playlistText.text = source.TrackDisplay;
+                }
 
-                if (Utilities.IsValid(playlistPanel))
+                if (Utilities.IsValid(playlistPanel) && Utilities.IsValid(playlistIcon))
                     playlistIcon.color = sourcePanelOpen ? activeColor : normalColor;
             }
         }
@@ -780,84 +863,109 @@ namespace Texel
 
             bool queueSupported = _IsQueueSupported();
 
-            if (queueInputControl)
+            if (Utilities.IsValid(queueInputControl))
                 queueInputControl.SetActive(false);
 
             int playerState = videoPlayer.playerState;
 
             if (enableControl && loadActive)
             {
-                loadIcon.color = activeColor;
-                urlInputControl.SetActive(true);
-                urlInput.readOnly = !canControl;
+                if (Utilities.IsValid(loadIcon))
+                    loadIcon.color = activeColor;
+                if (Utilities.IsValid(urlInputControl))
+                    urlInputControl.SetActive(true);
+                if (Utilities.IsValid(urlInput))
+                    urlInput.readOnly = !canControl;
                 SetStatusText("");
 
-                if (queueInputControl)
+                if (Utilities.IsValid(queueInputControl))
                     queueInputControl.SetActive(queueSupported);
 
                 if (queueSupported && urlMode == UrlEntryMode.AddToQueue)
                 {
-                    if (queueIcon)
+                    if (Utilities.IsValid(queueIcon))
                         queueIcon.color = activeColor;
                     SetPlaceholderText("Add Video URL to Queue...");
                 }
                 else
                 {
-                    if (queueIcon)
+                    if (Utilities.IsValid(queueIcon))
                         queueIcon.color = normalColor;
                     SetPlaceholderText("Enter Video URL...");
                 }
             }
             else
-                loadIcon.color = enableControl ? normalColor : disabledColor;
+            {
+                if (Utilities.IsValid(loadIcon))
+                    loadIcon.color = enableControl ? normalColor : disabledColor;
+            }
 
             if (playerState == TXLVideoPlayer.VIDEO_STATE_PLAYING && !loadActive)
             {
-                urlInput.readOnly = true;
-                urlInputControl.SetActive(false);
+                if (Utilities.IsValid(urlInput))
+                    urlInput.readOnly = true;
+                if (Utilities.IsValid(urlInputControl))
+                    urlInputControl.SetActive(false);
 
-                stopIcon.color = enableControl ? normalColor : disabledColor;
+                if (Utilities.IsValid(stopIcon))
+                    stopIcon.color = enableControl ? normalColor : disabledColor;
                 //loadIcon.color = enableControl ? normalColor : disabledColor;
-                resyncIcon.color = normalColor;
+                if (Utilities.IsValid(resyncIcon))
+                    resyncIcon.color = normalColor;
 
-                if (videoPlayer.paused)
-                    pauseIcon.color = activeColor;
-                else
-                    pauseIcon.color = (enableControl && videoPlayer.seekableSource) ? normalColor : disabledColor;
+                if (Utilities.IsValid(pauseIcon))
+                {
+                    if (videoPlayer.paused)
+                        pauseIcon.color = activeColor;
+                    else
+                        pauseIcon.color = (enableControl && videoPlayer.seekableSource) ? normalColor : disabledColor;
+                }
 
-                progressSlider.interactable = enableControl;
+                if (Utilities.IsValid(progressSlider))
+                    progressSlider.interactable = enableControl;
                 _UpdateTracking();
             }
             else
             {
                 _draggingProgressSlider = false;
 
-                stopIcon.color = disabledColor;
+                if (Utilities.IsValid(stopIcon))
+                    stopIcon.color = disabledColor;
                 //loadIcon.color = disabledColor;
-                progressSliderControl.SetActive(false);
-                syncSliderControl.SetActive(false);
-                urlInputControl.SetActive(true);
+                if (Utilities.IsValid(progressSliderControl))
+                    progressSliderControl.SetActive(false);
+                if (Utilities.IsValid(syncSliderControl))
+                    syncSliderControl.SetActive(false);
+                if (Utilities.IsValid(urlInputControl))
+                    urlInputControl.SetActive(true);
 
                 if (playerState == TXLVideoPlayer.VIDEO_STATE_LOADING)
                 {
-                    stopIcon.color = enableControl ? normalColor : disabledColor;
+                    if (Utilities.IsValid(stopIcon))
+                        stopIcon.color = enableControl ? normalColor : disabledColor;
                     //loadIcon.color = enableControl ? normalColor : disabledColor;
-                    resyncIcon.color = normalColor;
-                    pauseIcon.color = disabledColor;
+                    if (Utilities.IsValid(resyncIcon))
+                        resyncIcon.color = normalColor;
+                    if (Utilities.IsValid(pauseIcon))
+                        pauseIcon.color = disabledColor;
 
                     if (!loadActive)
                     {
                         SetPlaceholderText(videoPlayer.HoldVideos && videoPlayer._videoReady ? "Ready" : "Loading...");
-                        urlInput.readOnly = true;
+                        if (Utilities.IsValid(urlInput))
+                            urlInput.readOnly = true;
                         SetStatusText("");
                     }
                 }
                 else if (playerState == TXLVideoPlayer.VIDEO_STATE_ERROR)
                 {
-                    stopIcon.color = videoPlayer.retryOnError ? normalColor : disabledColor;
+                    if (Utilities.IsValid(stopIcon))
+                        stopIcon.color = videoPlayer.retryOnError ? normalColor : disabledColor;
                     //loadIcon.color = normalColor;
-                    resyncIcon.color = normalColor;
-                    pauseIcon.color = disabledColor;
+                    if (Utilities.IsValid(resyncIcon))
+                        resyncIcon.color = normalColor;
+                    if (Utilities.IsValid(pauseIcon))
+                        pauseIcon.color = disabledColor;
                     //loadActive = false;
 
                     if (!loadActive)
@@ -902,7 +1010,8 @@ namespace Texel
                         if (videoPlayer.streamFallback)
                             SetPlaceholderText("Retrying as stream source");
 
-                        urlInput.readOnly = !canControl;
+                        if (Utilities.IsValid(urlInput))
+                            urlInput.readOnly = !canControl;
                         SetStatusText("");
                     }
                 }
@@ -912,26 +1021,35 @@ namespace Texel
                     {
                         //loadActive = false;
                         pendingFromLoadOverride = false;
-                        stopIcon.color = disabledColor;
+                        if (Utilities.IsValid(stopIcon))
+                            stopIcon.color = disabledColor;
                         //loadIcon.color = disabledColor;
-                        resyncIcon.color = disabledColor;
-                        pauseIcon.color = disabledColor;
+                        if (Utilities.IsValid(resyncIcon))
+                            resyncIcon.color = disabledColor;
+                        if (Utilities.IsValid(pauseIcon))
+                            pauseIcon.color = disabledColor;
                     }
                     else
                     {
-                        stopIcon.color = enableControl ? normalColor : disabledColor;
+                        if (Utilities.IsValid(stopIcon))
+                            stopIcon.color = enableControl ? normalColor : disabledColor;
                         //loadIcon.color = activeColor;
-                        resyncIcon.color = normalColor;
+                        if (Utilities.IsValid(resyncIcon))
+                            resyncIcon.color = normalColor;
 
-                        if (videoPlayer.paused)
-                            pauseIcon.color = activeColor;
-                        else
-                            pauseIcon.color = (enableControl && videoPlayer.seekableSource) ? normalColor : disabledColor;
+                        if (Utilities.IsValid(pauseIcon))
+                        {
+                            if (videoPlayer.paused)
+                                pauseIcon.color = activeColor;
+                            else
+                                pauseIcon.color = (enableControl && videoPlayer.seekableSource) ? normalColor : disabledColor;
+                        }
                     }
 
                     if (!loadActive)
                     {
-                        urlInput.readOnly = !canControl;
+                        if (Utilities.IsValid(urlInput))
+                            urlInput.readOnly = !canControl;
                         if (canControl)
                         {
                             if (_IsQueueSupported() && urlMode == UrlEntryMode.AddToQueue)
@@ -949,46 +1067,52 @@ namespace Texel
                 }
             }
 
-            lockedIcon.enabled = videoPlayer.locked;
-            unlockedIcon.enabled = !videoPlayer.locked;
-            if (videoPlayer.locked)
+            if (Utilities.IsValid(lockedIcon))
+                lockedIcon.enabled = videoPlayer.locked;
+            if (Utilities.IsValid(unlockedIcon))
+                unlockedIcon.enabled = !videoPlayer.locked;
+            if (videoPlayer.locked && Utilities.IsValid(lockedIcon))
                 lockedIcon.color = canControl ? normalColor : attentionColor;
 
             if (!videoPlayer.VideoManager.HasMultipleTypes)
             {
-                modeText.text = "";
+                if (Utilities.IsValid(modeText))
+                    modeText.text = "";
             }
             else
             {
-                switch (videoPlayer.playerSourceOverride)
+                if (Utilities.IsValid(modeText))
                 {
-                    case VideoSource.VIDEO_SOURCE_UNITY:
-                        modeText.text = "VIDEO";
-                        break;
-                    case VideoSource.VIDEO_SOURCE_AVPRO:
-                        modeText.text = "STREAM";
-                        break;
-                    case VideoSource.VIDEO_SOURCE_NONE:
-                    default:
-                        if (playerState == TXLVideoPlayer.VIDEO_STATE_STOPPED)
-                            modeText.text = "AUTO";
-                        else
-                        {
-                            switch (videoPlayer.playerSource)
+                    switch (videoPlayer.playerSourceOverride)
+                    {
+                        case VideoSource.VIDEO_SOURCE_UNITY:
+                            modeText.text = "VIDEO";
+                            break;
+                        case VideoSource.VIDEO_SOURCE_AVPRO:
+                            modeText.text = "STREAM";
+                            break;
+                        case VideoSource.VIDEO_SOURCE_NONE:
+                        default:
+                            if (playerState == TXLVideoPlayer.VIDEO_STATE_STOPPED)
+                                modeText.text = "AUTO";
+                            else
                             {
-                                case VideoSource.VIDEO_SOURCE_UNITY:
-                                    modeText.text = "AUTO VIDEO";
-                                    break;
-                                case VideoSource.VIDEO_SOURCE_AVPRO:
-                                    modeText.text = "AUTO STREAM";
-                                    break;
-                                case VideoSource.VIDEO_SOURCE_NONE:
-                                default:
-                                    modeText.text = "AUTO";
-                                    break;
+                                switch (videoPlayer.playerSource)
+                                {
+                                    case VideoSource.VIDEO_SOURCE_UNITY:
+                                        modeText.text = "AUTO VIDEO";
+                                        break;
+                                    case VideoSource.VIDEO_SOURCE_AVPRO:
+                                        modeText.text = "AUTO STREAM";
+                                        break;
+                                    case VideoSource.VIDEO_SOURCE_NONE:
+                                    default:
+                                        modeText.text = "AUTO";
+                                        break;
+                                }
                             }
-                        }
-                        break;
+                            break;
+                    }
                 }
             }
 
@@ -998,6 +1122,9 @@ namespace Texel
 
         void SetStatusText(string msg)
         {
+            if (!Utilities.IsValid(statusText))
+                return;
+
             if (statusOverride != null)
                 statusText.text = statusOverride;
             else
@@ -1006,6 +1133,9 @@ namespace Texel
 
         void SetPlaceholderText(string msg)
         {
+            if (!Utilities.IsValid(placeholderText))
+                return;
+
             if (statusOverride != null)
                 placeholderText.text = "";
             else
@@ -1030,7 +1160,7 @@ namespace Texel
 
         public string _MakeOwnerMessage()
         {
-            if (videoPlayer.accessControl)
+            if (Utilities.IsValid(videoPlayer) && Utilities.IsValid(videoPlayer.accessControl))
                 return $"Controls locked by access control";
             if (instanceMaster == instanceOwner || instanceOwner == "")
                 return $"Controls locked to master {instanceMaster}";
@@ -1070,12 +1200,15 @@ namespace Texel
 
         public void _RefreshPlayerAccessIcon()
         {
-            masterIcon.enabled = false;
-            whitelistIcon.enabled = false;
+            if (Utilities.IsValid(masterIcon))
+                masterIcon.enabled = false;
+            if (Utilities.IsValid(whitelistIcon))
+                whitelistIcon.enabled = false;
 
-            if (!Utilities.IsValid(videoPlayer.accessControl))
+            if (!Utilities.IsValid(videoPlayer) || !Utilities.IsValid(videoPlayer.accessControl))
             {
-                masterIcon.enabled = videoPlayer._IsAdmin();
+                if (Utilities.IsValid(masterIcon))
+                    masterIcon.enabled = Utilities.IsValid(videoPlayer) && videoPlayer._IsAdmin();
                 return;
             }
 
@@ -1085,11 +1218,20 @@ namespace Texel
 
             AccessControl acl = videoPlayer.accessControl;
             if (acl.allowInstanceOwner && player.isInstanceOwner)
-                masterIcon.enabled = true;
+            {
+                if (Utilities.IsValid(masterIcon))
+                    masterIcon.enabled = true;
+            }
             else if (acl.allowMaster && player.isMaster)
-                masterIcon.enabled = true;
+            {
+                if (Utilities.IsValid(masterIcon))
+                    masterIcon.enabled = true;
+            }
             else if (acl.allowWhitelist && acl._LocalWhitelisted())
-                whitelistIcon.enabled = true;
+            {
+                if (Utilities.IsValid(whitelistIcon))
+                    whitelistIcon.enabled = true;
+            }
         }
 
         void _PopulateMissingReferences()
@@ -1098,7 +1240,7 @@ namespace Texel
             {
                 videoPlayer = transform.parent.GetComponent<SyncPlayer>();
                 if (Utilities.IsValid(videoPlayer))
-                    videoPlayer.debugLog._Write("PlayerControls", $"Missing syncplayer reference, found one on parent");
+                    videoPlayer.debugLog._Write("PlayerControls", "Missing syncplayer reference, found one on parent");
                 else
                     Debug.LogError("Missing syncplayer reference, also could not find one on parent!");
             }
@@ -1131,7 +1273,7 @@ namespace Texel
             if (!Utilities.IsValid(repeatIcon))
                 repeatIcon = (Image)_FindComponent("MainPanel/UpperRow/ButtonGroup/RepeatButton/IconRepeat", typeof(Image));
             if (!Utilities.IsValid(repeatOneIcon))
-                repeatIcon = (Image)_FindComponent("MainPanel/UpperRow/ButtonGroup/RepeatButton/IconRepeatOne", typeof(Image));
+                repeatOneIcon = (Image)_FindComponent("MainPanel/UpperRow/ButtonGroup/RepeatButton/IconRepeatOne", typeof(Image));
             if (!Utilities.IsValid(playlistIcon))
                 playlistIcon = (Image)_FindComponent("MainPanel/UpperRow/ButtonGroup/PlaylistButton/IconPlaylist", typeof(Image));
             if (!Utilities.IsValid(infoIcon))
@@ -1172,7 +1314,7 @@ namespace Texel
             if (!Utilities.IsValid(playlistText))
                 playlistText = (Text)_FindComponent("MainPanel/LowerRow/InputProgress/PlaylistText", typeof(Text));
 
-            if (!Utilities.IsValid(urlInput) && Utilities.IsValid(videoPlayer.debugLog))
+            if (!Utilities.IsValid(urlInput) && Utilities.IsValid(videoPlayer) && Utilities.IsValid(videoPlayer.debugLog))
                 videoPlayer.debugLog._Write("PlayerControls", "Could not resolve URL input component: is your VRC SDK missing VRCUrlInput?");
         }
 
