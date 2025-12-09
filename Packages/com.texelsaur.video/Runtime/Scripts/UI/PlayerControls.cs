@@ -847,7 +847,12 @@ namespace Texel
 
                     if (!loadActive)
                     {
-                        SetPlaceholderText(videoPlayer.HoldVideos && videoPlayer._videoReady ? "Ready" : "Loading...");
+                        string loadStr = "Loading...";
+                        VideoUrlSource source = videoPlayer.currentUrlSource;
+                        if (source && source.SupportsRetry && source.RetryCount > 0)
+                            loadStr = $"Loading... (retry {source.RetryCount} of {source.MaxRetryCount})";
+
+                        SetPlaceholderText(videoPlayer.HoldVideos && videoPlayer._videoReady ? "Ready" : loadStr);
                         urlInput.readOnly = true;
                         SetStatusText("");
                     }
