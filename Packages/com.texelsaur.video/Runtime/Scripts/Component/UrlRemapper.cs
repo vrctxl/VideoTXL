@@ -1,6 +1,7 @@
 ﻿
 using UdonSharp;
 using UnityEngine;
+using VRC.SDK3.Data;
 using VRC.SDKBase;
 using VRC.Udon;
 
@@ -37,6 +38,38 @@ namespace Texel
         GamePlatform platform;
         VideoSource videoSource;
         AudioChannelGroup audioProfile;
+
+        private DataDictionary ruleLookup;
+
+        private void Start()
+        {
+            _Init();
+        }
+
+        private void _Init()
+        {
+            ruleLookup = new DataDictionary();
+            for (int i = 0; i < referenceUrls.Length; i++)
+            {
+                VRCUrl url = referenceUrls[i];
+                if (url == null)
+                    continue;
+
+                string urlstr = url.ToString();
+                if (urlstr == "")
+                    continue;
+
+                if (ruleLookup.TryGetValue(urlstr, TokenType.DataList, out var dataListToken)) {
+                    DataList indexList = dataListToken.DataList;
+                    indexList.Add(i);
+                } else
+                {
+                    DataList indexList = new DataList();
+                    indexList.Add(i);
+                    ruleLookup.Add(urlstr, indexList);
+                }
+            }
+        }
 
         public void _SetPlatform(GamePlatform platform)
         {
@@ -76,42 +109,47 @@ namespace Texel
             bool videoSourceValid = videoSource != null;
 
             string inputStr = input.Get();
-            for (int i = 0; i < referenceUrls.Length; i++)
+            if (ruleLookup.TryGetValue(inputStr, TokenType.DataList, out var dataListToken))
             {
-                VRCUrl reffed = referenceUrls[i];
-                if (!Utilities.IsValid(reffed) || inputStr != reffed.Get())
-                    continue;
-
-                if (platformRule[i] && platform != platforms[i])
-                    continue;
-
-                if (videoSource != null)
+                DataList indexList = dataListToken.DataList;
+                for (int index = 0; index < indexList.Count; index++)
                 {
-                    if (sourceTypeRule[i] && videoSource.VideoSourceType != (int)sourceTypes[i])
+                    int i = indexList[index].Int;
+                    VRCUrl reffed = referenceUrls[i];
+                    if (!Utilities.IsValid(reffed) || inputStr != reffed.Get())
                         continue;
-                    if (latencyRule[i] && (videoSource.lowLatency ? VideoSourceLatency.LowLatency : VideoSourceLatency.Standard) != sourceLatencies[i])
+
+                    if (platformRule[i] && platform != platforms[i])
                         continue;
-                    if (resolutionRule[i] && videoSource.maxResolution != sourceResolutions[i])
+
+                    if (videoSource != null)
+                    {
+                        if (sourceTypeRule[i] && videoSource.VideoSourceType != (int)sourceTypes[i])
+                            continue;
+                        if (latencyRule[i] && (videoSource.lowLatency ? VideoSourceLatency.LowLatency : VideoSourceLatency.Standard) != sourceLatencies[i])
+                            continue;
+                        if (resolutionRule[i] && videoSource.maxResolution != sourceResolutions[i])
+                            continue;
+                    }
+
+                    if (audioProfile != null)
+                    {
+                        if (audioProfileRule[i] && audioProfile.groupName != audioProfiles[i])
+                            continue;
+                    }
+
+                    if (customRule[i] && customTests[i] && !customTests[i]._Test())
                         continue;
+
+                    if (remappedUrls.Length <= i || !Utilities.IsValid(remappedUrls[i]))
+                        continue;
+
+                    VRCUrl mapped = remappedUrls[i];
+                    if (mapped.Get() == "")
+                        continue;
+
+                    return remappedUrls[i];
                 }
-
-                if (audioProfile != null)
-                {
-                    if (audioProfileRule[i] && audioProfile.groupName != audioProfiles[i])
-                        continue;
-                }
-
-                if (customRule[i] && customTests[i] && !customTests[i]._Test())
-                    continue;
-
-                if (remappedUrls.Length <= i || !Utilities.IsValid(remappedUrls[i]))
-                    continue;
-
-                VRCUrl mapped = remappedUrls[i];
-                if (mapped.Get() == "")
-                    continue;
-
-                return remappedUrls[i];
             }
 
             return input;
