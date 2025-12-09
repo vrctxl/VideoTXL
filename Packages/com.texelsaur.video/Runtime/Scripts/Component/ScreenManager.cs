@@ -394,6 +394,11 @@ namespace Texel
             }
         }
 
+        public TXLVideoPlayer VideoPlayer
+        {
+            get { return videoPlayer; }
+        }
+
         // The current texture, which could be one of the placeholders
         public Texture CurrentTexture
         {
