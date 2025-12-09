@@ -151,6 +151,11 @@ namespace Texel
             _SetDebugState(debugState);
         }
 
+        public TXLVideoPlayer VideoPlayer
+        {
+            get { return videoPlayer; }
+        }
+
         void _Discover()
         {
             int[] foundResolutions = new int[sources.Length];

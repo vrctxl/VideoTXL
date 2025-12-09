@@ -217,6 +217,11 @@ namespace Texel
             }
         }
 
+        public TXLVideoPlayer VideoPlayer
+        {
+            get { return videoPlayer; }
+        }
+
         public AudioChannelGroup SelectedChannelGroup
         {
             get { return selectedChannelGroup; }
