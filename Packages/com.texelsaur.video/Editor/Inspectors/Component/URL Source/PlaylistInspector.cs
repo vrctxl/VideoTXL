@@ -17,6 +17,7 @@ namespace Texel
         protected SerializedProperty queueProperty;
 
         protected SerializedProperty debugLogProperty;
+        protected SerializedProperty debugLoggingProperty;
 
         protected override void OnEnable()
         {
@@ -31,6 +32,7 @@ namespace Texel
             playlistDataProperty = serializedObject.FindProperty(nameof(Playlist.playlistData));
             queueProperty = serializedObject.FindProperty(nameof(Playlist.queue));
             debugLogProperty = serializedObject.FindProperty(nameof(Playlist.debugLog));
+            debugLoggingProperty = serializedObject.FindProperty(nameof(Playlist.debugLogging));
         }
 
         public override void OnInspectorGUI()
@@ -62,6 +64,7 @@ namespace Texel
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(debugLogProperty);
+            EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
 
             serializedObject.ApplyModifiedProperties();
         }
