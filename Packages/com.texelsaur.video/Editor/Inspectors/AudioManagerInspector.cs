@@ -51,6 +51,8 @@ namespace Texel
         SerializedProperty audioLinkProperty;
         SerializedProperty vrslAudioDmxRuntimeProperty;
 
+        GenericMenu addMenu;
+
         bool audioValid = true;
         bool audioLinkOutsideLinked = false;
         bool vrslOutsideLinked = false;
@@ -95,6 +97,13 @@ namespace Texel
             debugStateProperty = serializedObject.FindProperty(nameof(AudioManager.debugState));
             debugLoggingProperty = serializedObject.FindProperty(nameof(AudioManager.debugLogging));
             debugEventsProperty = serializedObject.FindProperty(nameof(AudioManager.debugEvents));
+
+            addMenu = new GenericMenu();
+            addMenu.AddItem(new GUIContent("Default Profile"), false, () => VideoTxlManager.AddDefaultProfile());
+            addMenu.AddItem(new GUIContent("Global Profile"), false, () => VideoTxlManager.AddGlobalProfile());
+            addMenu.AddItem(new GUIContent("Stereo Profile"), false, () => VideoTxlManager.AddStereoProfile());
+            addMenu.AddItem(new GUIContent("ARC - 5.1 Profile"), false, () => VideoTxlManager.AddARCProfile());
+            addMenu.AddItem(new GUIContent("AudioDMX Profile"), false, () => VideoTxlManager.AddAudioDMXProfile());
 
             Revalidate();
         }
@@ -196,6 +205,14 @@ namespace Texel
 
                 EditorGUI.indentLevel--;
             }
+
+            EditorGUI.indentLevel++;
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(EditorGUI.indentLevel * 15f);
+            if (GUILayout.Button(new GUIContent("Add Audio Profile", "Adds audio profile instance to the hierarchy under the Audio Manager.\n\nTo remove an audio profile, delete it from the hierarchy.")))
+                addMenu.ShowAsContext();
+            GUILayout.EndHorizontal();
+            EditorGUI.indentLevel--;
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("External Systems", EditorStyles.boldLabel);

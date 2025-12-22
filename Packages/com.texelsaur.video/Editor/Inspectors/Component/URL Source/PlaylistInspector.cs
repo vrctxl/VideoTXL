@@ -51,8 +51,12 @@ namespace Texel
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Data", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(playlistCatalogProperty);
-            EditorGUILayout.PropertyField(playlistDataProperty);
+
+            if (TXLGUI.DrawObjectFieldWithAdd(playlistCatalogProperty, new GUIContent("Playlist Catalog", "Optional catalog to sync a loaded playlist data across network."), new GUIContent("+", "Create new Playlist Catalog")))
+                VideoTxlManager.AddPlaylistCatalogToScene(true);
+            if (TXLGUI.DrawObjectFieldWithAdd(playlistDataProperty, new GUIContent("Playlist Data", "Default playlist track set."), new GUIContent("+", "Create new Playlist Data and add to catalog if present")))
+                VideoTxlManager.AddPlaylistDataToScene(true);
+
             EditorGUILayout.PropertyField(queueProperty);
 
             EditorGUILayout.Space();

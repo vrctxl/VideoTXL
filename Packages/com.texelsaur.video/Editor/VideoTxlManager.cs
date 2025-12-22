@@ -10,7 +10,7 @@ namespace Texel
     [InitializeOnLoad]
     public class VideoTxlManager
     {
-        [MenuItem("Tools/TXL/VideoTXL/Add \"Sync Video Player\" Prefab to Scene", false)]
+        [MenuItem("Tools/TXL/VideoTXL/Add \"Sync Video Player\" Prefab to Scene", false, 1100)]
         [MenuItem("GameObject/TXL/VideoTXL/Sync Video Player", false, 100)]
         public static void AddSyncPlayerToScene()
         {
@@ -434,6 +434,11 @@ namespace Texel
         [MenuItem("GameObject/TXL/VideoTXL/Playlists and URL Sources/Source Manager", false, 240)]
         public static void AddSourceManagerToScene()
         {
+            AddSourceManagerToScene(false);
+        }
+
+        public static void AddSourceManagerToScene(bool replace)
+        {
             Undo.SetCurrentGroupName("Add URL Source Manager");
             int undoGroup = Undo.GetCurrentGroup();
 
@@ -441,7 +446,7 @@ namespace Texel
             if (vp)
             {
                 GameObject managerObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/Source Manager.prefab", vp.transform);
-                if (vp is SyncPlayer && !vp.SourceManager)
+                if (vp is SyncPlayer && (!vp.SourceManager || replace))
                 {
                     Undo.RecordObject(vp, "Set SourceManager Reference");
                     vp.sourceManager = managerObj.GetComponent<SourceManager>();
@@ -485,6 +490,11 @@ namespace Texel
         [MenuItem("GameObject/TXL/VideoTXL/Playlists and URL Sources/Playlist Data", false, 341)]
         public static void AddPlaylistDataToScene()
         {
+            AddPlaylistCatalogToScene(false);
+        }
+
+        public static void AddPlaylistDataToScene(bool replace)
+        {
             Undo.SetCurrentGroupName("Add Playlist Data");
             int undoGroup = Undo.GetCurrentGroup();
 
@@ -499,7 +509,7 @@ namespace Texel
             Playlist playlist = MenuUtil.GetObjectOrParent<Playlist>();
             if (playlist)
             {
-                AddPlaylistData(playlist);
+                AddPlaylistData(playlist, replace);
                 Undo.CollapseUndoOperations(undoGroup);
                 return;
             }
@@ -507,7 +517,7 @@ namespace Texel
             TXLVideoPlayer vp = GetVideoPlayer();
             if (vp)
             {
-                AddPlaylistData(vp);
+                AddPlaylistData(vp, replace);
                 Undo.CollapseUndoOperations(undoGroup);
                 return;
             }
@@ -525,7 +535,7 @@ namespace Texel
             EditorUtility.SetDirty(catalog);
         }
 
-        static void AddPlaylistData(Playlist playlist)
+        static void AddPlaylistData(Playlist playlist, bool replace)
         {
             if (playlist.playlistCatalog)
             {
@@ -534,7 +544,7 @@ namespace Texel
             }
 
             GameObject obj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/PlaylistData.prefab", playlist.transform);
-            if (playlist.playlistData == null)
+            if (playlist.playlistData == null || replace)
             {
                 Undo.RecordObject(playlist, "Update Playlist");
                 playlist.playlistData = obj.GetComponent<PlaylistData>();
@@ -542,14 +552,14 @@ namespace Texel
             }
         }
 
-        static void AddPlaylistData(TXLVideoPlayer vp)
+        static void AddPlaylistData(TXLVideoPlayer vp, bool replace)
         {
             if (vp is SyncPlayer && vp.SourceManager)
             {
                 Playlist found = vp.SourceManager.sources.FirstOrDefault(s => s is Playlist) as Playlist;
                 if (found)
                 {
-                    AddPlaylistData(found);
+                    AddPlaylistData(found, replace);
                     return;
                 }
             }
@@ -559,6 +569,11 @@ namespace Texel
 
         [MenuItem("GameObject/TXL/VideoTXL/Playlists and URL Sources/Playlist Catalog", false, 342)]
         public static void AddPlaylistCatalogToScene()
+        {
+            AddPlaylistCatalogToScene(false);
+        }
+
+        public static void AddPlaylistCatalogToScene(bool replace)
         {
             Undo.SetCurrentGroupName("Add Playlist Catalog");
             int undoGroup = Undo.GetCurrentGroup();
@@ -589,7 +604,7 @@ namespace Texel
                 PlaylistCatalog catalog = obj.GetComponent<PlaylistCatalog>();
                 if (playlist)
                 {
-                    if (playlist.playlistCatalog == null)
+                    if (playlist.playlistCatalog == null || replace)
                     {
                         Undo.RecordObject(playlist, "Update Playlist");
                         playlist.playlistCatalog = catalog;
@@ -641,14 +656,19 @@ namespace Texel
         [MenuItem("GameObject/TXL/VideoTXL/Components/Access Control", false, 250)]
         public static void AddAccessControlToScene()
         {
+            AddAccessControlToScene(false);
+        }
+
+        public static void AddAccessControlToScene(bool replace)
+        {
             Undo.SetCurrentGroupName("Add Access Control");
             int undoGroup = Undo.GetCurrentGroup();
 
             TXLVideoPlayer vp = GetVideoPlayer();
             if (vp)
             {
-                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.common/Runtime/Prefabs/AccessControl.prefab", vp.transform);
-                if (vp is SyncPlayer && ((SyncPlayer)vp).accessControl == null)
+                GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.common/Runtime/Prefabs/Access Control.prefab", vp.transform);
+                if (vp is SyncPlayer && (((SyncPlayer)vp).accessControl == null || replace))
                 {
                     Undo.RecordObject(vp, "Set Access Control");
                     ((SyncPlayer)vp).accessControl = playlistObj.GetComponent<AccessControl>();
@@ -656,13 +676,18 @@ namespace Texel
                 }
             }
             else
-                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.common/Runtime/Prefabs/AccessControl.prefab");
+                MenuUtil.AddPrefabToScene("Packages/com.texelsaur.common/Runtime/Prefabs/Access Control.prefab");
 
             Undo.CollapseUndoOperations(undoGroup);
         }
 
         [MenuItem("GameObject/TXL/VideoTXL/Components/URL Remapper", false, 251)]
         public static void AddUrlRemapperToScene()
+        {
+            AddUrlRemapperToScene(false);
+        }
+
+        public static void AddUrlRemapperToScene(bool replace)
         {
             Undo.SetCurrentGroupName("Add URL Remapper");
             int undoGroup = Undo.GetCurrentGroup();
@@ -671,7 +696,7 @@ namespace Texel
             if (vp)
             {
                 GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/URL Remapper.prefab", vp.transform);
-                if (vp is SyncPlayer && ((SyncPlayer)vp).urlRemapper == null)
+                if (vp is SyncPlayer && (((SyncPlayer)vp).urlRemapper == null || replace))
                 {
                     Undo.RecordObject(vp, "Set URL Remapper");
                     ((SyncPlayer)vp).urlRemapper = playlistObj.GetComponent<UrlRemapper>();
@@ -687,6 +712,11 @@ namespace Texel
         [MenuItem("GameObject/TXL/VideoTXL/Components/URL Info Resolver", false, 252)]
         public static void AddUrlInfoResolverToScene()
         {
+            AddUrlInfoResolverToScene(false);
+        }
+
+        public static void AddUrlInfoResolverToScene(bool replace)
+        {
             Undo.SetCurrentGroupName("Add URL Info Reoslver");
             int undoGroup = Undo.GetCurrentGroup();
 
@@ -694,7 +724,7 @@ namespace Texel
             if (vp)
             {
                 GameObject resolverObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/URL Info Resolver.prefab", vp.transform);
-                if (vp is SyncPlayer && ((SyncPlayer)vp).urlInfoResolver == null)
+                if (vp is SyncPlayer && (((SyncPlayer)vp).urlInfoResolver == null || replace))
                 {
                     Undo.RecordObject(vp, "Set URL Info Resolver");
                     ((SyncPlayer)vp).urlInfoResolver = resolverObj.GetComponent<UrlInfoResolver>();
@@ -733,6 +763,11 @@ namespace Texel
         [MenuItem("GameObject/TXL/VideoTXL/Components/Sync Playback Zone", false, 254)]
         public static void AddSyncPlaybackZoneToScene()
         {
+            AddSyncPlaybackZoneToScene(false);
+        }
+
+        public static void AddSyncPlaybackZoneToScene(bool replace)
+        {
             Undo.SetCurrentGroupName("Add Sync Playback Zone");
             int undoGroup = Undo.GetCurrentGroup();
 
@@ -740,7 +775,7 @@ namespace Texel
             if (vp)
             {
                 GameObject playlistObj = MenuUtil.AddPrefabToObject("Packages/com.texelsaur.video/Runtime/Prefabs/Component/SyncPlaybackZone.prefab", vp.transform);
-                if (vp is SyncPlayer && ((SyncPlayer)vp).trackedZoneTrigger == null)
+                if (vp is SyncPlayer && (((SyncPlayer)vp).trackedZoneTrigger == null || replace))
                 {
                     Undo.RecordObject(vp, "Set Dependent Source");
                     ((SyncPlayer)vp).trackedZoneTrigger = playlistObj.GetComponent<TrackedZoneTrigger>();
@@ -753,7 +788,7 @@ namespace Texel
             Undo.CollapseUndoOperations(undoGroup);
         }
 
-        [MenuItem("Tools/TXL/VideoTXL/Repair Prefabs in Scene")]
+        [MenuItem("Tools/TXL/VideoTXL/Repair Prefabs in Scene", false, 1100)]
         public static void Repair()
         {
             Debug.Log("Starting automated repair");

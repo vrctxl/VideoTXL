@@ -8,6 +8,7 @@ namespace Texel
     public class TXLGUI
     {
         public static float indentUnit = 15;
+        public static GUIContent labelDefaultAdd = new GUIContent("+");
 
         protected static Rect DrawPrefix(Rect rect, int indentLevel, GUIContent label)
         {
@@ -65,6 +66,47 @@ namespace Texel
             field2.x += 20;
             field2.width -= 20;
             EditorGUI.LabelField(field2, label2);
+        }
+        public static bool DrawObjectFieldWithAdd(SerializedProperty property, GUIContent label)
+        {
+            return DrawObjectFieldWithAdd(EditorGUILayout.GetControlRect(), EditorGUI.indentLevel, label, property, labelDefaultAdd);
+        }
+
+        public static bool DrawObjectFieldWithAdd(SerializedProperty property, GUIContent label, GUIContent addLabel)
+        {
+            return DrawObjectFieldWithAdd(EditorGUILayout.GetControlRect(), EditorGUI.indentLevel, label, property, addLabel);
+        }
+
+        public static bool DrawObjectFieldWithAdd(Rect rect, int indentLevel, GUIContent label, SerializedProperty prop)
+        {
+            return DrawObjectFieldWithAdd(rect, indentLevel, label, prop, labelDefaultAdd, EditorGUIUtility.singleLineHeight, GUI.backgroundColor);
+        }
+
+        public static bool DrawObjectFieldWithAdd(Rect rect, int indentLevel, GUIContent label, SerializedProperty prop, GUIContent addLabel)
+        {
+            return DrawObjectFieldWithAdd(rect, indentLevel, label, prop, addLabel, EditorGUIUtility.singleLineHeight, GUI.backgroundColor);
+        }
+
+        public static bool DrawObjectFieldWithAdd(Rect rect, int indentLevel, GUIContent label, SerializedProperty prop, GUIContent addLabel, float addWidth)
+        {
+            return DrawObjectFieldWithAdd(rect, indentLevel, label, prop, addLabel, addWidth, GUI.backgroundColor);
+        }
+
+        public static bool DrawObjectFieldWithAdd(Rect rect, int indentLevel, GUIContent label, SerializedProperty prop, GUIContent addLabel, float addWidth, Color buttonColor)
+        {
+            Rect lineRect = Indent(rect, indentLevel);
+            Rect fieldRect = DrawPrefix(lineRect, indentLevel, label);
+            Rect buttonRect = new Rect(fieldRect.x + fieldRect.width - addWidth, fieldRect.y, addWidth, fieldRect.height);
+            fieldRect.width -= buttonRect.width + EditorGUIUtility.standardVerticalSpacing;
+
+            EditorGUI.ObjectField(fieldRect, prop, GUIContent.none);
+
+            Color bgColor = GUI.backgroundColor;
+            GUI.backgroundColor = buttonColor;
+            bool result = GUI.Button(buttonRect, addLabel, EditorStyles.miniButton);
+            GUI.backgroundColor = bgColor;
+
+            return result;
         }
     }
 }
