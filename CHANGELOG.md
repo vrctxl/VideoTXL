@@ -2,6 +2,15 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.13]
+- Added helper controls to several inspectors to create and link new components
+- Added additional safety checks in sync player controls (CompuGeniusCode)
+- Added public VideoPlayer getter to ScreenManager
+- Added VRC Logging option to Playlist
+- Improved efficiency of debug logging within main sync player, video manager, playlist
+- Improved efficiency of URL Remapper for large number of rules
+- Added retry count to loading bar after first load fail
+
 ### [2.5.0-beta.12]
 - Removed invalid rootNamespace entry from asmdefs
 - Added quest URL support to queues

@@ -1,7 +1,10 @@
-﻿using UdonSharp;
+﻿using System.Runtime.CompilerServices;
+using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
 using VRC.SDKBase;
+
+[assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
 
 namespace Texel
 {

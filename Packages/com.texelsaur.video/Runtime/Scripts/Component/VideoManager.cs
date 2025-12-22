@@ -80,6 +80,7 @@ namespace Texel
         BaseVRCVideoPlayer activeVideoPlayer;
 
         private float playStartTime = 0;
+        bool _usingDebug = false;
 
         public bool SupportsUnity { get; private set; }
         public bool SupportsAVPro { get; private set; }
@@ -104,6 +105,8 @@ namespace Texel
 
         protected override void _Init()
         {
+            _usingDebug = debugLogging || Utilities.IsValid(debugLog);
+
             if (!videoPlayer)
             {
                 _DebugError($"Video manager has no associated video player.");
@@ -151,6 +154,11 @@ namespace Texel
             _SetDebugState(debugState);
         }
 
+        public TXLVideoPlayer VideoPlayer
+        {
+            get { return videoPlayer; }
+        }
+
         void _Discover()
         {
             int[] foundResolutions = new int[sources.Length];
@@ -195,13 +203,13 @@ namespace Texel
                         SupportsUnity = true;
                         unitySources[resIndex] = source;
                         latencyTracker[VideoSource.LOW_LATENCY_DISABLE] += 1;
-                        _DebugLog($"Found unity video source: res={source.maxResolution}");
+                        if (_usingDebug) _DebugLog($"Found unity video source: res={source.maxResolution}");
                         break;
                     case VideoSource.VIDEO_SOURCE_AVPRO:
                         SupportsAVPro = true;
                         avproSources[resIndex + (source.lowLatency ? resCount : 0)] = source;
                         latencyTracker[source.lowLatency ? VideoSource.LOW_LATENCY_ENABLE : VideoSource.LOW_LATENCY_DISABLE] += 1;
-                        _DebugLog($"Found avpro video source: res={source.maxResolution}, ll={source.lowLatency}");
+                        if (_usingDebug) _DebugLog($"Found avpro video source: res={source.maxResolution}, ll={source.lowLatency}");
                         break;
                 }
             }
@@ -341,14 +349,14 @@ namespace Texel
             {
                 if (!defaultReactStreamStop || (Time.time - playStartTime) < defaultStreamStopThreshold)
                 {
-                    _DebugLog("Video end encountered within stream start threshold, ignoring");
+                    if (_usingDebug) _DebugLog("Video end encountered within stream start threshold, ignoring");
                     return;
                 }
 
                 if (retryCount < liveStreamStopRetryCount)
                 {
                     retryCount += 1;
-                    _DebugLog($"Video end encountered, retry {retryCount} / {liveStreamStopRetryCount}");
+                    if (_usingDebug) _DebugLog($"Video end encountered, retry {retryCount} / {liveStreamStopRetryCount}");
 
                     _OnVideoError(id, VideoErrorTXL.RetryEndStream);
                     return;
@@ -373,7 +381,7 @@ namespace Texel
                 if (retryCount < liveStreamStopRetryCount)
                 {
                     retryCount += 1;
-                    _DebugLog($"Video end encountered, retry {retryCount} / {liveStreamStopRetryCount}");
+                    if (_usingDebug) _DebugLog($"Video end encountered, retry {retryCount} / {liveStreamStopRetryCount}");
 
                     _OnVideoError(id, VideoErrorTXL.RetryEndStream);
                     return;
@@ -441,7 +449,7 @@ namespace Texel
             if (activeSource != id)
                 message += " (ignored)";
 
-            _DebugLog(source, message);
+            if (_usingDebug) _DebugLog(source, message);
             if (activeSource != id)
                 return false;
 
@@ -516,7 +524,7 @@ namespace Texel
                 return;
 
             VideoSource source = sources[activeSource];
-            _DebugLog(source, "Play");
+            if (_usingDebug) _DebugLog(source, "Play");
 
             source._VideoPlay();
         }
@@ -527,7 +535,7 @@ namespace Texel
                 return;
 
             VideoSource source = sources[activeSource];
-            _DebugLog(source, "Pause");
+            if (_usingDebug) _DebugLog(source, "Pause");
 
             source._VideoPause();
         }
@@ -538,7 +546,7 @@ namespace Texel
                 return;
 
             VideoSource source = sources[activeSource];
-            _DebugLog(source, "Stop");
+            if (_usingDebug) _DebugLog(source, "Stop");
 
             source._VideoStop();
         }
@@ -549,7 +557,7 @@ namespace Texel
                 return;
 
             VideoSource source = sources[activeSource];
-            _DebugLog(source, $"Stop({frameDelay})");
+            if (_usingDebug) _DebugLog(source, $"Stop({frameDelay})");
 
             source._VideoStop(frameDelay);
         }
@@ -560,7 +568,7 @@ namespace Texel
                 return;
 
             VideoSource source = sources[activeSource];
-            _DebugLog(source, $"Load Url: {url}");
+            if (_usingDebug) _DebugLog(source, $"Load Url: {url}");
 
             source._VideoLoadURL(url);
         }
@@ -573,7 +581,7 @@ namespace Texel
             loopEnabled = state;
 
             VideoSource source = sources[activeSource];
-            _DebugLog(source, $"Set Loop: {state}");
+            if (_usingDebug) _DebugLog(source, $"Set Loop: {state}");
 
             source._VideoSetLoop(state);
         }
@@ -584,7 +592,7 @@ namespace Texel
                 return;
 
             VideoSource source = sources[activeSource];
-            _DebugLog(source, $"Set time: {time}");
+            if (_usingDebug) _DebugLog(source, $"Set time: {time}");
 
             source._VideoSetTime(time);
         }
@@ -609,7 +617,7 @@ namespace Texel
             VideoSource bestSource = _FindBestSource(videoType, preferredResIndex, lowLatency);
             int bestSourceId = (bestSource != null) ? bestSource.ID : -1;
 
-            if (bestSourceId == -1)
+            if (bestSourceId == -1 && _usingDebug)
                 _DebugLog($"Could not find compatible video source for {videoType},{preferredResIndex},{lowLatency}");
 
             if (activeSource == bestSourceId)
@@ -644,7 +652,7 @@ namespace Texel
 
             //_UpdateAudio();
 
-            if (source)
+            if (source && _usingDebug)
                 _DebugLog($"Selected source {source.name} ({source._FormattedAttributes()})");
 
             _UpdateHandlers(SOURCE_CHANGE_EVENT);
@@ -675,11 +683,11 @@ namespace Texel
 
             if (resIndex < 0 || resIndex >= supportedResolutions.Length)
             {
-                _DebugLog($"Tried to select invalid resolution index {resIndex}");
+                if (_usingDebug) _DebugLog($"Tried to select invalid resolution index {resIndex}");
                 return;
             }
 
-            _DebugLog($"Switching preferred resolution to {supportedResolutions[resIndex]} ({resIndex})");
+            if (_usingDebug) _DebugLog($"Switching preferred resolution to {supportedResolutions[resIndex]} ({resIndex})");
 
             preferredResIndex = resIndex;
             _UpdateHandlers(SETTINGS_CHANGE_EVENT);
@@ -695,11 +703,11 @@ namespace Texel
 
             if (value != VideoSource.LOW_LATENCY_DISABLE && value != VideoSource.LOW_LATENCY_ENABLE)
             {
-                _DebugLog($"Tried to select invalid low-latency index {value}");
+                if (_usingDebug) _DebugLog($"Tried to select invalid low-latency index {value}");
                 return;
             }
 
-            _DebugLog($"Switching low-latency preference to {value}");
+            if (_usingDebug) _DebugLog($"Switching low-latency preference to {value}");
 
             lowLatency = value;
             _UpdateHandlers(SETTINGS_CHANGE_EVENT);
@@ -715,7 +723,7 @@ namespace Texel
             if (videoType == activeSourceType)
                 return;
 
-            _DebugLog($"Switching source type to {_VideoModeName(activeSourceType)}");
+            if (_usingDebug) _DebugLog($"Switching source type to {_VideoModeName(activeSourceType)}");
 
             videoType = activeSourceType;
             _UpdateHandlers(SETTINGS_CHANGE_EVENT);
@@ -835,8 +843,7 @@ namespace Texel
 
         void _DebugTrace(VideoSource source, string message)
         {
-            if (traceLogging)
-                _DebugLog(source, message);
+            _DebugLog(source, message);
         }
 
         public void _DownstreamDebugLog(VideoSource source, string message)

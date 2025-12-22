@@ -29,6 +29,8 @@ namespace Texel
         DateTime lastValidate;
         bool audioValid = true;
 
+        GenericMenu addMenu;
+
         static bool expandDebug = false;
 
         private void OnEnable()
@@ -46,6 +48,19 @@ namespace Texel
             debugLoggingProperty = serializedObject.FindProperty(nameof(VideoManager.debugLogging));
             traceLoggingProperty = serializedObject.FindProperty(nameof(VideoManager.traceLogging));
             eventLoggingProperty = serializedObject.FindProperty(nameof(VideoManager.eventLogging));
+
+            addMenu = new GenericMenu();
+            addMenu.AddItem(new GUIContent("AVPro Video 1080p Low-Latency Source"), false, () => VideoTxlManager.AddAVProSource1080LL());
+            addMenu.AddItem(new GUIContent("AVPro Video 720p Low-Latency Source"), false, () => VideoTxlManager.AddAVProSource720LL());
+            addMenu.AddItem(new GUIContent("AVPro Video 360p Low-Latency Source"), false, () => VideoTxlManager.AddAVProSource360LL());
+            addMenu.AddSeparator("");
+            addMenu.AddItem(new GUIContent("AVPro Video 1080p Source"), false, () => VideoTxlManager.AddAVProSource1080());
+            addMenu.AddItem(new GUIContent("AVPro Video 720p Source"), false, () => VideoTxlManager.AddAVProSource720());
+            addMenu.AddItem(new GUIContent("AVPro Video 360p Source"), false, () => VideoTxlManager.AddAVProSource360());
+            addMenu.AddSeparator("");
+            addMenu.AddItem(new GUIContent("Unity Video 1080p Source"), false, () => VideoTxlManager.AddUnityVideoSource1080());
+            addMenu.AddItem(new GUIContent("Unity Video 720p Source"), false, () => VideoTxlManager.AddUnityVideoSource720());
+            addMenu.AddItem(new GUIContent("Unity Video 360p Source"), false, () => VideoTxlManager.AddUnityVideoSource360());
 
             Revalidate();
         }
@@ -112,6 +127,14 @@ namespace Texel
 
                 EditorGUI.indentLevel--;
             }
+
+            EditorGUI.indentLevel++;
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(EditorGUI.indentLevel * 15f);
+            if (GUILayout.Button(new GUIContent("Add Video Source", "Adds video source instance to the hierarchy under the Video Manager.\n\nTo remove a video source, delete it from the hierarchy.")))
+                addMenu.ShowAsContext();
+            GUILayout.EndHorizontal();
+            EditorGUI.indentLevel--;
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Audio", EditorStyles.boldLabel);

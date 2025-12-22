@@ -142,16 +142,20 @@ namespace Texel
             EditorGUILayout.LabelField("URLs & URL Sources", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(defaultUrlProperty, new GUIContent("Default URL", "Optional default URL to play on world load.  If a separate URL Source is also provided, the default URL will play first."));
-            EditorGUILayout.PropertyField(sourceManagerProperty, new GUIContent("URL Source Manager", "Manager for queues, playlists, and other URL sources."));
+            if (TXLGUI.DrawObjectFieldWithAdd(sourceManagerProperty, new GUIContent("URL Source Manager", "Manager for queues, playlists, and other URL sources."), new GUIContent("+", "Create new Source Manager")))
+                VideoTxlManager.AddSourceManagerToScene(true);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Optional Components", EditorStyles.boldLabel);
 
-            EditorGUILayout.PropertyField(remapperProperty, new GUIContent("URL Remapper", "Set of input URLs to remap to alternate URLs on a per-platform basis."));
-            EditorGUILayout.PropertyField(urlInfoResolverProperty, new GUIContent("URL Info Resolver", "A resolver and cache for finding additional info about a URL, like title or author."));
-            EditorGUILayout.PropertyField(accessControlProperty, new GUIContent("Access Control", "Control access to player controls based on player type or whitelist."));
-
-            EditorGUILayout.PropertyField(playbackZoneProperty, new GUIContent("Playback Zone", "Optional tracked trigger zone the player must be in to sustain playback.  Disables playing audio on world load."));
+            if (TXLGUI.DrawObjectFieldWithAdd(remapperProperty, new GUIContent("URL Remapper", "Set of input URLs to remap to alternate URLs on a per-platform basis."), new GUIContent("+", "Create new URL Remapper")))
+                VideoTxlManager.AddUrlRemapperToScene(true);
+            if (TXLGUI.DrawObjectFieldWithAdd(urlInfoResolverProperty, new GUIContent("URL Info Resolver", "A resolver and cache for finding additional info about a URL, like title or author."), new GUIContent("+", "Create new URL Info Resolver")))
+                VideoTxlManager.AddUrlInfoResolverToScene(true);
+            if (TXLGUI.DrawObjectFieldWithAdd(accessControlProperty, new GUIContent("Access Control", "Control access to player controls based on player type or whitelist."), new GUIContent("+", "Create new Access Control")))
+                VideoTxlManager.AddAccessControlToScene(true);
+            if (TXLGUI.DrawObjectFieldWithAdd(playbackZoneProperty, new GUIContent("Playback Zone", "Optional tracked trigger zone the player must be in to sustain playback.  Disables playing audio on world load."), new GUIContent("+", "Create new Tracked Trigger Zone")))
+                VideoTxlManager.AddSyncPlaybackZoneToScene(true);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Default Options", EditorStyles.boldLabel);

@@ -73,6 +73,11 @@ namespace Texel
             get { return id; }
         }
 
+        public VideoManager VideoManager
+        {
+            get { return videoMux; }
+        }
+
         public BaseVRCVideoPlayer VideoPlayer
         {
             get { return videoPlayer; }

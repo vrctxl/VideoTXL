@@ -17,6 +17,8 @@ namespace Texel
 
         [Tooltip("Log debug statements to a world object")]
         public DebugLog debugLog;
+        [Tooltip("Log debug statements to VRC log")]
+        public bool debugLogging = false;
 
         [Tooltip("Shuffle track order on load")]
         public bool shuffle;
@@ -67,6 +69,7 @@ namespace Texel
         int trackChangeSerial = 0;
 
         bool _initDeserialize = false;
+        bool _usingDebug = false;
 
         [NonSerialized]
         public int trackCount;
@@ -93,7 +96,8 @@ namespace Texel
         {
             base._Init();
 
-            DebugLog("Common initialization");
+            _usingDebug = debugLogging || Utilities.IsValid(debugLog);
+            if (_usingDebug) DebugLog("Common initialization");
 
             if (queue)
                 queueIndex = queue._RegisterPlaylistSource(this);
@@ -114,7 +118,7 @@ namespace Texel
         {
             _EnsureInit();
 
-            DebugLog("Master initialization");
+            if (_usingDebug) DebugLog("Master initialization");
 
             if (videoPlayer && videoPlayer.SupportsOwnership)
             {
@@ -143,14 +147,14 @@ namespace Texel
         {
             if (!_initDeserialize)
             {
-                DebugLog("Deserialize not received in reasonable time");
+                if (_usingDebug) DebugLog("Deserialize not received in reasonable time");
                 SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.Owner, "RequestOwnerSync");
             }
         }
 
         public void RequestOwnerSync()
         {
-            DebugLog("RequestOwnerSync");
+            if (_usingDebug) DebugLog("RequestOwnerSync");
             if (Networking.IsOwner(gameObject))
                 RequestSerialization();
         }
@@ -254,10 +258,13 @@ namespace Texel
             _PopulateInfo(data);
             _LoadDataLow(data);
 
-            if (Utilities.IsValid(data))
-                DebugLog($"Loading playlist data {data.playlistName}");
-            else
-                DebugLog("Loading empty playlist data");
+            if (_usingDebug)
+            {
+                if (Utilities.IsValid(data))
+                    DebugLog($"Loading playlist data {data.playlistName}");
+                else
+                    DebugLog("Loading empty playlist data");
+            }
 
             _EventListChange();
         }
@@ -320,7 +327,7 @@ namespace Texel
 
         void _LoadDataLow(PlaylistData data)
         {
-            DebugLog($"LoadDataLow trackcount={(data && data.playlist != null ? data.playlist.Length : 0)}");
+            if (_usingDebug) DebugLog($"LoadDataLow trackcount={(data && data.playlist != null ? data.playlist.Length : 0)}");
             playlistData = data;
 
             if (!Utilities.IsValid(data) || !Utilities.IsValid(data.playlist))
@@ -464,10 +471,13 @@ namespace Texel
 
             RequestSerialization();
 
-            if (CurrentIndex >= 0)
-                DebugLog($"Move next track {CurrentIndex}");
-            else
-                DebugLog($"Playlist completed");
+            if (_usingDebug)
+            {
+                if (CurrentIndex >= 0)
+                    DebugLog($"Move next track {CurrentIndex}");
+                else
+                    DebugLog($"Playlist completed");
+            }
 
             return CurrentIndex >= 0;
         }
@@ -489,10 +499,13 @@ namespace Texel
             else
                 CurrentIndex = (short)-1;
 
-            if (CurrentIndex >= 0)
-                DebugLog($"Move previous track {CurrentIndex}");
-            else
-                DebugLog($"Playlist reset");
+            if (_usingDebug)
+            {
+                if (CurrentIndex >= 0)
+                    DebugLog($"Move previous track {CurrentIndex}");
+                else
+                    DebugLog($"Playlist reset");
+            }
 
             CurrentIndexSerial += 1;
 
@@ -519,10 +532,13 @@ namespace Texel
             CurrentIndex = (short)index;
             CurrentIndexSerial += 1;
 
-            if (CurrentIndex >= 0)
-                DebugLog($"Move track to {CurrentIndex}");
-            else
-                DebugLog($"Playlist reset");
+            if (_usingDebug)
+            {
+                if (CurrentIndex >= 0)
+                    DebugLog($"Move track to {CurrentIndex}");
+                else
+                    DebugLog($"Playlist reset");
+            }
 
             RequestSerialization();
 
@@ -598,7 +614,7 @@ namespace Texel
             if (!_TakeControl())
                 return;
 
-            DebugLog($"Set playlist enabled {state}");
+            if (_usingDebug) DebugLog($"Set playlist enabled {state}");
 
             PlaylistEnabled = state;
 
@@ -615,7 +631,7 @@ namespace Texel
             if (!_TakeControl())
                 return;
 
-            DebugLog($"Set shuffle mode {state}");
+            if (_usingDebug) DebugLog($"Set shuffle mode {state}");
 
             bool listChange = state != ShuffleEnabled;
 
@@ -640,7 +656,7 @@ namespace Texel
             if (!_TakeControl())
                 return;
 
-            DebugLog($"Set auto advance {state}");
+            if (_usingDebug) DebugLog($"Set auto advance {state}");
 
             AutoAdvance = state;
             RequestSerialization();
@@ -648,7 +664,7 @@ namespace Texel
 
         void _Shuffle()
         {
-            DebugLog("Shuffling track list");
+            if (_usingDebug) DebugLog("Shuffling track list");
             int[] temp = new int[trackCount];
             for (int i = 0; i < trackCount; i++)
                 temp[i] = i;
@@ -682,7 +698,7 @@ namespace Texel
 
         void _LoadSyncedCatalogIndex()
         {
-            DebugLog($"Load synced catalog index {syncCatalogueIndex}");
+            if (_usingDebug) DebugLog($"Load synced catalog index {syncCatalogueIndex}");
 
             PlaylistData data = null;
             if (playlistCatalog && syncCatalogueIndex >= 0 && syncCatalogueIndex < playlistCatalog.PlaylistCount)
@@ -762,7 +778,8 @@ namespace Texel
 
         void DebugLog(string message)
         {
-            Debug.Log("[VideoTXL:Playlist] " + message);
+            if (debugLogging)
+                Debug.Log("[VideoTXL:Playlist] " + message);
             if (Utilities.IsValid(debugLog))
                 debugLog._Write("Playlist", message);
         }

@@ -57,6 +57,16 @@ namespace Texel
             }
         }
 
+        public TXLVideoPlayer PrimaryVideoPlayer
+        {
+            get { return primaryVideoPlayer; }
+        }
+
+        public LocalPlayer DependentVideoPlayer
+        {
+            get { return dependentVideoPlayer; }
+        }
+
         public void _InternalOnVideoUpdate()
         {
             int newState = primaryVideoPlayer.playerState;

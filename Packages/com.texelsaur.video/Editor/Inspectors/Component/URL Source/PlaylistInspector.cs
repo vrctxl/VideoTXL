@@ -17,6 +17,7 @@ namespace Texel
         protected SerializedProperty queueProperty;
 
         protected SerializedProperty debugLogProperty;
+        protected SerializedProperty debugLoggingProperty;
 
         protected override void OnEnable()
         {
@@ -31,6 +32,7 @@ namespace Texel
             playlistDataProperty = serializedObject.FindProperty(nameof(Playlist.playlistData));
             queueProperty = serializedObject.FindProperty(nameof(Playlist.queue));
             debugLogProperty = serializedObject.FindProperty(nameof(Playlist.debugLog));
+            debugLoggingProperty = serializedObject.FindProperty(nameof(Playlist.debugLogging));
         }
 
         public override void OnInspectorGUI()
@@ -51,13 +53,18 @@ namespace Texel
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Data", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(playlistCatalogProperty);
-            EditorGUILayout.PropertyField(playlistDataProperty);
+
+            if (TXLGUI.DrawObjectFieldWithAdd(playlistCatalogProperty, new GUIContent("Playlist Catalog", "Optional catalog to sync a loaded playlist data across network."), new GUIContent("+", "Create new Playlist Catalog")))
+                VideoTxlManager.AddPlaylistCatalogToScene(true);
+            if (TXLGUI.DrawObjectFieldWithAdd(playlistDataProperty, new GUIContent("Playlist Data", "Default playlist track set."), new GUIContent("+", "Create new Playlist Data and add to catalog if present")))
+                VideoTxlManager.AddPlaylistDataToScene(true);
+
             EditorGUILayout.PropertyField(queueProperty);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(debugLogProperty);
+            EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
 
             serializedObject.ApplyModifiedProperties();
         }
