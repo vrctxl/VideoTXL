@@ -1,6 +1,7 @@
-﻿
+
 using UdonSharp;
 using UnityEngine;
+using VRC.SDK3.Persistence;
 using VRC.SDKBase;
 using VRC.SDK3.Rendering;
 using VRC.Udon;
@@ -26,6 +27,7 @@ namespace Texel
         public float masterVolume = 0.9f;
         public bool masterMute = false;
         //public bool master2D = false;
+        public bool masterVolumePersistence;
 
         public AudioChannelGroup[] channelGroups;
         public AudioChannelGroup defaultChannelGroup;
@@ -89,6 +91,15 @@ namespace Texel
         void Start()
         {
             _EnsureInit();
+        }
+
+        public override void OnPlayerRestored(VRCPlayerApi player)
+        {
+            if (!masterVolumePersistence) return;
+
+            var changedVolume = PlayerData.TryGetFloat(Networking.LocalPlayer, "TXL_MasterVolume", out var volume);
+            if (!changedVolume) volume = masterVolume;
+            _SetMasterVolume(volume);
         }
 
         protected override int EventCount { get => EVENT_COUNT; }
@@ -416,6 +427,8 @@ namespace Texel
         {
             //ovrMasterVolume = true;
             masterVolume = value;
+
+            if (masterVolumePersistence) PlayerData.SetFloat("TXL_MasterVolume", value);
 
             _UpdateAll();
             _UpdateHandlers(EVENT_MASTER_VOLUME_UPDATE);
