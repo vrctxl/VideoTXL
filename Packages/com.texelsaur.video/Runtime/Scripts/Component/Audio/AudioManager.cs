@@ -100,6 +100,10 @@ namespace Texel
             var changedVolume = PlayerData.TryGetFloat(Networking.LocalPlayer, "TXL_MasterVolume", out var volume);
             if (!changedVolume) volume = masterVolume;
             _SetMasterVolume(volume);
+
+            var changedMute = PlayerData.TryGetBool(Networking.LocalPlayer, "TXL_MasterMute", out var mute);
+            if (!changedMute) mute = masterMute;
+            _SetMasterMute(mute);
         }
 
         protected override int EventCount { get => EVENT_COUNT; }
@@ -448,6 +452,8 @@ namespace Texel
         {
             //ovrMasterMute = true;
             masterMute = state;
+
+            if (masterVolumePersistence) PlayerData.SetBool("TXL_MasterMute", state);
 
             _UpdateAll();
             _UpdateHandlers(EVENT_MASTER_MUTE_UPDATE);
