@@ -95,7 +95,7 @@ namespace Texel
 
         public override void OnPlayerRestored(VRCPlayerApi player)
         {
-            if (!masterVolumePersistence) return;
+            if (!masterVolumePersistence || !player.isLocal) return;
 
             var changedVolume = PlayerData.TryGetFloat(Networking.LocalPlayer, "TXL_MasterVolume", out var volume);
             if (!changedVolume) volume = masterVolume;
