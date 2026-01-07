@@ -662,7 +662,7 @@ namespace Texel
             if (!videoPlayer)
                 return list;
 
-            VideoManager[] managers = Object.FindObjectsOfType<VideoManager>();
+            VideoManager[] managers = Object.FindObjectsOfType<VideoManager>(true);
             foreach (VideoManager manager in managers)
             {
                 if (manager.videoPlayer == videoPlayer)
@@ -678,7 +678,7 @@ namespace Texel
             if (!videoPlayer)
                 return list;
 
-            AudioManager[] managers = Object.FindObjectsOfType<AudioManager>();
+            AudioManager[] managers = Object.FindObjectsOfType<AudioManager>(true);
             foreach (AudioManager manager in managers)
             {
                 if (manager.videoPlayer == videoPlayer)
