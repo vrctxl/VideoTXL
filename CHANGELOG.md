@@ -4,6 +4,7 @@
 
 ### [2.5.0-beta.14]
 - Fixed lock mute option in Audio Channel script
+- Added 'Use Reserved Audio Source' option for AudioLink to audio profiles, overriding selected channel
 
 ### [2.5.0-beta.13]
 - Added helper controls to several inspectors to create and link new components
