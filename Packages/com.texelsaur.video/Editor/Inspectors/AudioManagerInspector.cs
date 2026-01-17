@@ -1,4 +1,4 @@
-﻿
+
 using UnityEngine;
 using VRC.Udon;
 
@@ -27,6 +27,7 @@ namespace Texel
         SerializedProperty masterVolumeProperty;
         SerializedProperty masterMuteProperty;
         //SerializedProperty master2DProperty;
+        SerializedProperty masterVolumePersistenceProperty;
 
         SerializedProperty channelGroupsProperty;
         SerializedProperty defaultChannelGroupProperty;
@@ -80,6 +81,7 @@ namespace Texel
             masterVolumeProperty = serializedObject.FindProperty(nameof(AudioManager.masterVolume));
             masterMuteProperty = serializedObject.FindProperty(nameof(AudioManager.masterMute));
             //master2DProperty = serializedObject.FindProperty(nameof(AudioManager.master2D));
+            masterVolumePersistenceProperty = serializedObject.FindProperty(nameof(AudioManager.masterVolumePersistence));
 
             channelGroupsProperty = serializedObject.FindProperty(nameof(AudioManager.channelGroups));
             defaultChannelGroupProperty = serializedObject.FindProperty(nameof(AudioManager.defaultChannelGroup));
@@ -156,6 +158,7 @@ namespace Texel
             EditorGUILayout.PropertyField(masterVolumeProperty, new GUIContent("Master Volume", "The default master volume. Can be overridden locally by users."));
             EditorGUILayout.PropertyField(masterMuteProperty, new GUIContent("Master Mute", "Whether all audio is muted by default"));
             //EditorGUILayout.PropertyField(master2DProperty, new GUIContent("Master 2D", "Whether the default spatial audio mode is 2D"));
+            EditorGUILayout.PropertyField(masterVolumePersistenceProperty, new GUIContent("Persist Master Volume", "Whether the master volume setting is saved between sessions for each user"));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Audio Profiles", EditorStyles.boldLabel);
