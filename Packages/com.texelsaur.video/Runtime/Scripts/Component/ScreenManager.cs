@@ -237,7 +237,7 @@ namespace Texel
 
             if (!videoPlayer)
             {
-                _DebugError($"Screen manager has no associated video player.");
+                //_DebugError($"Screen manager has no associated video player.");
                 videoPlayer = gameObject.transform.parent.GetComponentInParent<TXLVideoPlayer>();
                 if (videoPlayer)
                     _DebugLog($"Found video player on parent: {videoPlayer.gameObject.name}");
