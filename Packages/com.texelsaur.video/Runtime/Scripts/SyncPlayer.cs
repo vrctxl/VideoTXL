@@ -1400,6 +1400,8 @@ namespace Texel
             _initDeserialize = true;
 
             _UpdateVideoManagerSourceNoResync(_syncVideoSource);
+            playerSourceOverride = _syncVideoSourceOverride;
+
             _UpdateScreenFit(_syncScreenFit);
             _UpdateLockState(_syncLocked);
 
@@ -1425,6 +1427,8 @@ namespace Texel
                     if (!_IsUrlValid(_syncUrl))
                         SendCustomEventDelayedFrames("_StopVideo", 1);
                 }
+
+                _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
 
                 return;
             }

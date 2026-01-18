@@ -21,6 +21,10 @@ namespace Texel
         [Tooltip("A list of channels for use with avpro video sources.")]
         public AudioChannel[] avproChannels;
 
+        [Header("AudioLink")]
+        [Tooltip("For AVPro video sources, use the reserved audio source for AudioLink instead of any of the listed channels.")]
+        public bool useReservedAudioSource = false;
+
         void Start()
         {
 

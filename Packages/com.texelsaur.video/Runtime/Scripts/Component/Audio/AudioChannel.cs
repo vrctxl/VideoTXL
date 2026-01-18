@@ -208,7 +208,10 @@ namespace Texel
             else
                 boundSource.volume = Mathf.Clamp01(3.1623e-3f * Mathf.Exp(rawVolume * 5.757f) - 3.1623e-3f);
 
-            boundSource.mute = baseMute || mute;
+            if (lockMute)
+                boundSource.mute = mute;
+            else
+                boundSource.mute = baseMute || mute;
 
             // Update 2D/3D audio
             /*if (base2D)
