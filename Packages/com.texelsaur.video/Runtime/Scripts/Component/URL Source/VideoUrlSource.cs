@@ -221,6 +221,11 @@ namespace Texel
             return false;
         }
 
+        public virtual bool _AddTrackFromProxy(VRCUrl url, VRCUrl questUrl, string title, string author)
+        {
+            return false;
+        }
+
         public virtual void _OnVideoStop() 
         {
             errorCount = 0;

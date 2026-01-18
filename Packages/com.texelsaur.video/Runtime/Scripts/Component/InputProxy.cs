@@ -57,7 +57,7 @@ namespace Texel
                 loadOnQueue = false;
 
             if (loadOnQueue)
-                addSource._AddTrack(url);
+                addSource._AddTrackFromProxy(url, VRCUrl.Empty, name != null ? name : "", author != null ? author : "");
             else
                 videoPlayer._ChangeUrl(url);
         }
@@ -79,7 +79,7 @@ namespace Texel
             if (videoPlayer.urlInfoResolver)
                 videoPlayer.urlInfoResolver._AddInfo(url, name != "" ? name : null, author != "" ? author : null);
 
-            addSource._AddTrack(url);
+            addSource._AddTrackFromProxy(url, VRCUrl.Empty, name != null ? name : "", author != null ? author : "");
         }
     }
 }

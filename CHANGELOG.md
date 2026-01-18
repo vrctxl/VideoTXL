@@ -5,8 +5,12 @@
 ### [2.5.0-beta.14]
 - Fixed lock mute option in Audio Channel script
 - Added 'Use Reserved Audio Source' option for AudioLink to audio profiles, overriding selected channel
-- Added overall allow setting for queue priority and delete
+- Added overall allow setting for queue add, priority and delete
 - Added allow self delete option for queue entries
+- Added optional ACL for queue add permission
+- Added add from proxy option to queue
+- Fixed resolved title data in queue not propagating to remote clients
+- Fixed video mode setting not updating on player controls UI on remote clients
 - Added world persist option for volume/mute settings (CompuGeniusCode)
 
 ### [2.5.0-beta.13]

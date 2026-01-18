@@ -6,6 +6,10 @@ namespace Texel
     [CustomEditor(typeof(PlaylistQueue))]
     public class PlaylistQueueEditor : VideoUrlSourceInspector
     {
+        protected SerializedProperty allowAddProperty;
+        protected SerializedProperty addAccessProperty;
+        protected SerializedProperty allowAddFromProxyProperty;
+
         protected SerializedProperty priorityAccessProperty;
         protected SerializedProperty allowPriorityProperty;
         protected SerializedProperty deleteAccessProperty;
@@ -20,6 +24,10 @@ namespace Texel
         protected override void OnEnable()
         {
             base.OnEnable();
+
+            allowAddProperty = serializedObject.FindProperty(nameof(PlaylistQueue.allowAdd));
+            addAccessProperty = serializedObject.FindProperty(nameof(PlaylistQueue.addAccess));
+            allowAddFromProxyProperty = serializedObject.FindProperty(nameof(PlaylistQueue.allowAddFromProxy));
 
             priorityAccessProperty = serializedObject.FindProperty(nameof(PlaylistQueue.priorityAccess));
             allowPriorityProperty = serializedObject.FindProperty(nameof(PlaylistQueue.allowPriority));
@@ -41,6 +49,15 @@ namespace Texel
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Permissions", EditorStyles.boldLabel);
+
+            EditorGUILayout.PropertyField(allowAddProperty, new GUIContent("Allow Add", "Allow entries to be added to the queue."));
+            if (allowAddProperty.boolValue)
+            {
+                EditorGUI.indentLevel += 1;
+                EditorGUILayout.PropertyField(addAccessProperty, new GUIContent("Add Access", "Optional. ACL to control access to adding entries.  If not set, uses the video player's ACL settings."));
+                EditorGUILayout.PropertyField(allowAddFromProxyProperty, new GUIContent("Allow Add From Proxy", "Allows entries to be added through the input proxy, regardless of overall access control restrictions.  This applies to external systems like YouTube Search Prefab."));
+                EditorGUI.indentLevel -= 1;
+            }
 
             EditorGUILayout.PropertyField(allowPriorityProperty, new GUIContent("Allow Priority", "Allows queue entries to be moved to the front."));
             if (allowPriorityProperty.boolValue)

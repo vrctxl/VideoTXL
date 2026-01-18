@@ -4,7 +4,6 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Data;
 using VRC.SDKBase;
-using VRC.Udon;
 
 [assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
 
@@ -20,6 +19,10 @@ namespace Texel
     public class PlaylistQueue : VideoUrlSource
     {
         TXLVideoPlayer videoPlayer;
+
+        [SerializeField] protected internal bool allowAdd = true;
+        [SerializeField] protected internal AccessControl addAccess;
+        [SerializeField] protected internal bool allowAddFromProxy = false;
 
         [Tooltip("Optional. ACL to control access to the move-to-front button.  If not set, uses the video player's ACL settings.")]
         [SerializeField] protected internal AccessControl priorityAccess;
@@ -74,6 +77,10 @@ namespace Texel
         [UdonSynced]
         int syncReadyUrlUpdate = 0;
         int prevReadyUrlUpdate = 0;
+
+        [UdonSynced]
+        int syncTrackAddedUpdate = 0;
+        int prevTrackAddedUpdate = 0;
 
         bool usingQuestUrls = false;
         bool usingTitles = false;
@@ -494,6 +501,12 @@ namespace Texel
                 prevReadyUrlUpdate = syncReadyUrlUpdate;
                 _EventUrlReady();
             }
+
+            if (syncTrackAddedUpdate != prevTrackAddedUpdate)
+            {
+                prevTrackAddedUpdate = syncTrackAddedUpdate;
+                _UpdateInfoResolver();
+            }
         }
 
         void _PopulateResolver()
@@ -636,27 +649,36 @@ namespace Texel
 
         public override bool _AddTrack(VRCUrl url)
         {
-            return _AddTrack(url, VRCUrl.Empty, "");
+            return _AddTrack(url, VRCUrl.Empty, "", "", false);
+        }
+
+        public override bool _AddTrackFromProxy(VRCUrl url, VRCUrl questUrl, string title, string author)
+        {
+            return _AddTrack(url, questUrl, title, author, allowAddFromProxy);
         }
 
         public bool _AddTrack(VRCUrl url, VRCUrl questUrl, string title)
         {
-            return _AddTrack(url, questUrl, title, "");
+            return _AddTrack(url, questUrl, title, "", false);
         }
 
-        public bool _AddTrack(VRCUrl url, VRCUrl questUrl, string title, string author)
+        public bool _AddTrack(VRCUrl url, VRCUrl questUrl, string title, string author, bool force)
         {
+            if (!allowAdd)
+                return false;
             if (!URLUtil.WellFormedUrl(url))
                 return false;
 
-            if (!_TakeControl())
+            if (force)
+                _ForceTakeControl();
+            else if (!_TakeControl(addAccess))
                 return false;
 
             _EnsureSyncCapacity();
 
-            syncUrls[syncTrackCount] = url;
+            syncUrls[syncTrackCount] = url != null ? url : VRCUrl.Empty;
             if (usingQuestUrls)
-                syncQuestUrls[syncTrackCount] = questUrl;
+                syncQuestUrls[syncTrackCount] = questUrl != null ? questUrl : VRCUrl.Empty;
 
             syncEntries[syncTrackCount] = new Vector3(-1, -1, -1);
             syncPlayerIds[syncTrackCount] = Networking.LocalPlayer.playerId;
@@ -742,6 +764,20 @@ namespace Texel
             return false;
         }
 
+        void _UpdateInfoResolver()
+        {
+            UrlInfoResolver resolver = videoPlayer.UrlInfoResolver;
+            if (!resolver)
+                return;
+
+            for (int i = 0; i < syncTrackCount; i++)
+            {
+                string title = usingTitles ? syncTitles[i] : null;
+                string author = usingAuthors ? syncAuthors[i] : null;
+                resolver._AddInfo(syncUrls[i], title, author);
+            }
+        }
+
         public bool _AddTrack(int playlistIndex, int catalogIndex, int trackIndex)
         {
             if (!_TakeControl())
@@ -775,6 +811,8 @@ namespace Texel
 
         private void _EnsureSyncCapacity()
         {
+            _EnsureInit();
+
             if (syncTrackCount >= syncEntries.Length)
             {
                 syncEntries = (Vector3[])UtilityTxl.ArrayMinSize(syncEntries, syncTrackCount + 1, typeof(Vector3));
@@ -796,6 +834,7 @@ namespace Texel
         {
             syncQueueUpdate += 1;
             syncTrackCount += 1;
+            syncTrackAddedUpdate += 1;
 
             bool isPlaying = videoPlayer && (videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_LOADING || videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_PLAYING);
 
