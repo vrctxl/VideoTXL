@@ -112,6 +112,11 @@ namespace Texel
             get { return queue && queue.HasDeleteAccess; }
         }
 
+        public bool _HasDeleteAccessFor(int track)
+        {
+            return queue && queue._HasDeleteAccessFor(track);
+        }
+
         public void _HandleUrlInput()
         {
             if (!queue || !urlInput)
@@ -162,7 +167,7 @@ namespace Texel
             if (!queue)
                 return;
 
-            queue._MoveTrack(index, 0);
+            queue._MoveTrackFront(index);
         }
 
         public void _HandleDelete(int index)

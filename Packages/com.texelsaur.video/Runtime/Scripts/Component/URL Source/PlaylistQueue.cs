@@ -23,8 +23,12 @@ namespace Texel
 
         [Tooltip("Optional. ACL to control access to the move-to-front button.  If not set, uses the video player's ACL settings.")]
         [SerializeField] protected internal AccessControl priorityAccess;
+        [SerializeField] protected internal bool allowPriority = false;
         [Tooltip("Optional. ACL to control access to the delete button.  If not set, uses the video player's ACL settings.")]
         [SerializeField] protected internal AccessControl deleteAccess;
+        //[Tooltip("Allows players to delete their own added entries, even if th")]
+        [SerializeField] protected internal bool allowDelete = false;
+        [SerializeField] protected internal bool allowSelfDelete = false;
 
         [SerializeField] protected internal bool enableSyncQuestUrls = true;
         [SerializeField] protected internal bool syncTrackTitles = true;
@@ -46,6 +50,8 @@ namespace Texel
         VRCUrl[] syncQuestUrls;
         [UdonSynced]
         Vector3[] syncEntries; // (playlistIndex, catalogIndex, trackIndex)
+        [UdonSynced]
+        int[] syncPlayerIds;
         [UdonSynced]
         string[] syncTitles;
         [UdonSynced]
@@ -99,6 +105,7 @@ namespace Texel
             syncUrls = new VRCUrl[0];
             syncQuestUrls = new VRCUrl[0];
             syncEntries = new Vector3[0];
+            syncPlayerIds = new int[0];
 
             // Info data
             syncTitles = new string[0];
@@ -235,12 +242,31 @@ namespace Texel
         {
             get
             {
+                if (!allowDelete)
+                    return false;
                 if (deleteAccess)
                     return deleteAccess._LocalHasAccess();
                 if (videoPlayer)
                     return videoPlayer._CanTakeControl();
                 return false;
             }
+        }
+
+        public bool _HasDeleteAccessFor(int index)
+        {
+            if (!allowDelete || index < 0 || index >= syncTrackCount)
+                return false;
+
+            bool addedSelf = syncPlayerIds[index] == Networking.LocalPlayer.playerId;
+            if (addedSelf && allowSelfDelete)
+                return true;
+
+            if (deleteAccess)
+                return deleteAccess._LocalHasAccess();
+            if (videoPlayer)
+                return videoPlayer._CanTakeControl();
+
+            return false;
         }
 
         public override bool _CanMoveNext()
@@ -402,6 +428,7 @@ namespace Texel
             {
                 syncUrls[i] = syncUrls[i + popCount];
                 syncEntries[i] = syncEntries[i + popCount];
+                syncPlayerIds[i] = syncPlayerIds[i + popCount];
                 if (usingQuestUrls)
                     syncQuestUrls[i] = syncQuestUrls[i + popCount];
                 if (usingTitles)
@@ -416,6 +443,7 @@ namespace Texel
             {
                 syncUrls[i] = VRCUrl.Empty;
                 syncEntries[i] = new Vector3(-1, -1, -1);
+                syncPlayerIds[i] = -1;
                 if (usingQuestUrls)
                     syncQuestUrls[i] = VRCUrl.Empty;
                 if (usingTitles)
@@ -497,16 +525,29 @@ namespace Texel
 
         public bool _RemoveTrack(int index)
         {
-            if (index < 0 || index >= syncTrackCount)
+            if (!allowDelete || index < 0 || index >= syncTrackCount)
                 return false;
 
-            if (!_TakeControl(deleteAccess))
+            bool addedSelf = syncPlayerIds[index] == Networking.LocalPlayer.playerId;
+            if (addedSelf && allowSelfDelete)
+                _ForceTakeControl();
+            else if (!_TakeControl(deleteAccess))
                 return false;
 
             _PopTracks(index, 1);
             RequestSerialization();
 
             return true;
+        }
+
+        public bool _MoveTrackFront(int index)
+        {
+            if (!allowPriority)
+                return false;
+            if (!_TakeControl(priorityAccess))
+                return false;
+
+            return _MoveTrack(index, 0);
         }
 
         public bool _MoveTrack(int index, int destIndex)
@@ -518,11 +559,9 @@ namespace Texel
             if (index == destIndex)
                 return false;
 
-            if (!_TakeControl(priorityAccess))
-                return false;
-
             VRCUrl dstUrl = syncUrls[index];
             Vector3 dstEntry = syncEntries[index];
+            int dstPlayerId = syncPlayerIds[index];
             VRCUrl dstQuestUrl = VRCUrl.Empty;
             if (usingQuestUrls)
                 dstQuestUrl = syncQuestUrls[index];
@@ -542,6 +581,7 @@ namespace Texel
                 {
                     syncUrls[i] = syncUrls[i - 1];
                     syncEntries[i] = syncEntries[i - 1];
+                    syncPlayerIds[i] = syncPlayerIds[i - 1];
                     if (usingQuestUrls)
                         syncQuestUrls[i] = syncQuestUrls[i - 1];
                     if (usingTitles)
@@ -557,6 +597,7 @@ namespace Texel
                 {
                     syncUrls[i] = syncUrls[i + 1];
                     syncEntries[i] = syncEntries[i + 1];
+                    syncPlayerIds[i] = syncPlayerIds[i + 1];
                     if (usingQuestUrls)
                         syncQuestUrls[i] = syncQuestUrls[i + 1];
                     if (usingTitles)
@@ -570,6 +611,7 @@ namespace Texel
 
             syncUrls[destIndex] = dstUrl;
             syncEntries[destIndex] = dstEntry;
+            syncPlayerIds[destIndex] = dstPlayerId;
             if (usingQuestUrls)
                 syncQuestUrls[destIndex] = dstQuestUrl;
             if (usingTitles)
@@ -617,6 +659,7 @@ namespace Texel
                 syncQuestUrls[syncTrackCount] = questUrl;
 
             syncEntries[syncTrackCount] = new Vector3(-1, -1, -1);
+            syncPlayerIds[syncTrackCount] = Networking.LocalPlayer.playerId;
 
             if (usingTitles || usingAuthors)
             {
@@ -711,6 +754,7 @@ namespace Texel
                 syncQuestUrls[syncTrackCount] = VRCUrl.Empty;
 
             syncEntries[syncTrackCount] = new Vector3(playlistIndex, catalogIndex, trackIndex);
+            syncPlayerIds[syncTrackCount] = Networking.LocalPlayer.playerId;
 
             if (usingTitles)
                 syncTitles[syncTrackCount] = "";
@@ -735,6 +779,7 @@ namespace Texel
             {
                 syncEntries = (Vector3[])UtilityTxl.ArrayMinSize(syncEntries, syncTrackCount + 1, typeof(Vector3));
                 syncUrls = (VRCUrl[])UtilityTxl.ArrayMinSize(syncUrls, syncTrackCount + 1, typeof(VRCUrl));
+                syncPlayerIds = (int[])UtilityTxl.ArrayMinSize(syncPlayerIds, syncTrackCount + 1, typeof(int));
 
                 if (usingQuestUrls)
                     syncQuestUrls = (VRCUrl[])UtilityTxl.ArrayMinSize(syncQuestUrls, syncTrackCount + 1, typeof(VRCUrl));
@@ -772,6 +817,14 @@ namespace Texel
             if (!acl && videoPlayer && videoPlayer.SupportsOwnership && !videoPlayer._TakeControl())
                 return false;
 
+            if (!Networking.IsOwner(gameObject))
+                Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+            return true;
+        }
+
+        bool _ForceTakeControl()
+        {
             if (!Networking.IsOwner(gameObject))
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 

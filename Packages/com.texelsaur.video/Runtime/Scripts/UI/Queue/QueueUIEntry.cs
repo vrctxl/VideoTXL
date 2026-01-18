@@ -117,7 +117,7 @@ namespace Texel
             if (priorityButton && queueUI.HasPriorityAccess)
                 priorityButton.gameObject.SetActive(true);
 
-            if (deleteButton && queueUI.HasDeleteAccess)
+            if (deleteButton && queueUI._HasDeleteAccessFor(track))
                 deleteButton.gameObject.SetActive(true);
         }
 
