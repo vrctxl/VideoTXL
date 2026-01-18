@@ -5,6 +5,9 @@
 ### [2.5.0-beta.14]
 - Fixed lock mute option in Audio Channel script
 - Added 'Use Reserved Audio Source' option for AudioLink to audio profiles, overriding selected channel
+- Added overall allow setting for queue priority and delete
+- Added allow self delete option for queue entries
+- Added world persist option for volume/mute settings (CompuGeniusCode)
 
 ### [2.5.0-beta.13]
 - Added helper controls to several inspectors to create and link new components

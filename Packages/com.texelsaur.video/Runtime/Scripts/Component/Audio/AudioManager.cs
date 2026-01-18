@@ -2,8 +2,8 @@
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Persistence;
-using VRC.SDKBase;
 using VRC.SDK3.Rendering;
+using VRC.SDKBase;
 using VRC.Udon;
 
 namespace Texel
@@ -18,7 +18,6 @@ namespace Texel
 
         public UdonBehaviour audioLinkSystem;
         public UdonBehaviour vrslAudioDMXRuntime;
-        //public string audioLinkChannel;
 
         [Range(0, 1)]
         public float inputVolume = 1f;
@@ -26,31 +25,17 @@ namespace Texel
         [Range(0, 1)]
         public float masterVolume = 0.9f;
         public bool masterMute = false;
-        //public bool master2D = false;
-        public bool masterVolumePersistence;
 
         public AudioChannelGroup[] channelGroups;
         public AudioChannelGroup defaultChannelGroup;
+
+        public bool masterVolumePersistence;
+        public string persistenceKey = "100";
 
         public bool debugLogging = false;
         public bool debugEvents = false;
         public DebugLog debugLog;
         public DebugState debugState;
-
-        //public AudioSource[] channelAudio;
-        //public string[] channelNames;
-        //public AudioChannel[] channelData;
-
-        //[Range(0, 1)]
-        //public float[] channelVolume;
-        //public bool[] channelMute;
-        //public bool[] channel2D;
-        //public AudioFadeZone[] channelFadeZone;
-        //public bool[] channelDisableFade2D;
-        //public bool[] channelMute2D;
-        //public bool[] channelSeparateVolume2D;
-        //[Range(0, 1)]
-        //public float[] channelVolume2D;
 
         AudioChannelGroup selectedChannelGroup;
         VideoSource selectedVideoSource;
@@ -85,24 +70,34 @@ namespace Texel
         AudioSource vrslNullSource = null;
         bool enabledAudioLink = false;
 
+        private bool persistUpdateQueued = false;
+        private string persistVolumeKey;
+        private string persistMuteKey;
+
         const int UNITY = 0;
         const int AVPRO = 1;
 
         void Start()
         {
             _EnsureInit();
+
+            persistVolumeKey = "TXL_MasterVolume_" + persistenceKey;
+            persistMuteKey = "TXL_MasterMute_" + persistenceKey;
         }
 
         public override void OnPlayerRestored(VRCPlayerApi player)
         {
-            if (!masterVolumePersistence || !player.isLocal) return;
+            if (!masterVolumePersistence || !player.isLocal)
+                return;
 
-            var changedVolume = PlayerData.TryGetFloat(Networking.LocalPlayer, "TXL_MasterVolume", out var volume);
-            if (!changedVolume) volume = masterVolume;
+            var changedVolume = PlayerData.TryGetFloat(Networking.LocalPlayer, persistVolumeKey, out var volume);
+            if (!changedVolume)
+                volume = masterVolume;
             _SetMasterVolume(volume);
 
-            var changedMute = PlayerData.TryGetBool(Networking.LocalPlayer, "TXL_MasterMute", out var mute);
-            if (!changedMute) mute = masterMute;
+            var changedMute = PlayerData.TryGetBool(Networking.LocalPlayer, persistMuteKey, out var mute);
+            if (!changedMute)
+                mute = masterMute;
             _SetMasterMute(mute);
         }
 
@@ -432,10 +427,9 @@ namespace Texel
             //ovrMasterVolume = true;
             masterVolume = value;
 
-            if (masterVolumePersistence) PlayerData.SetFloat("TXL_MasterVolume", value);
-
             _UpdateAll();
             _UpdateHandlers(EVENT_MASTER_VOLUME_UPDATE);
+            _UpdatePersistence();
         }
 
         public void _SetMasterMuted()
@@ -453,10 +447,29 @@ namespace Texel
             //ovrMasterMute = true;
             masterMute = state;
 
-            if (masterVolumePersistence) PlayerData.SetBool("TXL_MasterMute", state);
-
             _UpdateAll();
             _UpdateHandlers(EVENT_MASTER_MUTE_UPDATE);
+            _UpdatePersistence();
+        }
+
+        void _UpdatePersistence()
+        {
+            if (persistUpdateQueued)
+                return;
+
+            persistUpdateQueued = true;
+            SendCustomEventDelayedSeconds(nameof(_InternalUpdatePersistence), 1);
+        }
+
+        public void _InternalUpdatePersistence()
+        {
+            persistUpdateQueued = false;
+
+            if (masterVolumePersistence)
+            {
+                PlayerData.SetFloat(persistVolumeKey, masterVolume);
+                PlayerData.SetBool(persistMuteKey, masterMute);
+            }
         }
 
         /*public void _SetMaster2D(bool state)
