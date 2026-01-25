@@ -45,6 +45,11 @@ namespace Texel
         [SerializeField] internal int liveStreamStopRetryCount = 1;
         [SerializeField] internal bool youtubeAutoUnityInEditor = true;
 
+        [SerializeField] internal VideoSourceBackend youtubeAutoSource = VideoSourceBackend.AVPro;
+        [SerializeField] internal bool youtubeFallbackAVPro = true;
+        [SerializeField] internal bool youtubeFallbackUnity = true;
+        [SerializeField] internal bool youtubeFallbackLocal = false;
+
         public const int VIDEO_READY_EVENT = 0;
         public const int VIDEO_START_EVENT = 1;
         public const int VIDEO_END_EVENT = 2;

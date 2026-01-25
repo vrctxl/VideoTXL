@@ -90,6 +90,8 @@ namespace Texel
         [NonSerialized]
         public bool streamFallback;
         [NonSerialized]
+        public bool videoFallback;
+        [NonSerialized]
         public bool seekableSource;
         [NonSerialized]
         public float trackDuration;

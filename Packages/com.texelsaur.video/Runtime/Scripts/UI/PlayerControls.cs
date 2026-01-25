@@ -926,7 +926,9 @@ namespace Texel
                         }
 
                         if (videoPlayer.streamFallback)
-                            SetPlaceholderText("Retrying as stream source");
+                            SetPlaceholderText("Video player error - Retrying as stream source");
+                        else if (videoPlayer.videoFallback)
+                            SetPlaceholderText("Video player error - Retrying as video source");
 
                         if (urlInput)
                             urlInput.readOnly = !canControl;

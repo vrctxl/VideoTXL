@@ -20,6 +20,11 @@ namespace Texel
         SerializedProperty liveStreamStopRetryCountProperty;
         SerializedProperty youtubeAutoUnityInEditorProperty;
 
+        SerializedProperty youtubeAutoSourceProperty;
+        SerializedProperty youtubeFallbackAVProProperty;
+        SerializedProperty youtubeFallbackUnityProperty;
+        SerializedProperty youtubeFallbackLocalProperty;
+
         SerializedProperty debugLogProperty;
         SerializedProperty debugStateProperty;
         SerializedProperty debugLoggingProperty;
@@ -42,6 +47,11 @@ namespace Texel
             defaultstreamStopThresholdProperty = serializedObject.FindProperty(nameof(VideoManager.defaultStreamStopThreshold));
             liveStreamStopRetryCountProperty = serializedObject.FindProperty(nameof(VideoManager.liveStreamStopRetryCount));
             youtubeAutoUnityInEditorProperty = serializedObject.FindProperty(nameof(VideoManager.youtubeAutoUnityInEditor));
+
+            youtubeAutoSourceProperty = serializedObject.FindProperty(nameof(VideoManager.youtubeAutoSource));
+            youtubeFallbackAVProProperty = serializedObject.FindProperty(nameof(VideoManager.youtubeFallbackAVPro));
+            youtubeFallbackUnityProperty = serializedObject.FindProperty(nameof(VideoManager.youtubeFallbackUnity));
+            youtubeFallbackLocalProperty = serializedObject.FindProperty(nameof(VideoManager.youtubeFallbackLocal));
 
             debugLogProperty = serializedObject.FindProperty(nameof(VideoManager.debugLog));
             debugStateProperty = serializedObject.FindProperty(nameof(VideoManager.debugState));
@@ -110,6 +120,14 @@ namespace Texel
                 EditorGUILayout.PropertyField(liveStreamStopRetryCountProperty, new GUIContent("Stream End Retry Count", "Outside of the ignore threshold, the number of times the stream should try reconnecting after receiving an end of stream event."));
                 EditorGUI.indentLevel--;
             }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("YouTube Options", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox("Due to the constantly evolving support (or non-support) of YouTube, you may need to regularly come back and update these settings.", MessageType.Info);
+            EditorGUILayout.PropertyField(youtubeAutoSourceProperty, new GUIContent("Auto Video Source", "The video source to try first when a YouTube URL is detected. Playback support for YouTube is a constantly moving target, and you may need to change this setting from time to time."));
+            EditorGUILayout.PropertyField(youtubeFallbackAVProProperty, new GUIContent("Enable AVPro Failover", "If a YouTube video fails to play when loaded on a Unity video source, try loading it on AVPro instead.\n\nIt's a good idea to keep this enabled for hangling YouTube live streams, which can only work on AVPro."));
+            EditorGUILayout.PropertyField(youtubeFallbackUnityProperty, new GUIContent("Enable Unity Failover", "If a YouTube video fails to play when loaded on an AVPro video source, try loading it on Unity instead.\n\nAVPro will normally play any YouTube videos, but problems with yt-dlp can prevent this from working. YouTube support on Unity is limited, but low-res playback may still work in this case."));
+            EditorGUILayout.PropertyField(youtubeFallbackLocalProperty, new GUIContent("Enable Local Failover", "Enables players to failover between video sources individually.\n\nSince this can result in different players using different video sources and audio setups, consider if your setup is compatible with this option."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Video Sources", EditorStyles.boldLabel);
