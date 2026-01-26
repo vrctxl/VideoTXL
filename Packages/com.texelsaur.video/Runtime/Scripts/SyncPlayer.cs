@@ -125,6 +125,8 @@ namespace Texel
         bool _initDeserialize = false;
         bool _usingDebug = false;
 
+        float localOffset = 0f;
+
         [HideInInspector] public int internalArgSourceIndex;
 
         VideoUrlSource[] urlSourceList;
@@ -368,6 +370,16 @@ namespace Texel
             get { return _videoReady && _syncPlaybackNumber < _syncVideoNumber; }
         }
 
+        public float LocalOffset
+        {
+            get { return localOffset; }
+            set 
+            {
+                localOffset = value;
+                _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
+            }
+        }
+
         public void _OnPlaybackZoneEnter()
         {
             if (traceLogging) DebugTrace("Event OnPlaybackZoneEnter");
@@ -395,7 +407,7 @@ namespace Texel
                     // if there were still viewers in the playback zone
                     if (serverTime < _syncVideoExpectedEndTime)
                     {
-                        _videoTargetTime = serverTime - _syncVideoStartNetworkTime;
+                        _videoTargetTime = serverTime - _syncVideoStartNetworkTime + localOffset;
                         if (_usingDebug) DebugLog($"Playback enter: start at {_videoTargetTime}");
                         _StartVideoLoad();
                         return;
@@ -498,7 +510,7 @@ namespace Texel
                 float videoTime = videoMux.VideoTime;
                 _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - videoTime;
                 _syncVideoExpectedEndTime = _syncVideoStartNetworkTime + trackDuration;
-                _videoTargetTime = videoTime;
+                _videoTargetTime = videoTime + localOffset;
                 videoMux._VideoPause();
             }
             else
@@ -763,7 +775,7 @@ namespace Texel
             _syncVideoExpectedEndTime = 0;
             RequestSerialization();
 
-            _videoTargetTime = _ParseTimeFromUrl(urlStr);
+            _videoTargetTime = _ParseTimeFromUrl(urlStr) + localOffset;
             _UpdateLastUrl();
 
             // Conditional player stop to try and avoid piling on AVPro at end of track
@@ -1657,7 +1669,7 @@ namespace Texel
         {
             float duration = videoMux.VideoDuration;
             float serverTime = (float)Networking.GetServerTimeInSeconds();
-            return Mathf.Clamp(serverTime - _syncVideoStartNetworkTime, 0f, duration);
+            return Mathf.Clamp(serverTime - _syncVideoStartNetworkTime + localOffset, 0f, duration);
         }
 
         public void _ForceResync()
@@ -1862,6 +1874,7 @@ namespace Texel
             debugState._SetValue("syncOwnerPaused", _syncOwnerPaused.ToString());
             debugState._SetValue("syncVideoStartNetworkTime", _syncVideoStartNetworkTime.ToString());
             debugState._SetValue("syncVideoExpectedEndTime", _syncVideoExpectedEndTime.ToString());
+            debugState._SetValue("localOffset", localOffset.ToString());
             debugState._SetValue("syncLocked", _syncLocked.ToString());
             debugState._SetValue("syncHoldVideos", _syncHoldVideos.ToString());
             debugState._SetValue("overrideLock", _overrideLock.ToString());

@@ -4,6 +4,7 @@
 
 ### [2.5.0-beta.15]
 - Added youtube fallback options to Video Manager
+- Added LocalOffset property to Sync Video Player API
 
 ### [2.5.0-beta.14]
 - Fixed lock mute option in Audio Channel script
