@@ -94,6 +94,7 @@ namespace Texel
         SerializedProperty modeTextProperty;
         SerializedProperty queuedTextProperty;
         SerializedProperty titleTextProperty;
+        SerializedProperty offsetTextProperty;
 
         SerializedProperty playlistTextProperty;
 
@@ -185,6 +186,7 @@ namespace Texel
             "MainPanel/LowerRow/InputProgress/PlaylistText",
             "MainPanel/LowerRow/InputProgress/SourceMode",
             "MainPanel/LowerRow/InputProgress/TitleText",
+            "MainPanel/LowerRow/InputProgress/OffsetText",
         };
         string[] subTextIconPaths = new string[]
         {
@@ -240,6 +242,7 @@ namespace Texel
             modeTextProperty = serializedObject.FindProperty(nameof(PlayerControls.modeText));
             queuedTextProperty = serializedObject.FindProperty(nameof(PlayerControls.queuedText));
             titleTextProperty = serializedObject.FindProperty(nameof(PlayerControls.titleText));
+            offsetTextProperty = serializedObject.FindProperty(nameof(PlayerControls.offsetText));
 
             playlistTextProperty = serializedObject.FindProperty(nameof(PlayerControls.playlistText));
 
@@ -309,6 +312,7 @@ namespace Texel
                 EditorGUILayout.PropertyField(modeTextProperty);
                 EditorGUILayout.PropertyField(queuedTextProperty);
                 EditorGUILayout.PropertyField(titleTextProperty);
+                EditorGUILayout.PropertyField(offsetTextProperty);
                 EditorGUILayout.PropertyField(playlistTextProperty);
                 EditorGUILayout.PropertyField(optionsPanelProperty);
                 EditorGUILayout.PropertyField(playlistPanelProperty);

@@ -125,6 +125,8 @@ namespace Texel
         bool _initDeserialize = false;
         bool _usingDebug = false;
 
+        float localOffset = 0f;
+
         [HideInInspector] public int internalArgSourceIndex;
 
         VideoUrlSource[] urlSourceList;
@@ -368,6 +370,16 @@ namespace Texel
             get { return _videoReady && _syncPlaybackNumber < _syncVideoNumber; }
         }
 
+        public float LocalOffset
+        {
+            get { return localOffset; }
+            set 
+            {
+                localOffset = value;
+                _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
+            }
+        }
+
         public void _OnPlaybackZoneEnter()
         {
             if (traceLogging) DebugTrace("Event OnPlaybackZoneEnter");
@@ -395,7 +407,7 @@ namespace Texel
                     // if there were still viewers in the playback zone
                     if (serverTime < _syncVideoExpectedEndTime)
                     {
-                        _videoTargetTime = serverTime - _syncVideoStartNetworkTime;
+                        _videoTargetTime = serverTime - _syncVideoStartNetworkTime + localOffset;
                         if (_usingDebug) DebugLog($"Playback enter: start at {_videoTargetTime}");
                         _StartVideoLoad();
                         return;
@@ -498,7 +510,7 @@ namespace Texel
                 float videoTime = videoMux.VideoTime;
                 _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - videoTime;
                 _syncVideoExpectedEndTime = _syncVideoStartNetworkTime + trackDuration;
-                _videoTargetTime = videoTime;
+                _videoTargetTime = videoTime + localOffset;
                 videoMux._VideoPause();
             }
             else
@@ -763,7 +775,7 @@ namespace Texel
             _syncVideoExpectedEndTime = 0;
             RequestSerialization();
 
-            _videoTargetTime = _ParseTimeFromUrl(urlStr);
+            _videoTargetTime = _ParseTimeFromUrl(urlStr) + localOffset;
             _UpdateLastUrl();
 
             // Conditional player stop to try and avoid piling on AVPro at end of track
@@ -854,12 +866,16 @@ namespace Texel
 
             // NB: As of 2024-07-25 Youtube no longer returns compatible codecs for Unity video.  Unless workaround is found,
             // Youtube videos must now be loaded on AVPro sources.
-            if (urlStr.Contains("youtube.com/watch") || urlStr.Contains("youtu.be/"))
+
+            // NB: As of 2026-01-15 Youtube can't be handled by current VRC-supported yt-dlp but DOES usually (or sometimes)
+            // return a compatible 360p codec for UnityVideo.  What a damn mess.  Make auto behavior configurable with the caveat
+            // that best practices are a moving target.
+            if (URLUtil.IsYoutubeUrl(urlStr))
             {
 #if UNITY_EDITOR
                 return VideoManager && VideoManager.YoutubeAutoUnityInEditor;
 #else
-                return false;
+                return VideoManager && VideoManager.youtubeAutoSource == VideoSourceBackend.Unity;
 #endif
             }
 
@@ -1231,17 +1247,53 @@ namespace Texel
                 DebugLog("Error code: " + code);
             }
 
-            // Try to fall back to AVPro if auto video failed (the youtube livestream problem)
-            bool shouldFallback = autoFailbackToAVPro &&
+            _UpdatePlayerStateError(videoError);
+
+            bool isYTVideo = URLUtil.IsYoutubeUrl(_syncUrl);
+            bool syncFallback = false;
+            streamFallback = false;
+            videoFallback = false;
+
+            if (videoErrorClass == VideoErrorClass.VRChat && videoError == VideoError.PlayerError)
+            {
+                // Youtube-specific fallback handling
+                if (isYTVideo)
+                {
+                    if (videoMux.youtubeFallbackAVPro && _syncVideoSource == VideoSource.VIDEO_SOURCE_UNITY && videoMux.SupportsAVPro)
+                    {
+                        syncFallback = !videoMux.youtubeFallbackLocal;
+                        streamFallback = true;
+                        //_SetStreamFallback();
+                    } else if (videoMux.youtubeFallbackUnity && _syncVideoSource == VideoSource.VIDEO_SOURCE_AVPRO && videoMux.SupportsUnity)
+                    {
+                        syncFallback = !videoMux.youtubeFallbackLocal;
+                        videoFallback = true;
+                        //_SetVideoFallback();
+                    }
+                }
+
+                // Auto-mode fallback handling
+                else if (_syncVideoSourceOverride == VideoSource.VIDEO_SOURCE_NONE)
+                {
+                    if (autoFailbackToAVPro && _syncVideoSource == VideoSource.VIDEO_SOURCE_UNITY && videoMux.SupportsAVPro)
+                    {
+                        syncFallback = true;
+                        streamFallback = true;
+                        //_SetStreamFallback();
+                    }
+                }
+            }
+
+            /*bool shouldFallback = autoFailbackToAVPro &&
                 videoErrorClass == VideoErrorClass.VRChat &&
                 videoError == VideoError.PlayerError &&
                 videoMux.SupportsAVPro &&
                 _syncVideoSourceOverride == VideoSource.VIDEO_SOURCE_NONE &&
-                _syncVideoSource == VideoSource.VIDEO_SOURCE_UNITY;
+                _syncVideoSource == VideoSource.VIDEO_SOURCE_UNITY;*/
 
-            _UpdatePlayerStateError(videoError);
-            if (shouldFallback)
-                _SetStreamFallback();
+            
+            //if (shouldFallback)
+            //    _SetStreamFallback();
 
             VideoErrorAction action = VideoErrorAction.Default;
             if (currentUrlSource)
@@ -1260,16 +1312,39 @@ namespace Texel
 
             if (Networking.IsOwner(gameObject))
             {
-                if (shouldFallback)
+                if (syncFallback)
                 {
-                    if (_usingDebug) DebugLog("Retrying URL in stream mode");
+                    if (streamFallback)
+                    {
+                        if (_usingDebug) DebugLog("Retrying URL in stream mode");
 
-                    fallbackSourceOverride = VideoSource.VIDEO_SOURCE_AVPRO;
-                    _PlayVideoAfterFallback(_syncUrl, _syncQuestUrl, _syncUrlSourceIndex, retryTimeout);
-                    return;
+                        fallbackSourceOverride = VideoSource.VIDEO_SOURCE_AVPRO;
+                        _PlayVideoAfterFallback(_syncUrl, _syncQuestUrl, _syncUrlSourceIndex, retryTimeout);
+
+                        streamFallback = true;
+                        playerState = VIDEO_STATE_ERROR;
+                        _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
+
+                        return;
+                    }
+                    else if (videoFallback)
+                    {
+                        if (_usingDebug) DebugLog("Retrying URL in video mode");
+
+                        fallbackSourceOverride = VideoSource.VIDEO_SOURCE_UNITY;
+                        _PlayVideoAfterFallback(_syncUrl, _syncQuestUrl, _syncUrlSourceIndex, retryTimeout);
+
+                        videoFallback = true;
+                        playerState = VIDEO_STATE_ERROR;
+                        _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
+
+                        return;
+                    }
                 }
 
                 if (_usingDebug) DebugLog($"Error retry action: {action}");
+
+                _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
 
                 if (action == VideoErrorAction.Retry)
                     _StartVideoLoadDelay(retryTimeout);
@@ -1293,8 +1368,10 @@ namespace Texel
             }
             else
             {
-                if (!shouldFallback && (action == VideoErrorAction.Advance || action == VideoErrorAction.Retry))
+                if (!syncFallback && (action == VideoErrorAction.Advance || action == VideoErrorAction.Retry))
                     _StartVideoLoadDelay(retryTimeout);
+
+                _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
 
                 //if (!shouldFallback && retryOnError)
                 //    _StartVideoLoadDelay(retryTimeout);
@@ -1592,7 +1669,7 @@ namespace Texel
         {
             float duration = videoMux.VideoDuration;
             float serverTime = (float)Networking.GetServerTimeInSeconds();
-            return Mathf.Clamp(serverTime - _syncVideoStartNetworkTime, 0f, duration);
+            return Mathf.Clamp(serverTime - _syncVideoStartNetworkTime + localOffset, 0f, duration);
         }
 
         public void _ForceResync()
@@ -1659,6 +1736,7 @@ namespace Texel
         {
             playerState = state;
             streamFallback = false;
+            videoFallback = false;
 
             if (state != VIDEO_STATE_PLAYING)
             {
@@ -1684,15 +1762,26 @@ namespace Texel
         void _UpdatePlayerStateError(VideoError error)
         {
             playerState = VIDEO_STATE_ERROR;
+            streamFallback = false;
+            videoFallback = false;
+            paused = false;
+            syncing = false;
             lastErrorCode = error;
+
             _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
         }
 
-        void _SetStreamFallback()
+        /*void _SetStreamFallback()
         {
             streamFallback = true;
             _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
         }
+
+        void _SetVideoFallback()
+        {
+            videoFallback = true;
+            _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
+        }*/
 
         void _UpdateLockState(bool state)
         {
@@ -1785,6 +1874,7 @@ namespace Texel
             debugState._SetValue("syncOwnerPaused", _syncOwnerPaused.ToString());
             debugState._SetValue("syncVideoStartNetworkTime", _syncVideoStartNetworkTime.ToString());
             debugState._SetValue("syncVideoExpectedEndTime", _syncVideoExpectedEndTime.ToString());
+            debugState._SetValue("localOffset", localOffset.ToString());
             debugState._SetValue("syncLocked", _syncLocked.ToString());
             debugState._SetValue("syncHoldVideos", _syncHoldVideos.ToString());
             debugState._SetValue("overrideLock", _overrideLock.ToString());

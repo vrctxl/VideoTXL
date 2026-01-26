@@ -66,6 +66,7 @@ namespace Texel
         public Text modeText;
         public Text queuedText;
         public Text titleText;
+        public Text offsetText;
 
         public Text playlistText;
 
@@ -126,6 +127,7 @@ namespace Texel
 
             _SetText(queuedText, "");
             _SetText(playlistText, "");
+            _SetText(offsetText, "");
 
             if (audioManager)
                 audioManager._RegisterControls(this);
@@ -926,7 +928,9 @@ namespace Texel
                         }
 
                         if (videoPlayer.streamFallback)
-                            SetPlaceholderText("Retrying as stream source");
+                            SetPlaceholderText("Video player error - Retrying as stream source");
+                        else if (videoPlayer.videoFallback)
+                            SetPlaceholderText("Video player error - Retrying as video source");
 
                         if (urlInput)
                             urlInput.readOnly = !canControl;
@@ -1017,6 +1021,11 @@ namespace Texel
                         break;
                 }
             }
+
+            if (videoPlayer.LocalOffset != 0)
+                _SetText(offsetText, $"{(videoPlayer.LocalOffset > 0 ? '+' : '−')}{Mathf.Abs(videoPlayer.LocalOffset):F2}");
+            else
+                _SetText(offsetText, "");
 
             _UpdatePlaylistInfo();
             _UpdateInfo();
@@ -1210,6 +1219,8 @@ namespace Texel
                 modeText = (Text)_FindComponent("MainPanel/LowerRow/InputProgress/SourceMode", typeof(Text));
             if (!Utilities.IsValid(queuedText))
                 queuedText = (Text)_FindComponent("MainPanel/LowerRow/InputProgress/QueuedText", typeof(Text));
+            if (!Utilities.IsValid(offsetText))
+                offsetText = (Text)_FindComponent("MainPanel/LowerRow/InputProgress/OffsetText", typeof(Text));
             if (!Utilities.IsValid(playlistText))
                 playlistText = (Text)_FindComponent("MainPanel/LowerRow/InputProgress/PlaylistText", typeof(Text));
 
