@@ -2,6 +2,9 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.16]
+- Added Fake Mute option to audio channel
+
 ### [2.5.0-beta.15]
 - Added youtube fallback options to Video Manager
 - Added LocalOffset property to Sync Video Player API

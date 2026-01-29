@@ -31,10 +31,10 @@ namespace Texel
         public bool lockVolume = false;
         [Tooltip("Preserves channel's mute state, ignoring master mute.")]
         public bool lockMute = false;
-        //[Tooltip("Preserves channel's spatial audio settings, ignoring master 2D audio.")]
-        //public bool lockSpatial = false;
         [Tooltip("Whether this channel should be muted by default.")]
         public bool mute;
+        [Tooltip("Whether muting this channel should instead set it to a very low volume (0.002).  Necessary to keep AudioLink reacting when muted if using this channel.")]
+        public bool useFakeMute = false;
         [Tooltip("An optional fade zone to dynamically scale volume based on position/distance.")]
         public AudioFadeZone fadeZone;
         [Tooltip("AVPro: which audio track to output on the audio source.")]
@@ -208,26 +208,25 @@ namespace Texel
             else
                 boundSource.volume = Mathf.Clamp01(3.1623e-3f * Mathf.Exp(rawVolume * 5.757f) - 3.1623e-3f);
 
-            if (lockMute)
-                boundSource.mute = mute;
-            else
-                boundSource.mute = baseMute || mute;
-
-            // Update 2D/3D audio
-            /*if (base2D)
+            if (useFakeMute)
             {
-                spatialCurve = boundSource.GetCustomCurve(AudioSourceCurveType.SpatialBlend);
-                if (!Utilities.IsValid(spatialCurve))
-                    spatialBlend = boundSource.spatialBlend;
-                boundSource.spatialBlend = 0;
-            }
-            else
-            {*/
-                if (Utilities.IsValid(spatialCurve))
-                    boundSource.SetCustomCurve(AudioSourceCurveType.SpatialBlend, spatialCurve);
+                boundSource.mute = false;
+                if (lockMute && mute)
+                    boundSource.volume = 0.002f;
+                else if (!lockMute && (baseMute || mute))
+                    boundSource.volume = 0.002f;
+            } else
+            {
+                if (lockMute)
+                    boundSource.mute = mute;
                 else
-                    boundSource.spatialBlend = spatialBlend;
-            //}
+                    boundSource.mute = baseMute || mute;
+            }
+
+            if (Utilities.IsValid(spatialCurve))
+                boundSource.SetCustomCurve(AudioSourceCurveType.SpatialBlend, spatialCurve);
+            else
+                boundSource.spatialBlend = spatialBlend;
 
         }
 
