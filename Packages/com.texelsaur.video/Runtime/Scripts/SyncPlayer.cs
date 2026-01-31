@@ -1312,32 +1312,23 @@ namespace Texel
 
             if (Networking.IsOwner(gameObject))
             {
-                if (syncFallback)
+                if (streamFallback || videoFallback)
                 {
-                    if (streamFallback)
-                    {
-                        if (_usingDebug) DebugLog("Retrying URL in stream mode");
+                    if (_usingDebug) DebugLog($"Retrying URL in {(streamFallback ? "stream" : "video")} mode");
 
-                        fallbackSourceOverride = VideoSource.VIDEO_SOURCE_AVPRO;
+                    bool isStreamFallback = streamFallback;
+                    fallbackSourceOverride = streamFallback ? VideoSource.VIDEO_SOURCE_AVPRO : VideoSource.VIDEO_SOURCE_UNITY;
+
+                    if (syncFallback)
+                    {
                         _PlayVideoAfterFallback(_syncUrl, _syncQuestUrl, _syncUrlSourceIndex, retryTimeout);
 
-                        streamFallback = true;
+                        // Restore state overwritten by play call
+                        streamFallback = isStreamFallback;
+                        videoFallback = !isStreamFallback;
                         playerState = VIDEO_STATE_ERROR;
+
                         _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
-
-                        return;
-                    }
-                    else if (videoFallback)
-                    {
-                        if (_usingDebug) DebugLog("Retrying URL in video mode");
-
-                        fallbackSourceOverride = VideoSource.VIDEO_SOURCE_UNITY;
-                        _PlayVideoAfterFallback(_syncUrl, _syncQuestUrl, _syncUrlSourceIndex, retryTimeout);
-
-                        videoFallback = true;
-                        playerState = VIDEO_STATE_ERROR;
-                        _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
-
                         return;
                     }
                 }
@@ -1368,8 +1359,20 @@ namespace Texel
             }
             else
             {
-                if (!syncFallback && (action == VideoErrorAction.Advance || action == VideoErrorAction.Retry))
-                    _StartVideoLoadDelay(retryTimeout);
+                // If syncFallback is active, do nothing and wait for owner to issue new play call on a given video source
+                if (!syncFallback)
+                {
+                    if (streamFallback || videoFallback)
+                    {
+                        if (_usingDebug) DebugLog($"Retrying URL in {(streamFallback ? "stream" : "video")} mode");
+
+                        bool isStreamFallback = streamFallback;
+                        fallbackSourceOverride = streamFallback ? VideoSource.VIDEO_SOURCE_AVPRO : VideoSource.VIDEO_SOURCE_UNITY;
+                    }
+
+                    if (action == VideoErrorAction.Advance || action == VideoErrorAction.Retry)
+                        _StartVideoLoadDelay(retryTimeout);
+                }
 
                 _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
 
