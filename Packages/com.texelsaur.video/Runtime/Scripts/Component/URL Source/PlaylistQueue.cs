@@ -853,7 +853,7 @@ namespace Texel
         {
             if (acl && !acl._LocalHasAccess())
                 return false;
-            if (!acl && videoPlayer && videoPlayer.SupportsOwnership && !videoPlayer._TakeControl())
+            if (!acl && videoPlayer && videoPlayer.SupportsOwnership && !videoPlayer._CanTakeControl())
                 return false;
 
             if (!Networking.IsOwner(gameObject))

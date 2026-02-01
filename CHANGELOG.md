@@ -2,6 +2,15 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.16]
+- Changed playback behavior so video keeps advancing if/while owner resyncs
+- Fixed various edge cases around sync playback, pause, resync, and playback zones
+- Fixed playback zones not handling pause case
+- Fixed unneeded ownership transfer of video player from playlists and queues
+- Fixed edge cases in how local offset ways applied
+- Updated AudioLink media integration to support one-loop state
+- Added Fake Mute option to audio channel
+
 ### [2.5.0-beta.15]
 - Added youtube fallback options to Video Manager
 - Added LocalOffset property to Sync Video Player API

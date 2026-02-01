@@ -90,6 +90,12 @@ namespace Texel
         float _syncVideoExpectedEndTime;
 
         [UdonSynced]
+        float _syncVideoTargetTime;
+
+        [UdonSynced]
+        float _syncPauseNetworkTime;
+
+        [UdonSynced]
         bool _syncLocked = true;
 
         [UdonSynced, FieldChangeCallback(nameof(_SyncRepeatMode))]
@@ -106,9 +112,9 @@ namespace Texel
         public VRCPlayerApi playerArg;
 
         float _lastVideoPosition = 0;
-        float _videoTargetTime = 0;
 
         bool _waitForSync;
+        bool _loadFromSync;
         bool _holdReadyState = false;
         bool _heldVideoReady = false;
         bool _skipAdvanceNextTrack = false;
@@ -391,7 +397,7 @@ namespace Texel
                 VRCPlayerApi currentOwner = Networking.GetOwner(gameObject);
                 if (trackedZoneTrigger)
                 {
-                    if (trackedZoneTrigger._PlayerInZone(currentOwner))
+                    if (!trackedZoneTrigger._PlayerInZone(currentOwner))
                         Networking.SetOwner(playerArg, gameObject);
                 } else if (playbackZoneMembership)
                 {
@@ -407,8 +413,9 @@ namespace Texel
                     // if there were still viewers in the playback zone
                     if (serverTime < _syncVideoExpectedEndTime)
                     {
-                        _videoTargetTime = serverTime - _syncVideoStartNetworkTime + localOffset;
-                        if (_usingDebug) DebugLog($"Playback enter: start at {_videoTargetTime}");
+                        //_videoTargetTime = serverTime - _syncVideoStartNetworkTime + localOffset;
+                        if (_usingDebug) DebugLog($"Playback enter: start at {_syncVideoTargetTime}");
+                        _loadFromSync = true;
                         _StartVideoLoad();
                         return;
                     }
@@ -416,7 +423,7 @@ namespace Texel
                     // Otherwise play next available track or stop, depending on queue/settings
                     if (Networking.IsOwner(playerArg, gameObject))
                     {
-                        if (_usingDebug) DebugLog($"Playback enter: is owner and track has ended");
+                        if (_usingDebug) DebugLog("Playback enter: is owner and track has ended");
                         _ConditionalPlayNext();
                         return;
                     }
@@ -505,16 +512,22 @@ namespace Texel
 
             _syncOwnerPaused = !_syncOwnerPaused;
 
+            float time = (float)Networking.GetServerTimeInSeconds();
             if (_syncOwnerPaused)
             {
-                float videoTime = videoMux.VideoTime;
-                _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - videoTime;
-                _syncVideoExpectedEndTime = _syncVideoStartNetworkTime + trackDuration;
-                _videoTargetTime = videoTime + localOffset;
+                _syncPauseNetworkTime = time;
                 videoMux._VideoPause();
             }
             else
-                videoMux._VideoPlay();
+            {
+                float pauseTime = time - _syncPauseNetworkTime;
+                _syncVideoStartNetworkTime += pauseTime;
+                if (seekableSource)
+                    _syncVideoExpectedEndTime += pauseTime;
+                _syncPauseNetworkTime = 0;
+
+                _PlayFromPause();
+            }
 
             _UpdatePlayerPaused(_syncOwnerPaused);
 
@@ -650,7 +663,8 @@ namespace Texel
                 RequestSerialization();
 
                 if (_videoReady)
-                    videoMux._VideoPlay();
+                    _PlayFromReady();
+                    //videoMux._VideoPlay();
             }
         }
 
@@ -773,17 +787,20 @@ namespace Texel
 
             _syncVideoStartNetworkTime = float.MaxValue;
             _syncVideoExpectedEndTime = 0;
+            _syncPauseNetworkTime = 0;
+            _syncVideoTargetTime = _ParseTimeFromUrl(urlStr);
             RequestSerialization();
 
-            _videoTargetTime = _ParseTimeFromUrl(urlStr) + localOffset;
             _UpdateLastUrl();
+
+            _loadFromSync = false;
 
             // Conditional player stop to try and avoid piling on AVPro at end of track
             // and maybe triggering bad things
             if (playerState == VIDEO_STATE_PLAYING && videoMux.VideoIsPlaying && seekableSource)
             {
                 float duration = videoMux.VideoDuration;
-                float remaining = videoMux.VideoTime;
+                float remaining = duration - videoMux.VideoTime;
                 if (remaining > 2)
                     videoMux._VideoStop();
             }
@@ -982,9 +999,9 @@ namespace Texel
             _UpdatePlayerState(VIDEO_STATE_STOPPED);
 
             videoMux._VideoStop();
-            _videoTargetTime = 0;
             _pendingLoadTime = 0;
             _videoReady = false;
+            _loadFromSync = false;
 
             if (currentUrlSource)
                 currentUrlSource._OnVideoStop();
@@ -993,6 +1010,8 @@ namespace Texel
             {
                 _syncVideoStartNetworkTime = 0;
                 //_syncVideoExpectedEndTime = 0;
+                _syncPauseNetworkTime = 0;
+                _syncVideoTargetTime = 0;
                 _syncOwnerPlaying = false;
                 _syncOwnerPaused = false;
                 _syncUrl = VRCUrl.Empty;
@@ -1031,11 +1050,28 @@ namespace Texel
                 currentUrlSource._OnVideoReady();
 
             _UpdateHandlers(EVENT_VIDEO_READY);
+            _PlayFromReady();
+        }
 
+        void _PlayFromReady()
+        {
             if (Networking.IsOwner(gameObject))
             {
                 if (_syncPlaybackNumber == _syncVideoNumber)
+                {
+                    if (!_loadFromSync)
+                    {
+                        _syncPauseNetworkTime = 0;
+                        _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _syncVideoTargetTime;
+                        if (seekableSource)
+                            _syncVideoExpectedEndTime = _syncVideoStartNetworkTime + trackDuration;
+                        else
+                            _syncVideoExpectedEndTime = 0;
+                    }
+
+                    _loadFromSync = false;
                     videoMux._VideoPlay();
+                }
             }
             else
             {
@@ -1047,6 +1083,11 @@ namespace Texel
             }
         }
 
+        void _PlayFromPause()
+        {
+            videoMux._VideoPlay();
+        }
+
         public void _OnVideoStart()
         {
             if (traceLogging) DebugTrace("Event OnVideoStart");
@@ -1055,51 +1096,47 @@ namespace Texel
 
             if (Networking.IsOwner(gameObject))
             {
-                //bool paused = _syncOwnerPaused;
-                //if (paused)
-                //    _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _currentPlayer.GetTime();
-                //else
-                _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - _videoTargetTime;
-                if (seekableSource)
-                    _syncVideoExpectedEndTime = _syncVideoStartNetworkTime + trackDuration;
-                else
-                    _syncVideoExpectedEndTime = 0;
-
                 _UpdatePlayerState(VIDEO_STATE_PLAYING);
-                _UpdatePlayerPaused(false);
 
                 _syncOwnerPlaying = true;
-                _syncOwnerPaused = false;
                 RequestSerialization();
 
-                //if (!paused)
                 if (seekableSource)
-                    videoMux._VideoSetTime(_videoTargetTime);
+                    videoMux._VideoSetTime(_GetTargetTime(localOffset));
 
                 if (currentUrlSource)
                     currentUrlSource._OnVideoStart();
 
                 SyncVideoImmediate();
+                if (_syncOwnerPaused)
+                    videoMux._VideoPause();
+
+                _UpdatePlayerPaused(_syncOwnerPaused);
             }
             else
             {
-                if (!_syncOwnerPlaying || _syncOwnerPaused)
+                if (!_syncOwnerPlaying)
                 {
                     // TODO: Owner bypass
                     videoMux._VideoPause();
                     _waitForSync = true;
-
-                    _UpdatePlayerPaused(_syncOwnerPaused);
                 }
                 else
                 {
                     _UpdatePlayerState(VIDEO_STATE_PLAYING);
 
+                    if (seekableSource)
+                        videoMux._VideoSetTime(_GetTargetTime(localOffset));
+
                     if (currentUrlSource)
                         currentUrlSource._OnVideoStart();
 
                     SyncVideoImmediate();
+                    if (_syncOwnerPaused)
+                        videoMux._VideoPause();
                 }
+
+                _UpdatePlayerPaused(_syncOwnerPaused);
             }
         }
 
@@ -1312,32 +1349,23 @@ namespace Texel
 
             if (Networking.IsOwner(gameObject))
             {
-                if (syncFallback)
+                if (streamFallback || videoFallback)
                 {
-                    if (streamFallback)
-                    {
-                        if (_usingDebug) DebugLog("Retrying URL in stream mode");
+                    if (_usingDebug) DebugLog($"Retrying URL in {(streamFallback ? "stream" : "video")} mode");
 
-                        fallbackSourceOverride = VideoSource.VIDEO_SOURCE_AVPRO;
+                    bool isStreamFallback = streamFallback;
+                    fallbackSourceOverride = streamFallback ? VideoSource.VIDEO_SOURCE_AVPRO : VideoSource.VIDEO_SOURCE_UNITY;
+
+                    if (syncFallback)
+                    {
                         _PlayVideoAfterFallback(_syncUrl, _syncQuestUrl, _syncUrlSourceIndex, retryTimeout);
 
-                        streamFallback = true;
+                        // Restore state overwritten by play call
+                        streamFallback = isStreamFallback;
+                        videoFallback = !isStreamFallback;
                         playerState = VIDEO_STATE_ERROR;
+
                         _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
-
-                        return;
-                    }
-                    else if (videoFallback)
-                    {
-                        if (_usingDebug) DebugLog("Retrying URL in video mode");
-
-                        fallbackSourceOverride = VideoSource.VIDEO_SOURCE_UNITY;
-                        _PlayVideoAfterFallback(_syncUrl, _syncQuestUrl, _syncUrlSourceIndex, retryTimeout);
-
-                        videoFallback = true;
-                        playerState = VIDEO_STATE_ERROR;
-                        _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
-
                         return;
                     }
                 }
@@ -1368,8 +1396,20 @@ namespace Texel
             }
             else
             {
-                if (!syncFallback && (action == VideoErrorAction.Advance || action == VideoErrorAction.Retry))
-                    _StartVideoLoadDelay(retryTimeout);
+                // If syncFallback is active, do nothing and wait for owner to issue new play call on a given video source
+                if (!syncFallback)
+                {
+                    if (streamFallback || videoFallback)
+                    {
+                        if (_usingDebug) DebugLog($"Retrying URL in {(streamFallback ? "stream" : "video")} mode");
+
+                        bool isStreamFallback = streamFallback;
+                        fallbackSourceOverride = streamFallback ? VideoSource.VIDEO_SOURCE_AVPRO : VideoSource.VIDEO_SOURCE_UNITY;
+                    }
+
+                    if (action == VideoErrorAction.Advance || action == VideoErrorAction.Retry)
+                        _StartVideoLoadDelay(retryTimeout);
+                }
 
                 _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
 
@@ -1493,7 +1533,8 @@ namespace Texel
                         SendCustomEventDelayedFrames("_StopVideo", 1);
                     else if (paused && !_syncOwnerPaused)
                     {
-                        videoMux._VideoPlay();
+                        //videoMux._VideoPlay();
+                        _PlayFromPause();
                         _UpdatePlayerPaused(false);
                     }
                     else if (playerState == VIDEO_STATE_PLAYING && _syncOwnerPaused)
@@ -1569,12 +1610,6 @@ namespace Texel
                         _UpdateTracking(position, target, videoMux.VideoDuration);
                     }
                 }
-
-                if (_syncOwnerPaused)
-                {
-                    _syncVideoStartNetworkTime = (float)Networking.GetServerTimeInSeconds() - videoTime;
-                    _syncVideoExpectedEndTime = _syncVideoStartNetworkTime + trackDuration;
-                }
             }
 
 
@@ -1593,7 +1628,7 @@ namespace Texel
             _UpdatePlayerState(VIDEO_STATE_PLAYING);
 
             _waitForSync = false;
-            videoMux._VideoPlay();
+            _PlayFromReady();
 
             SyncVideoImmediate();
         }
@@ -1632,15 +1667,14 @@ namespace Texel
 
             float duration = videoMux.VideoDuration;
             float current = videoMux.VideoTime;
-            float serverTime = (float)Networking.GetServerTimeInSeconds(); // local sync offset
-            float offsetTime = Mathf.Clamp(serverTime - _syncVideoStartNetworkTime, 0f, duration);
+            float offsetTime = _GetTargetTime(0);
 
             // If we're almost at the end, don't sync to avoid possible contention with AVPro
             if (duration - current < 2)
                 return;
 
             // Don't need to sync if we're within threshold
-            float offset = current - offsetTime;
+            float offset = current - localOffset - offsetTime;
             if (Mathf.Abs(offset) < syncThreshold)
                 return;
 
@@ -1662,14 +1696,18 @@ namespace Texel
                 previousTarget = offsetTime;
 
             previousCurrent = current;
-            videoMux._VideoSetTime(offsetTime);
+            videoMux._VideoSetTime(offsetTime + localOffset);
         }
 
-        float GetTargetTime()
+        float _GetTargetTime(float offset)
         {
             float duration = videoMux.VideoDuration;
             float serverTime = (float)Networking.GetServerTimeInSeconds();
-            return Mathf.Clamp(serverTime - _syncVideoStartNetworkTime + localOffset, 0f, duration);
+            float startTime = _syncVideoStartNetworkTime;
+            if (_syncOwnerPaused)
+                startTime += serverTime - _syncPauseNetworkTime;
+
+            return Mathf.Clamp(serverTime - startTime + offset, 0f, duration);
         }
 
         public void _ForceResync()
@@ -1682,21 +1720,8 @@ namespace Texel
             bool isOwner = Networking.IsOwner(gameObject);
             if (isOwner)
             {
-                if (seekableSource)
-                {
-                    float startTime = _videoTargetTime;
-                    bool isPlaying = usePreviousSource ? videoMux.PreviousStatePlaying : videoMux.VideoIsPlaying;
-                    if (isPlaying)
-                    {
-                        float videoTime = usePreviousSource ? videoMux.PreviousStateTime : videoMux.VideoTime;
-                        startTime = Mathf.Max(videoTime, GetTargetTime());
-                    }
-
-                    _StartVideoLoad();
-                    _videoTargetTime = startTime;
-                }
-                else
-                    _StartVideoLoad();
+                _loadFromSync = true;
+                _StartVideoLoad();
 
                 return;
             }
@@ -1861,7 +1886,7 @@ namespace Texel
         {
             VRCPlayerApi owner = Networking.GetOwner(gameObject);
             debugState._SetValue("isQuest", IsQuest.ToString());
-            debugState._SetValue("owner", Utilities.IsValid(owner) ? owner.displayName : "--");
+            debugState._SetValue("owner", Utilities.IsValid(owner) ? $"{owner.displayName} [{owner.playerId}]" : "--");
             debugState._SetValue("currentUrlSource", Utilities.IsValid(currentUrlSource) ? currentUrlSource.ToString() : "--");
             debugState._SetValue("syncVideoSource", _syncVideoSource.ToString());
             debugState._SetValue("syncVideoSourceOverride", _syncVideoSourceOverride.ToString());
@@ -1874,6 +1899,7 @@ namespace Texel
             debugState._SetValue("syncOwnerPaused", _syncOwnerPaused.ToString());
             debugState._SetValue("syncVideoStartNetworkTime", _syncVideoStartNetworkTime.ToString());
             debugState._SetValue("syncVideoExpectedEndTime", _syncVideoExpectedEndTime.ToString());
+            debugState._SetValue("syncPauseNetworkTime", _syncPauseNetworkTime.ToString());
             debugState._SetValue("localOffset", localOffset.ToString());
             debugState._SetValue("syncLocked", _syncLocked.ToString());
             debugState._SetValue("syncHoldVideos", _syncHoldVideos.ToString());
@@ -1881,7 +1907,7 @@ namespace Texel
             debugState._SetValue("playerState", playerState.ToString());
             debugState._SetValue("lastErrorCode", lastErrorCode.ToString());
             debugState._SetValue("lastVideoPosition", _lastVideoPosition.ToString());
-            debugState._SetValue("videoTargetTime", _videoTargetTime.ToString());
+            debugState._SetValue("syncVideoTargetTime", _syncVideoTargetTime.ToString());
             debugState._SetValue("waitForSync", _waitForSync.ToString());
             debugState._SetValue("holdReadyState", _holdReadyState.ToString());
             debugState._SetValue("heldVideoReady", _heldVideoReady.ToString());
