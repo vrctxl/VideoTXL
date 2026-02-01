@@ -267,10 +267,13 @@ namespace Texel
                     break;
             }
 
-            if (repeatPlaylist)
-                audioLink.SetMediaLoop(MediaLoop.Loop);
-            else
+            TXLRepeatMode mode = RepeatMode;
+            if (mode == TXLRepeatMode.None)
                 audioLink.SetMediaLoop(MediaLoop.None);
+            else if (mode == TXLRepeatMode.Single)
+                audioLink.SetMediaLoop(MediaLoop.LoopOne);
+            else
+                audioLink.SetMediaLoop(MediaLoop.Loop);
         }
 
         public void _AudioLinkOnVideoTrackingUpdate()

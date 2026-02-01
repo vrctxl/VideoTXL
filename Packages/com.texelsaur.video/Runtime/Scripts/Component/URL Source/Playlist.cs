@@ -679,7 +679,7 @@ namespace Texel
 
         bool _TakeControl()
         {
-            if (videoPlayer && videoPlayer.SupportsOwnership && !videoPlayer._TakeControl())
+            if (videoPlayer && videoPlayer.SupportsOwnership && !videoPlayer._CanTakeControl())
                 return false;
 
             if (!Networking.IsOwner(gameObject))
