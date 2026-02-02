@@ -26,6 +26,7 @@ namespace Texel
         [Obsolete("Use trackedPlaybackZone")]
         public ZoneMembership playbackZoneMembership;
         [SerializeField] internal TrackedZoneTrigger trackedZoneTrigger;
+        [SerializeField] internal TrackedZoneTrigger[] exclusionZones;
 
         public VRCUrl defaultUrl;
         public VRCUrl defaultQuestUrl;
@@ -128,6 +129,8 @@ namespace Texel
         bool _hasAccessControl = false;
         bool _hasSustainZone = false;
         bool _inSustainZone = false;
+        bool _inExclusionZone = false;
+        bool _localEnabled = true;
         bool _initDeserialize = false;
         bool _usingDebug = false;
 
@@ -189,6 +192,21 @@ namespace Texel
             }
             else
                 _inSustainZone = true;
+
+            if (exclusionZones.Length > 0)
+            {
+                for (int i = 0; i < exclusionZones.Length; i++)
+                {
+                    TrackedZoneTrigger zone = exclusionZones[i];
+                    if (zone)
+                    {
+                        if (Utilities.IsValid(Networking.LocalPlayer))
+                            _inExclusionZone |= zone._PlayerInZone(Networking.LocalPlayer);
+                        zone._Register(ZoneTrigger.EVENT_PLAYER_ENTER, this, nameof(_OnExclusionZoneEnterExit), nameof(playerArg));
+                        zone._Register(ZoneTrigger.EVENT_PLAYER_LEAVE, this, nameof(_OnExclusionZoneEnterExit), nameof(playerArg));
+                    }
+                }
+            }
 
             if (Utilities.IsValid(urlRemapper))
                 urlRemapper._SetPlatform(IsQuest ? GamePlatform.Quest : GamePlatform.PC);
@@ -358,6 +376,29 @@ namespace Texel
             }
         }
 
+        public bool LocalPlaybackEnabled
+        {
+            get { return _localEnabled; }
+            set
+            {
+                bool curValid = LocalPlaybackValid;
+                _localEnabled = value;
+
+                if (curValid != LocalPlaybackValid)
+                {
+                    if (curValid)
+                        _LocalPlaybackStop();
+                    else
+                        _LocalPlaybackStart();
+                }
+            }
+        }
+
+        public bool LocalPlaybackValid
+        {
+            get { return _localEnabled && !_inExclusionZone && _inSustainZone; }
+        }
+
         public bool HoldVideos
         {
             get { return _syncHoldVideos; }
@@ -392,45 +433,16 @@ namespace Texel
 
             if (playerArg == Networking.LocalPlayer)
             {
+                bool curValid = LocalPlaybackValid;
                 _inSustainZone = true;
 
-                VRCPlayerApi currentOwner = Networking.GetOwner(gameObject);
-                if (trackedZoneTrigger)
+                if (curValid != LocalPlaybackValid)
                 {
-                    if (!trackedZoneTrigger._PlayerInZone(currentOwner))
-                        Networking.SetOwner(playerArg, gameObject);
-                } else if (playbackZoneMembership)
-                {
-                    if (!playbackZoneMembership._ContainsPlayer(currentOwner))
-                        Networking.SetOwner(playerArg, gameObject);
+                    if (curValid)
+                        _LocalPlaybackStop();
+                    else
+                        _LocalPlaybackStart();
                 }
-
-                if (_syncVideoExpectedEndTime != 0)
-                {
-                    float serverTime = (float)Networking.GetServerTimeInSeconds();
-
-                    // If time hasn't reached theoretical end of track, set starting time to where it would have been
-                    // if there were still viewers in the playback zone
-                    if (serverTime < _syncVideoExpectedEndTime)
-                    {
-                        //_videoTargetTime = serverTime - _syncVideoStartNetworkTime + localOffset;
-                        if (_usingDebug) DebugLog($"Playback enter: start at {_syncVideoTargetTime}");
-                        _loadFromSync = true;
-                        _StartVideoLoad();
-                        return;
-                    }
-
-                    // Otherwise play next available track or stop, depending on queue/settings
-                    if (Networking.IsOwner(playerArg, gameObject))
-                    {
-                        if (_usingDebug) DebugLog("Playback enter: is owner and track has ended");
-                        _ConditionalPlayNext();
-                        return;
-                    }
-                }
-
-                if (_usingDebug) DebugLog("Playback enter: no expected end time set");
-                _StartVideoLoad();
             }
         }
 
@@ -440,37 +452,121 @@ namespace Texel
 
             if (playerArg == Networking.LocalPlayer)
             {
+                bool curValid = LocalPlaybackValid;
                 _inSustainZone = false;
 
-                if (Networking.IsOwner(gameObject))
+                if (curValid != LocalPlaybackValid)
                 {
-                    if (trackedZoneTrigger)
-                    {
-                        if (trackedZoneTrigger.TrackedPlayerCount > 0)
-                        {
-                            DataList tracked = trackedZoneTrigger._GetTrackedPlayers();
-                            if (tracked.TryGetValue(0, TokenType.Reference, out DataToken playerToken))
-                            {
-                                VRCPlayerApi nextPlayer = (VRCPlayerApi)playerToken.Reference;
-                                if (Utilities.IsValid(nextPlayer) && nextPlayer.IsValid())
-                                    Networking.SetOwner(nextPlayer, gameObject);
-                            }
-                        }
-                    }
-                    else if (playbackZoneMembership)
-                    {
-                        if (playbackZoneMembership._PlayerCount() > 0)
-                        {
-                            VRCPlayerApi nextPlayer = playbackZoneMembership._GetPlayer(0);
-                            if (Utilities.IsValid(nextPlayer) && nextPlayer.IsValid())
-                                Networking.SetOwner(nextPlayer, gameObject);
-                        }
-                    }
+                    if (curValid)
+                        _LocalPlaybackStop();
+                    else
+                        _LocalPlaybackStart();
                 }
 
                 videoMux._VideoStop();
                 _UpdatePlayerState(VIDEO_STATE_STOPPED);
             }
+        }
+
+        public void _OnExclusionZoneEnterExit()
+        {
+            if (traceLogging) DebugTrace("Event OnExclusionZoneEnterExit");
+
+            if (playerArg != Networking.LocalPlayer)
+                return;
+
+            bool curValid = LocalPlaybackValid;
+
+            _inExclusionZone = false;
+            for (int i = 0; i < exclusionZones.Length; i++)
+            {
+                TrackedZoneTrigger zone = exclusionZones[i];
+                if (zone)
+                {
+                    if (Utilities.IsValid(Networking.LocalPlayer))
+                        _inExclusionZone |= zone._PlayerInZone(Networking.LocalPlayer);
+                }
+            }
+
+            if (curValid != LocalPlaybackValid)
+            {
+                if (curValid)
+                    _LocalPlaybackStop();
+                else
+                    _LocalPlaybackStart();
+            }
+        }
+
+        public void _LocalPlaybackStart()
+        {
+            // Try to claim ownership if existing owner is not active
+            VRCPlayerApi currentOwner = Networking.GetOwner(gameObject);
+            if (exclusionZones.Length > 0)
+            {
+                for (int i = 0; i < exclusionZones.Length; i++)
+                {
+                    TrackedZoneTrigger zone = exclusionZones[i];
+                    if (zone && zone._PlayerInZone(currentOwner))
+                    {
+                        Networking.SetOwner(playerArg, gameObject);
+                        break;
+                    }
+                }
+            }
+            else if (trackedZoneTrigger && !trackedZoneTrigger._PlayerInZone(currentOwner))
+                Networking.SetOwner(playerArg, gameObject);
+
+            // Locally start video if it hasn't reached its expected end time
+            if (_syncVideoExpectedEndTime != 0)
+            {
+                float serverTime = (float)Networking.GetServerTimeInSeconds();
+
+                // If time hasn't reached theoretical end of track, set starting time to where it would have been
+                // if there were still viewers in the playback zone
+                if (serverTime < _syncVideoExpectedEndTime)
+                {
+                    //_videoTargetTime = serverTime - _syncVideoStartNetworkTime + localOffset;
+                    if (_usingDebug) DebugLog($"Local playback start: start at {_syncVideoTargetTime}");
+                    _loadFromSync = true;
+                    _StartVideoLoad();
+                    return;
+                }
+
+                // Otherwise play next available track or stop, depending on queue/settings
+                if (Networking.IsOwner(playerArg, gameObject))
+                {
+                    if (_usingDebug) DebugLog("Local playback start: is owner and track has ended");
+                    _ConditionalPlayNext();
+                    return;
+                }
+            }
+
+            if (_usingDebug) DebugLog("Local playback start: no expected end time set");
+            _StartVideoLoad();
+        }
+
+        public void _LocalPlaybackStop()
+        {
+            // Try to transfer ownership to a still active player
+            if (Networking.IsOwner(gameObject))
+            {
+                if (trackedZoneTrigger)
+                {
+                    if (trackedZoneTrigger.TrackedPlayerCount > 0)
+                    {
+                        DataList tracked = trackedZoneTrigger._GetTrackedPlayers();
+                        if (tracked.TryGetValue(0, TokenType.Reference, out DataToken playerToken))
+                        {
+                            VRCPlayerApi nextPlayer = (VRCPlayerApi)playerToken.Reference;
+                            if (Utilities.IsValid(nextPlayer) && nextPlayer.IsValid())
+                                Networking.SetOwner(nextPlayer, gameObject);
+                        }
+                    }
+                }
+            }
+
+            videoMux._VideoStop();
+            _UpdatePlayerState(VIDEO_STATE_STOPPED);
         }
 
         public override void _ValidateVideoSources()
@@ -1023,7 +1119,7 @@ namespace Texel
         {
             if (traceLogging) DebugTrace("Event OnVideoReady");
 
-            if (!_inSustainZone)
+            if (!LocalPlaybackValid)
             {
                 videoMux._VideoStop();
                 _UpdatePlayerState(VIDEO_STATE_STOPPED);
@@ -1428,7 +1524,7 @@ namespace Texel
             playerSource = (short)videoMux.ActiveSourceType;
             _UpdateHandlers(EVENT_VIDEO_SOURCE_CHANGE);
 
-            if (!_suppressSourceUpdate && _inSustainZone)
+            if (!_suppressSourceUpdate && LocalPlaybackValid)
                 _ForceResync(true);
         }
 
@@ -1444,7 +1540,7 @@ namespace Texel
             {
                 urlRemapper._SetAudioProfile(audioManager.SelectedChannelGroup);
 
-                if (!_suppressSourceUpdate && _inSustainZone && urlRemapper._ValidRemapped(_preResolvedUrl, _resolvedUrl))
+                if (!_suppressSourceUpdate && LocalPlaybackValid && urlRemapper._ValidRemapped(_preResolvedUrl, _resolvedUrl))
                     _ForceResync(false);
             }
         }
@@ -1527,7 +1623,7 @@ namespace Texel
                 if (_syncPlaybackNumber == _syncVideoNumber && _videoReady)
                     _waitForSync = true;
 
-                if (_inSustainZone)
+                if (LocalPlaybackValid)
                 {
                     if (playerState == VIDEO_STATE_PLAYING && !_syncOwnerPlaying)
                         SendCustomEventDelayedFrames("_StopVideo", 1);
@@ -1559,7 +1655,7 @@ namespace Texel
             _loadedVideoNumber = _syncVideoNumber;
             _UpdateLastUrl();
 
-            if (_inSustainZone)
+            if (LocalPlaybackValid)
             {
                 if (_usingDebug) DebugLog("Starting video load from sync");
                 _StartVideoLoad();
@@ -1584,7 +1680,7 @@ namespace Texel
 
         void Update()
         {
-            if (!_inSustainZone)
+            if (!LocalPlaybackValid)
                 return;
 
             bool isOwner = Networking.IsOwner(gameObject);
@@ -1919,6 +2015,8 @@ namespace Texel
             debugState._SetValue("hasAccessControl", _hasAccessControl.ToString());
             debugState._SetValue("hasSustainZone", _hasSustainZone.ToString());
             debugState._SetValue("inSustainZone", _inSustainZone.ToString());
+            debugState._SetValue("inExclusionZone", _inExclusionZone.ToString());
+            debugState._SetValue("localEnabled", _localEnabled.ToString());
         }
     }
 }

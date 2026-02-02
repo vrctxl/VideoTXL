@@ -26,6 +26,7 @@ namespace Texel
         SerializedProperty eventLoggingProperty;
         SerializedProperty traceLoggingProperty;
         SerializedProperty playbackZoneProperty;
+        SerializedProperty exclusionZonesProperty;
         SerializedProperty runBuildHooksProperty;
 
         SerializedProperty defaultUrlProperty;
@@ -63,6 +64,7 @@ namespace Texel
             eventLoggingProperty = serializedObject.FindProperty(nameof(SyncPlayer.eventLogging));
             traceLoggingProperty = serializedObject.FindProperty(nameof(SyncPlayer.traceLogging));
             playbackZoneProperty = serializedObject.FindProperty(nameof(SyncPlayer.trackedZoneTrigger));
+            exclusionZonesProperty = serializedObject.FindProperty(nameof(SyncPlayer.exclusionZones));
             runBuildHooksProperty = serializedObject.FindProperty(nameof(SyncPlayer.runBuildHooks));
 
             defaultUrlProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultUrl));
@@ -156,6 +158,8 @@ namespace Texel
                 VideoTxlManager.AddAccessControlToScene(true);
             if (TXLGUI.DrawObjectFieldWithAdd(playbackZoneProperty, new GUIContent("Playback Zone", "Optional tracked trigger zone the player must be in to sustain playback.  Disables playing audio on world load."), new GUIContent("+", "Create new Tracked Trigger Zone")))
                 VideoTxlManager.AddSyncPlaybackZoneToScene(true);
+
+            EditorGUILayout.PropertyField(exclusionZonesProperty, new GUIContent("Exclusion Zones", "Optional one or more tracked tricker zones that will locally halt playback when the player enters them."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Default Options", EditorStyles.boldLabel);
