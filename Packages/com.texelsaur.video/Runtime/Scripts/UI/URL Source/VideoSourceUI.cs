@@ -1,9 +1,6 @@
 ﻿
 using UdonSharp;
 using UnityEngine;
-using VRC.SDKBase;
-using VRC.Udon;
-using static Codice.CM.WorkspaceServer.WorkspaceTreeDataStore;
 
 namespace Texel
 {
