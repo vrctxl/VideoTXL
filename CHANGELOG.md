@@ -2,6 +2,16 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.18]
+- Added AddSource and RemoveSource methods to SourceManager
+- Added EVENT_SOURCE_ADDED and EVENT_SOURCE_REMOVED methods to SourceManager
+
+### [2.5.0-beta.17]
+- Requires CommonTXL 1.8.0 or later
+- Added exclusion zones property to SyncVideoPlayer
+- Added LocalPlaybackEnabled property to SyncVideoPlayer to control local playback
+- Added LocalPlaybackValid property to SyncVideoPlayer to check local playback
+
 ### [2.5.0-beta.16]
 - Changed playback behavior so video keeps advancing if/while owner resyncs
 - Fixed various edge cases around sync playback, pause, resync, and playback zones

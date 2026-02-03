@@ -3,6 +3,7 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 using VRC.Udon;
+using static Codice.CM.WorkspaceServer.WorkspaceTreeDataStore;
 
 namespace Texel
 {
@@ -43,12 +44,44 @@ namespace Texel
                 sourceTemplates = new VideoSourceUIBase[0];
 
             boundSourceManager = sourceManager;
+            boundSourceManager._Register(SourceManager.EVENT_SOURCE_ADDED, this, nameof(_InternalOnSourceAddRemove));
+            boundSourceManager._Register(SourceManager.EVENT_SOURCE_REMOVED, this, nameof(_InternalOnSourceAddRemove));
 
+            _Rebuild();
+        }
+
+        public void _InternalOnSourceAddRemove()
+        {
+            _Rebuild();
+        }
+
+        public void _Rebuild()
+        {
             contentPanels = new GameObject[boundSourceManager.Count];
             contentButtons = new VideoSourceUIButton[boundSourceManager.Count];
 
             int firstTemplateSource = -1;
-            
+
+            if (buttonRoot)
+            {
+                while (buttonRoot.transform.childCount > 0)
+                {
+                    var child = buttonRoot.transform.GetChild(0);
+                    child.parent = null;
+                    Destroy(child.gameObject);
+                }
+            }
+
+            if (contentRoot)
+            {
+                while (contentRoot.transform.childCount > 0)
+                {
+                    var child = contentRoot.transform.GetChild(0);
+                    child.parent = null;
+                    Destroy(child.gameObject);
+                }
+            }
+
             for (int i = 0; i < boundSourceManager.Count; i++)
             {
                 VideoUrlSource source = boundSourceManager._GetSource(i);
@@ -71,7 +104,8 @@ namespace Texel
                 if (firstTemplateSource == -1)
                     firstTemplateSource = i;
 
-                if (buttonRoot && buttonTemplate) {
+                if (buttonRoot && buttonTemplate)
+                {
                     GameObject button = Instantiate(buttonTemplate);
 
                     VideoSourceUIButton script = button.GetComponent<VideoSourceUIButton>();
