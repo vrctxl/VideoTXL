@@ -21,8 +21,6 @@ namespace Texel
         [SerializeField] internal bool eventLogging = false;
         [SerializeField] internal bool lowLevelLogging = false;
 
-        private int nextSourceIndex = 0;
-
         private int readySourceIndex;
         private VRCUrl readyUrl;
         private VRCUrl readyQuestUrl;
@@ -48,8 +46,8 @@ namespace Texel
             _ResetReady();
 
             sources = (VideoUrlSource[])UtilityTxl.ArrayCompact(sources);
-            foreach (VideoUrlSource source in sources)
-                source._SetSourceManager(this, nextSourceIndex++);
+            for (int i = 0; i < sources.Length; i++)
+                sources[i]._SetSourceManager(this, i);
 
             if (eventLogging)
                 eventDebugLog = debugLog;
@@ -63,7 +61,7 @@ namespace Texel
             _UpdateHandlers(EVENT_BIND_VIDEOPLAYER);
         }
 
-        public bool _AddSource(VideoUrlSource source)
+        public bool _AddSource(VideoUrlSource source, int atIndex = -1)
         {
             if (!source)
                 return false;
@@ -75,7 +73,14 @@ namespace Texel
             }
 
             sources = (VideoUrlSource[])UtilityTxl.ArrayAddElement(sources, source, source.GetType());
-            source._SetSourceManager(this, nextSourceIndex++);
+
+            if (atIndex < 0)
+                atIndex = sources.Length - 1;
+
+            for (int i = sources.Length - 2; i >= atIndex; i--)
+                sources[i]._SetSourceManager(this, i + 1);
+
+            source._SetSourceManager(this, atIndex);
 
             if (videoPlayer)
                 source._SetVideoPlayer(videoPlayer);
