@@ -15,17 +15,21 @@ namespace Texel
         [HideInInspector] public int track = 0;
 
         public Text trackNoText;
-        public Text selectedText;
-        public Text unselectedText;
+        public Text titleText;
         public Text urlText;
         public Image tracker;
         public Image trackerFill;
         public Button playButton;
         public Button addQueueButton;
 
+        public Color selectedActiveColor;
+        public Color selectedInactiveColor;
+        public Color unselectedColor;
+
         string title;
         string url;
         bool selected;
+        bool playback;
         float trackProgress;
 
         Image playImage;
@@ -62,19 +66,34 @@ namespace Texel
             set
             {
                 selected = value;
+                playback = value;
 
-                if (Utilities.IsValid(selectedText))
-                    selectedText.gameObject.SetActive(selected);
-                if (Utilities.IsValid(unselectedText))
-                    unselectedText.gameObject.SetActive(!selected);
+                _UpdateRow();
+            }
+        }
 
-                if (Utilities.IsValid(tracker))
-                    tracker.gameObject.SetActive(selected);
-                if (Utilities.IsValid(trackerFill))
-                {
-                    trackerFill.gameObject.SetActive(selected);
-                    trackerFill.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 0);
-                }
+        public bool Playback
+        {
+            get { return playback; }
+            set
+            {
+                playback = value;
+
+                _UpdateRow();
+            }
+        }
+
+        void _UpdateRow()
+        {
+            if (Utilities.IsValid(titleText))
+                titleText.color = selected ? (playback ? selectedActiveColor : selectedInactiveColor) : unselectedColor;
+
+            if (Utilities.IsValid(tracker))
+                tracker.gameObject.SetActive(selected && playback);
+            if (Utilities.IsValid(trackerFill))
+            {
+                trackerFill.gameObject.SetActive(selected && playback);
+                trackerFill.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 0);
             }
         }
 
@@ -97,10 +116,8 @@ namespace Texel
             {
                 title = value;
 
-                if (Utilities.IsValid(selectedText))
-                    selectedText.text = title;
-                if (Utilities.IsValid(unselectedText))
-                    unselectedText.text = title;
+                if (Utilities.IsValid(titleText))
+                    titleText.text = title;
             }
         }
 

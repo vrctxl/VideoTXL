@@ -308,7 +308,7 @@ namespace Texel
             _UpdateHandlers(EVENT_TRACK_CHANGE, sourceIndex);
         }
 
-        public void _OnSourceInterrupt(int sourceIndex)
+        protected internal void _OnSourceInterrupt(int sourceIndex)
         {
             if (sourceIndex < 0 || sourceIndex >= sources.Length)
                 return;
@@ -331,11 +331,30 @@ namespace Texel
             if (sourceIndex < 0 || sourceIndex >= sources.Length)
                 return;
 
+            VideoUrlSource source = sources[sourceIndex];
+            if (!source)
+                return;
+
             readySourceIndex = sourceIndex;
             readyUrl = sources[sourceIndex]._GetCurrentUrl();
             readyQuestUrl = sources[sourceIndex]._GetCurrentQuestUrl();
 
             _UpdateHandlers(EVENT_URL_READY);
+
+            if (source.ResetOtherSources)
+            {
+                for (int i = 0; i < sources.Length; i++)
+                {
+                    if (i == sourceIndex)
+                        continue;
+
+                    VideoUrlSource other = sources[i];
+                    if (!other)
+                        continue;
+
+                    other._ResetSource();
+                }
+            }
         }
 
         void _DebugLog(string message)

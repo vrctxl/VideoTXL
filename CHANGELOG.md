@@ -10,6 +10,9 @@
 - Removed legacy component registration for AudioManager
 - Deprecated AudioManager field on PlayerConrols and LocalControlsSlim, value will be taken from video player
 - PlayerControls and LocalControlsSlim will unhook their events when disabled in the hierarchy
+- Added interruptible field to Playlist
+- Playing playlist tracks will now reset all other playlist sources to the end, preventing them from playing in usual source order
+- Playlist UI will dim active track if another source is playing, like a queue, and it was not reset
 
 ### [2.5.0-beta.17]
 - Requires CommonTXL 1.8.0 or later

@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using VRC.SDKBase;
 using VRC.Udon;
+using static PlasticPipe.Server.MonitorStats;
 
 [assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
 
@@ -96,9 +97,15 @@ namespace Texel
 
             _RegisterListeners();
 
-            if (playlist && lastListChangeSerial < playlist.ListChangeSerial) {
-                lastListChangeSerial = playlist.ListChangeSerial;
-                _RebuildList();
+            if (playlist)
+            {
+                if (lastListChangeSerial < playlist.ListChangeSerial)
+                {
+                    lastListChangeSerial = playlist.ListChangeSerial;
+                    _RebuildList();
+                }
+                else if (lastSelectedEntry != playlist.CurrentIndex)
+                    _OnTrackChange();
             }
         }
 
@@ -206,8 +213,6 @@ namespace Texel
 
         public void _OnListChange()
         {
-            Debug.Log("TXL Event _OnListChange");
-
             if (lastListChangeSerial < playlist.ListChangeSerial)
                 _RebuildList();
 
@@ -245,7 +250,19 @@ namespace Texel
         public void _OnVideoInfo()
         {
             if (backingVideoPlayer && backingVideoPlayer.currentUrlSource != playlist)
-                _UnselectLastEntry();
+            {
+                if (lastSelectedEntry > -1 && lastSelectedEntry < entries.Length)
+                {
+                    PlaylistUIEntry entry = entries[lastSelectedEntry];
+                    if (Utilities.IsValid(entry))
+                    {
+                        entry.Playback = false;
+                        if (!playlist._CanMoveNext())
+                            entry.Selected = false;
+                    }
+                }
+            }
+            //_UnselectLastEntry();
         }
 
         public void _OnVideoTrackingUpdate()

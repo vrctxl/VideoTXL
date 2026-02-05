@@ -158,6 +158,12 @@ namespace Texel
             set { }
         }
 
+        public virtual bool ResetOtherSources
+        {
+            get { return false; }
+            set { }
+        }
+
         public virtual VideoDisplayOverride DisplayOverride
         {
             get { return overrideDisplay; }
@@ -225,6 +231,8 @@ namespace Texel
         {
             return false;
         }
+
+        public virtual void _ResetSource() { }
 
         public virtual void _OnVideoStop() 
         {

@@ -30,6 +30,8 @@ namespace Texel
         public bool immediate = false;
         [Tooltip("Resume playing from the playlist after a manually loaded URL is finished.")]
         public bool resumeAfterLoad = false;
+        [Tooltip("Allows currently playing track to be interrupted by sources, such as queues when a track is queued.")]
+        [SerializeField] internal bool interruptible = false;
 
         [Tooltip("Optional catalog to sync load playlist data from")]
         public PlaylistCatalog playlistCatalog;
@@ -206,7 +208,7 @@ namespace Texel
 
         public override bool IsReady
         {
-            get { return syncEnabled && trackCount > 0 && syncCurrentIndex >= 0; }
+            get { return syncEnabled && syncCurrentIndex >= 0 && syncCurrentIndex < trackCount; }
         }
 
         public PlaylistQueue TargetQueue
@@ -234,7 +236,10 @@ namespace Texel
             if (trackCatalogMode || trackCount == 0)
                 return false;
 
-            return CurrentIndex < trackCount - 1 || _Repeats();
+            if (_Repeats())
+                return CurrentIndex < trackCount;
+            else
+                return CurrentIndex < trackCount - 1;
         }
 
         public override bool _CanMovePrev()
@@ -455,6 +460,16 @@ namespace Texel
             get { return resumeAfterLoad; }
         }
 
+        public override bool Interruptable
+        {
+            get { return interruptible; }
+        }
+
+        public override bool ResetOtherSources
+        {
+            get { return true; }
+        }
+
         public override bool _MoveNext()
         {
             if (!_TakeControl())
@@ -462,24 +477,25 @@ namespace Texel
 
             if (!trackCatalogMode && CurrentIndex < playlist.Length - 1)
                 CurrentIndex += 1;
-            else if (!trackCatalogMode && _Repeats())
+            else if (!trackCatalogMode && _Repeats() && CurrentIndex <= trackCount)
                 CurrentIndex = 0;
             else
-                CurrentIndex = (short)-1;
+                CurrentIndex = (short)(trackCount + 1);
 
             CurrentIndexSerial += 1;
 
             RequestSerialization();
 
+            bool result = CurrentIndex >= 0 && CurrentIndex < playlist.Length;
             if (_usingDebug)
             {
-                if (CurrentIndex >= 0)
+                if (result)
                     DebugLog($"Move next track {CurrentIndex}");
                 else
                     DebugLog($"Playlist completed");
             }
 
-            return CurrentIndex >= 0;
+            return result;
         }
 
         public override bool _MovePrev()
@@ -545,10 +561,25 @@ namespace Texel
             return CurrentIndex >= 0;
         }
 
+        public override void _ResetSource()
+        {
+            if (CurrentIndex == trackCount)
+                return;
+            if (!_TakeControl())
+                return;
+
+            CurrentIndex = (short)(trackCount + 1);
+            CurrentIndexSerial += 1;
+
+            if (_usingDebug) DebugLog("Playlist complete");
+
+            RequestSerialization();
+        }
+
         public override VRCUrl _GetCurrentUrl()
         {
             int index = _TrackIndex(CurrentIndex);
-            if (CurrentIndex < 0 || !syncEnabled)
+            if (index < 0 || !syncEnabled)
                 return VRCUrl.Empty;
 
             return playlist[index];
