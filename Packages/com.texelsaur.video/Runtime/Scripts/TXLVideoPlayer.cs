@@ -50,7 +50,9 @@ namespace Texel
         public const int EVENT_UNBIND_VIDEOMANAGER = 7;
         public const int EVENT_VIDEO_SOURCE_CHANGE = 8;
         public const int EVENT_POSTINIT_DONE = 9;
-        protected const int EVENT_COUNT = 10;
+        public const int EVENT_BIND_AUDIOMANAGER = 10;
+        public const int EVENT_UNBIND_AUDIOMANAGER = 11;
+        protected const int EVENT_COUNT = 12;
 
         public const int VIDEO_STATE_STOPPED = 0;
         public const int VIDEO_STATE_LOADING = 1;
@@ -200,6 +202,9 @@ namespace Texel
 
         public virtual void _SetAudioManager(AudioManager manager)
         {
+            if (audioManager)
+                _UpdateHandlers(EVENT_UNBIND_AUDIOMANAGER);
+
             audioManager = manager;
 
 #if AUDIOLINK_V1
@@ -207,6 +212,9 @@ namespace Texel
             audioManager._Register(AudioManager.EVENT_AUDIOLINK_CHANGED, this, nameof(_AudioLinkOnBind));
             _AudioLinkOnBind();
 #endif
+
+            if (audioManager)
+                _UpdateHandlers(EVENT_BIND_AUDIOMANAGER);
         }
 
         internal static string _ParseYoutube(string url)

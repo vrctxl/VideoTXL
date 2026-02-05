@@ -77,9 +77,9 @@ namespace Texel
                             Undo.RecordObject(com, "Set References");
                             com.videoPlayer = vp;
 
-                            AudioManager audioMan = vp.GetComponentInChildren<AudioManager>();
-                            if (audioMan && audioMan.videoPlayer == vp)
-                                com.audioManager = audioMan;
+                            //AudioManager audioMan = vp.GetComponentInChildren<AudioManager>();
+                            //if (audioMan && audioMan.videoPlayer == vp)
+                            //    com.audioManager = audioMan;
 
                             EditorUtility.SetDirty(com);
                         }
@@ -121,9 +121,9 @@ namespace Texel
                             Undo.RecordObject(com, "Set References");
                             com.videoPlayer = vp;
 
-                            AudioManager audioMan = vp.GetComponentInChildren<AudioManager>();
-                            if (audioMan && audioMan.videoPlayer == vp)
-                                com.audioManager = audioMan;
+                            //AudioManager audioMan = vp.GetComponentInChildren<AudioManager>();
+                            //if (audioMan && audioMan.videoPlayer == vp)
+                            //    com.audioManager = audioMan;
 
                             EditorUtility.SetDirty(com);
                         }

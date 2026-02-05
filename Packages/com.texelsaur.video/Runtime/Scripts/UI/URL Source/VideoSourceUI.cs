@@ -32,17 +32,26 @@ namespace Texel
 
         public void _BindSourceManager(SourceManager sourceManager)
         {
-            if (!sourceManager || boundSourceManager == sourceManager)
+            if (boundSourceManager == sourceManager)
                 return;
+
+            if (boundSourceManager)
+            {
+                boundSourceManager._Unregister(SourceManager.EVENT_SOURCE_ADDED, this, nameof(_InternalOnSourceAddRemove));
+                boundSourceManager._Unregister(SourceManager.EVENT_SOURCE_REMOVED, this, nameof(_InternalOnSourceAddRemove));
+            }
+
+            boundSourceManager = sourceManager;
+            if (boundSourceManager)
+            {
+                boundSourceManager._Register(SourceManager.EVENT_SOURCE_ADDED, this, nameof(_InternalOnSourceAddRemove));
+                boundSourceManager._Register(SourceManager.EVENT_SOURCE_REMOVED, this, nameof(_InternalOnSourceAddRemove));
+            }
 
             if (templateRoot && (sourceTemplates == null || sourceTemplates.Length == 0))
                 sourceTemplates = templateRoot.GetComponentsInChildren<VideoSourceUIBase>(true);
             else
                 sourceTemplates = new VideoSourceUIBase[0];
-
-            boundSourceManager = sourceManager;
-            boundSourceManager._Register(SourceManager.EVENT_SOURCE_ADDED, this, nameof(_InternalOnSourceAddRemove));
-            boundSourceManager._Register(SourceManager.EVENT_SOURCE_REMOVED, this, nameof(_InternalOnSourceAddRemove));
 
             _Rebuild();
         }
@@ -54,11 +63,6 @@ namespace Texel
 
         public void _Rebuild()
         {
-            contentPanels = new GameObject[boundSourceManager.Count];
-            contentButtons = new VideoSourceUIButton[boundSourceManager.Count];
-
-            int firstTemplateSource = -1;
-
             if (buttonRoot)
             {
                 while (buttonRoot.transform.childCount > 0)
@@ -78,6 +82,13 @@ namespace Texel
                     Destroy(child.gameObject);
                 }
             }
+
+            if (!boundSourceManager)
+                return;
+
+            int firstTemplateSource = -1;
+            contentPanels = new GameObject[boundSourceManager.Count];
+            contentButtons = new VideoSourceUIButton[boundSourceManager.Count];
 
             for (int i = 0; i < boundSourceManager.Count; i++)
             {

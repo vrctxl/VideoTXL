@@ -4,7 +4,12 @@
 
 ### [2.5.0-beta.18]
 - Added AddSource and RemoveSource methods to SourceManager
-- Added EVENT_SOURCE_ADDED and EVENT_SOURCE_REMOVED methods to SourceManager
+- Added EVENT_SOURCE_ADDED and EVENT_SOURCE_REMOVED events to SourceManager
+- Added EVENT_BIND_AUDIO_MANAGER and EVENT_UNBIND_AUDIO_MANAGER events to TXLVideoPlayer
+- Added _BindVideoPlayer method to PlayerControls and LocalControlsSlim UI scripts
+- Removed legacy component registration for AudioManager
+- Deprecated AudioManager field on PlayerConrols and LocalControlsSlim, value will be taken from video player
+- PlayerControls and LocalControlsSlim will unhook their events when disabled in the hierarchy
 
 ### [2.5.0-beta.17]
 - Requires CommonTXL 1.8.0 or later

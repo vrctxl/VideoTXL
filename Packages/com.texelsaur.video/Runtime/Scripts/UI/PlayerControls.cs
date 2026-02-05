@@ -19,6 +19,7 @@ namespace Texel
     public class PlayerControls : UdonSharpBehaviour
     {
         public SyncPlayer videoPlayer;
+        [Obsolete("AudioManager will be taken from the bound video player instead")]
         public AudioManager audioManager;
         public ControlColorProfile colorProfile;
 
@@ -129,15 +130,10 @@ namespace Texel
             _SetText(playlistText, "");
             _SetText(offsetText, "");
 
-            if (audioManager)
-                audioManager._RegisterControls(this);
-
-            if (gameObject.activeInHierarchy)
-                _RegisterListeners();
-
             if (videoPlayer)
             {
-                _SetIconColor(unlockedIcon, normalColor);
+                if (gameObject.activeInHierarchy)
+                    _RegisterVideoListeners();
 
                 if (playlistPanel && videoPlayer.SourceManager)
                 {
@@ -145,6 +141,8 @@ namespace Texel
                     if (vui)
                         vui._BindSourceManager(videoPlayer.sourceManager);
                 }
+
+                _SetIconColor(unlockedIcon, normalColor);
             }
 
 #if !UNITY_EDITOR
@@ -163,7 +161,7 @@ namespace Texel
             if (!initialized)
                 return;
 
-            _RegisterListeners();
+            _RegisterVideoListeners();
 
             _RefreshPlayerAccessIcon();
             _UpdateAll();
@@ -171,19 +169,41 @@ namespace Texel
 
         private void OnDisable()
         {
-            _UnregisterListeners();
+            _UnregisterVideoListeners();
         }
 
-        void _RegisterListeners()
+        public void _BindVideoPlayer(SyncPlayer videoPlayer)
+        {
+            _UnregisterVideoListeners();
+
+            this.videoPlayer = videoPlayer;
+
+            if (gameObject.activeInHierarchy)
+                _RegisterVideoListeners();
+
+            if (playlistPanel && videoPlayer.SourceManager)
+            {
+                VideoSourceUI vui = playlistPanel.GetComponentInChildren<VideoSourceUI>();
+                if (vui)
+                    vui._BindSourceManager(videoPlayer.sourceManager);
+            }
+        }
+
+        void _RegisterVideoListeners()
         {
             if (videoPlayer)
             {
+                videoPlayer._Register(TXLVideoPlayer.EVENT_BIND_AUDIOMANAGER, this, nameof(_InternalOnBindAudioManager));
+                videoPlayer._Register(TXLVideoPlayer.EVENT_UNBIND_AUDIOMANAGER, this, nameof(_InternalOnUnbindAudioManager));
+
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_VideoStateUpdate");
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_LOCK_UPDATE, this, "_VideoLockUpdate");
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_TRACKING_UPDATE, this, "_VideoTrackingUpdate");
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_INFO_UPDATE, this, "_OnVideoInfoUpdate");
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_PLAYLIST_UPDATE, this, "_VideoPlaylistUpdate");
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_READY, this, "_VideoStateUpdate");
+
+                _RegisterAudioManagerListeners();
 
                 if (videoPlayer.accessControl)
                     videoPlayer.accessControl._Register(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateAccess));
@@ -193,10 +213,13 @@ namespace Texel
             }
         }
 
-        void _UnregisterListeners()
+        void _UnregisterVideoListeners()
         {
             if (videoPlayer)
             {
+                videoPlayer._Unregister(TXLVideoPlayer.EVENT_BIND_AUDIOMANAGER, this, nameof(_InternalOnBindAudioManager));
+                videoPlayer._Unregister(TXLVideoPlayer.EVENT_UNBIND_AUDIOMANAGER, this, nameof(_InternalOnUnbindAudioManager));
+
                 videoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_VideoStateUpdate");
                 videoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_LOCK_UPDATE, this, "_VideoLockUpdate");
                 videoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_TRACKING_UPDATE, this, "_VideoTrackingUpdate");
@@ -204,11 +227,20 @@ namespace Texel
                 videoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_PLAYLIST_UPDATE, this, "_VideoPlaylistUpdate");
                 videoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_READY, this, "_VideoStateUpdate");
 
+                _UnregisterAudioManagerListeners();
+
                 if (videoPlayer.accessControl)
                     videoPlayer.accessControl._Unregister(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateAccess));
 
                 if (videoPlayer.urlInfoResolver)
                     videoPlayer.urlInfoResolver._Unregister(UrlInfoResolver.EVENT_URL_INFO, this, nameof(_OnUrlInfoReady));
+
+                if (playlistPanel && videoPlayer.SourceManager)
+                {
+                    VideoSourceUI vui = playlistPanel.GetComponentInChildren<VideoSourceUI>();
+                    if (vui)
+                        vui._BindSourceManager(null);
+                }
             }
         }
 
@@ -230,25 +262,64 @@ namespace Texel
             _SetIconEnabled(repeatOneIcon, false);
         }
 
-        bool inVolumeControllerUpdate = false;
-
-        public void _AudioManagerUpdate()
+        public void _InternalOnUnbindAudioManager()
         {
-            if (!audioManager)
+            _UnregisterAudioManagerListeners();
+        }
+
+        public void _InternalOnBindAudioManager()
+        {
+            if (gameObject.activeInHierarchy)
+                _RegisterAudioManagerListeners();
+        }
+
+        /*public void _BindAudioManager(AudioManager audioManager)
+        {
+            _UnregisterAudioManagerListeners();
+
+            this.audioManager = audioManager;
+            _RegisterAudioManagerListeners();
+        }*/
+
+        void _RegisterAudioManagerListeners()
+        {
+            if (!videoPlayer)
                 return;
 
-            inVolumeControllerUpdate = true;
-
-            if (volumeSlider)
+            AudioManager manager = videoPlayer.AudioManager;
+            if (manager)
             {
-                float volume = audioManager.masterVolume;
-                if (volume != volumeSlider.value)
-                    volumeSlider.value = volume;
+                manager._Register(AudioManager.EVENT_MASTER_VOLUME_UPDATE, this, nameof(_InternalOnMasterVolumeUpdate));
+                manager._Register(AudioManager.EVENT_MASTER_MUTE_UPDATE, this, nameof(_InternalOnMasterMuteUpdate));
+
+                _InternalOnMasterVolumeUpdate();
+                _InternalOnMasterMuteUpdate();
             }
+        }
 
-            UpdateToggleVisual();
+        void _UnregisterAudioManagerListeners()
+        {
+            if (!videoPlayer)
+                return;
 
-            inVolumeControllerUpdate = false;
+            AudioManager manager = videoPlayer.AudioManager;
+            if (manager)
+            {
+                manager._Unregister(AudioManager.EVENT_MASTER_VOLUME_UPDATE, this, nameof(_InternalOnMasterVolumeUpdate));
+                manager._Unregister(AudioManager.EVENT_MASTER_MUTE_UPDATE, this, nameof(_InternalOnMasterMuteUpdate));
+            }
+        }
+
+        public void _InternalOnMasterVolumeUpdate()
+        {
+            if (volumeSlider)
+                volumeSlider.SetValueWithoutNotify(videoPlayer.AudioManager.masterVolume);
+        }
+
+        public void _InternalOnMasterMuteUpdate()
+        {
+            _SetActive(muteToggleOn, videoPlayer.AudioManager.masterMute);
+            _SetActive(muteToggleOff, !videoPlayer.AudioManager.masterMute);
         }
 
         public void _VideoStateUpdate()
@@ -539,22 +610,14 @@ namespace Texel
 
         public void _ToggleVolumeMute()
         {
-            if (inVolumeControllerUpdate)
-                return;
-
-            if (audioManager)
-                audioManager._SetMasterMute(!audioManager.masterMute);
-            //audioManager._ToggleMute();
+            if (videoPlayer && videoPlayer.AudioManager)
+                videoPlayer.AudioManager._SetMasterMute(!videoPlayer.AudioManager.masterMute);
         }
 
         public void _UpdateVolumeSlider()
         {
-            if (inVolumeControllerUpdate)
-                return;
-
-            if (audioManager && volumeSlider)
-                audioManager._SetMasterVolume(volumeSlider.value);
-            //audioManager._ApplyVolume(volumeSlider.value);
+            if (videoPlayer && videoPlayer.AudioManager && volumeSlider)
+                videoPlayer.AudioManager._SetMasterVolume(volumeSlider.value);
         }
 
         public void _HandlePlaylist()
@@ -1077,15 +1140,6 @@ namespace Texel
         {
             _FindOwners();
             _RefreshPlayerAccessIcon();
-        }
-
-        void UpdateToggleVisual()
-        {
-            if (audioManager)
-            {
-                _SetActive(muteToggleOn, audioManager.masterMute);
-                _SetActive(muteToggleOff, !audioManager.masterMute);
-            }
         }
 
         public void _ValidateAccess()

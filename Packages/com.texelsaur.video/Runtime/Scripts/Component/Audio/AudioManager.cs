@@ -374,31 +374,6 @@ namespace Texel
                 target.SetCustomCurve(AudioSourceCurveType.CustomRolloff, source.GetCustomCurve(AudioSourceCurveType.CustomRolloff));
         }
 
-        public void _RegisterControls(Component controls)
-        {
-            if (!Utilities.IsValid(controls))
-                return;
-
-            if (!Utilities.IsValid(audioControls))
-                audioControls = new Component[0];
-
-            foreach (Component c in audioControls)
-            {
-                if (c == controls)
-                    return;
-            }
-
-            Component[] newControls = new Component[audioControls.Length + 1];
-            for (int i = 0; i < audioControls.Length; i++)
-                newControls[i] = audioControls[i];
-
-            newControls[audioControls.Length] = controls;
-            audioControls = newControls;
-
-            if (initialized)
-                _UpdateAudioControl(controls);
-        }
-
         public void _OnVideoStateUpdate()
         {
             if (!muteSourceForInactiveVideo)
@@ -584,7 +559,6 @@ namespace Texel
         void _UpdateAll()
         {
             _UpdateAudioSources();
-            _UpdateAudioControls();
         }
 
         void _UpdateAudioSources()
@@ -650,22 +624,6 @@ namespace Texel
         {
             return _Master2D();
         }*/
-
-        void _UpdateAudioControls()
-        {
-            foreach (var control in audioControls)
-                _UpdateAudioControl(control);
-        }
-
-        void _UpdateAudioControl(Component control)
-        {
-            if (!Utilities.IsValid(control))
-                return;
-
-            UdonBehaviour script = (UdonBehaviour)control;
-            if (Utilities.IsValid(script))
-                script.SendCustomEvent("_AudioManagerUpdate");
-        }
 
         bool _InputMute()
         {
