@@ -156,9 +156,11 @@ namespace Texel
                 VideoTxlManager.AddUrlInfoResolverToScene(true);
             if (TXLGUI.DrawObjectFieldWithAdd(accessControlProperty, new GUIContent("Access Control", "Control access to player controls based on player type or whitelist."), new GUIContent("+", "Create new Access Control")))
                 VideoTxlManager.AddAccessControlToScene(true);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Local Playback Options", EditorStyles.boldLabel);
             if (TXLGUI.DrawObjectFieldWithAdd(playbackZoneProperty, new GUIContent("Playback Zone", "Optional tracked trigger zone the player must be in to sustain playback.  Disables playing audio on world load."), new GUIContent("+", "Create new Tracked Trigger Zone")))
                 VideoTxlManager.AddSyncPlaybackZoneToScene(true);
-
             EditorGUILayout.PropertyField(exclusionZonesProperty, new GUIContent("Exclusion Zones", "Optional one or more tracked tricker zones that will locally halt playback when the player enters them."));
 
             EditorGUILayout.Space();

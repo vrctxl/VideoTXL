@@ -8,6 +8,7 @@ namespace Texel
     {
         protected SerializedProperty sourceNameProperty;
         protected SerializedProperty overrideDisplayProperty;
+        protected SerializedProperty sourceEnabledProperty;
 
         protected SerializedProperty errorActionProperty;
         protected SerializedProperty retriesExceededActionProperty;
@@ -17,6 +18,7 @@ namespace Texel
         {
             sourceNameProperty = serializedObject.FindProperty(nameof(VideoUrlSource.sourceName));
             overrideDisplayProperty = serializedObject.FindProperty(nameof(VideoUrlSource.overrideDisplay));
+            sourceEnabledProperty = serializedObject.FindProperty(nameof(VideoUrlSource.sourceEnabled));
             errorActionProperty = serializedObject.FindProperty(nameof(VideoUrlSource.errorAction));
             retriesExceededActionProperty = serializedObject.FindProperty(nameof(VideoUrlSource.retriesExceededAction));
             maxErrorRetryCountProperty = serializedObject.FindProperty(nameof(VideoUrlSource.maxErrorRetryCount));
@@ -35,6 +37,7 @@ namespace Texel
         {
             EditorGUILayout.LabelField("Video URL Source", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(sourceNameProperty);
+            EditorGUILayout.PropertyField(sourceEnabledProperty);
             EditorGUILayout.PropertyField(overrideDisplayProperty);
 
             EditorGUILayout.Space();

@@ -4,7 +4,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using VRC.SDKBase;
 using VRC.Udon;
-using static PlasticPipe.Server.MonitorStats;
 
 [assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
 

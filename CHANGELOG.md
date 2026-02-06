@@ -13,6 +13,11 @@
 - Added interruptible field to Playlist
 - Playing playlist tracks will now reset all other playlist sources to the end, preventing them from playing in usual source order
 - Playlist UI will dim active track if another source is playing, like a queue, and it was not reset
+- Added source enabled field to VideoURLSource and derivatives
+- Synced SourceEnabled property on Playlist and PlaylistQueue
+- Added EVENT_ENABLE_CHANGE event to VideoURLSource
+- URL Source UI will show or hide buttons if source's enable state changes
+- Fixed adding to queue from playlist not working with overriding add access
 
 ### [2.5.0-beta.17]
 - Requires CommonTXL 1.8.0 or later

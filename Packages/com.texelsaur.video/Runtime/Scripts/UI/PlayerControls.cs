@@ -234,13 +234,6 @@ namespace Texel
 
                 if (videoPlayer.urlInfoResolver)
                     videoPlayer.urlInfoResolver._Unregister(UrlInfoResolver.EVENT_URL_INFO, this, nameof(_OnUrlInfoReady));
-
-                if (playlistPanel && videoPlayer.SourceManager)
-                {
-                    VideoSourceUI vui = playlistPanel.GetComponentInChildren<VideoSourceUI>();
-                    if (vui)
-                        vui._BindSourceManager(null);
-                }
             }
         }
 

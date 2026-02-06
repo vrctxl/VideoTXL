@@ -44,8 +44,8 @@ namespace Texel
         VRCUrl[] questPlaylist;
         string[] trackNames;
 
-        [UdonSynced, FieldChangeCallback("PlaylistEnabled")]
-        bool syncEnabled;
+        [UdonSynced, FieldChangeCallback(nameof(SyncSourceEnabled))]
+        bool syncEnabled = true;
         [UdonSynced]
         short syncCurrentIndex = -1;
         [UdonSynced]
@@ -133,7 +133,7 @@ namespace Texel
             else if (!Networking.IsOwner(gameObject))
                 return;
 
-            syncEnabled = true;
+            syncEnabled = sourceEnabled;
 
             _PostLoadShuffle();
             syncShuffleSerial += 1;
@@ -420,13 +420,31 @@ namespace Texel
             }
         }
 
-        public bool PlaylistEnabled
+        internal bool SyncSourceEnabled
+        {
+            set
+            {
+                if (syncEnabled != value)
+                {
+                    syncEnabled = value;
+
+                    _UpdateHandlers(VideoUrlSource.EVENT_ENABLE_CHANGE);
+                }
+            }
+        }
+
+        public bool SourceEnabled
         {
             get { return syncEnabled; }
             set
             {
-                syncEnabled = value;
-                _UpdateHandlers(VideoUrlSource.EVENT_OPTION_CHANGE);
+                if (!_TakeControl())
+                    return;
+
+                if (_usingDebug) DebugLog($"Set playlist enabled {value}");
+
+                SyncSourceEnabled = value;
+                RequestSerialization();
             }
         }
 
@@ -472,7 +490,7 @@ namespace Texel
 
         public override bool _MoveNext()
         {
-            if (!_TakeControl())
+            if (!syncEnabled || !_TakeControl())
                 return false;
 
             if (!trackCatalogMode && CurrentIndex < playlist.Length - 1)
@@ -500,7 +518,7 @@ namespace Texel
 
         public override bool _MovePrev()
         {
-            if (!_TakeControl())
+            if (!syncEnabled || !_TakeControl())
                 return false;
 
             bool onSource = videoPlayer && videoPlayer.currentUrlSource == this;
@@ -532,19 +550,12 @@ namespace Texel
 
         public override bool _MoveTo(int index)
         {
-            if (!_TakeControl())
+            if (!syncEnabled || !_TakeControl())
                 return false;
 
             if (index < -1 || index >= trackCount)
                 return false;
 
-            //if (CurrentIndex == index)
-            //{
-            //    if (syncEnabled)
-            //        return false;
-            //}
-
-            syncEnabled = true;
             CurrentIndex = (short)index;
             CurrentIndexSerial += 1;
 
@@ -640,16 +651,10 @@ namespace Texel
             return queue._AddTrack(queueIndex, CatalogueIndex, index);
         }
 
+        [Obsolete("Use PlaylistEnabled")]
         public void _SetEnabled(bool state)
         {
-            if (!_TakeControl())
-                return;
-
-            if (_usingDebug) DebugLog($"Set playlist enabled {state}");
-
-            PlaylistEnabled = state;
-
-            RequestSerialization();
+            SourceEnabled = state;
         }
 
         public void _ToggleShuffle()

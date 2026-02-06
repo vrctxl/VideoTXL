@@ -391,7 +391,7 @@ namespace Texel
             if (!_TakeControl())
                 return;
 
-            syncEnabled = true;
+            //syncEnabled = true;
             syncErrorCount = 0;
             syncLoadSuccess = false;
             syncEndSuccess = false;

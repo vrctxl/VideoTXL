@@ -39,6 +39,8 @@ namespace Texel
             {
                 boundSourceManager._Unregister(SourceManager.EVENT_SOURCE_ADDED, this, nameof(_InternalOnSourceAddRemove));
                 boundSourceManager._Unregister(SourceManager.EVENT_SOURCE_REMOVED, this, nameof(_InternalOnSourceAddRemove));
+
+                _RegisterSourceListeners(false);
             }
 
             boundSourceManager = sourceManager;
@@ -46,6 +48,8 @@ namespace Texel
             {
                 boundSourceManager._Register(SourceManager.EVENT_SOURCE_ADDED, this, nameof(_InternalOnSourceAddRemove));
                 boundSourceManager._Register(SourceManager.EVENT_SOURCE_REMOVED, this, nameof(_InternalOnSourceAddRemove));
+
+                _RegisterSourceListeners(true);
             }
 
             if (templateRoot && (sourceTemplates == null || sourceTemplates.Length == 0))
@@ -56,9 +60,33 @@ namespace Texel
             _Rebuild();
         }
 
+        void _RegisterSourceListeners(bool register)
+        {
+            if (!boundSourceManager)
+                return;
+
+            int count = boundSourceManager.Count;
+            for (int i = 0; i < count; i++)
+            {
+                VideoUrlSource source = boundSourceManager._GetSource(i);
+                if (!source)
+                    continue;
+
+                if (register)
+                    source._Register(VideoUrlSource.EVENT_ENABLE_CHANGE, this, nameof(_InternalOnSourceOptionChange));
+                else
+                    source._Unregister(VideoUrlSource.EVENT_ENABLE_CHANGE, this, nameof(_InternalOnSourceOptionChange));
+            }
+        }
+
         public void _InternalOnSourceAddRemove()
         {
             _Rebuild();
+        }
+
+        public void _InternalOnSourceOptionChange()
+        {
+            _RefreshButtons();
         }
 
         public void _Rebuild()
@@ -109,7 +137,7 @@ namespace Texel
                 if (!template)
                     continue;
 
-                if (firstTemplateSource == -1)
+                if (firstTemplateSource == -1 && source.IsEnabled)
                     firstTemplateSource = i;
 
                 if (buttonRoot && buttonTemplate)
@@ -149,9 +177,26 @@ namespace Texel
                 }
             }
 
+            _RefreshButtons();
+
             Canvas.ForceUpdateCanvases();
 
             _Select(firstTemplateSource);
+        }
+
+        void _RefreshButtons()
+        {
+            if (!boundSourceManager)
+                return;
+
+            for (int i = 0; i < boundSourceManager.Count; i++)
+            {
+                VideoUrlSource source = boundSourceManager._GetSource(i);
+                if (!source || !contentButtons[i])
+                    continue;
+
+                contentButtons[i].gameObject.SetActive(source.IsEnabled);
+            }
         }
 
         public void _Select(int index)

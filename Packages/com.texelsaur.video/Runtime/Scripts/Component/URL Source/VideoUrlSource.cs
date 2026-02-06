@@ -39,11 +39,13 @@ namespace Texel
         public const int EVENT_OPTION_CHANGE = 1;
         public const int EVENT_URL_READY = 2;
         public const int EVENT_INTERRUPT = 3;
-        protected const int EVENT_COUNT = 4;
+        public const int EVENT_ENABLE_CHANGE = 4;
+        protected const int EVENT_COUNT = 5;
 
         [SerializeField] protected internal string sourceName;
         [SerializeField, HideInInspector] protected internal SourceManager sourceManager;
         [SerializeField] protected internal VideoDisplayOverride overrideDisplay;
+        [SerializeField] protected internal bool sourceEnabled = true;
 
         [SerializeField] protected internal VideoErrorAction errorAction = VideoErrorAction.Retry;
         [Obsolete("Use retriesExceededAction")]
@@ -133,7 +135,7 @@ namespace Texel
 
         public virtual bool IsEnabled
         {
-            get { return false; }
+            get { return sourceEnabled; }
         }
 
         public virtual bool IsValid
