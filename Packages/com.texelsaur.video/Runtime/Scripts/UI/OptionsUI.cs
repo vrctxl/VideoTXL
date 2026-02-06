@@ -101,8 +101,8 @@ namespace Texel
             {
                 if (!videoPlayer)
                     videoPlayer = source.videoPlayer;
-                if (!audioManager)
-                    audioManager = source.audioManager;
+                if (!audioManager && videoPlayer)
+                    audioManager = source.videoPlayer.AudioManager;
             } else
             {
                 TXLVideoPlayer source2 = transform.GetComponentInParent<TXLVideoPlayer>();

@@ -43,8 +43,8 @@ namespace Texel
 
         [ObjectPath("..")]
         SerializedProperty videoPlayerProperty;
-        [ObjectPath("../Audio Manager")]
-        SerializedProperty volumeControllerProperty;
+        //[ObjectPath("../Audio Manager")]
+        //SerializedProperty volumeControllerProperty;
         [ObjectPath("../ColorProfile")]
         SerializedProperty colorProfileProperty;
 
@@ -197,7 +197,7 @@ namespace Texel
         private void OnEnable()
         {
             videoPlayerProperty = serializedObject.FindProperty(nameof(PlayerControls.videoPlayer));
-            volumeControllerProperty = serializedObject.FindProperty(nameof(PlayerControls.audioManager));
+            //volumeControllerProperty = serializedObject.FindProperty(nameof(PlayerControls.audioManager));
             colorProfileProperty = serializedObject.FindProperty(nameof(PlayerControls.colorProfile));
 
             defaultUrlModeProperty = serializedObject.FindProperty(nameof(PlayerControls.defaultUrlMode));
@@ -259,7 +259,7 @@ namespace Texel
                 return;
 
             EditorGUILayout.PropertyField(videoPlayerProperty);
-            EditorGUILayout.PropertyField(volumeControllerProperty);
+            //EditorGUILayout.PropertyField(volumeControllerProperty);
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(colorProfileProperty);
             if (GUILayout.Button("Apply Color Profile"))

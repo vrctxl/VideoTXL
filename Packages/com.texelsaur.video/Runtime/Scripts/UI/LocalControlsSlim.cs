@@ -1,4 +1,5 @@
-﻿using UdonSharp;
+﻿using System;
+using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
 using VRC.SDKBase;
@@ -10,6 +11,7 @@ namespace Texel
     public class LocalControlsSlim : UdonSharpBehaviour
     {
         public TXLVideoPlayer videoPlayer;
+        [Obsolete("AudioManager will be taken from the bound video player instead")]
         public AudioManager audioManager;
         public ControlColorProfile colorProfile;
 
@@ -21,6 +23,8 @@ namespace Texel
         Color disabledColor = new Color(.5f, .5f, .5f, .4f);
         Color activeColor = new Color(0f, 1f, .5f, .7f);
         Color attentionColor = new Color(.9f, 0f, 0f, .5f);
+
+        bool initialized = false;
 
         void Start()
         {
@@ -34,29 +38,108 @@ namespace Texel
                 attentionColor = colorProfile.attentionColor;
             }
 
-            if (Utilities.IsValid(audioManager))
-                audioManager._RegisterControls(this);
+            if (gameObject.activeInHierarchy)
+                _RegisterVideoListeners();
+
+            initialized = true;
         }
 
-        bool inVolumeControllerUpdate = false;
-
-        public void _AudioManagerUpdate()
+        private void OnEnable()
         {
-            if (!Utilities.IsValid(audioManager))
+            if (!initialized)
                 return;
 
-            inVolumeControllerUpdate = true;
+            _RegisterVideoListeners();
+        }
 
-            if (Utilities.IsValid(volumeSlider))
+        private void OnDisable()
+        {
+            _UnregisterVideoListeners();
+        }
+
+        public void _BindVideoPlayer(TXLVideoPlayer videoPlayer)
+        {
+            _UnregisterVideoListeners();
+
+            this.videoPlayer = videoPlayer;
+
+            if (gameObject.activeInHierarchy)
+                _RegisterVideoListeners();
+        }
+
+        void _RegisterVideoListeners()
+        {
+            if (videoPlayer)
             {
-                float volume = audioManager.masterVolume;
-                if (volume != volumeSlider.value)
-                    volumeSlider.value = volume;
+                videoPlayer._Register(TXLVideoPlayer.EVENT_BIND_AUDIOMANAGER, this, nameof(_InternalOnBindAudioManager));
+                videoPlayer._Register(TXLVideoPlayer.EVENT_UNBIND_AUDIOMANAGER, this, nameof(_InternalOnUnbindAudioManager));
+
+                _RegisterAudioManagerListeners();
             }
+        }
 
-            UpdateToggleVisual();
+        void _UnregisterVideoListeners()
+        {
+            if (videoPlayer)
+            {
+                videoPlayer._Unregister(TXLVideoPlayer.EVENT_BIND_AUDIOMANAGER, this, nameof(_InternalOnBindAudioManager));
+                videoPlayer._Unregister(TXLVideoPlayer.EVENT_UNBIND_AUDIOMANAGER, this, nameof(_InternalOnUnbindAudioManager));
 
-            inVolumeControllerUpdate = false;
+                _UnregisterAudioManagerListeners();
+            }
+        }
+
+        public void _InternalOnUnbindAudioManager()
+        {
+            _UnregisterAudioManagerListeners();
+        }
+
+        public void _InternalOnBindAudioManager()
+        {
+            if (gameObject.activeInHierarchy)
+                _RegisterAudioManagerListeners();
+        }
+
+        void _RegisterAudioManagerListeners()
+        {
+            if (!videoPlayer)
+                return;
+
+            AudioManager manager = videoPlayer.AudioManager;
+            if (manager)
+            {
+                manager._Register(AudioManager.EVENT_MASTER_VOLUME_UPDATE, this, nameof(_InternalOnMasterVolumeUpdate));
+                manager._Register(AudioManager.EVENT_MASTER_MUTE_UPDATE, this, nameof(_InternalOnMasterMuteUpdate));
+
+                _InternalOnMasterVolumeUpdate();
+                _InternalOnMasterMuteUpdate();
+            }
+        }
+
+        void _UnregisterAudioManagerListeners()
+        {
+            if (!videoPlayer)
+                return;
+
+            AudioManager manager = videoPlayer.AudioManager;
+            if (manager)
+            {
+                manager._Unregister(AudioManager.EVENT_MASTER_VOLUME_UPDATE, this, nameof(_InternalOnMasterVolumeUpdate));
+                manager._Unregister(AudioManager.EVENT_MASTER_MUTE_UPDATE, this, nameof(_InternalOnMasterMuteUpdate));
+            }
+        }
+
+        public void _InternalOnMasterVolumeUpdate()
+        {
+            if (volumeSlider)
+                volumeSlider.SetValueWithoutNotify(videoPlayer.AudioManager.masterVolume);
+        }
+
+        public void _InternalOnMasterMuteUpdate()
+        {
+            AudioManager manager = videoPlayer.AudioManager;
+            _SetActive(muteToggleOn, manager.masterMute);
+            _SetActive(muteToggleOff, !manager.masterMute);
         }
 
         public void _Resync()
@@ -67,32 +150,28 @@ namespace Texel
 
         public void _ToggleVolumeMute()
         {
-            if (inVolumeControllerUpdate)
+            if (!videoPlayer)
                 return;
 
-            if (Utilities.IsValid(audioManager))
-                audioManager._SetMasterMute(!audioManager.masterMute);
+            AudioManager manager = videoPlayer.AudioManager;
+            if (manager)
+                manager._SetMasterMute(!manager.masterMute);
         }
 
         public void _UpdateVolumeSlider()
         {
-            if (inVolumeControllerUpdate)
+            if (!videoPlayer)
                 return;
 
-            if (Utilities.IsValid(audioManager) && Utilities.IsValid(volumeSlider))
-                audioManager._SetMasterVolume(volumeSlider.value);
+            AudioManager manager = videoPlayer.AudioManager;
+            if (manager && volumeSlider)
+                manager._SetMasterVolume(volumeSlider.value);
         }
 
-        void UpdateToggleVisual()
+        void _SetActive(GameObject obj, bool active)
         {
-            if (Utilities.IsValid(audioManager))
-            {
-                if (Utilities.IsValid(muteToggleOn) && Utilities.IsValid(muteToggleOff))
-                {
-                    muteToggleOn.SetActive(audioManager.masterMute);
-                    muteToggleOff.SetActive(!audioManager.masterMute);
-                }
-            }
+            if (obj)
+                obj.SetActive(active);
         }
 
         void _PopulateMissingReferences()

@@ -1,8 +1,6 @@
 ﻿
 using UdonSharp;
 using UnityEngine;
-using VRC.SDKBase;
-using VRC.Udon;
 
 namespace Texel
 {
@@ -34,21 +32,92 @@ namespace Texel
 
         public void _BindSourceManager(SourceManager sourceManager)
         {
-            if (!sourceManager || boundSourceManager == sourceManager)
+            if (boundSourceManager == sourceManager)
                 return;
+
+            if (boundSourceManager)
+            {
+                boundSourceManager._Unregister(SourceManager.EVENT_SOURCE_ADDED, this, nameof(_InternalOnSourceAddRemove));
+                boundSourceManager._Unregister(SourceManager.EVENT_SOURCE_REMOVED, this, nameof(_InternalOnSourceAddRemove));
+
+                _RegisterSourceListeners(false);
+            }
+
+            boundSourceManager = sourceManager;
+            if (boundSourceManager)
+            {
+                boundSourceManager._Register(SourceManager.EVENT_SOURCE_ADDED, this, nameof(_InternalOnSourceAddRemove));
+                boundSourceManager._Register(SourceManager.EVENT_SOURCE_REMOVED, this, nameof(_InternalOnSourceAddRemove));
+
+                _RegisterSourceListeners(true);
+            }
 
             if (templateRoot && (sourceTemplates == null || sourceTemplates.Length == 0))
                 sourceTemplates = templateRoot.GetComponentsInChildren<VideoSourceUIBase>(true);
             else
                 sourceTemplates = new VideoSourceUIBase[0];
 
-            boundSourceManager = sourceManager;
+            _Rebuild();
+        }
 
+        void _RegisterSourceListeners(bool register)
+        {
+            if (!boundSourceManager)
+                return;
+
+            int count = boundSourceManager.Count;
+            for (int i = 0; i < count; i++)
+            {
+                VideoUrlSource source = boundSourceManager._GetSource(i);
+                if (!source)
+                    continue;
+
+                if (register)
+                    source._Register(VideoUrlSource.EVENT_ENABLE_CHANGE, this, nameof(_InternalOnSourceOptionChange));
+                else
+                    source._Unregister(VideoUrlSource.EVENT_ENABLE_CHANGE, this, nameof(_InternalOnSourceOptionChange));
+            }
+        }
+
+        public void _InternalOnSourceAddRemove()
+        {
+            _Rebuild();
+        }
+
+        public void _InternalOnSourceOptionChange()
+        {
+            _RefreshButtons();
+        }
+
+        public void _Rebuild()
+        {
+            if (buttonRoot)
+            {
+                while (buttonRoot.transform.childCount > 0)
+                {
+                    var child = buttonRoot.transform.GetChild(0);
+                    child.parent = null;
+                    Destroy(child.gameObject);
+                }
+            }
+
+            if (contentRoot)
+            {
+                while (contentRoot.transform.childCount > 0)
+                {
+                    var child = contentRoot.transform.GetChild(0);
+                    child.parent = null;
+                    Destroy(child.gameObject);
+                }
+            }
+
+            if (!boundSourceManager)
+                return;
+
+            int firstTemplateSource = -1;
             contentPanels = new GameObject[boundSourceManager.Count];
             contentButtons = new VideoSourceUIButton[boundSourceManager.Count];
 
-            int firstTemplateSource = -1;
-            
             for (int i = 0; i < boundSourceManager.Count; i++)
             {
                 VideoUrlSource source = boundSourceManager._GetSource(i);
@@ -68,10 +137,11 @@ namespace Texel
                 if (!template)
                     continue;
 
-                if (firstTemplateSource == -1)
+                if (firstTemplateSource == -1 && source.IsEnabled)
                     firstTemplateSource = i;
 
-                if (buttonRoot && buttonTemplate) {
+                if (buttonRoot && buttonTemplate)
+                {
                     GameObject button = Instantiate(buttonTemplate);
 
                     VideoSourceUIButton script = button.GetComponent<VideoSourceUIButton>();
@@ -107,9 +177,26 @@ namespace Texel
                 }
             }
 
+            _RefreshButtons();
+
             Canvas.ForceUpdateCanvases();
 
             _Select(firstTemplateSource);
+        }
+
+        void _RefreshButtons()
+        {
+            if (!boundSourceManager)
+                return;
+
+            for (int i = 0; i < boundSourceManager.Count; i++)
+            {
+                VideoUrlSource source = boundSourceManager._GetSource(i);
+                if (!source || !contentButtons[i])
+                    continue;
+
+                contentButtons[i].gameObject.SetActive(source.IsEnabled);
+            }
         }
 
         public void _Select(int index)

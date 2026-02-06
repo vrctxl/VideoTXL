@@ -30,6 +30,8 @@ namespace Texel
         public bool immediate = false;
         [Tooltip("Resume playing from the playlist after a manually loaded URL is finished.")]
         public bool resumeAfterLoad = false;
+        [Tooltip("Allows currently playing track to be interrupted by sources, such as queues when a track is queued.")]
+        [SerializeField] internal bool interruptible = false;
 
         [Tooltip("Optional catalog to sync load playlist data from")]
         public PlaylistCatalog playlistCatalog;
@@ -42,8 +44,8 @@ namespace Texel
         VRCUrl[] questPlaylist;
         string[] trackNames;
 
-        [UdonSynced, FieldChangeCallback("PlaylistEnabled")]
-        bool syncEnabled;
+        [UdonSynced, FieldChangeCallback(nameof(SyncSourceEnabled))]
+        bool syncEnabled = true;
         [UdonSynced]
         short syncCurrentIndex = -1;
         [UdonSynced]
@@ -131,7 +133,7 @@ namespace Texel
             else if (!Networking.IsOwner(gameObject))
                 return;
 
-            syncEnabled = true;
+            syncEnabled = sourceEnabled;
 
             _PostLoadShuffle();
             syncShuffleSerial += 1;
@@ -206,7 +208,7 @@ namespace Texel
 
         public override bool IsReady
         {
-            get { return syncEnabled && trackCount > 0 && syncCurrentIndex >= 0; }
+            get { return syncEnabled && syncCurrentIndex >= 0 && syncCurrentIndex < trackCount; }
         }
 
         public PlaylistQueue TargetQueue
@@ -234,7 +236,10 @@ namespace Texel
             if (trackCatalogMode || trackCount == 0)
                 return false;
 
-            return CurrentIndex < trackCount - 1 || _Repeats();
+            if (_Repeats())
+                return CurrentIndex < trackCount;
+            else
+                return CurrentIndex < trackCount - 1;
         }
 
         public override bool _CanMovePrev()
@@ -415,13 +420,31 @@ namespace Texel
             }
         }
 
-        public bool PlaylistEnabled
+        internal bool SyncSourceEnabled
+        {
+            set
+            {
+                if (syncEnabled != value)
+                {
+                    syncEnabled = value;
+
+                    _UpdateHandlers(VideoUrlSource.EVENT_ENABLE_CHANGE);
+                }
+            }
+        }
+
+        public bool SourceEnabled
         {
             get { return syncEnabled; }
             set
             {
-                syncEnabled = value;
-                _UpdateHandlers(VideoUrlSource.EVENT_OPTION_CHANGE);
+                if (!_TakeControl())
+                    return;
+
+                if (_usingDebug) DebugLog($"Set playlist enabled {value}");
+
+                SyncSourceEnabled = value;
+                RequestSerialization();
             }
         }
 
@@ -455,36 +478,47 @@ namespace Texel
             get { return resumeAfterLoad; }
         }
 
+        public override bool Interruptable
+        {
+            get { return interruptible; }
+        }
+
+        public override bool ResetOtherSources
+        {
+            get { return true; }
+        }
+
         public override bool _MoveNext()
         {
-            if (!_TakeControl())
+            if (!syncEnabled || !_TakeControl())
                 return false;
 
             if (!trackCatalogMode && CurrentIndex < playlist.Length - 1)
                 CurrentIndex += 1;
-            else if (!trackCatalogMode && _Repeats())
+            else if (!trackCatalogMode && _Repeats() && CurrentIndex <= trackCount)
                 CurrentIndex = 0;
             else
-                CurrentIndex = (short)-1;
+                CurrentIndex = (short)(trackCount + 1);
 
             CurrentIndexSerial += 1;
 
             RequestSerialization();
 
+            bool result = CurrentIndex >= 0 && CurrentIndex < playlist.Length;
             if (_usingDebug)
             {
-                if (CurrentIndex >= 0)
+                if (result)
                     DebugLog($"Move next track {CurrentIndex}");
                 else
                     DebugLog($"Playlist completed");
             }
 
-            return CurrentIndex >= 0;
+            return result;
         }
 
         public override bool _MovePrev()
         {
-            if (!_TakeControl())
+            if (!syncEnabled || !_TakeControl())
                 return false;
 
             bool onSource = videoPlayer && videoPlayer.currentUrlSource == this;
@@ -516,19 +550,12 @@ namespace Texel
 
         public override bool _MoveTo(int index)
         {
-            if (!_TakeControl())
+            if (!syncEnabled || !_TakeControl())
                 return false;
 
             if (index < -1 || index >= trackCount)
                 return false;
 
-            //if (CurrentIndex == index)
-            //{
-            //    if (syncEnabled)
-            //        return false;
-            //}
-
-            syncEnabled = true;
             CurrentIndex = (short)index;
             CurrentIndexSerial += 1;
 
@@ -545,10 +572,25 @@ namespace Texel
             return CurrentIndex >= 0;
         }
 
+        public override void _ResetSource()
+        {
+            if (CurrentIndex == trackCount)
+                return;
+            if (!_TakeControl())
+                return;
+
+            CurrentIndex = (short)(trackCount + 1);
+            CurrentIndexSerial += 1;
+
+            if (_usingDebug) DebugLog("Playlist complete");
+
+            RequestSerialization();
+        }
+
         public override VRCUrl _GetCurrentUrl()
         {
             int index = _TrackIndex(CurrentIndex);
-            if (CurrentIndex < 0 || !syncEnabled)
+            if (index < 0 || !syncEnabled)
                 return VRCUrl.Empty;
 
             return playlist[index];
@@ -609,16 +651,10 @@ namespace Texel
             return queue._AddTrack(queueIndex, CatalogueIndex, index);
         }
 
+        [Obsolete("Use PlaylistEnabled")]
         public void _SetEnabled(bool state)
         {
-            if (!_TakeControl())
-                return;
-
-            if (_usingDebug) DebugLog($"Set playlist enabled {state}");
-
-            PlaylistEnabled = state;
-
-            RequestSerialization();
+            SourceEnabled = state;
         }
 
         public void _ToggleShuffle()

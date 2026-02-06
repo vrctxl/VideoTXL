@@ -2,6 +2,29 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.18]
+- Added AddSource and RemoveSource methods to SourceManager
+- Added EVENT_SOURCE_ADDED and EVENT_SOURCE_REMOVED events to SourceManager
+- Added EVENT_BIND_AUDIO_MANAGER and EVENT_UNBIND_AUDIO_MANAGER events to TXLVideoPlayer
+- Added _BindVideoPlayer method to PlayerControls and LocalControlsSlim UI scripts
+- Removed legacy component registration for AudioManager
+- Deprecated AudioManager field on PlayerConrols and LocalControlsSlim, value will be taken from video player
+- PlayerControls and LocalControlsSlim will unhook their events when disabled in the hierarchy
+- Added interruptible field to Playlist
+- Playing playlist tracks will now reset all other playlist sources to the end, preventing them from playing in usual source order
+- Playlist UI will dim active track if another source is playing, like a queue, and it was not reset
+- Added source enabled field to VideoURLSource and derivatives
+- Synced SourceEnabled property on Playlist and PlaylistQueue
+- Added EVENT_ENABLE_CHANGE event to VideoURLSource
+- URL Source UI will show or hide buttons if source's enable state changes
+- Fixed adding to queue from playlist not working with overriding add access
+
+### [2.5.0-beta.17]
+- Requires CommonTXL 1.8.0 or later
+- Added exclusion zones property to SyncVideoPlayer
+- Added LocalPlaybackEnabled property to SyncVideoPlayer to control local playback
+- Added LocalPlaybackValid property to SyncVideoPlayer to check local playback
+
 ### [2.5.0-beta.16]
 - Changed playback behavior so video keeps advancing if/while owner resyncs
 - Fixed various edge cases around sync playback, pause, resync, and playback zones

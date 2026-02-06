@@ -13,7 +13,7 @@ namespace Texel
         static bool _showObjectFoldout;
 
         SerializedProperty videoPlayerProperty;
-        SerializedProperty audioManagerProperty;
+        //SerializedProperty audioManagerProperty;
         SerializedProperty colorProfileProperty;
 
         SerializedProperty muteToggleOnProperty;
@@ -49,13 +49,13 @@ namespace Texel
 
         private void OnEnable()
         {
-            videoPlayerProperty = serializedObject.FindProperty(nameof(PlayerControls.videoPlayer));
-            audioManagerProperty = serializedObject.FindProperty(nameof(PlayerControls.audioManager));
-            colorProfileProperty = serializedObject.FindProperty(nameof(PlayerControls.colorProfile));
+            videoPlayerProperty = serializedObject.FindProperty(nameof(LocalControlsSlim.videoPlayer));
+            //audioManagerProperty = serializedObject.FindProperty(nameof(LocalControlsSlim.audioManager));
+            colorProfileProperty = serializedObject.FindProperty(nameof(LocalControlsSlim.colorProfile));
 
-            muteToggleOnProperty = serializedObject.FindProperty(nameof(PlayerControls.muteToggleOn));
-            muteToggleOffProperty = serializedObject.FindProperty(nameof(PlayerControls.muteToggleOff));
-            volumeSliderProperty = serializedObject.FindProperty(nameof(PlayerControls.volumeSlider));
+            muteToggleOnProperty = serializedObject.FindProperty(nameof(LocalControlsSlim.muteToggleOn));
+            muteToggleOffProperty = serializedObject.FindProperty(nameof(LocalControlsSlim.muteToggleOff));
+            volumeSliderProperty = serializedObject.FindProperty(nameof(LocalControlsSlim.volumeSlider));
         }
 
         public override void OnInspectorGUI()
@@ -64,7 +64,7 @@ namespace Texel
                 return;
 
             EditorGUILayout.PropertyField(videoPlayerProperty);
-            EditorGUILayout.PropertyField(audioManagerProperty);
+            //EditorGUILayout.PropertyField(audioManagerProperty);
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(colorProfileProperty);
             if (GUILayout.Button("Apply Color Profile"))

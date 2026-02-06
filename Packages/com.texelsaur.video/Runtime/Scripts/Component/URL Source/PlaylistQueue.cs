@@ -63,7 +63,7 @@ namespace Texel
         string[] syncPlayers;
         [UdonSynced]
         short syncTrackCount = 0;
-        [UdonSynced, FieldChangeCallback("SourceEnabled")]
+        [UdonSynced, FieldChangeCallback(nameof(SyncSourceEnabled))]
         bool syncEnabled = true;
 
         [UdonSynced]
@@ -219,12 +219,29 @@ namespace Texel
             get { return true; }
         }
 
+        internal bool SyncSourceEnabled
+        {
+            set
+            {
+                if (syncEnabled != value)
+                {
+                    syncEnabled = value;
+
+                    _UpdateHandlers(VideoUrlSource.EVENT_ENABLE_CHANGE);
+                }
+            }
+        }
+
         public bool SourceEnabled
         {
             get { return syncEnabled; }
             set
             {
-                syncEnabled = value;
+                if (!_TakeControl())
+                    return;
+
+                SyncSourceEnabled = value;
+                RequestSerialization();
             }
         }
 
@@ -780,7 +797,7 @@ namespace Texel
 
         public bool _AddTrack(int playlistIndex, int catalogIndex, int trackIndex)
         {
-            if (!_TakeControl())
+            if (!_TakeControl(addAccess))
                 return false;
 
             _EnsureSyncCapacity();

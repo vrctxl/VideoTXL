@@ -21,8 +21,6 @@ namespace Texel
         [SerializeField] internal bool eventLogging = false;
         [SerializeField] internal bool lowLevelLogging = false;
 
-        private int nextSourceIndex = 0;
-
         private int readySourceIndex;
         private VRCUrl readyUrl;
         private VRCUrl readyQuestUrl;
@@ -30,7 +28,9 @@ namespace Texel
         public const int EVENT_BIND_VIDEOPLAYER = 0;
         public const int EVENT_TRACK_CHANGE = 1;
         public const int EVENT_URL_READY = 2;
-        protected const int EVENT_COUNT = 3;
+        public const int EVENT_SOURCE_ADDED = 3;
+        public const int EVENT_SOURCE_REMOVED = 4;
+        protected const int EVENT_COUNT = 5;
 
         void Start()
         {
@@ -46,8 +46,8 @@ namespace Texel
             _ResetReady();
 
             sources = (VideoUrlSource[])UtilityTxl.ArrayCompact(sources);
-            foreach (VideoUrlSource source in sources)
-                source._SetSourceManager(this, nextSourceIndex++);
+            for (int i = 0; i < sources.Length; i++)
+                sources[i]._SetSourceManager(this, i);
 
             if (eventLogging)
                 eventDebugLog = debugLog;
@@ -59,6 +59,68 @@ namespace Texel
                 source._SetVideoPlayer(videoPlayer);
 
             _UpdateHandlers(EVENT_BIND_VIDEOPLAYER);
+        }
+
+        public bool _AddSource(VideoUrlSource source, int atIndex = -1)
+        {
+            if (!source)
+                return false;
+
+            foreach (VideoUrlSource s in sources)
+            {
+                if (s == source)
+                    return false;
+            }
+
+            sources = (VideoUrlSource[])UtilityTxl.ArrayAddElement(sources, source, source.GetType());
+
+            if (atIndex < 0)
+                atIndex = sources.Length - 1;
+
+            for (int i = sources.Length - 2; i >= atIndex; i--)
+                sources[i]._SetSourceManager(this, i + 1);
+
+            source._SetSourceManager(this, atIndex);
+
+            if (videoPlayer)
+                source._SetVideoPlayer(videoPlayer);
+
+            _ResetReady();
+            _UpdateHandlers(EVENT_SOURCE_ADDED, source);
+
+            return true;
+        }
+
+        public bool _RemoveSource(VideoUrlSource source)
+        {
+            if (!source)
+                return false;
+
+            int index = -1;
+            for (int i = 0; i < sources.Length; i++) {
+                if (sources[i] == source)
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index == -1)
+                return false;
+
+            source._SetVideoPlayer(null);
+            source._SetSourceManager(null, -1);
+            sources[index] = null;
+
+            sources = (VideoUrlSource[])UtilityTxl.ArrayCompact(sources);
+
+            for (int i = index; i < sources.Length; i++)
+                sources[i]._SetSourceManager(this, i);
+
+            _ResetReady();
+            _UpdateHandlers(EVENT_SOURCE_REMOVED, source);
+
+            return true;
         }
 
         public int Count
@@ -246,7 +308,7 @@ namespace Texel
             _UpdateHandlers(EVENT_TRACK_CHANGE, sourceIndex);
         }
 
-        public void _OnSourceInterrupt(int sourceIndex)
+        protected internal void _OnSourceInterrupt(int sourceIndex)
         {
             if (sourceIndex < 0 || sourceIndex >= sources.Length)
                 return;
@@ -269,11 +331,30 @@ namespace Texel
             if (sourceIndex < 0 || sourceIndex >= sources.Length)
                 return;
 
+            VideoUrlSource source = sources[sourceIndex];
+            if (!source)
+                return;
+
             readySourceIndex = sourceIndex;
             readyUrl = sources[sourceIndex]._GetCurrentUrl();
             readyQuestUrl = sources[sourceIndex]._GetCurrentQuestUrl();
 
             _UpdateHandlers(EVENT_URL_READY);
+
+            if (source.ResetOtherSources)
+            {
+                for (int i = 0; i < sources.Length; i++)
+                {
+                    if (i == sourceIndex)
+                        continue;
+
+                    VideoUrlSource other = sources[i];
+                    if (!other)
+                        continue;
+
+                    other._ResetSource();
+                }
+            }
         }
 
         void _DebugLog(string message)
