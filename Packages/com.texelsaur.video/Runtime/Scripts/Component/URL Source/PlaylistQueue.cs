@@ -33,6 +33,8 @@ namespace Texel
         [SerializeField] protected internal bool allowDelete = false;
         [SerializeField] protected internal bool allowSelfDelete = false;
 
+        [SerializeField] protected internal bool canInterruptSources = true;
+
         [SerializeField] protected internal bool enableSyncQuestUrls = true;
         [SerializeField] protected internal bool syncTrackTitles = true;
         [SerializeField] protected internal bool syncTrackAuthors = true;
@@ -67,20 +69,20 @@ namespace Texel
         bool syncEnabled = true;
 
         [UdonSynced]
-        int syncQueueUpdate = 0;
-        int prevQueueUpdate = 0;
+        int syncQueueUpdate = -1;
+        int prevQueueUpdate = -1;
 
         [UdonSynced]
-        int syncTrackChangeUpdate = 0;
-        int prevTrackChangeUpdate = 0;
+        int syncTrackChangeUpdate = -1;
+        int prevTrackChangeUpdate = -1;
 
         [UdonSynced]
-        int syncReadyUrlUpdate = 0;
-        int prevReadyUrlUpdate = 0;
+        int syncReadyUrlUpdate = -1;
+        int prevReadyUrlUpdate = -1;
 
         [UdonSynced]
-        int syncTrackAddedUpdate = 0;
-        int prevTrackAddedUpdate = 0;
+        int syncTrackAddedUpdate = -1;
+        int prevTrackAddedUpdate = -1;
 
         bool usingQuestUrls = false;
         bool usingTitles = false;
@@ -123,6 +125,16 @@ namespace Texel
             usingTitles = false;
             usingAuthors = false;
             usingPlayers = syncPlayerNames;
+
+            if (Networking.IsOwner(gameObject))
+            {
+                syncQueueUpdate = 0;
+                syncReadyUrlUpdate = 0;
+                syncTrackAddedUpdate = 0;
+                syncTrackChangeUpdate = 0;
+
+                RequestSerialization();
+            }
         }
 
         public override void _SetVideoPlayer(TXLVideoPlayer videoPlayer)
@@ -498,7 +510,7 @@ namespace Texel
         {
             base.OnDeserialization();
 
-            if (syncQueueUpdate != prevQueueUpdate)
+            if (syncQueueUpdate > prevQueueUpdate)
             {
                 prevQueueUpdate = syncQueueUpdate;
                 _PopulateResolver();
@@ -506,20 +518,21 @@ namespace Texel
                 _EventListChange();
             }
 
-            if (syncTrackChangeUpdate != prevTrackChangeUpdate)
+            if (syncTrackChangeUpdate > prevTrackChangeUpdate)
             {
                 prevTrackChangeUpdate = syncTrackChangeUpdate;
                 _EventTrackChange();
             }
 
-            if (syncReadyUrlUpdate != prevReadyUrlUpdate)
+            if (syncReadyUrlUpdate > prevReadyUrlUpdate)
             {
                 errorCount = 0;
+                if (prevReadyUrlUpdate > -1)
+                    _EventUrlReady();
                 prevReadyUrlUpdate = syncReadyUrlUpdate;
-                _EventUrlReady();
             }
 
-            if (syncTrackAddedUpdate != prevTrackAddedUpdate)
+            if (syncTrackAddedUpdate > prevTrackAddedUpdate)
             {
                 prevTrackAddedUpdate = syncTrackAddedUpdate;
                 _UpdateInfoResolver();
@@ -786,6 +799,8 @@ namespace Texel
             UrlInfoResolver resolver = videoPlayer.UrlInfoResolver;
             if (!resolver)
                 return;
+            if (!usingTitles && !usingAuthors)
+                return;
 
             for (int i = 0; i < syncTrackCount; i++)
             {
@@ -913,6 +928,8 @@ namespace Texel
 
         protected void _EventInterupt()
         {
+            if (!canInterruptSources)
+                return;
             if (sourceManager)
                 sourceManager._OnSourceInterrupt(sourceIndex);
 

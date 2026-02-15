@@ -310,17 +310,22 @@ namespace Texel
 
         protected internal void _OnSourceInterrupt(int sourceIndex)
         {
+            _DebugLog($"OnSourceInterrupt source={sourceIndex}");
             if (sourceIndex < 0 || sourceIndex >= sources.Length)
                 return;
 
-            if (readySourceIndex >= 0 && !sources[readySourceIndex].Interruptable)
+            int readyIndex = _GetSourceIndex(videoPlayer.currentUrlSource);
+            if (readyIndex >= 0 && !sources[readyIndex].Interruptable)
                 return;
 
             if (!sources[sourceIndex]._CanMoveNext())
                 return;
 
             if (Networking.IsOwner(videoPlayer.gameObject))
+            {
+                _DebugLog($"Interrupting ready source={readySourceIndex}");
                 _AdvanceNext(videoPlayer.currentUrl.Get());
+            }
         }
 
         protected internal void _OnUrlReady(int sourceIndex)

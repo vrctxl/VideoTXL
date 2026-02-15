@@ -16,6 +16,7 @@ namespace Texel
         protected SerializedProperty allowDeleteProperty;
         protected SerializedProperty allowSelfDeleteProperty;
 
+        protected SerializedProperty canInterruptSourcesProperty;
         protected SerializedProperty enableSyncQuestUrlsProperty;
         protected SerializedProperty syncTrackTitlesProperty;
         protected SerializedProperty syncTrackAuthorsProperty;
@@ -35,6 +36,7 @@ namespace Texel
             allowDeleteProperty = serializedObject.FindProperty(nameof(PlaylistQueue.allowDelete));
             allowSelfDeleteProperty = serializedObject.FindProperty(nameof(PlaylistQueue.allowSelfDelete));
 
+            canInterruptSourcesProperty = serializedObject.FindProperty(nameof(PlaylistQueue.canInterruptSources));
             enableSyncQuestUrlsProperty = serializedObject.FindProperty(nameof(PlaylistQueue.enableSyncQuestUrls));
             syncTrackTitlesProperty = serializedObject.FindProperty(nameof(PlaylistQueue.syncTrackTitles));
             syncTrackAuthorsProperty = serializedObject.FindProperty(nameof(PlaylistQueue.syncTrackAuthors));
@@ -46,6 +48,9 @@ namespace Texel
             serializedObject.Update();
 
             RenderUrlSourceInspector();
+
+            EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(canInterruptSourcesProperty, new GUIContent("Can Interrupt Sources", "When enabled, if the currently playing URL source is interruptible, then adding a track will interrupt that source's playback."));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Permissions", EditorStyles.boldLabel);
@@ -75,7 +80,6 @@ namespace Texel
                 EditorGUILayout.PropertyField(allowSelfDeleteProperty, new GUIContent("Allow Self Delete", "Allows players to delete their own added entries, regardless of overall access control restrictions."));
                 EditorGUI.indentLevel -= 1;
             }
-            
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Sync", EditorStyles.boldLabel);
