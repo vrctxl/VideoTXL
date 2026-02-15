@@ -266,7 +266,7 @@ namespace Texel
 
         public void _OnVideoTrackingUpdate()
         {
-            if (backingVideoPlayer && backingVideoPlayer.SourceManager && backingVideoPlayer.SourceManager.ReadySource != playlist)
+            if (backingVideoPlayer && backingVideoPlayer.currentUrlSource != playlist)
                 return;
 
             int track = playlist.CurrentIndex;
