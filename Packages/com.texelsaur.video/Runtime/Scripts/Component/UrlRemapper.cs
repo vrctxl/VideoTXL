@@ -46,7 +46,7 @@ namespace Texel
             _Init();
         }
 
-        private void _Init()
+        protected virtual void _Init()
         {
             ruleLookup = new DataDictionary();
             for (int i = 0; i < referenceUrls.Length; i++)
@@ -71,22 +71,22 @@ namespace Texel
             }
         }
 
-        public void _SetPlatform(GamePlatform platform)
+        public virtual void _SetPlatform(GamePlatform platform)
         {
             this.platform = platform;
         }
 
-        public void _SetVideoSource(VideoSource source)
+        public virtual void _SetVideoSource(VideoSource source)
         {
             videoSource = source;
         }
 
-        public void _SetAudioProfile(AudioChannelGroup group)
+        public virtual void _SetAudioProfile(AudioChannelGroup group)
         {
             audioProfile = group;
         }
 
-        public bool _ValidRemapped(VRCUrl input, VRCUrl matchup)
+        public virtual bool _ValidRemapped(VRCUrl input, VRCUrl matchup)
         {
             if (input == null || input == VRCUrl.Empty || input.Get() == "")
                 return false;
@@ -101,7 +101,7 @@ namespace Texel
             return matchup.Get() != mapped.Get();
         }
 
-        public VRCUrl _Remap(VRCUrl input)
+        public virtual VRCUrl _Remap(VRCUrl input)
         {
             if (!Utilities.IsValid(input))
                 return input;
