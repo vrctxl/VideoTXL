@@ -12,6 +12,22 @@ using UdonSharpEditor;
 
 namespace Texel
 {
+    [Serializable]
+    internal class PlaylistDataEntryJson
+    {
+        public string title;
+        public string url;
+        public string questUrl;
+        public string urlForQuest;
+    }
+
+    [Serializable]
+    internal class PlaylistDataJson
+    {
+        public string title;
+        public PlaylistDataEntryJson[] entries;
+    }
+
     [CustomEditor(typeof(PlaylistData))]
     internal class PlaylistDataInspector : Editor
     {
@@ -28,6 +44,9 @@ namespace Texel
         SerializedProperty trackNamesProperty;
 
         ReorderableList trackList;
+
+        private string jsonInput = "{\n  \"title\": \"Playlist Name\",\n  \"entries\": [ {\n    \"title\": \"Track Name\",\n    \"url\": \"Track URL\",\n    \"questUrl\": \"Quest URL\"\n  } ]\n}";
+        private Vector2 jsonScroll;
 
         private void OnEnable()
         {
@@ -71,6 +90,8 @@ namespace Texel
             EditorGUILayout.Space();
 
             trackList.DoLayoutList();
+
+            DrawJsonImportField("Import from JSON");
 
             // OverrideFoldout();
 
@@ -152,6 +173,66 @@ namespace Texel
             trackNamesProperty.DeleteArrayElementAtIndex(index);
         }
 
+        void TracksFromJson(PlaylistDataJson data)
+        {
+            playlistNameProperty.stringValue = data.title ?? "";
+
+            playlistProperty.arraySize = data.entries.Length;
+            questPlaylistProperty.arraySize = data.entries.Length;
+            trackNamesProperty.arraySize = data.entries.Length;
+
+            for (int i = 0; i < data.entries.Length; i++)
+            {
+                PlaylistDataEntryJson entry = data.entries[i];
+                if (entry.url != null && entry.url.Length > 0)
+                    playlistProperty.GetArrayElementAtIndex(i).boxedValue = new VRCUrl(entry.url);
+                else
+                    playlistProperty.GetArrayElementAtIndex(i).boxedValue = VRCUrl.Empty;
+
+                if (entry.questUrl != null && entry.questUrl.Length > 0)
+                    questPlaylistProperty.GetArrayElementAtIndex(i).boxedValue = new VRCUrl(entry.questUrl);
+                else if (entry.urlForQuest != null && entry.urlForQuest.Length > 0)
+                    questPlaylistProperty.GetArrayElementAtIndex(i).boxedValue = new VRCUrl(entry.urlForQuest);
+                else
+                    questPlaylistProperty.GetArrayElementAtIndex(i).boxedValue = VRCUrl.Empty;
+
+                trackNamesProperty.GetArrayElementAtIndex(i).stringValue = entry.title;
+            }
+        }
+
+        private void DrawJsonImportField(string label)
+        {
+            EditorGUILayout.LabelField(label, EditorStyles.boldLabel);
+
+            jsonScroll = EditorGUILayout.BeginScrollView(jsonScroll, GUILayout.Height(130));
+            jsonInput = EditorGUILayout.TextArea(jsonInput, EditorStyles.textArea, GUILayout.ExpandHeight(true));
+            EditorGUILayout.EndScrollView();
+
+            EditorGUILayout.Space();
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.FlexibleSpace();
+
+                if (GUILayout.Button("Import", GUILayout.Width(100)))
+                {
+                    var parsed = parseJson(jsonInput);
+                    if (parsed != null)
+                    {
+                        TracksFromJson(parsed);
+                        jsonInput = "";
+                    }
+                    else
+                    {
+                        EditorUtility.DisplayDialog(
+                            "Invalid JSON",
+                            "Failed to parse Playlist JSON. Check console for details.",
+                            "OK");
+                    }
+                }
+            }
+        }
+
         private void OverrideFoldout()
         {
             _showPlaylistFoldout = EditorGUILayout.Foldout(_showPlaylistFoldout, "Playlist Entries");
@@ -225,6 +306,24 @@ namespace Texel
             }
 
             UdonSharpEditorUtility.CopyProxyToUdon(data);
+        }
+
+        private PlaylistDataJson parseJson(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) {
+                Debug.LogError("JSON input was empty");
+                return null;
+            }
+
+            try
+            {
+                return JsonUtility.FromJson<PlaylistDataJson>(json);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Failed to parse PlaylistDataJson:\n{e}");
+                return null;
+            }
         }
     }
 }
