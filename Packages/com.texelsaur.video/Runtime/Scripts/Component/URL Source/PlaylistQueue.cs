@@ -40,6 +40,12 @@ namespace Texel
         [SerializeField] protected internal bool syncTrackAuthors = true;
         [SerializeField] protected internal bool syncPlayerNames = true;
 
+        [Tooltip("Log debug statements to a world object")]
+        [SerializeField] internal DebugLog debugLog;
+        [SerializeField] internal bool vrcLogging = false;
+        [SerializeField] internal bool eventLogging = false;
+        [SerializeField] internal bool lowLevelLogging = false;
+
         // public bool removeTracks = true;
         [UdonSynced]
         VRCUrl syncReadyUrl;
@@ -84,6 +90,8 @@ namespace Texel
         int syncTrackAddedUpdate = -1;
         int prevTrackAddedUpdate = -1;
 
+        bool usingDebug = false;
+        bool usingDebugLow = false;
         bool usingQuestUrls = false;
         bool usingTitles = false;
         bool usingAuthors = false;
@@ -107,6 +115,13 @@ namespace Texel
         {
             base._Init();
 
+            usingDebug = vrcLogging || Utilities.IsValid(debugLog);
+            usingDebugLow = usingDebug && lowLevelLogging;
+            if (usingDebug) _DebugLog("Init");
+
+            if (eventLogging)
+                eventDebugLog = debugLog;
+
             syncReadyUrl = VRCUrl.Empty;
             syncReadyTitle = "";
             syncReadyPlayer = "";
@@ -128,10 +143,16 @@ namespace Texel
 
             if (Networking.IsOwner(gameObject))
             {
+                if (usingDebug) _DebugLog("Init Owner");
+
                 syncQueueUpdate = 0;
                 syncReadyUrlUpdate = 0;
                 syncTrackAddedUpdate = 0;
                 syncTrackChangeUpdate = 0;
+                prevQueueUpdate = 0;
+                prevReadyUrlUpdate = 0;
+                prevTrackAddedUpdate = 0;
+                prevTrackChangeUpdate = 0;
 
                 RequestSerialization();
             }
@@ -175,10 +196,11 @@ namespace Texel
 
             if (_UpdateInfoFromResolver(internalArgUrl, index))
             {
+                if (usingDebugLow) _DebugLowLevel($"Updated info from resolver for {internalArgUrl} at {index}");
                 if (!_TakeControl())
                     return;
 
-                syncQueueUpdate += 1;
+                _IncrQueueUpdate();
 
                 _EventListChange();
                 RequestSerialization();
@@ -237,6 +259,7 @@ namespace Texel
             {
                 if (syncEnabled != value)
                 {
+                    if (usingDebug) _DebugLog($"Source enabled = {syncEnabled}");
                     syncEnabled = value;
 
                     _UpdateHandlers(VideoUrlSource.EVENT_ENABLE_CHANGE);
@@ -428,6 +451,34 @@ namespace Texel
             return syncPlayers[index];
         }
 
+        void _IncrQueueUpdate()
+        {
+            syncQueueUpdate += 1;
+            if (usingDebugLow) _DebugLowLevel($"  readyUrlUpdate {prevQueueUpdate} -> {syncQueueUpdate}");
+            prevQueueUpdate = syncQueueUpdate;
+        }
+
+        void _IncrReadyUrlUpdate()
+        {
+            syncReadyUrlUpdate += 1;
+            if (usingDebugLow) _DebugLowLevel($"  readyUrlUpdate {prevReadyUrlUpdate} -> {syncReadyUrlUpdate}");
+            prevReadyUrlUpdate = syncReadyUrlUpdate;
+        }
+
+        void _IncrTrackChangeUpdate()
+        {
+            syncTrackChangeUpdate += 1;
+            if (usingDebugLow) _DebugLowLevel($"  trackChangeUpdate {prevTrackChangeUpdate} -> {syncTrackChangeUpdate}");
+            prevTrackChangeUpdate = syncTrackChangeUpdate;
+        }
+
+        void _IncrTrackAddedUpdate()
+        {
+            syncTrackAddedUpdate += 1;
+            if (usingDebugLow) _DebugLowLevel($"  trackAddedUpdate {prevTrackAddedUpdate} -> {syncTrackAddedUpdate}");
+            prevTrackAddedUpdate = syncTrackAddedUpdate;
+        }
+
         public override bool _MoveNext()
         {
             if (!_TakeControl())
@@ -435,6 +486,8 @@ namespace Texel
 
             if (syncTrackCount == 0)
                 return false;
+
+            if (usingDebug) _DebugLog("Move next track");
 
             syncReadyUrl = _GetTrackURL(0);
             syncReadyQuestUrl = _GetTrackURL(0, TXLUrlType.Quest);
@@ -447,8 +500,8 @@ namespace Texel
             _EventUrlReady();
 
             errorCount = 0;
-            syncReadyUrlUpdate += 1;
-            syncTrackChangeUpdate += 1;
+            _IncrReadyUrlUpdate();
+            _IncrTrackChangeUpdate();
 
             RequestSerialization();
 
@@ -491,7 +544,7 @@ namespace Texel
             }
 
             syncTrackCount -= (short)popCount;
-            syncQueueUpdate += 1;
+            _IncrQueueUpdate();
 
             _EventListChange();
         }
@@ -510,8 +563,11 @@ namespace Texel
         {
             base.OnDeserialization();
 
+            if (usingDebugLow) _DebugLowLevel("Deserialize");
+
             if (syncQueueUpdate > prevQueueUpdate)
             {
+                if (usingDebugLow) _DebugLowLevel($"  queueUpdate {prevQueueUpdate} -> {syncQueueUpdate}");
                 prevQueueUpdate = syncQueueUpdate;
                 _PopulateResolver();
 
@@ -520,12 +576,14 @@ namespace Texel
 
             if (syncTrackChangeUpdate > prevTrackChangeUpdate)
             {
+                if (usingDebugLow) _DebugLowLevel($"  trackChangeUpdate {prevTrackChangeUpdate} -> {syncTrackChangeUpdate}");
                 prevTrackChangeUpdate = syncTrackChangeUpdate;
                 _EventTrackChange();
             }
 
             if (syncReadyUrlUpdate > prevReadyUrlUpdate)
             {
+                if (usingDebugLow) _DebugLowLevel($"  readyUrlUpdate {prevReadyUrlUpdate} -> {syncReadyUrlUpdate}");
                 errorCount = 0;
                 if (prevReadyUrlUpdate > -1)
                     _EventUrlReady();
@@ -534,9 +592,17 @@ namespace Texel
 
             if (syncTrackAddedUpdate > prevTrackAddedUpdate)
             {
+                if (usingDebugLow) _DebugLowLevel($"  trackAddedUpdate {prevTrackAddedUpdate} -> {syncTrackAddedUpdate}");
                 prevTrackAddedUpdate = syncTrackAddedUpdate;
                 _UpdateInfoResolver();
             }
+        }
+
+        public override void OnOwnershipTransferred(VRCPlayerApi player)
+        {
+            base.OnOwnershipTransferred(player);
+
+            if (usingDebugLow) _DebugLowLevel($"Ownership transferred to {player.displayName}");
         }
 
         void _PopulateResolver()
@@ -547,6 +613,8 @@ namespace Texel
             UrlInfoResolver resolver = videoPlayer.UrlInfoResolver;
             if (!resolver)
                 return;
+
+            if (usingDebugLow) _DebugLowLevel("Populate Resolver");
 
             for (int i = 0; i < syncTrackCount; i++)
             {
@@ -570,6 +638,8 @@ namespace Texel
         {
             if (!allowDelete || index < 0 || index >= syncTrackCount)
                 return false;
+
+            if (usingDebug) _DebugLog($"Remove track at {index}");
 
             bool addedSelf = syncPlayerIds[index] == Networking.LocalPlayer.playerId;
             if (addedSelf && allowSelfDelete)
@@ -601,6 +671,8 @@ namespace Texel
                 return false;
             if (index == destIndex)
                 return false;
+
+            if (usingDebug) _DebugLog($"Move track from {index} to {destIndex}");
 
             VRCUrl dstUrl = syncUrls[index];
             Vector3 dstEntry = syncEntries[index];
@@ -664,7 +736,7 @@ namespace Texel
             if (usingPlayers)
                 syncPlayers[destIndex] = dstPlayer;
 
-            syncQueueUpdate += 1;
+            _IncrQueueUpdate();
             _EventListChange();
 
             RequestSerialization();
@@ -703,6 +775,8 @@ namespace Texel
                 _ForceTakeControl();
             else if (!_TakeControl(addAccess))
                 return false;
+
+            if (usingDebug) _DebugLog($"Adding URL {url}");
 
             _EnsureSyncCapacity();
 
@@ -763,6 +837,7 @@ namespace Texel
 
             if (!foundInfo && (usingTitles || usingAuthors))
             {
+                if (usingDebugLow) _DebugLowLevel($"Resolving info for url {url}");
                 UrlInfoResolver resolver = videoPlayer.UrlInfoResolver;
                 resolver._ResolveInfo(url);
             }
@@ -802,6 +877,8 @@ namespace Texel
             if (!usingTitles && !usingAuthors)
                 return;
 
+            if (usingDebug) _DebugLowLevel($"Updating info resolver for {syncTrackCount} tracks");
+
             for (int i = 0; i < syncTrackCount; i++)
             {
                 string title = usingTitles ? syncTitles[i] : null;
@@ -814,6 +891,8 @@ namespace Texel
         {
             if (!_TakeControl(addAccess))
                 return false;
+
+            if (usingDebug) _DebugLog($"Adding track (playlist={playlistIndex}, catalog={catalogIndex}, track={trackIndex}");
 
             _EnsureSyncCapacity();
 
@@ -864,9 +943,9 @@ namespace Texel
 
         private bool _CommitAddTrack()
         {
-            syncQueueUpdate += 1;
+            _IncrQueueUpdate();
+            _IncrTrackAddedUpdate();
             syncTrackCount += 1;
-            syncTrackAddedUpdate += 1;
 
             bool isPlaying = videoPlayer && (videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_LOADING || videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_PLAYING);
 
@@ -889,7 +968,10 @@ namespace Texel
                 return false;
 
             if (!Networking.IsOwner(gameObject))
+            {
+                if (usingDebugLow) _DebugLowLevel("Take control");
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
+            }
 
             return true;
         }
@@ -897,7 +979,10 @@ namespace Texel
         bool _ForceTakeControl()
         {
             if (!Networking.IsOwner(gameObject))
+            {
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
+                if (usingDebugLow) _DebugLowLevel("Force take control");
+            }
 
             return true;
         }
@@ -934,6 +1019,28 @@ namespace Texel
                 sourceManager._OnSourceInterrupt(sourceIndex);
 
             _UpdateHandlers(EVENT_INTERRUPT);
+        }
+
+        void _DebugLog(string message)
+        {
+            if (vrcLogging)
+                Debug.Log("[VideoTXL:PlaylistQueue] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write("PlaylistQueue", message);
+        }
+
+        void _DebugError(string message, bool force = false)
+        {
+            if (vrcLogging || force)
+                Debug.LogError("[VideoTXL:PlaylistQueue] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write("PlaylistQueue", message);
+        }
+
+        void _DebugLowLevel(string message)
+        {
+            if (lowLevelLogging)
+                _DebugLog(message);
         }
     }
 }

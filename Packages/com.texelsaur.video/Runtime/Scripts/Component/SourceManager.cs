@@ -242,6 +242,9 @@ namespace Texel
 
         public bool _MoveNext()
         {
+            if (!videoPlayer || !videoPlayer._TakeControl())
+                return false;
+
             _ResetReady();
 
             foreach (VideoUrlSource source in sources)
@@ -256,6 +259,9 @@ namespace Texel
 
         public bool _MovePrev()
         {
+            if (!videoPlayer || !videoPlayer._TakeControl())
+                return false;
+
             _ResetReady();
 
             foreach (VideoUrlSource source in sources)

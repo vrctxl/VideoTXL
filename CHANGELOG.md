@@ -2,12 +2,16 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.20]
+- Added debugging options to PlaylistQueue
+- Possible fixes for queue restart bug
+
 ### [2.5.0-beta.19]
 - Create VIDEO_TXL define symbol on load
 - Added JSON import field to PlaylistData
 - Added option to queue to disable its interrupt behavior
 - Added additional logging to SourceManager around interrupted sources
-- Possible fixes relayed to current URL source
+- Possible fixes related to current URL source
 - Made most functions with URL Remapper virtual
 
 ### [2.5.0-beta.18]

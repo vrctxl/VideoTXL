@@ -22,6 +22,13 @@ namespace Texel
         protected SerializedProperty syncTrackAuthorsProperty;
         protected SerializedProperty syncPlayerNamesProperty;
 
+        protected SerializedProperty debugLogProperty;
+        protected SerializedProperty vrcLoggingProperty;
+        protected SerializedProperty eventLoggingProperty;
+        protected SerializedProperty lowLevelLoggingProperty;
+
+        static bool expandDebug = false;
+
         protected override void OnEnable()
         {
             base.OnEnable();
@@ -41,11 +48,19 @@ namespace Texel
             syncTrackTitlesProperty = serializedObject.FindProperty(nameof(PlaylistQueue.syncTrackTitles));
             syncTrackAuthorsProperty = serializedObject.FindProperty(nameof(PlaylistQueue.syncTrackAuthors));
             syncPlayerNamesProperty = serializedObject.FindProperty(nameof(PlaylistQueue.syncPlayerNames));
+
+            debugLogProperty = serializedObject.FindProperty(nameof(PlaylistQueue.debugLog));
+            vrcLoggingProperty = serializedObject.FindProperty(nameof(PlaylistQueue.vrcLogging));
+            eventLoggingProperty = serializedObject.FindProperty(nameof(PlaylistQueue.eventLogging));
+            lowLevelLoggingProperty = serializedObject.FindProperty(nameof(PlaylistQueue.lowLevelLogging));
         }
 
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
+
+            GUIStyle boldFoldoutStyle = new GUIStyle(EditorStyles.foldout);
+            boldFoldoutStyle.fontStyle = FontStyle.Bold;
 
             RenderUrlSourceInspector();
 
@@ -87,6 +102,16 @@ namespace Texel
             EditorGUILayout.PropertyField(syncTrackTitlesProperty);
             EditorGUILayout.PropertyField(syncTrackAuthorsProperty);
             EditorGUILayout.PropertyField(syncPlayerNamesProperty);
+
+            EditorGUILayout.Space();
+            expandDebug = EditorGUILayout.Foldout(expandDebug, "Debug Options", true, boldFoldoutStyle);
+            if (expandDebug)
+            {
+                EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log"));
+                EditorGUILayout.PropertyField(eventLoggingProperty, new GUIContent("Include Events"));
+                EditorGUILayout.PropertyField(lowLevelLoggingProperty, new GUIContent("Include Low-Level"));
+                EditorGUILayout.PropertyField(vrcLoggingProperty, new GUIContent("VRC Logging"));
+            }
 
             serializedObject.ApplyModifiedProperties();
         }

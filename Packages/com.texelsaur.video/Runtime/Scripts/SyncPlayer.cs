@@ -1600,6 +1600,13 @@ namespace Texel
         //    return base.OnOwnershipRequest(requestingPlayer, requestedOwner);
         //}
 
+        public override void OnOwnershipTransferred(VRCPlayerApi player)
+        {
+            base.OnOwnershipTransferred(player);
+
+            if (_usingDebug) DebugLog($"Ownership transferred to {player.displayName} [{player.playerId}]");
+        }
+
         public override void OnDeserialization()
         {
             if (_usingDebug) DebugLog($"Deserialize: video #{_syncVideoNumber}");
