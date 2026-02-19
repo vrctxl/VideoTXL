@@ -2,6 +2,10 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.21]
+- Exposed default local playback to SyncVideoPlayer inspector
+- Fixed player controls not updating correctly when Video Manager binding is changed
+
 ### [2.5.0-beta.20]
 - Added debugging options to PlaylistQueue
 - Possible fixes for queue restart bug

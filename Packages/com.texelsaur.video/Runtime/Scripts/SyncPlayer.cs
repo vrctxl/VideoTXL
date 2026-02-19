@@ -27,6 +27,7 @@ namespace Texel
         public ZoneMembership playbackZoneMembership;
         [SerializeField] internal TrackedZoneTrigger trackedZoneTrigger;
         [SerializeField] internal TrackedZoneTrigger[] exclusionZones;
+        [SerializeField] internal bool defaultLocalPlaybackEnabled = true;
 
         public VRCUrl defaultUrl;
         public VRCUrl defaultQuestUrl;
@@ -148,6 +149,8 @@ namespace Texel
         protected override void _Init()
         {
             base._Init();
+
+            _localEnabled = defaultLocalPlaybackEnabled;
 
             _usingDebug = debugLogging || Utilities.IsValid(debugLog);
             if (_usingDebug) DebugLog("Init");

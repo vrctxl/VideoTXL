@@ -196,6 +196,9 @@ namespace Texel
                 videoPlayer._Register(TXLVideoPlayer.EVENT_BIND_AUDIOMANAGER, this, nameof(_InternalOnBindAudioManager));
                 videoPlayer._Register(TXLVideoPlayer.EVENT_UNBIND_AUDIOMANAGER, this, nameof(_InternalOnUnbindAudioManager));
 
+                videoPlayer._Register(TXLVideoPlayer.EVENT_BIND_VIDEOMANAGER, this, nameof(_InternalOnBindUnbindVideoManager));
+                videoPlayer._Register(TXLVideoPlayer.EVENT_UNBIND_VIDEOMANAGER, this, nameof(_InternalOnBindUnbindVideoManager));
+
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_VideoStateUpdate");
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_LOCK_UPDATE, this, "_VideoLockUpdate");
                 videoPlayer._Register(TXLVideoPlayer.EVENT_VIDEO_TRACKING_UPDATE, this, "_VideoTrackingUpdate");
@@ -219,6 +222,9 @@ namespace Texel
             {
                 videoPlayer._Unregister(TXLVideoPlayer.EVENT_BIND_AUDIOMANAGER, this, nameof(_InternalOnBindAudioManager));
                 videoPlayer._Unregister(TXLVideoPlayer.EVENT_UNBIND_AUDIOMANAGER, this, nameof(_InternalOnUnbindAudioManager));
+
+                videoPlayer._Unregister(TXLVideoPlayer.EVENT_BIND_VIDEOMANAGER, this, nameof(_InternalOnBindUnbindVideoManager));
+                videoPlayer._Unregister(TXLVideoPlayer.EVENT_UNBIND_VIDEOMANAGER, this, nameof(_InternalOnBindUnbindVideoManager));
 
                 videoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_STATE_UPDATE, this, "_VideoStateUpdate");
                 videoPlayer._Unregister(TXLVideoPlayer.EVENT_VIDEO_LOCK_UPDATE, this, "_VideoLockUpdate");
@@ -264,6 +270,11 @@ namespace Texel
         {
             if (gameObject.activeInHierarchy)
                 _RegisterAudioManagerListeners();
+        }
+
+        public void _InternalOnBindUnbindVideoManager()
+        {
+            _UpdateAll();
         }
 
         /*public void _BindAudioManager(AudioManager audioManager)

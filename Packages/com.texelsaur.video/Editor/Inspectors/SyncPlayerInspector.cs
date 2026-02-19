@@ -27,6 +27,7 @@ namespace Texel
         SerializedProperty traceLoggingProperty;
         SerializedProperty playbackZoneProperty;
         SerializedProperty exclusionZonesProperty;
+        SerializedProperty defaultLocalPlaybackEnabledProperty;
         SerializedProperty runBuildHooksProperty;
 
         SerializedProperty defaultUrlProperty;
@@ -65,6 +66,7 @@ namespace Texel
             traceLoggingProperty = serializedObject.FindProperty(nameof(SyncPlayer.traceLogging));
             playbackZoneProperty = serializedObject.FindProperty(nameof(SyncPlayer.trackedZoneTrigger));
             exclusionZonesProperty = serializedObject.FindProperty(nameof(SyncPlayer.exclusionZones));
+            defaultLocalPlaybackEnabledProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultLocalPlaybackEnabled));
             runBuildHooksProperty = serializedObject.FindProperty(nameof(SyncPlayer.runBuildHooks));
 
             defaultUrlProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultUrl));
@@ -159,7 +161,8 @@ namespace Texel
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Local Playback Options", EditorStyles.boldLabel);
-            if (TXLGUI.DrawObjectFieldWithAdd(playbackZoneProperty, new GUIContent("Playback Zone", "Optional tracked trigger zone the player must be in to sustain playback.  Disables playing audio on world load."), new GUIContent("+", "Create new Tracked Trigger Zone")))
+            EditorGUILayout.PropertyField(defaultLocalPlaybackEnabledProperty, new GUIContent("Playback Enabled", "Whether or not playback is enabled for each player locally on world load.\n\nLocal playback is controllable by API and independent of playback zones."));
+            if (TXLGUI.DrawObjectFieldWithAdd(playbackZoneProperty, new GUIContent("Playback Zone", "Optional tracked trigger zone the player must be in to sustain playback.  Disables playing video on world load if player does not start in zone."), new GUIContent("+", "Create new Tracked Trigger Zone")))
                 VideoTxlManager.AddSyncPlaybackZoneToScene(true);
             EditorGUILayout.PropertyField(exclusionZonesProperty, new GUIContent("Exclusion Zones", "Optional one or more tracked tricker zones that will locally halt playback when the player enters them."));
 
