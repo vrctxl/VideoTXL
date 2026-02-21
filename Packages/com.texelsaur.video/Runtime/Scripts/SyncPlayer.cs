@@ -240,8 +240,20 @@ namespace Texel
         {
             if (!videoMux)
             {
-                DebugError("No video manager set at time of post init, skipping default playback");
-                return;
+                if (!gameObject.activeInHierarchy)
+                {
+                    gameObject.GetComponentInChildren<VideoManager>(true)._EnsureInit();
+                    if (!videoMux)
+                    {
+                        DebugError("No video manager found at time of post init, skipping default playback");
+                        return;
+                    }
+                }
+                else
+                {
+                    DebugError("No video manager set at time of post init, skipping default playback");
+                    return;
+                }
             }
 
             if (Networking.IsOwner(gameObject))
