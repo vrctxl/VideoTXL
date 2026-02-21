@@ -490,7 +490,7 @@ namespace Texel
         [MenuItem("GameObject/TXL/VideoTXL/Playlists and URL Sources/Playlist Data", false, 341)]
         public static void AddPlaylistDataToScene()
         {
-            AddPlaylistCatalogToScene(false);
+            AddPlaylistDataToScene(false);
         }
 
         public static void AddPlaylistDataToScene(bool replace)
