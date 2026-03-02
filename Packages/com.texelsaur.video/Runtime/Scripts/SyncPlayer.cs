@@ -31,6 +31,7 @@ namespace Texel
 
         public VRCUrl defaultUrl;
         public VRCUrl defaultQuestUrl;
+        public bool defaultUrlInterruptible = false;
         public bool defaultLocked = false;
         public bool loop = false;
         public bool retryOnError = true;
@@ -428,6 +429,11 @@ namespace Texel
                 localOffset = value;
                 _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
             }
+        }
+
+        public override bool CurrentUrlInterruptible
+        {
+            get { return currentUrl == defaultUrl && defaultUrlInterruptible; }
         }
 
         public void _OnPlaybackZoneEnter()

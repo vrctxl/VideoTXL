@@ -5,6 +5,11 @@
 ### [2.5.0-beta.21]
 - Exposed default local playback to SyncVideoPlayer inspector
 - Fixed player controls not updating correctly when Video Manager binding is changed
+- Fixed queue UI showing priority button when priority option was disabled
+- Fixed AddPlaylistDataToScene menu option (CompuGeniusCode)
+- Added CurrentUrlInterruptible virtual property to base TXLVideoPlayer
+- Added Interruptible option to default Url in SyncPlayer, default OFF
+- Changed Queue "Allow Delete" option default to ON
 
 ### [2.5.0-beta.20]
 - Added debugging options to PlaylistQueue

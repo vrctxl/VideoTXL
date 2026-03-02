@@ -30,7 +30,7 @@ namespace Texel
         [Tooltip("Optional. ACL to control access to the delete button.  If not set, uses the video player's ACL settings.")]
         [SerializeField] protected internal AccessControl deleteAccess;
         //[Tooltip("Allows players to delete their own added entries, even if th")]
-        [SerializeField] protected internal bool allowDelete = false;
+        [SerializeField] protected internal bool allowDelete = true;
         [SerializeField] protected internal bool allowSelfDelete = false;
 
         [SerializeField] protected internal bool canInterruptSources = true;
@@ -289,6 +289,8 @@ namespace Texel
         {
             get
             {
+                if (!allowPriority)
+                    return false;
                 if (priorityAccess)
                     return priorityAccess._LocalHasAccess();
                 if (videoPlayer)
