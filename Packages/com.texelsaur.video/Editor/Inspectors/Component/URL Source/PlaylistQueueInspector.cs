@@ -16,6 +16,9 @@ namespace Texel
         protected SerializedProperty allowDeleteProperty;
         protected SerializedProperty allowSelfDeleteProperty;
 
+        protected SerializedProperty removeOnLeaveProperty;
+        protected SerializedProperty removeIfAbsentProperty;
+
         protected SerializedProperty canInterruptSourcesProperty;
         protected SerializedProperty enableSyncQuestUrlsProperty;
         protected SerializedProperty syncTrackTitlesProperty;
@@ -42,6 +45,9 @@ namespace Texel
             deleteAccessProperty = serializedObject.FindProperty(nameof(PlaylistQueue.deleteAccess));
             allowDeleteProperty = serializedObject.FindProperty(nameof(PlaylistQueue.allowDelete));
             allowSelfDeleteProperty = serializedObject.FindProperty(nameof(PlaylistQueue.allowSelfDelete));
+
+            removeOnLeaveProperty = serializedObject.FindProperty(nameof(PlaylistQueue.removeOnLeave));
+            removeIfAbsentProperty = serializedObject.FindProperty(nameof(PlaylistQueue.removeIfAbsent));
 
             canInterruptSourcesProperty = serializedObject.FindProperty(nameof(PlaylistQueue.canInterruptSources));
             enableSyncQuestUrlsProperty = serializedObject.FindProperty(nameof(PlaylistQueue.enableSyncQuestUrls));
@@ -95,6 +101,12 @@ namespace Texel
                 EditorGUILayout.PropertyField(allowSelfDeleteProperty, new GUIContent("Allow Self Delete", "Allows players to delete their own added entries, regardless of overall access control restrictions."));
                 EditorGUI.indentLevel -= 1;
             }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Auto Management", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(removeIfAbsentProperty, new GUIContent("Remove If Absent", "Removes a queue entry at the moment it would be played if the player that added it is not currently in the world."));
+            EditorGUILayout.PropertyField(removeOnLeaveProperty, new GUIContent("Remove On Leave", "Removes all queue entries added by a player if they leave the world."));
+
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Sync", EditorStyles.boldLabel);

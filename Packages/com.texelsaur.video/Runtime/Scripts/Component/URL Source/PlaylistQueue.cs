@@ -33,6 +33,9 @@ namespace Texel
         [SerializeField] protected internal bool allowDelete = true;
         [SerializeField] protected internal bool allowSelfDelete = false;
 
+        [SerializeField] protected internal bool removeOnLeave = false;
+        [SerializeField] protected internal bool removeIfAbsent = false;
+
         [SerializeField] protected internal bool canInterruptSources = true;
 
         [SerializeField] protected internal bool enableSyncQuestUrls = true;
@@ -490,6 +493,28 @@ namespace Texel
                 return false;
 
             if (usingDebug) _DebugLog("Move next track");
+
+            if (removeIfAbsent)
+            {
+                int popCount = 0;
+                while (popCount < syncTrackCount)
+                {
+                    VRCPlayerApi player = VRCPlayerApi.GetPlayerById(syncPlayerIds[popCount]);
+                    if (Utilities.IsValid(player))
+                        break;
+
+                    popCount++;
+                }
+
+                if (popCount > 0)
+                {
+                    if (usingDebug) _DebugLog($"Skipping {popCount} consecutive tracks from absent players.");
+                    _PopTracks(0, popCount);
+                }
+
+                if (syncTrackCount == 0)
+                    return false;
+            }
 
             syncReadyUrl = _GetTrackURL(0);
             syncReadyQuestUrl = _GetTrackURL(0, TXLUrlType.Quest);
@@ -997,6 +1022,36 @@ namespace Texel
                     return videoPlayer.RepeatMode;
 
                 return TXLRepeatMode.None;
+            }
+        }
+
+        public override void OnPlayerLeft(VRCPlayerApi player)
+        {
+            base.OnPlayerLeft(player);
+
+            if (removeOnLeave && Networking.IsOwner(gameObject))
+            {
+                int id = player.playerId;
+                int removeCount = 0;
+
+                SuppressEvents = true;
+                for (int i = 0; i < Count; i++)
+                {
+                    if (syncPlayerIds[i] == id && _RemoveTrack(i))
+                    {
+                        removeCount++;
+                        i--;
+                    }
+                }
+                SuppressEvents = false;
+
+                if (removeCount > 0)
+                {
+                    if (usingDebug) _DebugLog($"Removed {removeCount} tracks from departing player {player.displayName} [{player.playerId}]");
+                    _IncrQueueUpdate();
+                    _EventListChange();
+                    RequestSerialization();
+                }
             }
         }
 

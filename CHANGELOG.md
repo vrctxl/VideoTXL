@@ -7,8 +7,14 @@
 - Fixed player controls not updating correctly when Video Manager binding is changed
 - Fixed queue UI showing priority button when priority option was disabled
 - Fixed AddPlaylistDataToScene menu option (CompuGeniusCode)
+- Fixed LocalOffset to take effect immediately on set
+- Fixed some behavior edge cases around LocalOffset
+- Fixed trackbar changes not reflecting on remote clients immediately
 - Added CurrentUrlInterruptible virtual property to base TXLVideoPlayer
 - Added Interruptible option to default Url in SyncPlayer, default OFF
+- Added basic local offset control to options info panel
+- Added Remove On Leave option to queues
+- Added Remove If Absent option to queues
 - Changed Queue "Allow Delete" option default to ON
 
 ### [2.5.0-beta.20]
