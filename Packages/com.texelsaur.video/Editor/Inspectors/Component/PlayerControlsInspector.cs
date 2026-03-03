@@ -50,6 +50,7 @@ namespace Texel
 
         SerializedProperty defaultUrlModeProperty;
         SerializedProperty rememberUrlModeProperty;
+        SerializedProperty localOffsetIncrementProperty;
 
         [ObjectPath("MainPanel/LowerRow/InputProgress/InputField")]
         SerializedProperty urlInputProperty;
@@ -202,6 +203,7 @@ namespace Texel
 
             defaultUrlModeProperty = serializedObject.FindProperty(nameof(PlayerControls.defaultUrlMode));
             rememberUrlModeProperty = serializedObject.FindProperty(nameof(PlayerControls.rememberUrlMode));
+            localOffsetIncrementProperty = serializedObject.FindProperty(nameof(PlayerControls.localOffsetIncrement));
 
             urlInputProperty = serializedObject.FindProperty(nameof(PlayerControls.urlInput));
 
@@ -269,6 +271,7 @@ namespace Texel
 
             EditorGUILayout.PropertyField(defaultUrlModeProperty);
             EditorGUILayout.PropertyField(rememberUrlModeProperty);
+            EditorGUILayout.PropertyField(localOffsetIncrementProperty);
 
             CheckUrlInputValid();
 

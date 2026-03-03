@@ -27,6 +27,8 @@ namespace Texel
         public UrlEntryMode defaultUrlMode;
         [Tooltip("Whether the control will remember the user's URL entry mode after inputting a URL, or revert to the default")]
         public bool rememberUrlMode;
+        [Tooltip("Amount to increase or decrease local offset when using UI +/- controls")]
+        public float localOffsetIncrement = 0.25f;
 
         public VRCUrlInputField urlInput;
 
