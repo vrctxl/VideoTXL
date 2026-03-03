@@ -427,6 +427,8 @@ namespace Texel
             set 
             {
                 localOffset = value;
+                _SyncLocalOffset();
+
                 _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
             }
         }
@@ -1182,7 +1184,10 @@ namespace Texel
             {
                 // TODO: Stream bypass owner
                 if (_syncOwnerPlaying)
+                {
                     videoMux._VideoPlay();
+                    _SyncLocalOffset();
+                }
                 else
                     _waitForSync = true;
             }
@@ -1206,9 +1211,6 @@ namespace Texel
                 _syncOwnerPlaying = true;
                 RequestSerialization();
 
-                if (seekableSource)
-                    videoMux._VideoSetTime(_GetTargetTime(localOffset));
-
                 if (currentUrlSource)
                     currentUrlSource._OnVideoStart();
 
@@ -1225,21 +1227,33 @@ namespace Texel
                     // TODO: Owner bypass
                     videoMux._VideoPause();
                     _waitForSync = true;
+
+                    _UpdatePlayerPaused(_syncOwnerPaused);
+                    return;
                 }
-                else
+
+                if (seekableSource)
                 {
-                    _UpdatePlayerState(VIDEO_STATE_PLAYING);
-
-                    if (seekableSource)
-                        videoMux._VideoSetTime(_GetTargetTime(localOffset));
-
-                    if (currentUrlSource)
-                        currentUrlSource._OnVideoStart();
-
-                    SyncVideoImmediate();
-                    if (_syncOwnerPaused)
+                    float target = _GetTargetTime(0) + localOffset;
+                    if (target < 0)
+                    {
+                        // Negative local offset means wait to start video
                         videoMux._VideoPause();
+                        return;
+                    }
                 }
+
+                _UpdatePlayerState(VIDEO_STATE_PLAYING);
+
+                if (seekableSource)
+                    videoMux._VideoSetTime(_GetTargetTime(localOffset));
+
+                if (currentUrlSource)
+                    currentUrlSource._OnVideoStart();
+
+                SyncVideoImmediate();
+                if (_syncOwnerPaused)
+                    videoMux._VideoPause();
 
                 _UpdatePlayerPaused(_syncOwnerPaused);
             }
@@ -1658,6 +1672,8 @@ namespace Texel
                         SendCustomEventDelayedFrames("_StopVideo", 1);
                 }
 
+                SyncVideoImmediate();
+
                 _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
 
                 return;
@@ -1726,7 +1742,7 @@ namespace Texel
 
 
             // Video is playing: periodically sync with owner
-            if (isOwner || !_waitForSync)
+            if ((isOwner && !_waitForSync) || !_waitForSync)
             {
                 SyncVideoIfTime();
                 return;
@@ -1736,11 +1752,18 @@ namespace Texel
             if (!_syncOwnerPlaying || _syncOwnerPaused)
                 return;
 
+            // Video is playing, but local offset still results in negative target time
+            if (_GetTargetTime(0) + localOffset < 0)
+                return;
+
             // Got go-ahead from owner, start playing video
             _UpdatePlayerState(VIDEO_STATE_PLAYING);
 
             _waitForSync = false;
-            _PlayFromReady();
+            if (isOwner)
+                videoMux._VideoPlay();
+            else
+                _PlayFromReady();
 
             SyncVideoImmediate();
         }
@@ -1780,14 +1803,16 @@ namespace Texel
             float duration = videoMux.VideoDuration;
             float current = videoMux.VideoTime;
             float offsetTime = _GetTargetTime(0);
+            float target = offsetTime + localOffset;
+            float clampedTarget = Mathf.Clamp(target, 0f, duration);
 
             // If we're almost at the end, don't sync to avoid possible contention with AVPro
             if (duration - current < 2)
                 return;
 
             // Don't need to sync if we're within threshold
-            float offset = current - localOffset - offsetTime;
-            if (Mathf.Abs(offset) < syncThreshold)
+            float offset = current - target;
+            if (Mathf.Abs(offset) < syncThreshold && target >= 0)
                 return;
 
             if (_usingDebug) DebugLog($"Sync video (off by {offset:N3}s) to {offsetTime:N3}");
@@ -1808,7 +1833,22 @@ namespace Texel
                 previousTarget = offsetTime;
 
             previousCurrent = current;
-            videoMux._VideoSetTime(offsetTime + localOffset);
+            videoMux._VideoSetTime(clampedTarget);
+
+            if (target < 0)
+            {
+                _ResetSyncState();
+                videoMux._VideoPause();
+                _waitForSync = true;
+            }
+        }
+
+        void _SyncLocalOffset()
+        {
+            if (!seekableSource)
+                return;
+
+            videoMux._VideoSetTime(_GetTargetTime(localOffset));
         }
 
         float _GetTargetTime(float offset)
