@@ -5,6 +5,7 @@ using UnityEditor.SceneManagement;
 using UdonSharpEditor;
 using System.Collections.Generic;
 using System;
+using VRC.SDKBase;
 
 #if UNITY_2019
 using UnityEditor.Experimental.SceneManagement;
@@ -27,9 +28,11 @@ namespace Texel
         SerializedProperty traceLoggingProperty;
         SerializedProperty playbackZoneProperty;
         SerializedProperty exclusionZonesProperty;
+        SerializedProperty defaultLocalPlaybackEnabledProperty;
         SerializedProperty runBuildHooksProperty;
 
         SerializedProperty defaultUrlProperty;
+        SerializedProperty defaultUrlInterruptibleProperty;
         SerializedProperty defaultLockedProperty;
         SerializedProperty debugLoggingProperty;
         SerializedProperty loopProperty;
@@ -65,9 +68,11 @@ namespace Texel
             traceLoggingProperty = serializedObject.FindProperty(nameof(SyncPlayer.traceLogging));
             playbackZoneProperty = serializedObject.FindProperty(nameof(SyncPlayer.trackedZoneTrigger));
             exclusionZonesProperty = serializedObject.FindProperty(nameof(SyncPlayer.exclusionZones));
+            defaultLocalPlaybackEnabledProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultLocalPlaybackEnabled));
             runBuildHooksProperty = serializedObject.FindProperty(nameof(SyncPlayer.runBuildHooks));
 
             defaultUrlProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultUrl));
+            defaultUrlInterruptibleProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultUrlInterruptible));
             defaultLockedProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultLocked));
             debugLoggingProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugLogging));
             loopProperty = serializedObject.FindProperty(nameof(SyncPlayer.loop));
@@ -104,7 +109,7 @@ namespace Texel
             GUIStyle boldFoldoutStyle = new GUIStyle(EditorStyles.foldout);
             boldFoldoutStyle.fontStyle = FontStyle.Bold;
 
-            TXLVideoPlayer videoPlayer = (TXLVideoPlayer)serializedObject.targetObject;
+            SyncPlayer videoPlayer = (SyncPlayer)serializedObject.targetObject;
 
             TimeSpan time = DateTime.Now.Subtract(lastValidate);
             if (time.TotalMilliseconds > 1000)
@@ -144,6 +149,13 @@ namespace Texel
             EditorGUILayout.LabelField("URLs & URL Sources", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(defaultUrlProperty, new GUIContent("Default URL", "Optional default URL to play on world load.  If a separate URL Source is also provided, the default URL will play first."));
+            if (videoPlayer.defaultUrl != null && videoPlayer.defaultUrl.Get() != "")
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(defaultUrlInterruptibleProperty, new GUIContent("Interruptible", "Whether the default URL playback can be interrupted by other interrupting sources, like queues."));
+                EditorGUI.indentLevel--;
+            }
+
             if (TXLGUI.DrawObjectFieldWithAdd(sourceManagerProperty, new GUIContent("URL Source Manager", "Manager for queues, playlists, and other URL sources."), new GUIContent("+", "Create new Source Manager")))
                 VideoTxlManager.AddSourceManagerToScene(true);
 
@@ -159,7 +171,8 @@ namespace Texel
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Local Playback Options", EditorStyles.boldLabel);
-            if (TXLGUI.DrawObjectFieldWithAdd(playbackZoneProperty, new GUIContent("Playback Zone", "Optional tracked trigger zone the player must be in to sustain playback.  Disables playing audio on world load."), new GUIContent("+", "Create new Tracked Trigger Zone")))
+            EditorGUILayout.PropertyField(defaultLocalPlaybackEnabledProperty, new GUIContent("Playback Enabled", "Whether or not playback is enabled for each player locally on world load.\n\nLocal playback is controllable by API and independent of playback zones."));
+            if (TXLGUI.DrawObjectFieldWithAdd(playbackZoneProperty, new GUIContent("Playback Zone", "Optional tracked trigger zone the player must be in to sustain playback.  Disables playing video on world load if player does not start in zone."), new GUIContent("+", "Create new Tracked Trigger Zone")))
                 VideoTxlManager.AddSyncPlaybackZoneToScene(true);
             EditorGUILayout.PropertyField(exclusionZonesProperty, new GUIContent("Exclusion Zones", "Optional one or more tracked tricker zones that will locally halt playback when the player enters them."));
 

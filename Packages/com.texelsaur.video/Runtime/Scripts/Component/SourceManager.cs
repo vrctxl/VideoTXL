@@ -321,6 +321,8 @@ namespace Texel
                 return;
 
             int readyIndex = _GetSourceIndex(videoPlayer.currentUrlSource);
+            if (readyIndex == -1 && !videoPlayer.CurrentUrlInterruptible)
+                return;
             if (readyIndex >= 0 && !sources[readyIndex].Interruptable)
                 return;
 

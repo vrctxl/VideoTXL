@@ -45,6 +45,7 @@ namespace Texel
         public Text infoLastVideoText;
         public Image infoPlayCurrentVideoImage;
         public Image infoPlayLastVideoImage;
+        public InputField infoOffsetField;
 
         const int OPTIONS_TAB_NONE = 0;
         const int OPTIONS_TAB_INFO = 1;
@@ -54,6 +55,7 @@ namespace Texel
         int optionsTabOpen = OPTIONS_TAB_NONE;
         bool registeredVideo = false;
         bool registeredAudio = false;
+        SyncPlayer syncPlayer;
 
         Color normalColor = new Color(1f, 1f, 1f, .8f);
         Color disabledColor = new Color(.5f, .5f, .5f, .4f);
@@ -63,6 +65,9 @@ namespace Texel
         void Start()
         {
             _SetControls(mainControls);
+
+            if (videoPlayer)
+                syncPlayer = videoPlayer.GetComponent<SyncPlayer>();
 
             if (!infoPanel && optionsInfoNav)
                 optionsInfoNav.SetActive(false);
@@ -211,6 +216,8 @@ namespace Texel
                 videoFitDropdown.SetValueWithoutNotify(videoPlayer.screenFit);
             if (videoModeDropdown)
                 videoModeDropdown.SetValueWithoutNotify(videoPlayer.playerSourceOverride);
+            if (infoOffsetField && syncPlayer)
+                infoOffsetField.text = syncPlayer.LocalOffset.ToString();
         }
 
         // Info Panel
@@ -298,6 +305,31 @@ namespace Texel
                 videoPlayer._ChangeUrl(videoPlayer.lastUrl);
             else if (mainControls)
                 mainControls._SetStatusOverride(mainControls._MakeOwnerMessage(), 3);
+        }
+
+        public void _HandleAddOffset()
+        {
+            if (!syncPlayer || !mainControls)
+                return;
+
+            syncPlayer.LocalOffset = syncPlayer.LocalOffset + mainControls.localOffsetIncrement;
+        }
+
+        public void _HandleSubOffset()
+        {
+            if (!syncPlayer || !mainControls)
+                return;
+
+            syncPlayer.LocalOffset = syncPlayer.LocalOffset - mainControls.localOffsetIncrement;
+        }
+
+        public void _HandleSetOffset()
+        {
+            if (!videoPlayer)
+                return;
+
+            if (float.TryParse(infoOffsetField.text, out float val))
+                syncPlayer.LocalOffset = val;
         }
 
         // Video Panel

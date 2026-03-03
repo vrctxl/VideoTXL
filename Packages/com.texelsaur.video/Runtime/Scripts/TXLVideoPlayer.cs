@@ -143,6 +143,11 @@ namespace Texel
 
         public virtual TXLRepeatMode RepeatMode { get; set; }
 
+        public virtual bool CurrentUrlInterruptible
+        {
+            get { return false; }
+        }
+
         public virtual bool _CanTakeControl()
         {
             return true;
