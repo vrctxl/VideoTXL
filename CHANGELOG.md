@@ -2,6 +2,12 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.22]
+- Fixed owner access failure advancing queue
+- Added Transfer Owner on Play option to queues to transfer video player ownership
+- Added max entries property to queues
+- Added max entries per player property to queues
+
 ### [2.5.0-beta.21]
 - Exposed default local playback to SyncVideoPlayer inspector
 - Fixed player controls not updating correctly when Video Manager binding is changed

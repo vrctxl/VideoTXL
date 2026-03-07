@@ -20,6 +20,11 @@ namespace Texel
     {
         TXLVideoPlayer videoPlayer;
 
+        [SerializeField] protected internal bool limitEntries = true;
+        [SerializeField] protected internal int maxEntries = 30;
+        [SerializeField] protected internal bool limitEntriesPerPlayer = false;
+        [SerializeField] protected internal int maxEntriesPerPlayer = 0;
+
         [SerializeField] protected internal bool allowAdd = true;
         [SerializeField] protected internal AccessControl addAccess;
         [SerializeField] protected internal bool allowAddFromProxy = false;
@@ -29,7 +34,7 @@ namespace Texel
         [SerializeField] protected internal bool allowPriority = false;
         [Tooltip("Optional. ACL to control access to the delete button.  If not set, uses the video player's ACL settings.")]
         [SerializeField] protected internal AccessControl deleteAccess;
-        //[Tooltip("Allows players to delete their own added entries, even if th")]
+        //[Tooltip("Allows players to delete their own added entries, even if th")] 
         [SerializeField] protected internal bool allowDelete = true;
         [SerializeField] protected internal bool allowSelfDelete = false;
 
@@ -38,6 +43,7 @@ namespace Texel
 
         [SerializeField] protected internal bool canInterruptSources = true;
 
+        [SerializeField] protected internal bool transferOwnershipOnPlay = false;
         [SerializeField] protected internal bool enableSyncQuestUrls = true;
         [SerializeField] protected internal bool syncTrackTitles = true;
         [SerializeField] protected internal bool syncTrackAuthors = true;
@@ -486,7 +492,7 @@ namespace Texel
 
         public override bool _MoveNext()
         {
-            if (!_TakeControl())
+            if (!_ForceTakeControl())
                 return false;
 
             if (syncTrackCount == 0)
@@ -520,17 +526,28 @@ namespace Texel
             syncReadyQuestUrl = _GetTrackURL(0, TXLUrlType.Quest);
             syncReadyTitle = _GetTrackName(0);
             syncReadyPlayer = _GetTrackPlayer(0);
+            int readyPlayerId = syncPlayerIds[0];
 
             _PopTracks(0, 1);
-
-            _EventTrackChange();
-            _EventUrlReady();
 
             errorCount = 0;
             _IncrReadyUrlUpdate();
             _IncrTrackChangeUpdate();
 
             RequestSerialization();
+
+            if (transferOwnershipOnPlay)
+            {
+                VRCPlayerApi player = VRCPlayerApi.GetPlayerById(readyPlayerId);
+                if (Utilities.IsValid(player))
+                {
+                    if (usingDebug) _DebugLog($"Transfering video player ownership to {player.displayName} [{readyPlayerId}]");
+                    Networking.SetOwner(player, videoPlayer.gameObject);
+                }
+            }
+
+            _EventTrackChange();
+            _EventUrlReady();
 
             return true;
         }
@@ -684,8 +701,6 @@ namespace Texel
         {
             if (!allowPriority)
                 return false;
-            if (!_TakeControl(priorityAccess))
-                return false;
 
             return _MoveTrack(index, 0);
         }
@@ -697,6 +712,8 @@ namespace Texel
             if (destIndex < 0 || destIndex >= syncTrackCount)
                 return false;
             if (index == destIndex)
+                return false;
+            if (!_TakeControl(priorityAccess))
                 return false;
 
             if (usingDebug) _DebugLog($"Move track from {index} to {destIndex}");
@@ -773,6 +790,25 @@ namespace Texel
 
         public override bool _CanAddTrack()
         {
+            if (!allowAdd)
+                return false;
+            if (limitEntries && syncTrackCount >= maxEntries)
+                return false;
+
+            if (limitEntriesPerPlayer)
+            {
+                int playerId = Networking.LocalPlayer.playerId;
+                int foundCount = 0;
+                for (int i = 0; i < syncTrackCount; i++)
+                {
+                    if (syncPlayerIds[i] == playerId)
+                        foundCount += 1;
+                }
+
+                if (foundCount >= maxEntriesPerPlayer)
+                    return false;
+            }
+
             return true;
         }
 
@@ -793,7 +829,7 @@ namespace Texel
 
         public bool _AddTrack(VRCUrl url, VRCUrl questUrl, string title, string author, bool force)
         {
-            if (!allowAdd)
+            if (!_CanAddTrack())
                 return false;
             if (!URLUtil.WellFormedUrl(url))
                 return false;
@@ -916,6 +952,8 @@ namespace Texel
 
         public bool _AddTrack(int playlistIndex, int catalogIndex, int trackIndex)
         {
+            if (!_CanAddTrack())
+                return false;
             if (!_TakeControl(addAccess))
                 return false;
 
