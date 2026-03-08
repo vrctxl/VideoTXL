@@ -20,6 +20,8 @@ namespace Texel
         protected SerializedProperty deleteAccessProperty;
         protected SerializedProperty allowDeleteProperty;
         protected SerializedProperty allowSelfDeleteProperty;
+        protected SerializedProperty moveAccessProperty;
+        protected SerializedProperty allowMoveProperty;
 
         protected SerializedProperty removeOnLeaveProperty;
         protected SerializedProperty removeIfAbsentProperty;
@@ -56,6 +58,8 @@ namespace Texel
             deleteAccessProperty = serializedObject.FindProperty(nameof(PlaylistQueue.deleteAccess));
             allowDeleteProperty = serializedObject.FindProperty(nameof(PlaylistQueue.allowDelete));
             allowSelfDeleteProperty = serializedObject.FindProperty(nameof(PlaylistQueue.allowSelfDelete));
+            moveAccessProperty = serializedObject.FindProperty(nameof(PlaylistQueue.moveAccess));
+            allowMoveProperty = serializedObject.FindProperty(nameof(PlaylistQueue.allowMove));
 
             removeOnLeaveProperty = serializedObject.FindProperty(nameof(PlaylistQueue.removeOnLeave));
             removeIfAbsentProperty = serializedObject.FindProperty(nameof(PlaylistQueue.removeIfAbsent));
@@ -121,6 +125,14 @@ namespace Texel
             {
                 EditorGUI.indentLevel += 1;
                 EditorGUILayout.PropertyField(priorityAccessProperty, new GUIContent("Priority Access", "Optional. ACL to control access to the priority button.  If not set, uses the video player's ACL settings."));
+                EditorGUI.indentLevel -= 1;
+            }
+
+            EditorGUILayout.PropertyField(allowMoveProperty, new GUIContent("Allow Move", "Allows queue entries to be moved up or down within the list."));
+            if (allowMoveProperty.boolValue)
+            {
+                EditorGUI.indentLevel += 1;
+                EditorGUILayout.PropertyField(moveAccessProperty, new GUIContent("Move Access", "Optional. ACL to control access to the move buttons.  If not set, uses the video player's ACL settings."));
                 EditorGUI.indentLevel -= 1;
             }
 

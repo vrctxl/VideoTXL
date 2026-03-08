@@ -112,6 +112,11 @@ namespace Texel
             get { return queue && queue.HasDeleteAccess; }
         }
 
+        public bool HasMoveAccess
+        {
+            get { return queue && queue.HasMoveAccess; }
+        }
+
         public bool _HasDeleteAccessFor(int track)
         {
             return queue && queue._HasDeleteAccessFor(track);
@@ -176,6 +181,24 @@ namespace Texel
                 return;
 
             queue._RemoveTrack(index);
+        }
+
+        public void _HandleMoveUp(int index)
+        {
+            if (!queue)
+                return;
+
+            if (index > 0)
+                queue._MoveTrack(index, index - 1);
+        }
+
+        public void _HandleMoveDown(int index)
+        {
+            if (!queue)
+                return;
+
+            if (index < queue.Count - 1)
+                queue._MoveTrack(index, index + 1);
         }
 
         public void _OnListChange()

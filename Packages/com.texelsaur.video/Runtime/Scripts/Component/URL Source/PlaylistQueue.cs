@@ -37,6 +37,8 @@ namespace Texel
         //[Tooltip("Allows players to delete their own added entries, even if th")] 
         [SerializeField] protected internal bool allowDelete = true;
         [SerializeField] protected internal bool allowSelfDelete = false;
+        [SerializeField] protected internal AccessControl moveAccess;
+        [SerializeField] protected internal bool allowMove = false;
 
         [SerializeField] protected internal bool removeOnLeave = false;
         [SerializeField] protected internal bool removeIfAbsent = false;
@@ -316,6 +318,20 @@ namespace Texel
                     return false;
                 if (deleteAccess)
                     return deleteAccess._LocalHasAccess();
+                if (videoPlayer)
+                    return videoPlayer._CanTakeControl();
+                return false;
+            }
+        }
+
+        public bool HasMoveAccess
+        {
+            get
+            {
+                if (!allowMove)
+                    return false;
+                if (moveAccess)
+                    return moveAccess._LocalHasAccess();
                 if (videoPlayer)
                     return videoPlayer._CanTakeControl();
                 return false;
@@ -702,10 +718,18 @@ namespace Texel
             if (!allowPriority)
                 return false;
 
-            return _MoveTrack(index, 0);
+            return _MoveTrackLL(index, 0, priorityAccess);
         }
 
         public bool _MoveTrack(int index, int destIndex)
+        {
+            if (!allowMove)
+                return false;
+
+            return _MoveTrackLL(index, destIndex, moveAccess);
+        }
+
+        bool _MoveTrackLL(int index, int destIndex, AccessControl access)
         {
             if (index < 0 || index >= syncTrackCount)
                 return false;
@@ -713,7 +737,7 @@ namespace Texel
                 return false;
             if (index == destIndex)
                 return false;
-            if (!_TakeControl(priorityAccess))
+            if (!_TakeControl(access))
                 return false;
 
             if (usingDebug) _DebugLog($"Move track from {index} to {destIndex}");
