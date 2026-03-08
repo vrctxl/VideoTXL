@@ -6,6 +6,11 @@ namespace Texel
     [CustomEditor(typeof(PlaylistQueue))]
     public class PlaylistQueueEditor : VideoUrlSourceInspector
     {
+        protected SerializedProperty limitEntriesProperty;
+        protected SerializedProperty maxEntriesProperty;
+        protected SerializedProperty limitEntriesPerPlayerProperty;
+        protected SerializedProperty maxEntriesPerPlayerProperty;
+
         protected SerializedProperty allowAddProperty;
         protected SerializedProperty addAccessProperty;
         protected SerializedProperty allowAddFromProxyProperty;
@@ -15,11 +20,14 @@ namespace Texel
         protected SerializedProperty deleteAccessProperty;
         protected SerializedProperty allowDeleteProperty;
         protected SerializedProperty allowSelfDeleteProperty;
+        protected SerializedProperty moveAccessProperty;
+        protected SerializedProperty allowMoveProperty;
 
         protected SerializedProperty removeOnLeaveProperty;
         protected SerializedProperty removeIfAbsentProperty;
 
         protected SerializedProperty canInterruptSourcesProperty;
+        protected SerializedProperty transferOwnershipOnPlayProperty;
         protected SerializedProperty enableSyncQuestUrlsProperty;
         protected SerializedProperty syncTrackTitlesProperty;
         protected SerializedProperty syncTrackAuthorsProperty;
@@ -36,6 +44,11 @@ namespace Texel
         {
             base.OnEnable();
 
+            limitEntriesProperty = serializedObject.FindProperty(nameof(PlaylistQueue.limitEntries));
+            maxEntriesProperty = serializedObject.FindProperty(nameof(PlaylistQueue.maxEntries));
+            limitEntriesPerPlayerProperty = serializedObject.FindProperty(nameof(PlaylistQueue.limitEntriesPerPlayer));
+            maxEntriesPerPlayerProperty = serializedObject.FindProperty(nameof(PlaylistQueue.maxEntriesPerPlayer));
+
             allowAddProperty = serializedObject.FindProperty(nameof(PlaylistQueue.allowAdd));
             addAccessProperty = serializedObject.FindProperty(nameof(PlaylistQueue.addAccess));
             allowAddFromProxyProperty = serializedObject.FindProperty(nameof(PlaylistQueue.allowAddFromProxy));
@@ -45,11 +58,14 @@ namespace Texel
             deleteAccessProperty = serializedObject.FindProperty(nameof(PlaylistQueue.deleteAccess));
             allowDeleteProperty = serializedObject.FindProperty(nameof(PlaylistQueue.allowDelete));
             allowSelfDeleteProperty = serializedObject.FindProperty(nameof(PlaylistQueue.allowSelfDelete));
+            moveAccessProperty = serializedObject.FindProperty(nameof(PlaylistQueue.moveAccess));
+            allowMoveProperty = serializedObject.FindProperty(nameof(PlaylistQueue.allowMove));
 
             removeOnLeaveProperty = serializedObject.FindProperty(nameof(PlaylistQueue.removeOnLeave));
             removeIfAbsentProperty = serializedObject.FindProperty(nameof(PlaylistQueue.removeIfAbsent));
 
             canInterruptSourcesProperty = serializedObject.FindProperty(nameof(PlaylistQueue.canInterruptSources));
+            transferOwnershipOnPlayProperty = serializedObject.FindProperty(nameof(PlaylistQueue.transferOwnershipOnPlay));
             enableSyncQuestUrlsProperty = serializedObject.FindProperty(nameof(PlaylistQueue.enableSyncQuestUrls));
             syncTrackTitlesProperty = serializedObject.FindProperty(nameof(PlaylistQueue.syncTrackTitles));
             syncTrackAuthorsProperty = serializedObject.FindProperty(nameof(PlaylistQueue.syncTrackAuthors));
@@ -74,6 +90,25 @@ namespace Texel
             EditorGUILayout.PropertyField(canInterruptSourcesProperty, new GUIContent("Can Interrupt Sources", "When enabled, if the currently playing URL source is interruptible, then adding a track will interrupt that source's playback."));
 
             EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Limits", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(limitEntriesProperty, new GUIContent("Limit Entries", "Limit the number of entries that can be held by the queue"));
+            if (limitEntriesProperty.boolValue)
+            {
+                EditorGUI.indentLevel += 1;
+                EditorGUILayout.PropertyField(maxEntriesProperty, new GUIContent("Max Entries", "The maximum number of entries that can be held by the queue."));
+                EditorGUI.indentLevel -= 1;
+            }
+
+            EditorGUILayout.PropertyField(limitEntriesPerPlayerProperty, new GUIContent("Limit Entries Per Player", "Limit the number of entries that can be held by the queue from the same player"));
+            if (limitEntriesPerPlayerProperty.boolValue)
+            {
+                EditorGUI.indentLevel += 1;
+                EditorGUILayout.PropertyField(maxEntriesPerPlayerProperty, new GUIContent("Max Entries Per Player", "The maximum number of entries that can be held by the queue from the same player."));
+                EditorGUI.indentLevel -= 1;
+            }
+
+            
+            EditorGUILayout.Space();
             EditorGUILayout.LabelField("Permissions", EditorStyles.boldLabel);
 
             EditorGUILayout.PropertyField(allowAddProperty, new GUIContent("Allow Add", "Allow entries to be added to the queue."));
@@ -90,6 +125,14 @@ namespace Texel
             {
                 EditorGUI.indentLevel += 1;
                 EditorGUILayout.PropertyField(priorityAccessProperty, new GUIContent("Priority Access", "Optional. ACL to control access to the priority button.  If not set, uses the video player's ACL settings."));
+                EditorGUI.indentLevel -= 1;
+            }
+
+            EditorGUILayout.PropertyField(allowMoveProperty, new GUIContent("Allow Move", "Allows queue entries to be moved up or down within the list."));
+            if (allowMoveProperty.boolValue)
+            {
+                EditorGUI.indentLevel += 1;
+                EditorGUILayout.PropertyField(moveAccessProperty, new GUIContent("Move Access", "Optional. ACL to control access to the move buttons.  If not set, uses the video player's ACL settings."));
                 EditorGUI.indentLevel -= 1;
             }
 
@@ -110,6 +153,7 @@ namespace Texel
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Sync", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(transferOwnershipOnPlayProperty, new GUIContent("Transfer Ownership On Play", "Transfer ownership of the video player to the player that added the queue entry when the entry is played."));
             EditorGUILayout.PropertyField(enableSyncQuestUrlsProperty, new GUIContent("Sync Quest URLs", "When enabled, supports tracking separate Quest URLs if they are added through the API."));
             EditorGUILayout.PropertyField(syncTrackTitlesProperty);
             EditorGUILayout.PropertyField(syncTrackAuthorsProperty);

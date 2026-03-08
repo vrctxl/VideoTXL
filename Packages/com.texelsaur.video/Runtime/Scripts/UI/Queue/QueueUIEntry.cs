@@ -15,29 +15,19 @@ namespace Texel
         public Text trackNoText;
         public Text titleText;
         public Text infoText;
+        public GameObject buttonContainer;
         public Button priorityButton;
         public Button deleteButton;
+        public Button upButton;
+        public Button downButton;
 
         string title;
         string url;
         string playerName;
 
-        Image priorityImage;
-        Image deleteImage;
-
         private void Start()
         {
-            if (priorityButton)
-            {
-                priorityImage = priorityButton.GetComponentInChildren<Image>();
-                priorityButton.gameObject.SetActive(false);
-            }
-
-            if (deleteButton)
-            {
-                deleteImage = deleteButton.GetComponentInChildren<Image>();
-                deleteButton.gameObject.SetActive(false);
-            }
+            _PointerExit();
         }
 
         public void _SelectPriority()
@@ -48,6 +38,16 @@ namespace Texel
         public void _SelectDelete()
         {
             queueUI._HandleDelete(track);
+        }
+
+        public void _SelectMoveUp()
+        {
+            queueUI._HandleMoveUp(track);
+        }
+
+        public void _SelectMoveDown()
+        {
+            queueUI._HandleMoveDown(track);
         }
 
         public int Track
@@ -116,18 +116,34 @@ namespace Texel
         {
             if (priorityButton && queueUI.HasPriorityAccess)
                 priorityButton.gameObject.SetActive(true);
-
             if (deleteButton && queueUI._HasDeleteAccessFor(track))
                 deleteButton.gameObject.SetActive(true);
+
+            if (queueUI.HasMoveAccess)
+            {
+                if (upButton)
+                    upButton.gameObject.SetActive(true);
+                if (downButton)
+                    downButton.gameObject.SetActive(true);
+            }
+
+            if (buttonContainer)
+                buttonContainer.SetActive(true);
         }
 
         public void _PointerExit()
         {
+            if (buttonContainer)
+                buttonContainer.SetActive(false);
+
             if (priorityButton)
                 priorityButton.gameObject.SetActive(false);
-
             if (deleteButton)
                 deleteButton.gameObject.SetActive(false);
+            if (upButton)
+                upButton.gameObject.SetActive(false);
+            if (downButton)
+                downButton.gameObject.SetActive(false);
         }
     }
 }

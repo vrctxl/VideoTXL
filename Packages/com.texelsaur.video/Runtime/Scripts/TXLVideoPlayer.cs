@@ -115,6 +115,8 @@ namespace Texel
         public VRCUrl queuedUrl = VRCUrl.Empty;
         [NonSerialized]
         public VideoUrlSource currentUrlSource = null;
+        [NonSerialized]
+        public string currentUrlPlayerName = "";
 
         public bool IsQuest { get; private set; }
 

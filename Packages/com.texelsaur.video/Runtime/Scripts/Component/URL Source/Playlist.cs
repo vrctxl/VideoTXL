@@ -32,6 +32,8 @@ namespace Texel
         public bool resumeAfterLoad = false;
         [Tooltip("Allows currently playing track to be interrupted by sources, such as queues when a track is queued.")]
         [SerializeField] internal bool interruptible = false;
+        [Tooltip("Selecting a track in a playlist UI will always add it to a queue if one is attached.")]
+        public bool selectShouldEnqueue = false;
 
         [Tooltip("Optional catalog to sync load playlist data from")]
         public PlaylistCatalog playlistCatalog;
@@ -83,7 +85,8 @@ namespace Texel
 
         public const int EVENT_LIST_CHANGE = VideoUrlSource.EVENT_COUNT + 0;
         public const int EVENT_TRACK_CHANGE = VideoUrlSource.EVENT_COUNT + 1;
-        protected new const int EVENT_COUNT = VideoUrlSource.EVENT_COUNT + 2;
+        public const int EVENT_CATALOG_INDEX_CHANGE = VideoUrlSource.EVENT_COUNT + 2;
+        protected new const int EVENT_COUNT = VideoUrlSource.EVENT_COUNT + 3;
 
         protected override int EventCount => EVENT_COUNT;
 
@@ -91,8 +94,6 @@ namespace Texel
         {
             _EnsureInit();
         }
-
-        //protected override int EventCount { get => EVENT_COUNT; }
 
         protected override void _Init()
         {
@@ -104,7 +105,16 @@ namespace Texel
             if (queue)
                 queueIndex = queue._RegisterPlaylistSource(this);
 
-            _LoadDataLow(playlistData);
+            if (playlistData)
+            {
+                int catIndex = _CatalogIndexFromData(playlistData);
+                if (catIndex >= 0)
+                {
+                    syncCatalogueIndex = catIndex;
+                    _LoadSyncedCatalogIndex();
+                } else
+                    _LoadDataLow(playlistData);
+            }
 
             if (Networking.IsOwner(gameObject))
             {
@@ -136,7 +146,7 @@ namespace Texel
             syncEnabled = sourceEnabled;
 
             _PostLoadShuffle();
-            syncShuffleSerial += 1;
+            _IncrShuffleSerial();
 
             _EventListChange();
 
@@ -274,26 +284,27 @@ namespace Texel
             _EventListChange();
         }
 
-        public void _LoadFromCatalogueData(PlaylistData data)
+        int _CatalogIndexFromData(PlaylistData data)
         {
-            if (!_TakeControl())
-                return;
-
-            int index = -1;
             if (Utilities.IsValid(playlistCatalog) && playlistCatalog.PlaylistCount > 0)
             {
                 for (int i = 0; i < playlistCatalog.playlists.Length; i++)
                 {
                     if (playlistCatalog.playlists[i] == data)
-                    {
-                        index = i;
-                        break;
-                    }
+                        return i;
                 }
             }
 
-            syncCatalogueIndex = index;
-            syncPlaylistSerial += 1;
+            return -1;
+        }
+
+        public void _LoadFromCatalogueData(PlaylistData data)
+        {
+            if (!_TakeControl())
+                return;
+
+            SyncCatalogIndex = _CatalogIndexFromData(data);
+            _IncrPlaylistSerial();
 
             _LoadSyncedCatalogIndex();
             CurrentIndex = -1;
@@ -316,8 +327,8 @@ namespace Texel
             if (index < 0 || index >= playlistCatalog.PlaylistCount)
                 index = -1;
 
-            syncCatalogueIndex = index;
-            syncPlaylistSerial += 1;
+            SyncCatalogIndex = index;
+            _IncrPlaylistSerial();
 
             _LoadSyncedCatalogIndex();
             CurrentIndex = -1;
@@ -372,7 +383,7 @@ namespace Texel
             {
                 syncTrackerOrder = new byte[playlist.Length];
                 _Shuffle();
-                syncShuffleSerial += 1;
+                _IncrShuffleSerial();
             }
             else
                 syncTrackerOrder = new byte[0];
@@ -382,13 +393,13 @@ namespace Texel
         {
             CurrentIndex = (short)((AutoAdvance && !trackCatalogMode && immediate) ? 0 : -1);
             if (immediate)
-                CurrentIndexSerial += 1;
+                _IncrCurrentIndexSerial();
             else
             {
                 if (videoPlayer && (videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_PLAYING || videoPlayer.playerState == TXLVideoPlayer.VIDEO_STATE_LOADING))
                     CurrentIndex = -1;
                 else
-                    CurrentIndexSerial += 1;
+                    _IncrCurrentIndexSerial();
             }
         }
 
@@ -458,6 +469,24 @@ namespace Texel
             }
         }
 
+        public PlaylistCatalog Catalog
+        {
+            get { return playlistCatalog; }
+        }
+
+        internal int SyncCatalogIndex
+        {
+            get { return syncCatalogueIndex; }
+            set
+            {
+                if (syncCatalogueIndex != value)
+                {
+                    syncCatalogueIndex = value;
+                    _UpdateHandlers(EVENT_CATALOG_INDEX_CHANGE);
+                }
+            }
+        }
+
         public int CatalogueIndex
         {
             get { return syncCatalogueIndex; }
@@ -500,7 +529,7 @@ namespace Texel
             else
                 CurrentIndex = (short)(trackCount + 1);
 
-            CurrentIndexSerial += 1;
+            _IncrCurrentIndexSerial();
 
             RequestSerialization();
 
@@ -541,7 +570,7 @@ namespace Texel
                     DebugLog($"Playlist reset");
             }
 
-            CurrentIndexSerial += 1;
+            _IncrCurrentIndexSerial();
 
             RequestSerialization();
 
@@ -557,7 +586,7 @@ namespace Texel
                 return false;
 
             CurrentIndex = (short)index;
-            CurrentIndexSerial += 1;
+            _IncrCurrentIndexSerial();
 
             if (_usingDebug)
             {
@@ -572,6 +601,29 @@ namespace Texel
             return CurrentIndex >= 0;
         }
 
+        public bool _SelectTrack(int index)
+        {
+            if (selectShouldEnqueue)
+                return _Enqueue(index);
+
+            return _MoveTo(index);
+        }
+
+        public bool _SelectTrackFromCatalog(int catalogIndex, int index)
+        {
+            if (!Catalog)
+                return false;
+
+            if (selectShouldEnqueue)
+                return _SelectTrackFromCatalog(catalogIndex, index);
+
+            _LoadFromCatalogueIndex(catalogIndex);
+            if (CatalogueIndex != catalogIndex)
+                return false;
+
+            return _MoveTo(index);
+        }
+
         public override void _ResetSource()
         {
             if (CurrentIndex == trackCount)
@@ -580,7 +632,7 @@ namespace Texel
                 return;
 
             CurrentIndex = (short)(trackCount + 1);
-            CurrentIndexSerial += 1;
+            _IncrCurrentIndexSerial();
 
             if (_usingDebug) DebugLog("Playlist complete");
 
@@ -651,6 +703,21 @@ namespace Texel
             return queue._AddTrack(queueIndex, CatalogueIndex, index);
         }
 
+        public bool _EnqueueFromCatalog(int catalogIndex, int index)
+        {
+            if (!queue || !queue._CanAddTrack() || !playlistCatalog)
+                return false;
+
+            PlaylistData data = playlistCatalog._GetPlaylist(catalogIndex);
+            if (!data)
+                return false;
+
+            if (index < 0 || index >= data.playlist.Length)
+                return false;
+
+            return queue._AddTrack(queueIndex, catalogIndex, index);
+        }
+
         [Obsolete("Use PlaylistEnabled")]
         public void _SetEnabled(bool state)
         {
@@ -680,7 +747,7 @@ namespace Texel
 
             if (listChange)
             {
-                syncShuffleSerial += 1;
+                _IncrShuffleSerial();
                 _EventListChange();
             }
 
@@ -763,6 +830,24 @@ namespace Texel
                 if (data.trackNames[i] != null && data.trackNames[i].Length > 0)
                     resolver._AddInfo(data.playlist[i], data.trackNames[i]);
             }
+        }
+
+        void _IncrPlaylistSerial()
+        {
+            syncPlaylistSerial += 1;
+            prevPlaylistSerial = syncPlaylistSerial;
+        }
+
+        void _IncrShuffleSerial()
+        {
+            syncShuffleSerial += 1;
+            prevShuffleSerial = syncShuffleSerial;
+        }
+
+        void _IncrCurrentIndexSerial()
+        {
+            CurrentIndexSerial += 1;
+            prevCurrentIndexSerial = syncCurrentIndexSerial;
         }
 
         public override void OnDeserialization(DeserializationResult result)

@@ -186,6 +186,16 @@ namespace Texel
             return VRCUrl.Empty;
         }
 
+        public virtual int _GetCurrentPlayerId()
+        {
+            return -1;
+        }
+
+        public virtual string _GetCurrentPlayerName()
+        {
+            return "";
+        }
+
         public virtual bool _CanMoveNext()
         {
             return false;

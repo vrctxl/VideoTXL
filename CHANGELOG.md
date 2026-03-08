@@ -2,6 +2,18 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.22]
+- Fixed owner access failure advancing queue
+- Added Transfer Owner on Play option to queues to transfer video player ownership
+- Added max entries property to queues
+- Added max entries per player property to queues
+- Added option to playlist to always enqueue when selected
+- Fixed some edge cases around playlist sync
+- Added catalog slide-out to playlist UI
+- Added move up/down permission and buttons to queue
+- Added loaded video player name to info / sync player
+- Improved efficiency of playlist UI updates
+
 ### [2.5.0-beta.21]
 - Exposed default local playback to SyncVideoPlayer inspector
 - Fixed player controls not updating correctly when Video Manager binding is changed
