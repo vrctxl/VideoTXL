@@ -7,6 +7,10 @@
 - Added Transfer Owner on Play option to queues to transfer video player ownership
 - Added max entries property to queues
 - Added max entries per player property to queues
+- Added option to playlist to always enqueue when selected
+- Fixed some edge cases around playlist sync
+- Added catalog slide-out to playlist UI
+- Improved efficiency of playlist UI updates
 
 ### [2.5.0-beta.21]
 - Exposed default local playback to SyncVideoPlayer inspector

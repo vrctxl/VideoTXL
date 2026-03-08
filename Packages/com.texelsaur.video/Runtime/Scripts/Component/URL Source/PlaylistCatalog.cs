@@ -21,5 +21,13 @@ namespace Texel
                 return playlists.Length;
             }
         }
+
+        public PlaylistData _GetPlaylist(int index)
+        {
+            if (index < 0 || index >= playlists.Length)
+                return null;
+
+            return playlists[index];
+        }
     }
 }

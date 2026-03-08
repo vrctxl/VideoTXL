@@ -12,6 +12,7 @@ namespace Texel
         protected SerializedProperty immediateProperty;
         protected SerializedProperty resumeAfterLoadProperty;
         protected SerializedProperty interruptibleProperty;
+        protected SerializedProperty selectShouldEnqueueProperty;
 
         protected SerializedProperty playlistCatalogProperty;
         protected SerializedProperty playlistDataProperty;
@@ -30,6 +31,7 @@ namespace Texel
             immediateProperty = serializedObject.FindProperty(nameof(Playlist.immediate));
             resumeAfterLoadProperty = serializedObject.FindProperty(nameof(Playlist.resumeAfterLoad));
             interruptibleProperty = serializedObject.FindProperty(nameof(Playlist.interruptible));
+            selectShouldEnqueueProperty = serializedObject.FindProperty(nameof(Playlist.selectShouldEnqueue));
             playlistCatalogProperty = serializedObject.FindProperty(nameof(Playlist.playlistCatalog));
             playlistDataProperty = serializedObject.FindProperty(nameof(Playlist.playlistData));
             queueProperty = serializedObject.FindProperty(nameof(Playlist.queue));
@@ -53,6 +55,7 @@ namespace Texel
             EditorGUILayout.PropertyField(immediateProperty);
             EditorGUILayout.PropertyField(resumeAfterLoadProperty);
             EditorGUILayout.PropertyField(interruptibleProperty);
+            EditorGUILayout.PropertyField(selectShouldEnqueueProperty);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Data", EditorStyles.boldLabel);

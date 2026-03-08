@@ -14,8 +14,10 @@ namespace Texel
     {
         //public Playlist playlist;
         public Playlist playlist;
+        public CatalogUI catalogUI;
         public GameObject playlistEntryTemplate;
 
+        public bool showCatalog = true;
         public bool showTrackNames = true;
 
         public ScrollRect scrollRect;
@@ -29,10 +31,12 @@ namespace Texel
         RectTransform[] entriesRT;
         int lastListChangeSerial = -1;
         int lastSelectedEntry = -1;
+        int catalogPreviewIndex = -1;
 
         void Start()
         {
             entries = new PlaylistUIEntry[0];
+            entriesRT = new RectTransform[0];
 
             if (Utilities.IsValid(playlist))
                 _InitFromPlaylist(playlist);
@@ -76,6 +80,9 @@ namespace Texel
 
             this.playlist = playlist;
 
+            if (catalogUI)
+                catalogUI._InitFromPlaylist(playlist, this);
+
             if (gameObject.activeInHierarchy)
             {
                 _RegisterListeners();
@@ -111,6 +118,22 @@ namespace Texel
         private void OnDisable()
         {
             _UnregisterListeners();
+        }
+
+        public int CatalogPreviewIndex
+        {
+            get { return catalogPreviewIndex; }
+            set 
+            {
+                if (catalogPreviewIndex != value)
+                {
+                    catalogPreviewIndex = value;
+                    _RebuildList();
+
+                    if (catalogUI)
+                        catalogUI._OnPreviewChange();
+                }
+            }
         }
 
         public void _OnBindVideoPlayer()
@@ -169,6 +192,8 @@ namespace Texel
         public void _OnTrackChange()
         {
             _UnselectLastEntry();
+            if (catalogPreviewIndex >= 0 && catalogPreviewIndex != playlist.CatalogueIndex)
+                return;
 
             int track = playlist.CurrentIndex;
             if (track < 0 || track >= entries.Length)
@@ -220,6 +245,7 @@ namespace Texel
 
         void _RebuildList()
         {
+            layoutGroup.SetActive(false);
             _ClearList();
 
             if (!Utilities.IsValid(playlist))
@@ -237,6 +263,8 @@ namespace Texel
             }
 
             _BuildList();
+            layoutGroup.SetActive(true);
+
             _OnTrackChange();
         }
 
@@ -287,12 +315,17 @@ namespace Texel
         {
             if (backingVideoPlayer)
             {
-                //playlist._SetEnabled(true);
-                //SyncPlayer videoPlayer = playlist.syncPlayer;
-                //if (playlist.holdOnReady)
-                //    videoPlayer._HoldNextVideo();
-                if (playlist._MoveTo(track))
+                bool selectResult = false;
+                if (catalogPreviewIndex >= 0 && catalogPreviewIndex != playlist.CatalogueIndex)
+                    selectResult = playlist._SelectTrackFromCatalog(catalogPreviewIndex, track);
+                else
+                    selectResult = playlist._SelectTrack(track);
+
+                if (selectResult)
                     backingVideoPlayer._ChangeUrl(playlist._GetCurrentUrl(), playlist._GetCurrentQuestUrl());
+
+                if (playlist.CatalogueIndex == catalogPreviewIndex)
+                    catalogPreviewIndex = -1;
             }
             else
                 Debug.LogWarning("[VideoTXL] Tried to select playlist track, but the playlist is not associated with a video player!");
@@ -300,7 +333,10 @@ namespace Texel
 
         public void _EnqueueTrack(int track)
         {
-            playlist._Enqueue(track);
+            if (catalogPreviewIndex >= 0 && catalogPreviewIndex != playlist.CatalogueIndex)
+                playlist._EnqueueFromCatalog(catalogPreviewIndex, track);
+            else
+                playlist._Enqueue(track);
         }
 
         void _UnselectEntries()
@@ -330,10 +366,11 @@ namespace Texel
             for (int i = 0; i < entryCount; i++)
             {
                 GameObject child = layoutGroup.transform.GetChild(i).gameObject;
-                Destroy(child);
+                child.SetActive(false);
+                //Destroy(child);
             }
 
-            entries = new PlaylistUIEntry[0];
+            //entries = new PlaylistUIEntry[0];
         }
 
         void _BuildList()
@@ -342,30 +379,54 @@ namespace Texel
                 return;
 
             int count = playlist.Count;
-            entries = new PlaylistUIEntry[count];
-            entriesRT = new RectTransform[count];
+            PlaylistData pdata = null;
+
+            if (playlist.Catalog && catalogPreviewIndex >= 0) {
+                pdata = playlist.Catalog._GetPlaylist(catalogPreviewIndex);
+                if (pdata)
+                    count = pdata.playlist.Length;
+            }
+
+            entries = (PlaylistUIEntry[])UtilityTxl.ArrayMinSize(entries, count, typeof(UdonBehaviour));
+            entriesRT = (RectTransform[])UtilityTxl.ArrayMinSize(entriesRT, count, typeof(RectTransform));
 
             for (int i = 0; i < count; i++)
             {
-                GameObject entry = Instantiate(playlistEntryTemplate);
+                PlaylistUIEntry script = entries[i];
+                if (!script)
+                {
+                    GameObject newEntry = Instantiate(playlistEntryTemplate);
+                    script = newEntry.GetComponent<PlaylistUIEntry>();
+                    script.playlistUI = this;
+                    script.Track = i;
 
-                PlaylistUIEntry script = (PlaylistUIEntry)entry.GetComponent(typeof(UdonBehaviour));
-                script.playlistUI = this;
-                script.Track = i;
+                    entries[i] = script;
+
+                    newEntry.transform.SetParent(layoutGroup.transform);
+                    RectTransform rt = (RectTransform)newEntry.GetComponent(typeof(RectTransform));
+                    rt.localScale = Vector3.one;
+                    rt.localRotation = Quaternion.identity;
+                    rt.localPosition = Vector3.zero;
+
+                    entriesRT[i] = rt;
+                }
+
+                GameObject entry = script.gameObject;
+                entry.SetActive(true);
 
                 string url = "";
                 string title = "";
 
-                if (Utilities.IsValid(playlist))
+                if (pdata)
+                {
+                    url = pdata.playlist[i].ToString();
+                    title = pdata.trackNames[i];
+                }
+                else
                 {
                     url = playlist._GetTrackURL(i).ToString();
                     title = playlist._GetTrackName(i);
                 }
-                //else
-                //{
-                //    url = data.playlist[i].ToString();
-                //    title = data.trackNames[i];
-                //}
 
                 if (!showTrackNames || title == null || title == "")
                     title = url;
@@ -373,16 +434,6 @@ namespace Texel
                 script.Title = title;
                 script.Url = url;
                 script.Selected = false;
-
-                entry.transform.SetParent(layoutGroup.transform);
-
-                RectTransform rt = (RectTransform)entry.GetComponent(typeof(RectTransform));
-                rt.localScale = Vector3.one;
-                rt.localRotation = Quaternion.identity;
-                rt.localPosition = Vector3.zero;
-
-                entries[i] = script;
-                entriesRT[i] = rt;
             }
         }
     }

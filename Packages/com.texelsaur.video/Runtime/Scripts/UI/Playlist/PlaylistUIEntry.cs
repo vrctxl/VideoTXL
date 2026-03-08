@@ -153,7 +153,7 @@ namespace Texel
             if (playButton)
                 playButton.gameObject.SetActive(true);
 
-            if (addQueueButton && playlistUI && playlistUI.playlist.TargetQueue)
+            if (addQueueButton && playlistUI && playlistUI.playlist.TargetQueue && !playlistUI.playlist.selectShouldEnqueue)
                 addQueueButton.gameObject.SetActive(true);
         }
 

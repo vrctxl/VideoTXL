@@ -12,8 +12,10 @@ namespace Texel
         public CatalogUI catalogtUI;
         public int index = 0;
 
-        public Text selectedText;
-        public Text unselectedText;
+        public Text titleText;
+
+        public Color selectedColor;
+        public Color unselectedColor;
 
         string title;
         bool selected;
@@ -29,11 +31,7 @@ namespace Texel
             set
             {
                 selected = value;
-
-                if (Utilities.IsValid(selectedText))
-                    selectedText.gameObject.SetActive(selected);
-                if (Utilities.IsValid(unselectedText))
-                    unselectedText.gameObject.SetActive(!selected);
+                _UpdateRow();
             }
         }
 
@@ -44,11 +42,15 @@ namespace Texel
             {
                 title = value;
 
-                if (Utilities.IsValid(selectedText))
-                    selectedText.text = title;
-                if (Utilities.IsValid(unselectedText))
-                    unselectedText.text = title;
+                if (Utilities.IsValid(titleText))
+                    titleText.text = title;
             }
+        }
+
+        void _UpdateRow()
+        {
+            if (Utilities.IsValid(titleText))
+                titleText.color = selected ? selectedColor : unselectedColor;
         }
     }
 }
