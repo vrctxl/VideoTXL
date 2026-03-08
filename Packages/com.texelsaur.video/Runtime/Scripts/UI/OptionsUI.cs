@@ -46,6 +46,7 @@ namespace Texel
         public Image infoPlayCurrentVideoImage;
         public Image infoPlayLastVideoImage;
         public InputField infoOffsetField;
+        public Text infoCurrentVideoPlayerText;
 
         const int OPTIONS_TAB_NONE = 0;
         const int OPTIONS_TAB_INFO = 1;
@@ -253,6 +254,9 @@ namespace Texel
                 else
                     infoLastVideoText.text = lastUrl;
             }
+
+            if (infoCurrentVideoPlayerText)
+                infoCurrentVideoPlayerText.text = $"Loaded by: {videoPlayer.currentUrlPlayerName}";
 
             if (!videoPlayer.IsQuest)
             {

@@ -65,6 +65,8 @@ namespace Texel
         [UdonSynced]
         string syncReadyTitle;
         [UdonSynced]
+        int syncReadyPlayerId;
+        [UdonSynced]
         string syncReadyPlayer;
         [UdonSynced]
         VRCUrl[] syncUrls;
@@ -135,6 +137,7 @@ namespace Texel
 
             syncReadyUrl = VRCUrl.Empty;
             syncReadyTitle = "";
+            syncReadyPlayerId = -1;
             syncReadyPlayer = "";
 
             syncUrls = new VRCUrl[0];
@@ -393,7 +396,12 @@ namespace Texel
             return syncReadyTitle;
         }
 
-        public virtual string _GetCurrentPlayer()
+        public override int _GetCurrentPlayerId()
+        {
+            return syncReadyPlayerId;
+        }
+
+        public override string _GetCurrentPlayerName()
         {
             return syncReadyPlayer;
         }
@@ -470,6 +478,11 @@ namespace Texel
             return "";
         }
 
+        public int _GetTrackPlayerId(int index)
+        {
+            return syncPlayerIds[index];
+        }
+
         public string _GetTrackPlayer(int index)
         {
             if (!usingPlayers)
@@ -541,6 +554,7 @@ namespace Texel
             syncReadyUrl = _GetTrackURL(0);
             syncReadyQuestUrl = _GetTrackURL(0, TXLUrlType.Quest);
             syncReadyTitle = _GetTrackName(0);
+            syncReadyPlayerId = _GetTrackPlayerId(0);
             syncReadyPlayer = _GetTrackPlayer(0);
             int readyPlayerId = syncPlayerIds[0];
 

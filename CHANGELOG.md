@@ -11,6 +11,7 @@
 - Fixed some edge cases around playlist sync
 - Added catalog slide-out to playlist UI
 - Added move up/down permission and buttons to queue
+- Added loaded video player name to info / sync player
 - Improved efficiency of playlist UI updates
 
 ### [2.5.0-beta.21]

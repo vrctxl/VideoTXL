@@ -71,6 +71,11 @@ namespace Texel
         [UdonSynced]
         short _syncUrlSourceIndex = -1;
 
+        [UdonSynced]
+        int _syncVideoPlayerId = -1;
+        [UdonSynced]
+        string _syncVideoPlayerName = "";
+
         VRCUrl _preResolvedUrl = VRCUrl.Empty;
         VRCUrl _resolvedUrl = VRCUrl.Empty;
 
@@ -438,6 +443,16 @@ namespace Texel
             get { return currentUrl == defaultUrl && defaultUrlInterruptible; }
         }
 
+        public VRCPlayerApi LoadedVideoPlayer
+        {
+            get 
+            {
+                if (_syncVideoPlayerId < 0)
+                    return null;
+                return VRCPlayerApi.GetPlayerById(_syncVideoPlayerId);
+            }
+        }
+
         public void _OnPlaybackZoneEnter()
         {
             if (traceLogging) DebugTrace("Event OnPlaybackZoneEnter");
@@ -735,7 +750,8 @@ namespace Texel
             if (traceLogging) DebugTrace("Change Url");
             if (!_TakeControl())
                 return;
-            
+
+            _UpdatePlayerVideoInfo();
             _PlayVideo(url, -1);
         }
 
@@ -744,8 +760,21 @@ namespace Texel
             if (traceLogging) DebugTrace("Change Url Quest Fallback");
             if (!_TakeControl())
                 return;
-            
+
+            _UpdatePlayerVideoInfo();
             _PlayVideoFallback(url, questUrl, -1);
+        }
+
+        void _UpdatePlayerVideoInfo()
+        {
+            VRCPlayerApi player = Networking.LocalPlayer;
+            if (Utilities.IsValid(player))
+            {
+                _syncVideoPlayerId = player.playerId;
+                _syncVideoPlayerName = player.displayName;
+
+                currentUrlPlayerName = _syncVideoPlayerName;
+            }
         }
 
         public void _SetHoldMode(bool holdState)
@@ -954,7 +983,14 @@ namespace Texel
             _skipAdvanceNextTrack = false;
 
             if (sourceManager && sourceManager.ReadyUrl != VRCUrl.Empty)
+            {
+                _syncVideoPlayerId = sourceManager.ReadyPlayerId;
+                _syncVideoPlayerName = sourceManager.ReadyPlayerName;
+
+                currentUrlPlayerName = _syncVideoPlayerName;
+
                 _PlayVideoFallback(sourceManager.ReadyUrl, sourceManager.ReadyQuestUrl, (short)sourceManager._GetSourceIndex(sourceManager.ReadySource));
+            }
 
             _overrideLock = false;
         }
@@ -1648,6 +1684,8 @@ namespace Texel
             _UpdateScreenFit(_syncScreenFit);
             _UpdateLockState(_syncLocked);
 
+            currentUrlPlayerName = _syncVideoPlayerName;
+
             if (_syncVideoNumber == _loadedVideoNumber)
             {
                 if (_syncPlaybackNumber == _syncVideoNumber && _videoReady)
@@ -2044,6 +2082,7 @@ namespace Texel
             debugState._SetValue("syncVideoSourceOverride", _syncVideoSourceOverride.ToString());
             debugState._SetValue("syncUrl", _syncUrl.ToString());
             debugState._SetValue("syncQuestUrl", _syncQuestUrl.ToString());
+            debugState._SetValue("syncVideoPlayer", $"{_syncVideoPlayerName} [{_syncVideoPlayerId}]");
             debugState._SetValue("syncVideoNumber", _syncVideoNumber.ToString());
             debugState._SetValue("loadedVideoNumber", _loadedVideoNumber.ToString());
             debugState._SetValue("syncPlaybackNumber", _syncPlaybackNumber.ToString());

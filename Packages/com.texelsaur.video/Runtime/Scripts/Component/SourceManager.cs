@@ -24,6 +24,8 @@ namespace Texel
         private int readySourceIndex;
         private VRCUrl readyUrl;
         private VRCUrl readyQuestUrl;
+        private int readyPlayerId;
+        private string readyPlayerName;
 
         public const int EVENT_BIND_VIDEOPLAYER = 0;
         public const int EVENT_TRACK_CHANGE = 1;
@@ -151,6 +153,16 @@ namespace Texel
         public VRCUrl ReadyQuestUrl
         {
             get { return readyQuestUrl; }
+        }
+
+        public int ReadyPlayerId
+        {
+            get { return readyPlayerId; }
+        }
+
+        public string ReadyPlayerName
+        {
+            get { return readyPlayerName; }
         }
 
         public VideoUrlSource FirstSource
@@ -307,6 +319,8 @@ namespace Texel
             readySourceIndex = -1;
             readyUrl = VRCUrl.Empty;
             readyQuestUrl = VRCUrl.Empty;
+            readyPlayerId = -1;
+            readyPlayerName = "";
         }
 
         protected internal void _OnSourceTrackChange(int sourceIndex)
@@ -351,6 +365,7 @@ namespace Texel
             readySourceIndex = sourceIndex;
             readyUrl = sources[sourceIndex]._GetCurrentUrl();
             readyQuestUrl = sources[sourceIndex]._GetCurrentQuestUrl();
+            readyPlayerName = sources[sourceIndex]._GetCurrentPlayerName();
 
             _UpdateHandlers(EVENT_URL_READY);
 
