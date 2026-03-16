@@ -2,6 +2,11 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.23]
+- Fixed playlist crash edge case
+- Fixed playlist UI crash initialization race
+- Fixed queue UI entry crash edge case
+
 ### [2.5.0-beta.22]
 - Fixed owner access failure advancing queue
 - Added Transfer Owner on Play option to queues to transfer video player ownership

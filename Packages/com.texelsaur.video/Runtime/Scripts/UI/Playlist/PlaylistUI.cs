@@ -35,13 +35,20 @@ namespace Texel
 
         void Start()
         {
-            entries = new PlaylistUIEntry[0];
-            entriesRT = new RectTransform[0];
+            _Init();
 
             if (Utilities.IsValid(playlist))
                 _InitFromPlaylist(playlist);
+        }
+
+        void _Init()
+        {
+            if (initialized)
+                return;
 
             initialized = true;
+            entries = new PlaylistUIEntry[0];
+            entriesRT = new RectTransform[0];
         }
 
         public override bool _CompatibleSource(VideoUrlSource source)
@@ -55,6 +62,7 @@ namespace Texel
 
         public override void _SetSource(VideoUrlSource source)
         {
+            _Init();
             if (source == null)
                 return;
 
@@ -75,9 +83,7 @@ namespace Texel
 
         public void _InitFromPlaylist(Playlist playlist)
         {
-            if (entries == null)
-                entries = new PlaylistUIEntry[0];
-
+            _Init();
             this.playlist = playlist;
 
             if (catalogUI)
@@ -98,9 +104,7 @@ namespace Texel
 
         private void OnEnable()
         {
-            if (!initialized)
-                return;
-
+            _Init();
             _RegisterListeners();
 
             if (playlist)

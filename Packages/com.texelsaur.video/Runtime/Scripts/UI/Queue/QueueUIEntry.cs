@@ -114,6 +114,9 @@ namespace Texel
 
         public void _PointerEnter()
         {
+            if (!queueUI)
+                return;
+
             if (priorityButton && queueUI.HasPriorityAccess)
                 priorityButton.gameObject.SetActive(true);
             if (deleteButton && queueUI._HasDeleteAccessFor(track))
