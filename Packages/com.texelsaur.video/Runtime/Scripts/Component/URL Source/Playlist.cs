@@ -381,7 +381,7 @@ namespace Texel
         {
             if (syncShuffle)
             {
-                syncTrackerOrder = new byte[playlist.Length];
+                syncTrackerOrder = new byte[trackCount];
                 _Shuffle();
                 _IncrShuffleSerial();
             }
@@ -405,7 +405,7 @@ namespace Texel
 
         public short Count
         {
-            get { return (short)playlist.Length; }
+            get { return (short)trackCount; }
         }
 
         public short CurrentIndex
@@ -522,7 +522,7 @@ namespace Texel
             if (!syncEnabled || !_TakeControl())
                 return false;
 
-            if (!trackCatalogMode && CurrentIndex < playlist.Length - 1)
+            if (!trackCatalogMode && CurrentIndex < trackCount - 1)
                 CurrentIndex += 1;
             else if (!trackCatalogMode && _Repeats() && CurrentIndex <= trackCount)
                 CurrentIndex = 0;
@@ -533,7 +533,7 @@ namespace Texel
 
             RequestSerialization();
 
-            bool result = CurrentIndex >= 0 && CurrentIndex < playlist.Length;
+            bool result = CurrentIndex >= 0 && CurrentIndex < trackCount;
             if (_usingDebug)
             {
                 if (result)
@@ -558,7 +558,7 @@ namespace Texel
                     CurrentIndex -= 1;
             }
             else if (!trackCatalogMode && _Repeats())
-                CurrentIndex = (short)(playlist.Length - 1);
+                CurrentIndex = (short)(trackCount - 1);
             else
                 CurrentIndex = (short)-1;
 
