@@ -78,7 +78,7 @@ namespace Texel
                 _urlSourceType = SOURCE_TYPE_URL;
 
             if (Utilities.IsValid(urlRemapper))
-                urlRemapper._SetPlatform(IsQuest ? GamePlatform.Quest : GamePlatform.PC);
+                urlRemapper._SetPlatform(this.GamePlatform);
 
             _UpdatePlayerState(VIDEO_STATE_STOPPED);
         }

@@ -119,6 +119,25 @@ namespace Texel
         public string currentUrlPlayerName = "";
 
         public bool IsQuest { get; private set; }
+        public bool IsIOS { get; private set; }
+
+        public bool IsMobile
+        {
+            get { return IsQuest || IsIOS; }
+        }
+
+        public GamePlatform GamePlatform
+        {
+            get
+            {
+                if (IsQuest)
+                    return GamePlatform.Quest;
+                else if (IsIOS)
+                    return GamePlatform.IOS;
+                else
+                    return GamePlatform.PC;
+            }
+        }
 
         protected override int EventCount { get => EVENT_COUNT; }
 
@@ -130,8 +149,12 @@ namespace Texel
         protected override void _Init()
         {
             IsQuest = false;
+            IsIOS = false;
+
 #if UNITY_ANDROID
             IsQuest = true;
+#elif UNITY_IOS
+            IsIOS = true;
 #endif
 
 #if AUDIOLINK_V1

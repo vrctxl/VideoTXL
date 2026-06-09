@@ -1,4 +1,5 @@
 ﻿
+using System;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Data;
@@ -8,8 +9,10 @@ using VRC.Udon;
 namespace Texel
 {
     public enum GamePlatform {
-        PC,
+        None = -1,
+        PC = 0,
         Quest,
+        IOS,
     }
 
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
@@ -24,6 +27,7 @@ namespace Texel
         public bool[] audioProfileRule;
         public bool[] customRule;
 
+        [Obsolete("Use applyX fields")]
         public GamePlatform[] platforms;
         public VideoSourceBackend[] sourceTypes;
         public VideoSourceLatency[] sourceLatencies;
@@ -33,8 +37,8 @@ namespace Texel
 
         public bool[] applyPC;
         public bool[] applyQuest;
+        public bool[] applyIOS;
 
-        
         GamePlatform platform;
         VideoSource videoSource;
         AudioChannelGroup audioProfile;
@@ -58,6 +62,17 @@ namespace Texel
                 string urlstr = url.ToString();
                 if (urlstr == "")
                     continue;
+
+                // Upgrade platform setting
+                if (platformRule[i] && !applyPC[i] && !applyQuest[i] && !applyIOS[i])
+                {
+                    if (platform == GamePlatform.PC)
+                        applyPC[i] = true;
+                    else if (platform == GamePlatform.Quest)
+                        applyQuest[i] = true;
+                    else if (platform == GamePlatform.IOS)
+                        applyIOS[i] = true;
+                }
 
                 if (ruleLookup.TryGetValue(urlstr, TokenType.DataList, out var dataListToken)) {
                     DataList indexList = dataListToken.DataList;
@@ -119,8 +134,15 @@ namespace Texel
                     if (!Utilities.IsValid(reffed) || inputStr != reffed.Get())
                         continue;
 
-                    if (platformRule[i] && platform != platforms[i])
-                        continue;
+                    if (platformRule[i])
+                    {
+                        if (platform == GamePlatform.PC && !applyPC[i])
+                            continue;
+                        if (platform == GamePlatform.Quest && !applyQuest[i])
+                            continue;
+                        if (platform == GamePlatform.IOS && !applyIOS[i])
+                            continue;
+                    }
 
                     if (videoSource != null)
                     {

@@ -29,6 +29,10 @@ namespace Texel
         SerializedProperty audioProfilesProperty;
         SerializedProperty customTestsProperty;
 
+        SerializedProperty applyPCProperty;
+        SerializedProperty applyQuestProperty;
+        SerializedProperty applyIOSProperty;
+
         private void OnEnable()
         {
             referenceUrlsProperty = serializedObject.FindProperty(nameof(UrlRemapper.referenceUrls));
@@ -41,12 +45,18 @@ namespace Texel
             audioProfileRuleProperty = serializedObject.FindProperty(nameof(UrlRemapper.audioProfileRule));
             customRuleProperty = serializedObject.FindProperty(nameof(UrlRemapper.customRule));
 
+            // Legacy -- upgrade on view
             platformsProperty = serializedObject.FindProperty(nameof(UrlRemapper.platforms));
+
             sourceTypesProperty = serializedObject.FindProperty(nameof(UrlRemapper.sourceTypes));
             sourceLatenciesProperty = serializedObject.FindProperty(nameof(UrlRemapper.sourceLatencies));
             sourceResolutionsProperty = serializedObject.FindProperty(nameof(UrlRemapper.sourceResolutions));
             audioProfilesProperty = serializedObject.FindProperty(nameof(UrlRemapper.audioProfiles));
             customTestsProperty = serializedObject.FindProperty(nameof(UrlRemapper.customTests));
+
+            applyPCProperty = serializedObject.FindProperty(nameof(UrlRemapper.applyPC));
+            applyQuestProperty = serializedObject.FindProperty(nameof(UrlRemapper.applyQuest));
+            applyIOSProperty = serializedObject.FindProperty(nameof(UrlRemapper.applyIOS));
         }
 
         public override void OnInspectorGUI()
@@ -65,7 +75,7 @@ namespace Texel
                 referenceUrlsProperty, remappedUrlsProperty,
                 platformRuleProperty, sourceTypeRuleProperty, latencyRuleProperty, resolutionRuleProperty, audioProfileRuleProperty,
                 platformsProperty, sourceTypesProperty, sourceLatenciesProperty, sourceResolutionsProperty, audioProfilesProperty,
-                customRuleProperty, customTestsProperty);
+                customRuleProperty, customTestsProperty, applyPCProperty, applyQuestProperty, applyIOSProperty);
 
             EditorGUILayout.Space();
 
@@ -97,33 +107,71 @@ namespace Texel
                     SerializedProperty audioProfile = audioProfilesProperty.GetArrayElementAtIndex(i);
                     SerializedProperty customTest = customTestsProperty.GetArrayElementAtIndex(i);
 
+                    SerializedProperty applyPC = applyPCProperty.GetArrayElementAtIndex(i);
+                    SerializedProperty applyQuest = applyQuestProperty.GetArrayElementAtIndex(i);
+                    SerializedProperty applyIOS = applyIOSProperty.GetArrayElementAtIndex(i);
+
                     EditorGUILayout.PropertyField(platformRule, new GUIContent("Apply Platform Rule"));
                     if (platformRule.boolValue)
                     {
+                        // Upgrade legacy
+                        if (platform.intValue >= 0)
+                        {
+                            if (platform.intValue == 0)
+                                applyPC.boolValue = true;
+                            else if (platform.intValue == 1)
+                                applyQuest.boolValue = true;
+                            else if (platform.intValue == 2)
+                                applyIOS.boolValue = true;
+
+                            platform.intValue = -1;
+                        }
+
                         EditorGUI.indentLevel++;
-                        EditorGUILayout.PropertyField(platform, new GUIContent("Platform Matches"));
+                        EditorGUILayout.PropertyField(applyPC, new GUIContent("Platform Matches PC"));
+                        EditorGUILayout.PropertyField(applyQuest, new GUIContent("Platform Matches Quest"));
+                        EditorGUILayout.PropertyField(applyIOS, new GUIContent("Platform Matches IOS"));
                         EditorGUI.indentLevel--;
                     }
 
                     EditorGUILayout.PropertyField(sourceTypeRule, new GUIContent("Apply Video Source Type Rule"));
                     if (sourceTypeRule.boolValue)
+                    {
+                        EditorGUI.indentLevel++;
                         EditorGUILayout.PropertyField(sourceType, new GUIContent("Video Source Type Matches"));
+                        EditorGUI.indentLevel--;
+                    }
 
                     EditorGUILayout.PropertyField(latencyRule, new GUIContent("Apply Latency Rule"));
                     if (latencyRule.boolValue)
+                    {
+                        EditorGUI.indentLevel++;
                         EditorGUILayout.PropertyField(latency, new GUIContent("Video Source Latency Matches"));
+                        EditorGUI.indentLevel--;
+                    }
 
                     EditorGUILayout.PropertyField(resolutionRule, new GUIContent("Apply Resolution Rule"));
-                    if (resolutionRule.boolValue)
+                    if (resolutionRule.boolValue) {
+                        EditorGUI.indentLevel++;
                         EditorGUILayout.PropertyField(resolution, new GUIContent("Video Source Resolution Matches"));
+                        EditorGUI.indentLevel--;
+                    }
 
                     EditorGUILayout.PropertyField(audioProfileRule, new GUIContent("Apply Audio Profile Rule"));
                     if (audioProfileRule.boolValue)
+                    {
+                        EditorGUI.indentLevel++;
                         EditorGUILayout.PropertyField(audioProfile, new GUIContent("Audio Profile Matches"));
+                        EditorGUI.indentLevel--;
+                    }
 
                     EditorGUILayout.PropertyField(customRule, new GUIContent("Apply Custom Rule"));
                     if (customRule.boolValue)
+                    {
+                        EditorGUI.indentLevel++;
                         EditorGUILayout.PropertyField(customTest, new GUIContent("Custom Rule Passes"));
+                        EditorGUI.indentLevel--;
+                    }
 
                     EditorGUI.indentLevel--;
                 }

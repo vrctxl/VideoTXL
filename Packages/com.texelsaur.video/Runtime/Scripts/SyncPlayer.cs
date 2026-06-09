@@ -160,15 +160,10 @@ namespace Texel
 
             _usingDebug = debugLogging || Utilities.IsValid(debugLog);
             if (_usingDebug) DebugLog("Init");
-
-            if (IsQuest)
-            {
-                if (_usingDebug) DebugLog("Detected Quest platform");
-            }
-            else if (Utilities.IsValid(Networking.LocalPlayer))
-            {
-                if (_usingDebug) DebugLog("Detected " + (Networking.LocalPlayer.IsUserInVR() ? "PC VR" : "PC Desktop") + " Platform");
-            }
+            if (_usingDebug) DebugLog($"Detected platform: {this.GamePlatform}");
+            
+            if (Utilities.IsValid(Networking.LocalPlayer))
+                if (_usingDebug) DebugLog("Detected " + (Networking.LocalPlayer.IsUserInVR() ? "VR" : "Desktop") + " Platform");
 
             if (Utilities.IsValid(debugState))
                 _SetDebugState(debugState);
@@ -218,7 +213,7 @@ namespace Texel
             }
 
             if (Utilities.IsValid(urlRemapper))
-                urlRemapper._SetPlatform(IsQuest ? GamePlatform.Quest : GamePlatform.PC);
+                urlRemapper._SetPlatform(this.GamePlatform);
 
             _UpdatePlayerState(VIDEO_STATE_STOPPED);
 
@@ -790,7 +785,7 @@ namespace Texel
         public void _ReleaseHold()
         {
             if (traceLogging) DebugTrace("Release Hold");
-            if (_syncLocked && !_TakeControl())
+            if (!_TakeControl())
                 return;
 
             if (_syncPlaybackNumber < _syncVideoNumber)
@@ -1111,10 +1106,10 @@ namespace Texel
             _UpdatePlayerState(VIDEO_STATE_LOADING);
 
             VRCUrl url = _syncUrl;
-            if (IsQuest && _syncQuestUrl != null && _syncQuestUrl != VRCUrl.Empty && _syncQuestUrl.Get().Trim() != "")
+            if (IsMobile && _syncQuestUrl != null && _syncQuestUrl != VRCUrl.Empty && _syncQuestUrl.Get().Trim() != "")
             {
                 url = _syncQuestUrl;
-                if (_usingDebug) DebugLog($"Loading Quest URL variant: {url}");
+                if (_usingDebug) DebugLog($"Loading Quest/Mobile URL variant: {url}");
             }
 
             _preResolvedUrl = url;
@@ -2076,6 +2071,7 @@ namespace Texel
         {
             VRCPlayerApi owner = Networking.GetOwner(gameObject);
             debugState._SetValue("isQuest", IsQuest.ToString());
+            debugState._SetValue("isIOS", IsIOS.ToString());
             debugState._SetValue("owner", Utilities.IsValid(owner) ? $"{owner.displayName} [{owner.playerId}]" : "--");
             debugState._SetValue("currentUrlSource", Utilities.IsValid(currentUrlSource) ? currentUrlSource.ToString() : "--");
             debugState._SetValue("syncVideoSource", _syncVideoSource.ToString());
