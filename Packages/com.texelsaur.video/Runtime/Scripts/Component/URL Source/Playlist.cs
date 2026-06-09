@@ -55,7 +55,7 @@ namespace Texel
         [UdonSynced]
         short syncPlaylistSerial = 0;
         [UdonSynced]
-        byte[] syncTrackerOrder = new byte[0];
+        short[] syncTrackerOrder = new short[0];
         [UdonSynced, FieldChangeCallback("ShuffleEnabled")]
         bool syncShuffle;
         [UdonSynced]
@@ -381,12 +381,12 @@ namespace Texel
         {
             if (syncShuffle)
             {
-                syncTrackerOrder = new byte[trackCount];
+                syncTrackerOrder = new short[trackCount];
                 _Shuffle();
                 _IncrShuffleSerial();
             }
             else
-                syncTrackerOrder = new byte[0];
+                syncTrackerOrder = new short[0];
         }
 
         void _PostLoadTrack()
@@ -774,10 +774,10 @@ namespace Texel
 
             Utilities.ShuffleArray(temp);
             if (syncTrackerOrder == null || syncTrackerOrder.Length != trackCount)
-                syncTrackerOrder = new byte[trackCount];
+                syncTrackerOrder = new short[trackCount];
 
             for (int i = 0; i < trackCount; i++)
-                syncTrackerOrder[i] = (byte)temp[i];
+                syncTrackerOrder[i] = (short)temp[i];
         }
 
         bool _TakeControl()
