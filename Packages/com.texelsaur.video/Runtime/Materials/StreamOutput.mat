@@ -12,7 +12,8 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _DOUBLEBUFFERED_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -24,7 +25,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: c7b6af41b4802a642b3e00d0ebd65ab2, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MarginTex:
@@ -35,10 +36,10 @@ Material:
     m_Floats:
     - _ApplyGamma: 0
     - _AspectRatio: 1.777777
-    - _DoubleBuffered: 0
+    - _DoubleBuffered: 1
     - _FitMode: 0
     - _FlipY: 0
     - _Gamma: 1
-    - _TexAspectRatio: 1.7777778
+    - _TexAspectRatio: 0
     m_Colors: []
   m_BuildTextureStacks: []
