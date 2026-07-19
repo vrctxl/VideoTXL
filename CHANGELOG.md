@@ -3,6 +3,7 @@
 ## [2.5.0] - 02-25-25
 
 ### [2.5.0-beta.24]
+- Requires CommonTXL 2.0.0+
 - Expanded playlist shuffle capacity from 255 to ~16k
 - Added 360 panoramic sphere and skybox shaders and materials
 - Added iOS option to URL Remapper

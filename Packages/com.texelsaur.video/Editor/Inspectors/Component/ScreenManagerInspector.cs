@@ -176,7 +176,7 @@ namespace Texel
 
         SerializedProperty downloadLogoImageProperty;
         SerializedProperty downloadLogoImageUrlProperty;
-        SerializedProperty imageDownloadManagerProperty;
+        SerializedProperty imageDownloadAdapterProperty;
 
         // VRSL Integration
         SerializedProperty vrslEnabledProperty;
@@ -327,7 +327,7 @@ namespace Texel
 
             downloadLogoImageProperty = serializedObject.FindProperty(nameof(ScreenManager.downloadLogoImage));
             downloadLogoImageUrlProperty = serializedObject.FindProperty(nameof(ScreenManager.downloadLogoImageUrl));
-            imageDownloadManagerProperty = serializedObject.FindProperty(nameof(ScreenManager.imageDownloadManager));
+            imageDownloadAdapterProperty = serializedObject.FindProperty(nameof(ScreenManager.imageDownloadAdapter));
 
             vrslEnabledProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslEnabled));
             vrslControllerProperty = serializedObject.FindProperty(nameof(ScreenManager.vrslController));
@@ -505,7 +505,7 @@ namespace Texel
             {
                 EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(downloadLogoImageUrlProperty, new GUIContent("Logo Texture URL"));
-                EditorGUILayout.PropertyField(imageDownloadManagerProperty, new GUIContent("Download Manager", "Optional. Downloads images through a central manager, where downloaded resources can be shared."));
+                EditorGUILayout.PropertyField(imageDownloadAdapterProperty, new GUIContent("Download Manager", "Optional. Downloads images through a central manager, where downloaded resources can be shared."));
                 EditorGUI.indentLevel--;
             }
 
