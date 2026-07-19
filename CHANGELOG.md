@@ -2,6 +2,18 @@
 
 ## [2.5.0] - 02-25-25
 
+- Requires CommonTXL 2.0.0+
+- BREAKING: URL source fields in SyncPlayer replaced with Source Manager architecture
+- Added queues and full catalog support for playlists
+- Added URL Info Resolver component
+- Added Input Proxy component to support third party prefabs like YouTube Search
+- Added local track offset support
+- Playback zones updated to use TrackedZoneTrigger components instead of ZoneMembership
+- Audio profiles mute the reserved source by default, using another source for AudioLink
+- Numerous fixes and minor changes, features, etc.
+- Read through beta changelogs for detailed breakdown
+
+
 ### [2.5.0-beta.24]
 - Requires CommonTXL 2.0.0+
 - Expanded playlist shuffle capacity from 255 to ~16k
