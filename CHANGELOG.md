@@ -2,6 +2,19 @@
 
 ## [2.5.0] - 02-25-25
 
+### [2.5.0-beta.24]
+- Requires CommonTXL 2.0.0+
+- Expanded playlist shuffle capacity from 255 to ~16k
+- Added 360 panoramic sphere and skybox shaders and materials
+- Added iOS option to URL Remapper
+- Updated URL Remapper to select multiple platforms in platform rule
+- Added IsIOS, IsMobile, and GamePlatform properties to TXLVideoPlayer
+- Defaulted audio profiles/resources to Priority=1 or 2 (highest priority)
+- Fixed SyncPlayer _ReleaseHold to allow any permitted user to release the hold
+- Defaulted placeholder textures to lower res on mobile platforms
+- Fixed main UI crash if player count in instance exceeds 100
+- Fixed playlist UI catalog not correctly updating
+
 ### [2.5.0-beta.23]
 - Fixed playlist crash edge case
 - Fixed playlist UI crash initialization race

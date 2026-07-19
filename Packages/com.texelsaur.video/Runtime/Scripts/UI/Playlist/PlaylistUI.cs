@@ -385,7 +385,7 @@ namespace Texel
             int count = playlist.Count;
             PlaylistData pdata = null;
 
-            if (playlist.Catalog && catalogPreviewIndex >= 0) {
+            if (playlist.Catalog && catalogPreviewIndex >= 0 && catalogPreviewIndex != playlist.CatalogueIndex) {
                 pdata = playlist.Catalog._GetPlaylist(catalogPreviewIndex);
                 if (pdata)
                     count = pdata.playlist.Length;

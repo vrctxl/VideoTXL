@@ -1,6 +1,7 @@
 ﻿
 using System;
 using System.Runtime.CompilerServices;
+using Texel.Adapter;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components.Video;
@@ -133,7 +134,7 @@ namespace Texel
 
         [SerializeField] internal bool downloadLogoImage;
         [SerializeField] internal VRCUrl downloadLogoImageUrl;
-        [SerializeField] internal ImageDownloadManager imageDownloadManager;
+        [SerializeField] internal ImageDownloadAdapter imageDownloadAdapter;
 
         // VRSL Integration
         [SerializeField] internal bool vrslEnabled;
@@ -213,6 +214,8 @@ namespace Texel
 
         VRCImageDownloader imageDownloader;
         int imageDownloadClaim;
+
+        [NonSerialized] public Texture argTexture;
 
         [Obsolete("Use EVENT_TEX_CHANGED")]
         public const int EVENT_UPDATE = 0;
@@ -295,8 +298,8 @@ namespace Texel
 
             if (downloadLogoImage)
             {
-                if (imageDownloadManager != null)
-                    imageDownloadClaim = imageDownloadManager._RequestImage(downloadLogoImageUrl, this, nameof(_InternalOnImageDispatch));
+                if (imageDownloadAdapter != null)
+                    imageDownloadAdapter._RequestImage(downloadLogoImageUrl, this, nameof(_InternalOnImageDispatch), nameof(argTexture));
                 else
                 {
                     imageDownloader = new VRCImageDownloader();
@@ -355,10 +358,9 @@ namespace Texel
 
         public void _InternalOnImageDispatch()
         {
-            Texture2D image = imageDownloadManager.CurrentImage;
-            if (image != null)
+            if (argTexture != null)
             {
-                _SetTextureOverride(ScreenOverrideType.Logo, image);
+                _SetTextureOverride(ScreenOverrideType.Logo, argTexture);
                 _ResetCheckScreenMaterial();
             }
         }

@@ -95,8 +95,6 @@ namespace Texel
         //bool addToQueue = false;
         bool sourcePanelOpen = false;
 
-        VRCPlayerApi[] _playerBuffer = new VRCPlayerApi[100];
-
         [NonSerialized]
         public VRCUrl internalArgUrl;
 
@@ -1112,18 +1110,11 @@ namespace Texel
 
         void _FindOwners()
         {
-            int playerCount = VRCPlayerApi.GetPlayerCount();
-            _playerBuffer = VRCPlayerApi.GetPlayers(_playerBuffer);
+            VRCPlayerApi owner = Networking.InstanceOwner;
+            instanceOwner = owner != null ? owner.displayName : "";
 
-            foreach (VRCPlayerApi player in _playerBuffer)
-            {
-                if (!Utilities.IsValid(player) || !player.IsValid())
-                    continue;
-                if (player.isInstanceOwner)
-                    instanceOwner = player.displayName;
-                if (player.isMaster)
-                    instanceMaster = player.displayName;
-            }
+            VRCPlayerApi master = Networking.Master;
+            instanceMaster = master != null ? master.displayName : "";
         }
 
         public string _MakeOwnerMessage()
