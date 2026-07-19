@@ -1,6 +1,10 @@
 # Changelog
 
-## [2.5.0] - 02-25-25
+## [2.5.1] - 07-19-26
+
+- Fixed crash from existing URL Remappers due to addition of IOS platform option
+
+## [2.5.0] - 07-19-26
 
 - Requires CommonTXL 2.0.0+
 - BREAKING: URL source fields in SyncPlayer replaced with Source Manager architecture

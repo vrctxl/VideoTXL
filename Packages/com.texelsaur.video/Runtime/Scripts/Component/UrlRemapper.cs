@@ -8,7 +8,8 @@ using VRC.Udon;
 
 namespace Texel
 {
-    public enum GamePlatform {
+    public enum GamePlatform
+    {
         None = -1,
         PC = 0,
         Quest,
@@ -53,6 +54,12 @@ namespace Texel
         protected virtual void _Init()
         {
             ruleLookup = new DataDictionary();
+
+            int count = referenceUrls.Length;
+            applyPC = (bool[])UtilityTxl.ArrayMinSize(applyPC, count, typeof(bool));
+            applyQuest = (bool[])UtilityTxl.ArrayMinSize(applyQuest, count, typeof(bool));
+            applyIOS = (bool[])UtilityTxl.ArrayMinSize(applyIOS, count, typeof(bool));
+
             for (int i = 0; i < referenceUrls.Length; i++)
             {
                 VRCUrl url = referenceUrls[i];
@@ -74,10 +81,12 @@ namespace Texel
                         applyIOS[i] = true;
                 }
 
-                if (ruleLookup.TryGetValue(urlstr, TokenType.DataList, out var dataListToken)) {
+                if (ruleLookup.TryGetValue(urlstr, TokenType.DataList, out var dataListToken))
+                {
                     DataList indexList = dataListToken.DataList;
                     indexList.Add(i);
-                } else
+                }
+                else
                 {
                     DataList indexList = new DataList();
                     indexList.Add(i);
