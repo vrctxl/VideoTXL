@@ -11,6 +11,7 @@
 - Defaulted audio profiles/resources to Priority=1 or 2 (highest priority)
 - Fixed SyncPlayer _ReleaseHold to allow any permitted user to release the hold
 - Defaulted placeholder textures to lower res on mobile platforms
+- Fixed main UI crash if player count in instance exceeds 100
 
 ### [2.5.0-beta.23]
 - Fixed playlist crash edge case
