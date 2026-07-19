@@ -12,6 +12,7 @@
 - Fixed SyncPlayer _ReleaseHold to allow any permitted user to release the hold
 - Defaulted placeholder textures to lower res on mobile platforms
 - Fixed main UI crash if player count in instance exceeds 100
+- Fixed playlist UI catalog not correctly updating
 
 ### [2.5.0-beta.23]
 - Fixed playlist crash edge case
