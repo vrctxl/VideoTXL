@@ -1703,7 +1703,11 @@ namespace Texel
                         else
                         {
                             if (videoTexRT.IsCreated())
+                            {
+                                if (RenderTexture.active == videoTexRT)
+                                    RenderTexture.active = null;
                                 videoTexRT.Release();
+                            }
                             videoTexRT.width = crt.width;
                             videoTexRT.height = crt.height;
                         }
