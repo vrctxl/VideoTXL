@@ -87,8 +87,20 @@ namespace Texel
         {
             if (!videoMux)
             {
-                DebugLog("No video manager set at time of post init, skipping default playback");
-                return;
+                if (!gameObject.activeInHierarchy)
+                {
+                    gameObject.GetComponentInChildren<VideoManager>(true)._EnsureInit();
+                    if (!videoMux)
+                    {
+                        DebugLog("No video manager found at time of post init, skipping default playback");
+                        return;
+                    }
+                }
+                else
+                {
+                    DebugLog("No video manager set at time of post init, skipping default playback");
+                    return;
+                }
             }
 
             _SetScreenFit(defaultScreenFit);
