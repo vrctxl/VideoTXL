@@ -1,11 +1,22 @@
 # Changelog
 
-## [2.5.1] - 07-19-26
+## [2.6.0-beta.1] - 07-20-26
+- Requires CommonTXL 2.1.0+
+- BREAKING: Any debug log or debug state objects on components have probably been unassigned
+- SyncPlayer now extends from AccessEventBase with some additinal security checks
+  - By default, player will try to block ownership transfer to unauthorized users
+  - By default, authorized users will try to reclaim ownership from unauthorized ones
+  - There is an additional strict security mode that REQUIRES authorized users present for normal function
+    - Do NOT enable this for normal use.  This is a special mode for high-risk, controlled environments
+- Debugging options have been standardized across components
+  - DebugLog itself now carries the VRC logging flag and a min reporting level
+- Added RT guard to screen manager editor script (thanks DrakenStark)
+- Fixed component update awareness around disabled objects (thanks DrakenStark)
 
+## [2.5.1] - 07-19-26
 - Fixed crash from existing URL Remappers due to addition of IOS platform option
 
 ## [2.5.0] - 07-19-26
-
 - Requires CommonTXL 2.0.0+
 - BREAKING: URL source fields in SyncPlayer replaced with Source Manager architecture
 - Added queues and full catalog support for playlists

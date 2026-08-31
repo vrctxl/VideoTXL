@@ -16,9 +16,6 @@ namespace Texel
         [Tooltip("Component that ties this video player to primary video player, loading an alternate URL and syncing time against the primary")]
         public DependentSource dependentSource;
 
-        [Tooltip("Log debug statements to a world object")]
-        public DebugLog debugLog;
-
         [Header("Playback")]
         [Tooltip("Optional trigger zone the player must be in to sustain playback.  Disables playing audio on world load.")]
         public ZoneTrigger playbackZone;
@@ -32,9 +29,6 @@ namespace Texel
         public VRCUrl streamUrl;
         [Tooltip("How content not matching a screen's aspect ratio should be fit by default.  Affects the output CRT and materials with the screen fit property mapped.")]
         public TXLScreenFit defaultScreenFit = TXLScreenFit.Fit;
-
-        [Tooltip("Write out video player events to VRChat log")]
-        public bool debugLogging = true;
 
         [Tooltip("Automatically loop track when finished")]
         public bool loop;
@@ -87,7 +81,7 @@ namespace Texel
         {
             if (!videoMux)
             {
-                DebugLog("No video manager set at time of post init, skipping default playback");
+                if (_usingDebug) _DebugLog("No video manager set at time of post init, skipping default playback");
                 return;
             }
 
@@ -115,7 +109,7 @@ namespace Texel
 
             if (playOnJoin)
             {
-                DebugLog("Play on Join");
+                if (_usingDebug) _DebugLog("Play on Join");
                 _inSustainZone = true;
                 initTrigger = true;
             }
@@ -130,7 +124,7 @@ namespace Texel
         {
             if (videoMux)
             {
-                DebugLog("VideoManager already set");
+                if (_usingDebug) _DebugLog("VideoManager already set");
                 return;
             }
 
@@ -156,7 +150,7 @@ namespace Texel
 
         public void _TriggerPlay()
         {
-            DebugLog("Trigger play");
+            if (_usingDebug) _DebugLog("Trigger play");
             if (playAt > 0 || playerState == VIDEO_STATE_PLAYING || playerState == VIDEO_STATE_LOADING)
                 return;
 
@@ -177,7 +171,7 @@ namespace Texel
 
         public void _TriggerStop()
         {
-            DebugLog("Trigger Stop");
+            if (_usingDebug) _DebugLog("Trigger Stop");
             _StopVideo();
         }
 
@@ -188,7 +182,7 @@ namespace Texel
 
         public void _PlaybackZoneEnter()
         {
-            DebugLog("Playback Zone Enter");
+            if (_usingDebug) _DebugLog("Playback Zone Enter");
             _inSustainZone = true;
 
             if (_triggerZoneSame)
@@ -197,14 +191,14 @@ namespace Texel
 
         public void _PlaybackZoneExit()
         {
-            DebugLog("Playback Zone Exit");
+            if (_usingDebug) _DebugLog("Playback Zone Exit");
             _inSustainZone = false;
             _TriggerStop();
         }
 
         public override void _Resync()
         {
-            DebugLog("Resync");
+            if (_usingDebug) _DebugLog("Resync");
             if (playerState == VIDEO_STATE_STOPPED)
                 return;
 
@@ -263,7 +257,7 @@ namespace Texel
             if (!Utilities.IsValid(url))
                 return;
 
-            DebugLog("Play video " + url);
+            if (_usingDebug) _DebugLog("Play video " + url);
 
             string urlStr = url.Get();
             if (urlStr == null || urlStr == "")
@@ -276,7 +270,7 @@ namespace Texel
             {
                 resolvedUrl = urlRemapper._Remap(url);
                 if (Utilities.IsValid(resolvedUrl) && resolvedUrl.Get() != url.Get())
-                    DebugLog($"Remapped URL: {url}");
+                    if (_usingDebug) _DebugLog($"Remapped URL: {url}");
             }
 
             videoMux._VideoLoadURL(resolvedUrl);
@@ -284,7 +278,7 @@ namespace Texel
 
         void _StopVideo()
         {
-            DebugLog("Stop video");
+            if (_usingDebug) _DebugLog("Stop video");
 
             if (seekableSource && resumePosition)
                 _lastVideoPosition = videoMux.VideoTime;
@@ -302,7 +296,7 @@ namespace Texel
 
         void _PauseVideo()
         {
-            DebugLog("Pause video");
+            if (_usingDebug) _DebugLog("Pause video");
 
             if (playerState != VIDEO_STATE_PLAYING)
                 return;
@@ -312,7 +306,7 @@ namespace Texel
                 videoMux._VideoPlay();
                 if (seekableSource)
                 {
-                    DebugLog($"Set time to {_lastVideoPosition}");
+                    if (_usingDebug) _DebugLog($"Set time to {_lastVideoPosition}");
                     videoMux._VideoSetTime(_lastVideoPosition);
                 }
             }
@@ -330,11 +324,11 @@ namespace Texel
         {
             float position = videoMux.VideoTime;
             float duration = videoMux.VideoDuration;
-            DebugLog("Video ready, duration: " + duration + ", position: " + position);
+            if (_usingDebug) _DebugLog("Video ready, duration: " + duration + ", position: " + position);
 
             if (_hasSustainZone && !_inSustainZone)
             {
-                DebugLog("Canceling video: trigger not active");
+                if (_usingDebug) _DebugLog("Canceling video: trigger not active");
                 _StopVideo();
                 return;
             }
@@ -348,11 +342,11 @@ namespace Texel
 
         public void _OnVideoStart()
         {
-            DebugLog("Video start");
+            if (_usingDebug) _DebugLog("Video start");
 
             if (_hasSustainZone && !_inSustainZone)
             {
-                DebugLog("Canceling video: trigger not active");
+                if (_usingDebug) _DebugLog("Canceling video: trigger not active");
                 _StopVideo();
                 return;
             }
@@ -369,7 +363,7 @@ namespace Texel
 
         public void _OnVideoEnd()
         {
-            DebugLog("Video end");
+            if (_usingDebug) _DebugLog("Video end");
 
             seekableSource = false;
             paused = false;
@@ -400,8 +394,8 @@ namespace Texel
             }
 
             VRCUrl url = _GetSelectedUrl();
-            DebugLog("Video stream failed: " + url);
-            DebugLog("Error code: " + code);
+            if (_usingDebug) _DebugLog("Video stream failed: " + url);
+            if (_usingDebug) _DebugLog("Error code: " + code);
 
             _UpdatePlayerStateError(videoError);
 
@@ -461,15 +455,6 @@ namespace Texel
                 playAt = 0;
                 _PlayVideo(playAtUrl);
             }
-        }
-
-        // Debug
-        void DebugLog(string message)
-        {
-            if (debugLogging)
-                Debug.Log("[VideoTXL:LocalPlayer] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write("LocalPlayer", message);
         }
     }
 }

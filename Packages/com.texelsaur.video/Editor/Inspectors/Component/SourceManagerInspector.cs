@@ -13,22 +13,14 @@ namespace Texel
         SerializedProperty videoPlayerProperty;
         SerializedProperty sourcesProperty;
 
-        SerializedProperty debugLogProperty;
-        SerializedProperty vrcLoggingProperty;
-        SerializedProperty eventLoggingProperty;
-        SerializedProperty lowLevelLoggingProperty;
-
-        static bool expandDebug = false;
+        DebugInspectorBlock debugBlock;
 
         private void OnEnable()
         {
             videoPlayerProperty = serializedObject.FindProperty(nameof(SourceManager.videoPlayer));
             sourcesProperty = serializedObject.FindProperty(nameof(SourceManager.sources));
 
-            debugLogProperty = serializedObject.FindProperty(nameof(SourceManager.debugLog));
-            vrcLoggingProperty = serializedObject.FindProperty(nameof(SourceManager.vrcLogging));
-            eventLoggingProperty = serializedObject.FindProperty(nameof(SourceManager.eventLogging));
-            lowLevelLoggingProperty = serializedObject.FindProperty(nameof(SourceManager.lowLevelLogging));
+            debugBlock = new DebugInspectorBlock(serializedObject);
         }
 
         public override void OnInspectorGUI()
@@ -57,14 +49,7 @@ namespace Texel
             GUILayout.EndHorizontal();
 
             EditorGUILayout.Space();
-            expandDebug = EditorGUILayout.Foldout(expandDebug, "Debug Options", true, boldFoldoutStyle);
-            if (expandDebug)
-            {
-                EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log"));
-                EditorGUILayout.PropertyField(eventLoggingProperty, new GUIContent("Include Events"));
-                EditorGUILayout.PropertyField(lowLevelLoggingProperty, new GUIContent("Include Low-Level"));
-                EditorGUILayout.PropertyField(vrcLoggingProperty, new GUIContent("VRC Logging"));
-            }
+            debugBlock.Draw(TXLGUI.Styles.BoldFoldout);
 
             serializedObject.ApplyModifiedProperties();
         }

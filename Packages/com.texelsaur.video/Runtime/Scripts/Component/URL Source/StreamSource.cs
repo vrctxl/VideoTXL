@@ -71,6 +71,8 @@ namespace Texel
         {
             base._Init();
 
+            _SetComponentName("StreamSource", "VideoTXL");
+
             syncStreamUrl = VRCUrl.Empty;
 
             int validElements = Mathf.Min(additionalStreamNames.Length, additionalStreamUrls.Length);

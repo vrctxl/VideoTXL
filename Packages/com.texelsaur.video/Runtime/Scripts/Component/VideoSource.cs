@@ -352,13 +352,13 @@ namespace Texel
         void _DebugLog(string message)
         {
             if (videoMux)
-                videoMux._DownstreamDebugLog(this, message);
+                videoMux._DebugLog(this, message);
         }
 
         void _DebugTrace(string message)
         {
             if (traceLogging)
-                _DebugLog(message);
+                videoMux._DebugTrace(this, message);
         }
 
         public static string _VideoSourceEventName(VideoSourceEvent val)

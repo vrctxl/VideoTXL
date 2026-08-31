@@ -51,12 +51,6 @@ namespace Texel
         [SerializeField] protected internal bool syncTrackAuthors = true;
         [SerializeField] protected internal bool syncPlayerNames = true;
 
-        [Tooltip("Log debug statements to a world object")]
-        [SerializeField] internal DebugLog debugLog;
-        [SerializeField] internal bool vrcLogging = false;
-        [SerializeField] internal bool eventLogging = false;
-        [SerializeField] internal bool lowLevelLogging = false;
-
         // public bool removeTracks = true;
         [UdonSynced]
         VRCUrl syncReadyUrl;
@@ -103,8 +97,6 @@ namespace Texel
         int syncTrackAddedUpdate = -1;
         int prevTrackAddedUpdate = -1;
 
-        bool usingDebug = false;
-        bool usingDebugLow = false;
         bool usingQuestUrls = false;
         bool usingTitles = false;
         bool usingAuthors = false;
@@ -128,12 +120,9 @@ namespace Texel
         {
             base._Init();
 
-            usingDebug = vrcLogging || Utilities.IsValid(debugLog);
-            usingDebugLow = usingDebug && lowLevelLogging;
-            if (usingDebug) _DebugLog("Init");
+            _SetComponentName("PlaylistQueue", "VideoTXL");
 
-            if (eventLogging)
-                eventDebugLog = debugLog;
+            if (_usingDebug) _DebugLog("Init");
 
             syncReadyUrl = VRCUrl.Empty;
             syncReadyTitle = "";
@@ -157,7 +146,7 @@ namespace Texel
 
             if (Networking.IsOwner(gameObject))
             {
-                if (usingDebug) _DebugLog("Init Owner");
+                if (_usingDebug) _DebugLog("Init Owner");
 
                 syncQueueUpdate = 0;
                 syncReadyUrlUpdate = 0;
@@ -210,7 +199,7 @@ namespace Texel
 
             if (_UpdateInfoFromResolver(internalArgUrl, index))
             {
-                if (usingDebugLow) _DebugLowLevel($"Updated info from resolver for {internalArgUrl} at {index}");
+                if (_usingVerbose) _DebugVerbose($"Updated info from resolver for {internalArgUrl} at {index}");
                 if (!_TakeControl())
                     return;
 
@@ -273,7 +262,7 @@ namespace Texel
             {
                 if (syncEnabled != value)
                 {
-                    if (usingDebug) _DebugLog($"Source enabled = {syncEnabled}");
+                    if (_usingDebug) _DebugLog($"Source enabled = {syncEnabled}");
                     syncEnabled = value;
 
                     _UpdateHandlers(VideoUrlSource.EVENT_ENABLE_CHANGE);
@@ -494,28 +483,28 @@ namespace Texel
         void _IncrQueueUpdate()
         {
             syncQueueUpdate += 1;
-            if (usingDebugLow) _DebugLowLevel($"  readyUrlUpdate {prevQueueUpdate} -> {syncQueueUpdate}");
+            if (_usingVerbose) _DebugVerbose($"  readyUrlUpdate {prevQueueUpdate} -> {syncQueueUpdate}");
             prevQueueUpdate = syncQueueUpdate;
         }
 
         void _IncrReadyUrlUpdate()
         {
             syncReadyUrlUpdate += 1;
-            if (usingDebugLow) _DebugLowLevel($"  readyUrlUpdate {prevReadyUrlUpdate} -> {syncReadyUrlUpdate}");
+            if (_usingVerbose) _DebugVerbose($"  readyUrlUpdate {prevReadyUrlUpdate} -> {syncReadyUrlUpdate}");
             prevReadyUrlUpdate = syncReadyUrlUpdate;
         }
 
         void _IncrTrackChangeUpdate()
         {
             syncTrackChangeUpdate += 1;
-            if (usingDebugLow) _DebugLowLevel($"  trackChangeUpdate {prevTrackChangeUpdate} -> {syncTrackChangeUpdate}");
+            if (_usingVerbose) _DebugVerbose($"  trackChangeUpdate {prevTrackChangeUpdate} -> {syncTrackChangeUpdate}");
             prevTrackChangeUpdate = syncTrackChangeUpdate;
         }
 
         void _IncrTrackAddedUpdate()
         {
             syncTrackAddedUpdate += 1;
-            if (usingDebugLow) _DebugLowLevel($"  trackAddedUpdate {prevTrackAddedUpdate} -> {syncTrackAddedUpdate}");
+            if (_usingVerbose) _DebugVerbose($"  trackAddedUpdate {prevTrackAddedUpdate} -> {syncTrackAddedUpdate}");
             prevTrackAddedUpdate = syncTrackAddedUpdate;
         }
 
@@ -527,7 +516,7 @@ namespace Texel
             if (syncTrackCount == 0)
                 return false;
 
-            if (usingDebug) _DebugLog("Move next track");
+            if (_usingDebug) _DebugLog("Move next track");
 
             if (removeIfAbsent)
             {
@@ -543,7 +532,7 @@ namespace Texel
 
                 if (popCount > 0)
                 {
-                    if (usingDebug) _DebugLog($"Skipping {popCount} consecutive tracks from absent players.");
+                    if (_usingDebug) _DebugLog($"Skipping {popCount} consecutive tracks from absent players.");
                     _PopTracks(0, popCount);
                 }
 
@@ -571,7 +560,7 @@ namespace Texel
                 VRCPlayerApi player = VRCPlayerApi.GetPlayerById(readyPlayerId);
                 if (Utilities.IsValid(player))
                 {
-                    if (usingDebug) _DebugLog($"Transfering video player ownership to {player.displayName} [{readyPlayerId}]");
+                    if (_usingDebug) _DebugLog($"Transfering video player ownership to {player.displayName} [{readyPlayerId}]");
                     Networking.SetOwner(player, videoPlayer.gameObject);
                 }
             }
@@ -637,11 +626,11 @@ namespace Texel
         {
             base.OnDeserialization();
 
-            if (usingDebugLow) _DebugLowLevel("Deserialize");
+            if (_usingVerbose) _DebugVerbose("Deserialize");
 
             if (syncQueueUpdate > prevQueueUpdate)
             {
-                if (usingDebugLow) _DebugLowLevel($"  queueUpdate {prevQueueUpdate} -> {syncQueueUpdate}");
+                if (_usingVerbose) _DebugVerbose($"  queueUpdate {prevQueueUpdate} -> {syncQueueUpdate}");
                 prevQueueUpdate = syncQueueUpdate;
                 _PopulateResolver();
 
@@ -650,14 +639,14 @@ namespace Texel
 
             if (syncTrackChangeUpdate > prevTrackChangeUpdate)
             {
-                if (usingDebugLow) _DebugLowLevel($"  trackChangeUpdate {prevTrackChangeUpdate} -> {syncTrackChangeUpdate}");
+                if (_usingVerbose) _DebugVerbose($"  trackChangeUpdate {prevTrackChangeUpdate} -> {syncTrackChangeUpdate}");
                 prevTrackChangeUpdate = syncTrackChangeUpdate;
                 _EventTrackChange();
             }
 
             if (syncReadyUrlUpdate > prevReadyUrlUpdate)
             {
-                if (usingDebugLow) _DebugLowLevel($"  readyUrlUpdate {prevReadyUrlUpdate} -> {syncReadyUrlUpdate}");
+                if (_usingVerbose) _DebugVerbose($"  readyUrlUpdate {prevReadyUrlUpdate} -> {syncReadyUrlUpdate}");
                 errorCount = 0;
                 if (prevReadyUrlUpdate > -1)
                     _EventUrlReady();
@@ -666,7 +655,7 @@ namespace Texel
 
             if (syncTrackAddedUpdate > prevTrackAddedUpdate)
             {
-                if (usingDebugLow) _DebugLowLevel($"  trackAddedUpdate {prevTrackAddedUpdate} -> {syncTrackAddedUpdate}");
+                if (_usingVerbose) _DebugVerbose($"  trackAddedUpdate {prevTrackAddedUpdate} -> {syncTrackAddedUpdate}");
                 prevTrackAddedUpdate = syncTrackAddedUpdate;
                 _UpdateInfoResolver();
             }
@@ -676,7 +665,7 @@ namespace Texel
         {
             base.OnOwnershipTransferred(player);
 
-            if (usingDebugLow) _DebugLowLevel($"Ownership transferred to {player.displayName}");
+            if (_usingVerbose) _DebugVerbose($"Ownership transferred to {player.displayName}");
         }
 
         void _PopulateResolver()
@@ -688,7 +677,7 @@ namespace Texel
             if (!resolver)
                 return;
 
-            if (usingDebugLow) _DebugLowLevel("Populate Resolver");
+            if (_usingVerbose) _DebugVerbose("Populate Resolver");
 
             for (int i = 0; i < syncTrackCount; i++)
             {
@@ -713,7 +702,7 @@ namespace Texel
             if (!allowDelete || index < 0 || index >= syncTrackCount)
                 return false;
 
-            if (usingDebug) _DebugLog($"Remove track at {index}");
+            if (_usingDebug) _DebugLog($"Remove track at {index}");
 
             bool addedSelf = syncPlayerIds[index] == Networking.LocalPlayer.playerId;
             if (addedSelf && allowSelfDelete)
@@ -754,7 +743,7 @@ namespace Texel
             if (!_TakeControl(access))
                 return false;
 
-            if (usingDebug) _DebugLog($"Move track from {index} to {destIndex}");
+            if (_usingDebug) _DebugLog($"Move track from {index} to {destIndex}");
 
             VRCUrl dstUrl = syncUrls[index];
             Vector3 dstEntry = syncEntries[index];
@@ -877,7 +866,7 @@ namespace Texel
             else if (!_TakeControl(addAccess))
                 return false;
 
-            if (usingDebug) _DebugLog($"Adding URL {url}");
+            if (_usingDebug) _DebugLog($"Adding URL {url}");
 
             _EnsureSyncCapacity();
 
@@ -938,7 +927,7 @@ namespace Texel
 
             if (!foundInfo && (usingTitles || usingAuthors))
             {
-                if (usingDebugLow) _DebugLowLevel($"Resolving info for url {url}");
+                if (_usingVerbose) _DebugVerbose($"Resolving info for url {url}");
                 UrlInfoResolver resolver = videoPlayer.UrlInfoResolver;
                 resolver._ResolveInfo(url);
             }
@@ -978,7 +967,7 @@ namespace Texel
             if (!usingTitles && !usingAuthors)
                 return;
 
-            if (usingDebug) _DebugLowLevel($"Updating info resolver for {syncTrackCount} tracks");
+            if (_usingDebug) _DebugVerbose($"Updating info resolver for {syncTrackCount} tracks");
 
             for (int i = 0; i < syncTrackCount; i++)
             {
@@ -995,7 +984,7 @@ namespace Texel
             if (!_TakeControl(addAccess))
                 return false;
 
-            if (usingDebug) _DebugLog($"Adding track (playlist={playlistIndex}, catalog={catalogIndex}, track={trackIndex}");
+            if (_usingDebug) _DebugLog($"Adding track (playlist={playlistIndex}, catalog={catalogIndex}, track={trackIndex}");
 
             _EnsureSyncCapacity();
 
@@ -1072,7 +1061,7 @@ namespace Texel
 
             if (!Networking.IsOwner(gameObject))
             {
-                if (usingDebugLow) _DebugLowLevel("Take control");
+                if (_usingVerbose) _DebugVerbose("Take control");
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
             }
 
@@ -1084,7 +1073,7 @@ namespace Texel
             if (!Networking.IsOwner(gameObject))
             {
                 Networking.SetOwner(Networking.LocalPlayer, gameObject);
-                if (usingDebugLow) _DebugLowLevel("Force take control");
+                if (_usingVerbose) _DebugVerbose("Force take control");
             }
 
             return true;
@@ -1123,7 +1112,7 @@ namespace Texel
 
                 if (removeCount > 0)
                 {
-                    if (usingDebug) _DebugLog($"Removed {removeCount} tracks from departing player {player.displayName} [{player.playerId}]");
+                    if (_usingDebug) _DebugLog($"Removed {removeCount} tracks from departing player {player.displayName} [{player.playerId}]");
                     _IncrQueueUpdate();
                     _EventListChange();
                     RequestSerialization();
@@ -1152,28 +1141,6 @@ namespace Texel
                 sourceManager._OnSourceInterrupt(sourceIndex);
 
             _UpdateHandlers(EVENT_INTERRUPT);
-        }
-
-        void _DebugLog(string message)
-        {
-            if (vrcLogging)
-                Debug.Log("[VideoTXL:PlaylistQueue] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write("PlaylistQueue", message);
-        }
-
-        void _DebugError(string message, bool force = false)
-        {
-            if (vrcLogging || force)
-                Debug.LogError("[VideoTXL:PlaylistQueue] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write("PlaylistQueue", message);
-        }
-
-        void _DebugLowLevel(string message)
-        {
-            if (lowLevelLogging)
-                _DebugLog(message);
         }
     }
 }

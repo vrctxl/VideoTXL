@@ -33,12 +33,7 @@ namespace Texel
         protected SerializedProperty syncTrackAuthorsProperty;
         protected SerializedProperty syncPlayerNamesProperty;
 
-        protected SerializedProperty debugLogProperty;
-        protected SerializedProperty vrcLoggingProperty;
-        protected SerializedProperty eventLoggingProperty;
-        protected SerializedProperty lowLevelLoggingProperty;
-
-        static bool expandDebug = false;
+        DebugInspectorBlock debugBlock;
 
         protected override void OnEnable()
         {
@@ -71,10 +66,7 @@ namespace Texel
             syncTrackAuthorsProperty = serializedObject.FindProperty(nameof(PlaylistQueue.syncTrackAuthors));
             syncPlayerNamesProperty = serializedObject.FindProperty(nameof(PlaylistQueue.syncPlayerNames));
 
-            debugLogProperty = serializedObject.FindProperty(nameof(PlaylistQueue.debugLog));
-            vrcLoggingProperty = serializedObject.FindProperty(nameof(PlaylistQueue.vrcLogging));
-            eventLoggingProperty = serializedObject.FindProperty(nameof(PlaylistQueue.eventLogging));
-            lowLevelLoggingProperty = serializedObject.FindProperty(nameof(PlaylistQueue.lowLevelLogging));
+            debugBlock = new DebugInspectorBlock(serializedObject);
         }
 
         public override void OnInspectorGUI()
@@ -160,14 +152,7 @@ namespace Texel
             EditorGUILayout.PropertyField(syncPlayerNamesProperty);
 
             EditorGUILayout.Space();
-            expandDebug = EditorGUILayout.Foldout(expandDebug, "Debug Options", true, boldFoldoutStyle);
-            if (expandDebug)
-            {
-                EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log"));
-                EditorGUILayout.PropertyField(eventLoggingProperty, new GUIContent("Include Events"));
-                EditorGUILayout.PropertyField(lowLevelLoggingProperty, new GUIContent("Include Low-Level"));
-                EditorGUILayout.PropertyField(vrcLoggingProperty, new GUIContent("VRC Logging"));
-            }
+            debugBlock.Draw(TXLGUI.Styles.BoldFoldout);
 
             serializedObject.ApplyModifiedProperties();
         }

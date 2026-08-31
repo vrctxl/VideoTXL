@@ -133,12 +133,6 @@ namespace Texel
 
         SerializedProperty videoPlayerProperty;
 
-        SerializedProperty debugLogProperty;
-        SerializedProperty debugStateProperty;
-        SerializedProperty vrcLoggingProperty;
-        SerializedProperty lowLevelLoggingProperty;
-        SerializedProperty eventLoggingProperty;
-
         SerializedProperty playbackMaterialProperty;
         SerializedProperty logoMaterialProperty;
         SerializedProperty loadingMaterialProperty;
@@ -195,6 +189,8 @@ namespace Texel
         SerializedProperty useRenderOutProperty;
         SerializedProperty outputCRTProperty;
         SerializedProperty outputMaterialPropertiesProperty;
+
+        DebugInspectorBlock debugBlock;
 
         CrtListDisplay crtList;
         SharedMaterialListDisplay sharedMaterialList;
@@ -280,12 +276,6 @@ namespace Texel
         private void OnEnable()
         {
             videoPlayerProperty = serializedObject.FindProperty(nameof(ScreenManager.videoPlayer));
-
-            debugLogProperty = serializedObject.FindProperty(nameof(ScreenManager.debugLog));
-            debugStateProperty = serializedObject.FindProperty(nameof(ScreenManager.debugState));
-            vrcLoggingProperty = serializedObject.FindProperty(nameof(ScreenManager.vrcLogging));
-            lowLevelLoggingProperty = serializedObject.FindProperty(nameof(ScreenManager.lowLevelLogging));
-            eventLoggingProperty = serializedObject.FindProperty(nameof(ScreenManager.eventLogging));
 
             playbackMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.playbackMaterial));
             logoMaterialProperty = serializedObject.FindProperty(nameof(ScreenManager.logoMaterial));
@@ -386,6 +376,8 @@ namespace Texel
                 serializedObject.ApplyModifiedProperties();
             }
 
+            debugBlock = new DebugInspectorBlock(serializedObject);
+
             // CRT texture
             UpdateEditorState();
 
@@ -444,7 +436,6 @@ namespace Texel
 
             // ---
 
-            EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
             DebugSection();
 
             if (serializedObject.hasModifiedProperties)
@@ -545,16 +536,8 @@ namespace Texel
 
         private void DebugSection()
         {
-            if (!TXLEditor.DrawMainHeaderHelp(new GUIContent("Debug Options"), ref expandDebug, debugOptionsUrl))
-                return;
-
-            EditorGUI.indentLevel++;
-            EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
-            EditorGUILayout.PropertyField(debugStateProperty, new GUIContent("Debug State", "Track periodically refreshed internal state in a world object"));
-            EditorGUILayout.PropertyField(eventLoggingProperty, new GUIContent("Include Events", "Include additional event traffic in debug log"));
-            EditorGUILayout.PropertyField(lowLevelLoggingProperty, new GUIContent("Include Low Level", "Include additional verbose messages in debug log"));
-            EditorGUILayout.PropertyField(vrcLoggingProperty, new GUIContent("VRC Logging", "Write out debug messages to VRChat log."));
-            EditorGUI.indentLevel--;
+            EditorGUILayout.Space();
+            debugBlock.Draw(TXLGUI.Styles.BoldFoldout);
         }
 
         static GUIContent doubleBufferLabel = new GUIContent("Double Bufferd", "Use double buffering with AVPro video sources to repeat previous frames whenever a frame is dropped.");
@@ -1708,13 +1691,16 @@ namespace Texel
                                     RenderTexture.active = null;
                                 videoTexRT.Release();
                             }
+
                             videoTexRT.width = crt.width;
                             videoTexRT.height = crt.height;
                         }
                         videoTexRT.Create();
 
+                        RenderTexture prevRT = RenderTexture.active;
                         Graphics.Blit(null, videoTexRT, crtMat);
                         Shader.SetGlobalTexture("_Udon_VideoTex", videoTexRT);
+                        RenderTexture.active = prevRT;
                     }
                 }
             }

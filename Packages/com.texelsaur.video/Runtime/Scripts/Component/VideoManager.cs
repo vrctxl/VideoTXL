@@ -28,16 +28,12 @@ namespace Texel
     }
 
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-    public class VideoManager : EventBase
+    public class VideoManager : DebugEventBase
     {
         public TXLVideoPlayer videoPlayer;
         public VideoSource[] sources;
 
-        public bool debugLogging = true;
-        public bool eventLogging = false;
-        public bool traceLogging = false;
-        public DebugLog debugLog;
-        public DebugState debugState;
+        int[] sourceLogChannels;
 
         [SerializeField] internal bool enableAVProInEditor = false;
         [SerializeField] internal bool defaultReactStreamStop = true;
@@ -85,7 +81,6 @@ namespace Texel
         BaseVRCVideoPlayer activeVideoPlayer;
 
         private float playStartTime = 0;
-        bool _usingDebug = false;
 
         public bool SupportsUnity { get; private set; }
         public bool SupportsAVPro { get; private set; }
@@ -110,7 +105,7 @@ namespace Texel
 
         protected override void _Init()
         {
-            _usingDebug = debugLogging || Utilities.IsValid(debugLog);
+            _SetComponentName("VideoManager", "VideoTXL");
 
             if (!videoPlayer)
             {
@@ -119,7 +114,7 @@ namespace Texel
                 if (videoPlayer)
                     _DebugLog($"Found video player on parent: {videoPlayer.gameObject.name}");
                 else
-                    _DebugError("Could not find parent video player.  Video playback will not work.", true);
+                    _DebugError("Could not find parent video player.  Video playback will not work.");
             }
 
             sources = new VideoSource[transform.childCount];
@@ -136,12 +131,21 @@ namespace Texel
             if (sources == null)
                 sources = new VideoSource[0];
 
+            sourceLogChannels = new int[sources.Length];
+
             for (int i = 0; i < sources.Length; i++)
             {
-                if (sources[i] != null)
+                VideoSource source = sources[i];
+                if (source != null)
                 {
-                    sources[i]._Register(this, i);
-                    sources[i].traceLogging = traceLogging;
+                    source._Register(this, i);
+                    source.traceLogging = _usingTrace;
+
+                    if (logProvider)
+                    {
+                        string name = _VideoSourceName(source.VideoSourceType) + '-' + source.ID;
+                        sourceLogChannels[i] = logProvider._RegisterChannel(componentNamespace, name, null);
+                    }
                 }
             }
 
@@ -152,11 +156,18 @@ namespace Texel
 
             if (videoPlayer)
                 videoPlayer._SetVideoManager(this);
+        }
 
-            if (eventLogging)
-                eventDebugLog = debugLog;
+        protected override void _RefreshDebugFlags()
+        {
+            base._RefreshDebugFlags();
 
-            _SetDebugState(debugState);
+            for (int i = 0; i < sources.Length; i++)
+            {
+                VideoSource source = sources[i];
+                if (source != null)
+                    source.traceLogging = _usingTrace;
+            }
         }
 
         public TXLVideoPlayer VideoPlayer
@@ -468,9 +479,9 @@ namespace Texel
                 if (!activeVideoPlayer)
                     return false;
 
-                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace: IsPlaying (VM:VideoIsPlaying, FC={Time.frameCount})");
+                if (_usingTrace) _DebugTrace(sources[activeSource], $"Trace: IsPlaying (VM:VideoIsPlaying, FC={Time.frameCount})");
                 bool result = activeVideoPlayer.IsPlaying;
-                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace:   IsPlaying -> {result}");
+                if (_usingTrace) _DebugTrace(sources[activeSource], $"Trace:   IsPlaying -> {result}");
                 return result;
             }
         }
@@ -482,9 +493,9 @@ namespace Texel
                 if (!activeVideoPlayer)
                     return false;
 
-                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace: GetDuration (VM:IsSeekable, FC={Time.frameCount})");
+                if (_usingTrace) _DebugTrace(sources[activeSource], $"Trace: GetDuration (VM:IsSeekable, FC={Time.frameCount})");
                 float duration = activeVideoPlayer.GetDuration();
-                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace:   GetDuration -> {duration}");
+                if (_usingTrace) _DebugTrace(sources[activeSource], $"Trace:   GetDuration -> {duration}");
 
                 return !float.IsInfinity(duration) && !float.IsNaN(duration) && duration > 1;
             }
@@ -497,9 +508,9 @@ namespace Texel
                 if (!activeVideoPlayer)
                     return 0;
 
-                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace: GetTime (VM:VideoTime, FC={Time.frameCount})");
+                if (_usingTrace) _DebugTrace(sources[activeSource], $"Trace: GetTime (VM:VideoTime, FC={Time.frameCount})");
                 float result = activeVideoPlayer.GetTime();
-                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace:   GetTime -> {result}");
+                if (_usingTrace) _DebugTrace(sources[activeSource], $"Trace:   GetTime -> {result}");
                 return result;
             }
         }
@@ -511,9 +522,9 @@ namespace Texel
                 if (!activeVideoPlayer)
                     return 0;
 
-                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace: GetDuration (VM:VideoDuration, FC={Time.frameCount})");
+                if (_usingTrace) _DebugTrace(sources[activeSource], $"Trace: GetDuration (VM:VideoDuration, FC={Time.frameCount})");
                 float result = activeVideoPlayer.GetDuration();
-                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace:   GetDuration -> {result}");
+                if (_usingTrace) _DebugTrace(sources[activeSource], $"Trace:   GetDuration -> {result}");
                 return result;
             }
         }
@@ -631,13 +642,13 @@ namespace Texel
             prevSource = activeSource;
             if (prevSource >= 0)
             {
-                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace: IsPlaying (VM:_UpdateSource, FC={Time.frameCount})");
+                if (_usingTrace) _DebugTrace(sources[activeSource], $"Trace: IsPlaying (VM:_UpdateSource, FC={Time.frameCount})");
                 PreviousStatePlaying = activeVideoPlayer.IsPlaying;
-                if (traceLogging) _DebugTrace(sources[activeSource], "Trace: GetTime (VM:_UpdateSource)");
+                if (_usingTrace) _DebugTrace(sources[activeSource], "Trace: GetTime (VM:_UpdateSource)");
                 PreviousStateTime = activeVideoPlayer.GetTime();
-                if (traceLogging) _DebugTrace(sources[activeSource], "Trace: GetDuration (VM:_UpdateSource)");
+                if (_usingTrace) _DebugTrace(sources[activeSource], "Trace: GetDuration (VM:_UpdateSource)");
                 PreviousStateDuration = activeVideoPlayer.GetDuration();
-                if (traceLogging) _DebugTrace(sources[activeSource], $"Trace:   IsPlaying -> {PreviousStatePlaying}, GetTime -> {PreviousStateTime}, GetDuration -> {PreviousStateDuration}");
+                if (_usingTrace) _DebugTrace(sources[activeSource], $"Trace:   IsPlaying -> {PreviousStatePlaying}, GetTime -> {PreviousStateTime}, GetDuration -> {PreviousStateDuration}");
 
                 sources[prevSource]._VideoStop(1);
             }
@@ -811,68 +822,31 @@ namespace Texel
             }
         }
 
-        void _DebugLog(string message)
+        void _DebugLogSource(VideoSource source, string message, DebugLogLevel level)
         {
-            if (debugLogging)
-                Debug.Log($"[VideoTXL:VideoManager] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write("VideoManager", message);
-        }
-
-        void _DebugError(string message, bool force = false)
-        {
-            if (debugLogging || force)
-                Debug.LogError("[VideoTXL:VideoManager] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write("VideoManager", message);
-        }
-
-        void _DebugLog(VideoSource source, string message)
-        {
-            string name = "";
-            switch (source.VideoSourceType)
-            {
-                case VideoSource.VIDEO_SOURCE_UNITY:
-                    name = $"Unity-{source.ID}";
-                    break;
-                case VideoSource.VIDEO_SOURCE_AVPRO:
-                    name = $"AVPro-{source.ID}";
-                    break;
-            }
-
-            if (debugLogging)
-                Debug.Log($"[VideoTXL:{name}] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write(name, message);
-        }
-
-        void _DebugTrace(VideoSource source, string message)
-        {
-            _DebugLog(source, message);
-        }
-
-        public void _DownstreamDebugLog(VideoSource source, string message)
-        {
-            _DebugLog(source, message);
-        }
-
-        public void _SetDebugState(DebugState debug)
-        {
-            if (debugState)
-            {
-                debugState._Unregister(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
-                debugState = null;
-            }
-
-            if (!debug)
+            if (!_usingDebug)
                 return;
 
-            debugState = debug;
-            debugState._Register(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
-            debugState._SetContext(this, nameof(_InternalUpdateDebugState), "VideoManager");
+            int index = source.ID;
+            if (index < 0 || index > sourceLogChannels.Length)
+                return;
+
+            logProvider._Write(sourceLogChannels[index], message, level);
         }
 
-        public void _InternalUpdateDebugState()
+        public void _DebugLog(VideoSource source, string message)
+        {
+            _DebugLogSource(source, message, DebugLogLevel.Info);
+        }
+
+        public void _DebugTrace(VideoSource source, string message)
+        {
+            _DebugLogSource(source, message, DebugLogLevel.Trace);
+        }
+
+        public override bool UsesDebugState => true;
+
+        protected override void _UpdateDebugState()
         {
             VRCPlayerApi owner = Networking.GetOwner(gameObject);
             debugState._SetValue("videoPlayer", videoPlayer ? videoPlayer.ToString() : "--");
@@ -903,7 +877,7 @@ namespace Texel
                     debugState._SetValue("active.captureRenderer", source.captureRenderer ? source.captureRenderer.ToString() : "--");
                     debugState._SetValue("active.avproReservedChannel", source.avproReservedChannel ? source.avproReservedChannel.ToString() : "--");
                     debugState._SetValue("active.player", player ? player.ToString() : "--");
-                   
+
                     if (player != null)
                     {
                         debugState._SetValue("active.lastEvent", VideoSource._VideoSourceEventName(source.LastEvent));

@@ -19,7 +19,6 @@ namespace Texel
     {
         public UrlRemapper urlRemapper;
         public UrlInfoResolver urlInfoResolver;
-        public AccessControl accessControl;
 
         [Obsolete("Use trackedPlaybackZone")]
         public CompoundZoneTrigger playbackZone;
@@ -45,72 +44,67 @@ namespace Texel
         public TXLScreenFit defaultScreenFit = TXLScreenFit.Fit;
         public short defaultVideoSource = VideoSource.VIDEO_SOURCE_NONE;
 
-        public bool debugLogging = true;
-        public DebugLog debugLog;
-        public DebugState debugState;
-        public bool eventLogging = false;
-        public bool traceLogging = false;
-
         float retryTimeout = 6;
         //float loadWaitTime = 2;
         //float syncLatchUpdateFrequency = 0.2f;
 
-        [UdonSynced]
-        short _syncVideoSource = VideoSource.VIDEO_SOURCE_NONE;
-        [UdonSynced]
-        short _syncVideoSourceOverride = VideoSource.VIDEO_SOURCE_NONE;
+        [UdonSynced] short _syncVideoSource = VideoSource.VIDEO_SOURCE_NONE;
+        short _shadowVideoSource = VideoSource.VIDEO_SOURCE_NONE;
+        [UdonSynced] short _syncVideoSourceOverride = VideoSource.VIDEO_SOURCE_NONE;
+        short _shadowVideoSourceOverride = VideoSource.VIDEO_SOURCE_NONE;
+
         short fallbackSourceOverride = VideoSource.VIDEO_SOURCE_NONE;
 
-        [UdonSynced]
-        byte _syncScreenFit = SCREEN_FIT;
+        [UdonSynced] byte _syncScreenFit = SCREEN_FIT;
+        byte _shadowScreenFit = SCREEN_FIT;
 
-        [UdonSynced]
-        VRCUrl _syncUrl = VRCUrl.Empty;
-        [UdonSynced]
-        VRCUrl _syncQuestUrl = VRCUrl.Empty;
-        [UdonSynced]
-        short _syncUrlSourceIndex = -1;
+        [UdonSynced] VRCUrl _syncUrl = VRCUrl.Empty;
+        VRCUrl _shadowUrl = VRCUrl.Empty;
+        [UdonSynced] VRCUrl _syncQuestUrl = VRCUrl.Empty;
+        VRCUrl _shadowQuestUrl = VRCUrl.Empty;
+        [UdonSynced] short _syncUrlSourceIndex = -1;
+        short _shadowUrlSourceIndex = -1;
 
-        [UdonSynced]
-        int _syncVideoPlayerId = -1;
-        [UdonSynced]
-        string _syncVideoPlayerName = "";
+        [UdonSynced] int _syncVideoPlayerId = -1;
+        int _shadowVideoPlayerId = -1;
+        [UdonSynced] string _syncVideoPlayerName = "";
+        string _shadowVideoPlayerName = "";
 
         VRCUrl _preResolvedUrl = VRCUrl.Empty;
         VRCUrl _resolvedUrl = VRCUrl.Empty;
 
-        [UdonSynced]
-        int _syncVideoNumber;
+        [UdonSynced] int _syncVideoNumber;
+        int _shadowVideoNumber;
         int _loadedVideoNumber;
-        [UdonSynced]
-        int _syncPlaybackNumber;
+        [UdonSynced] int _syncPlaybackNumber;
+        int _shadowPlaybackNumber;
 
-        [UdonSynced, NonSerialized]
-        public bool _syncOwnerPlaying;
+        [UdonSynced, NonSerialized] public bool _syncOwnerPlaying;
+        bool _shadowOwnerPlaying;
 
-        [UdonSynced, NonSerialized]
-        public bool _syncOwnerPaused = false;
+        [UdonSynced, NonSerialized] public bool _syncOwnerPaused = false;
+        bool _shadowOwnerPaused;
 
-        [UdonSynced]
-        float _syncVideoStartNetworkTime;
+        [UdonSynced] float _syncVideoStartNetworkTime;
+        float _shadowVideoStartNetworkTime;
 
-        [UdonSynced]
-        float _syncVideoExpectedEndTime;
+        [UdonSynced] float _syncVideoExpectedEndTime;
+        float _shadowVideoExpectedEndTime;
 
-        [UdonSynced]
-        float _syncVideoTargetTime;
+        [UdonSynced] float _syncVideoTargetTime;
+        float _shadowVideoTargetTime;
 
-        [UdonSynced]
-        float _syncPauseNetworkTime;
+        [UdonSynced] float _syncPauseNetworkTime;
+        float _shadowPauseNetworkTime;
 
-        [UdonSynced]
-        bool _syncLocked = true;
+        [UdonSynced] bool _syncLocked = true;
+        bool _shadowLocked = true;
 
-        [UdonSynced, FieldChangeCallback(nameof(_SyncRepeatMode))]
-        TXLRepeatMode syncRepeatMode;
+        [UdonSynced, FieldChangeCallback(nameof(_SyncRepeatMode))] TXLRepeatMode syncRepeatMode;
+        TXLRepeatMode _shadowRepeatMode;
 
-        [UdonSynced, FieldChangeCallback(nameof(HoldVideos))]
-        bool _syncHoldVideos = false;
+        [UdonSynced, FieldChangeCallback(nameof(HoldVideos))] bool _syncHoldVideos = false;
+        bool _shadowHoldVideos = false;
 
         //[NonSerialized]
         //public int localPlayerState = VIDEO_STATE_STOPPED;
@@ -139,7 +133,6 @@ namespace Texel
         bool _inExclusionZone = false;
         bool _localEnabled = true;
         bool _initDeserialize = false;
-        bool _usingDebug = false;
 
         float localOffset = 0f;
 
@@ -156,20 +149,15 @@ namespace Texel
         {
             base._Init();
 
+            _SetComponentName("SyncPlayer", "VideoTXL");
+
             _localEnabled = defaultLocalPlaybackEnabled;
 
-            _usingDebug = debugLogging || Utilities.IsValid(debugLog);
-            if (_usingDebug) DebugLog("Init");
-            if (_usingDebug) DebugLog($"Detected platform: {this.GamePlatform}");
+            if (_usingDebug) _DebugLog("Init");
+            if (_usingDebug) _DebugLog($"Detected platform: {this.GamePlatform}");
             
             if (Utilities.IsValid(Networking.LocalPlayer))
-                if (_usingDebug) DebugLog("Detected " + (Networking.LocalPlayer.IsUserInVR() ? "VR" : "Desktop") + " Platform");
-
-            if (Utilities.IsValid(debugState))
-                _SetDebugState(debugState);
-
-            if (eventLogging)
-                eventDebugLog = debugLog;
+                if (_usingDebug) _DebugLog("Detected " + (Networking.LocalPlayer.IsUserInVR() ? "VR" : "Desktop") + " Platform");
 
             _hasAccessControl = Utilities.IsValid(accessControl);
             _hasSustainZone = playbackZoneMembership || trackedZoneTrigger;
@@ -244,7 +232,7 @@ namespace Texel
         {
             if (!videoMux)
             {
-                DebugError("No video manager set at time of post init, skipping default playback");
+                _DebugError("No video manager set at time of post init, skipping default playback");
                 return;
             }
 
@@ -263,7 +251,7 @@ namespace Texel
         {
             if (!_initDeserialize)
             {
-                if (_usingDebug) DebugLog("Deserialize not received in reasonable time");
+                if (_usingDebug) _DebugLog("Deserialize not received in reasonable time");
                 SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.Owner, "RequestOwnerSync");
             }
         }
@@ -272,13 +260,13 @@ namespace Texel
         {
             if (videoMux)
             {
-                if (_usingDebug) DebugLog("VideoManager already set");
+                if (_usingDebug) _DebugLog("VideoManager already set");
                 return;
             }
 
             base._SetVideoManager(manager);
 
-            if (traceLogging) DebugTrace("Setting video manager");
+            if (_usingTrace) _DebugTrace("Setting video manager");
 
             videoMux._Register(VideoManager.VIDEO_READY_EVENT, this, "_OnVideoReady");
             videoMux._Register(VideoManager.VIDEO_START_EVENT, this, "_OnVideoStart");
@@ -298,13 +286,13 @@ namespace Texel
         {
             if (audioManager)
             {
-                if (_usingDebug) DebugLog("AudioManager already set");
+                if (_usingDebug) _DebugLog("AudioManager already set");
                 return;
             }
 
             base._SetAudioManager(manager);
 
-            if (traceLogging) DebugTrace("Setting audio manager");
+            if (_usingTrace) _DebugTrace("Setting audio manager");
 
             if (audioManager)
                 audioManager._Register(AudioManager.EVENT_CHANNEL_GROUP_CHANGED, this, "_OnAudioProfileChanged");
@@ -369,7 +357,7 @@ namespace Texel
             get { return syncRepeatMode; }
             set
             {
-                if (traceLogging) DebugTrace($"RepeatMode = {value}");
+                if (_usingTrace) _DebugTrace($"RepeatMode = {value}");
                 if (!_TakeControl())
                     return;
 
@@ -450,7 +438,7 @@ namespace Texel
 
         public void _OnPlaybackZoneEnter()
         {
-            if (traceLogging) DebugTrace("Event OnPlaybackZoneEnter");
+            if (_usingTrace) _DebugTrace("Event OnPlaybackZoneEnter");
 
             if (playerArg == Networking.LocalPlayer)
             {
@@ -469,7 +457,7 @@ namespace Texel
 
         public void _OnPlaybackZoneExit()
         {
-            if (traceLogging) DebugTrace("Event OnPlaybackZoneExit");
+            if (_usingTrace) _DebugTrace("Event OnPlaybackZoneExit");
 
             if (playerArg == Networking.LocalPlayer)
             {
@@ -491,7 +479,7 @@ namespace Texel
 
         public void _OnExclusionZoneEnterExit()
         {
-            if (traceLogging) DebugTrace("Event OnExclusionZoneEnterExit");
+            if (_usingTrace) _DebugTrace("Event OnExclusionZoneEnterExit");
 
             if (playerArg != Networking.LocalPlayer)
                 return;
@@ -547,7 +535,7 @@ namespace Texel
                 if (serverTime < _syncVideoExpectedEndTime)
                 {
                     //_videoTargetTime = serverTime - _syncVideoStartNetworkTime + localOffset;
-                    if (_usingDebug) DebugLog($"Local playback start: start at {_syncVideoTargetTime}");
+                    if (_usingDebug) _DebugLog($"Local playback start: start at {_syncVideoTargetTime}");
                     _loadFromSync = true;
                     _StartVideoLoad();
                     return;
@@ -556,13 +544,13 @@ namespace Texel
                 // Otherwise play next available track or stop, depending on queue/settings
                 if (Networking.IsOwner(playerArg, gameObject))
                 {
-                    if (_usingDebug) DebugLog("Local playback start: is owner and track has ended");
+                    if (_usingDebug) _DebugLog("Local playback start: is owner and track has ended");
                     _ConditionalPlayNext();
                     return;
                 }
             }
 
-            if (_usingDebug) DebugLog("Local playback start: no expected end time set");
+            if (_usingDebug) _DebugLog("Local playback start: no expected end time set");
             _StartVideoLoad();
         }
 
@@ -592,7 +580,7 @@ namespace Texel
 
         public override void _ValidateVideoSources()
         {
-            if (traceLogging) DebugTrace("Validate Video Sources");
+            if (_usingTrace) _DebugTrace("Validate Video Sources");
 
             if (Networking.IsOwner(gameObject))
             {
@@ -603,7 +591,7 @@ namespace Texel
 
         public void _TriggerPlay()
         {
-            if (traceLogging) DebugTrace("Trigger Play");
+            if (_usingTrace) _DebugTrace("Trigger Play");
             if (playerState == VIDEO_STATE_PLAYING || playerState == VIDEO_STATE_LOADING)
                 return;
 
@@ -612,7 +600,7 @@ namespace Texel
 
         public void _TriggerStop()
         {
-            if (traceLogging) DebugTrace("Trigger Stop");
+            if (_usingTrace) _DebugTrace("Trigger Stop");
             if (!_TakeControl())
                 return;
 
@@ -621,7 +609,7 @@ namespace Texel
 
         public void _TriggerPause()
         {
-            if (traceLogging) DebugTrace("Trigger Pause");
+            if (_usingTrace) _DebugTrace("Trigger Pause");
             if (!seekableSource || playerState != VIDEO_STATE_PLAYING)
                 return;
             if (!_TakeControl())
@@ -653,13 +641,13 @@ namespace Texel
 
         public void _TriggerLock()
         {
-            if (traceLogging) DebugTrace("Trigger Lock");
+            if (_usingTrace) _DebugTrace("Trigger Lock");
             _SetLock(!_syncLocked);
         }
 
         public void _SetLock(bool state)
         {
-            if (traceLogging) DebugTrace("Set Lock");
+            if (_usingTrace) _DebugTrace("Set Lock");
             if (!_IsAdmin() || !_TakeControl())
                 return;
 
@@ -670,7 +658,7 @@ namespace Texel
 
         public void _TriggerRepeatMode()
         {
-            if (traceLogging) DebugTrace("Trigger Repeat Mode");
+            if (_usingTrace) _DebugTrace("Trigger Repeat Mode");
             if (!_TakeControl())
                 return;
 
@@ -689,14 +677,14 @@ namespace Texel
 
         public void _TriggerInternalAVSync()
         {
-            if (traceLogging) DebugTrace("Trigger Internal AVSync Mode");
+            if (_usingTrace) _DebugTrace("Trigger Internal AVSync Mode");
 
             _UpdateAVSync(!autoInternalAVSync);
         }
 
         public override void _SetSourceMode(int mode)
         {
-            if (traceLogging) DebugTrace("Set Source Mode");
+            if (_usingTrace) _DebugTrace("Set Source Mode");
             if (!_TakeControl())
                 return;
 
@@ -712,19 +700,19 @@ namespace Texel
 
         public override void _SetSourceLatency(int latency)
         {
-            if (traceLogging) DebugTrace("Set Source latency");
+            if (_usingTrace) _DebugTrace("Set Source latency");
             videoMux._UpdateLowLatency(latency);
         }
 
         public override void _SetSourceResolution(int res)
         {
-            if (traceLogging) DebugTrace("Set Source Resolution");
+            if (_usingTrace) _DebugTrace("Set Source Resolution");
             videoMux._UpdatePreferredResolution(res);
         }
 
         public override void _SetScreenFit(TXLScreenFit fit)
         {
-            if (traceLogging) DebugTrace("Set Screen Fit");
+            if (_usingTrace) _DebugTrace("Set Screen Fit");
             if (!_TakeControl())
                 return;
 
@@ -736,13 +724,13 @@ namespace Texel
 
         public override void _Resync()
         {
-            if (traceLogging) DebugTrace("Resync");
+            if (_usingTrace) _DebugTrace("Resync");
             _ForceResync();
         }
 
         public override void _ChangeUrl(VRCUrl url)
         {
-            if (traceLogging) DebugTrace("Change Url");
+            if (_usingTrace) _DebugTrace("Change Url");
             if (!_TakeControl())
                 return;
 
@@ -752,7 +740,7 @@ namespace Texel
 
         public void _ChangeUrlQuestFallback(VRCUrl url, VRCUrl questUrl)
         {
-            if (traceLogging) DebugTrace("Change Url Quest Fallback");
+            if (_usingTrace) _DebugTrace("Change Url Quest Fallback");
             if (!_TakeControl())
                 return;
 
@@ -774,7 +762,7 @@ namespace Texel
 
         public void _SetHoldMode(bool holdState)
         {
-            if (traceLogging) DebugTrace("Set Hold Mode");
+            if (_usingTrace) _DebugTrace("Set Hold Mode");
             if (!_TakeControl())
                 return;
 
@@ -784,7 +772,7 @@ namespace Texel
 
         public void _ReleaseHold()
         {
-            if (traceLogging) DebugTrace("Release Hold");
+            if (_usingTrace) _DebugTrace("Release Hold");
             if (!_TakeControl())
                 return;
 
@@ -801,7 +789,7 @@ namespace Texel
 
         public void _CancelHold()
         {
-            if (traceLogging) DebugTrace("Cancel Hold");
+            if (_usingTrace) _DebugTrace("Cancel Hold");
             _StopVideo();
         }
 
@@ -817,7 +805,7 @@ namespace Texel
 
         public void _SetTargetTime(float time)
         {
-            if (traceLogging) DebugTrace($"Set target time: {time:N3}");
+            if (_usingTrace) _DebugTrace($"Set target time: {time:N3}");
             if (playerState != VIDEO_STATE_PLAYING)
                 return;
             if (!seekableSource)
@@ -865,7 +853,7 @@ namespace Texel
             if (urlInfoResolver)
                 urlInfoResolver._ResolveInfo(url);
 
-            if (_usingDebug) DebugLog("Play video " + url);
+            if (_usingDebug) _DebugLog("Play video " + url);
             bool isOwner = Networking.IsOwner(gameObject);
             if (!isOwner && !_TakeControl())
                 return;
@@ -945,7 +933,7 @@ namespace Texel
 
         public void _LoopVideo()
         {
-            if (traceLogging) DebugTrace("Loop Video");
+            if (_usingTrace) _DebugTrace("Loop Video");
             _overrideLock = true;
             _skipAdvanceNextTrack = false;
 
@@ -959,7 +947,7 @@ namespace Texel
 
         public void _OnSourceUrlReady()
         {
-            if (traceLogging) DebugTrace($"Event OnSourceUrlReady");
+            if (_usingTrace) _DebugTrace($"Event OnSourceUrlReady");
             if (Networking.IsOwner(gameObject))
                 _PlaySourceUrl();
         }
@@ -972,7 +960,7 @@ namespace Texel
 
         void _PlaySourceUrl()
         {
-            if (traceLogging) DebugTrace($"Play Source URL");
+            if (_usingTrace) _DebugTrace($"Play Source URL");
 
             _overrideLock = true;
             _skipAdvanceNextTrack = false;
@@ -992,7 +980,7 @@ namespace Texel
 
         void _PlayPlaylistUrl(VideoUrlSource source)
         {
-            if (traceLogging) DebugTrace($"Play Playlist Url from {source}");
+            if (_usingTrace) _DebugTrace($"Play Playlist Url from {source}");
 
             _overrideLock = true;
             _skipAdvanceNextTrack = false;
@@ -1109,7 +1097,7 @@ namespace Texel
             if (IsMobile && _syncQuestUrl != null && _syncQuestUrl != VRCUrl.Empty && _syncQuestUrl.Get().Trim() != "")
             {
                 url = _syncQuestUrl;
-                if (_usingDebug) DebugLog($"Loading Quest/Mobile URL variant: {url}");
+                if (_usingDebug) _DebugLog($"Loading Quest/Mobile URL variant: {url}");
             }
 
             _preResolvedUrl = url;
@@ -1119,7 +1107,7 @@ namespace Texel
                 url = urlRemapper._Remap(url);
                 if (Utilities.IsValid(url) && _syncUrl.Get() != url.Get())
                 {
-                    if (_usingDebug) DebugLog($"Remapped URL: {url}");
+                    if (_usingDebug) _DebugLog($"Remapped URL: {url}");
                 }
             }
 
@@ -1129,7 +1117,7 @@ namespace Texel
 
         public void _StopVideo()
         {
-            if (_usingDebug) DebugLog("Stop video");
+            if (_usingDebug) _DebugLog("Stop video");
 
             if (seekableSource)
                 _lastVideoPosition = videoMux.VideoTime;
@@ -1159,7 +1147,7 @@ namespace Texel
 
         public void _OnVideoReady()
         {
-            if (traceLogging) DebugTrace("Event OnVideoReady");
+            if (_usingTrace) _DebugTrace("Event OnVideoReady");
 
             if (!LocalPlaybackValid)
             {
@@ -1170,7 +1158,7 @@ namespace Texel
 
             float position = videoMux.VideoTime;
             float duration = videoMux.VideoDuration;
-            if (_usingDebug) DebugLog("Video ready, duration: " + duration + ", position: " + position);
+            if (_usingDebug) _DebugLog("Video ready, duration: " + duration + ", position: " + position);
 
             // If a seekable video is loaded it should have a positive duration.  Otherwise we assume it's a non-seekable stream
             seekableSource = !float.IsInfinity(duration) && !float.IsNaN(duration) && duration > 1;
@@ -1231,7 +1219,7 @@ namespace Texel
 
         public void _OnVideoStart()
         {
-            if (traceLogging) DebugTrace("Event OnVideoStart");
+            if (_usingTrace) _DebugTrace("Event OnVideoStart");
 
             _videoReady = false;
 
@@ -1294,7 +1282,7 @@ namespace Texel
         {
             _videoReady = false;
 
-            if (traceLogging) DebugTrace("Event OnVideoEnd");
+            if (_usingTrace) _DebugTrace("Event OnVideoEnd");
 
             seekableSource = false;
 
@@ -1377,7 +1365,7 @@ namespace Texel
         // AVPro sends loop event but does not auto-loop, and setting time sometimes deadlocks player *sigh*
         public void _OnVideoLoop()
         {
-            if (traceLogging) DebugTrace("Event OnVideoLoop");
+            if (_usingTrace) _DebugTrace("Event OnVideoLoop");
             /*
             float current = _currentPlayer.GetTime();
             float duration = _currentPlayer.GetDuration();
@@ -1397,7 +1385,7 @@ namespace Texel
         {
             _videoReady = false;
 
-            if (traceLogging) DebugTrace($"Event OnVideoError");
+            if (_usingTrace) _DebugTrace($"Event OnVideoError");
             if (playerState == VIDEO_STATE_STOPPED)
                 return;
 
@@ -1430,8 +1418,8 @@ namespace Texel
 
             if (_usingDebug)
             {
-                DebugLog("Video stream failed: " + _syncUrl);
-                DebugLog("Error code: " + code);
+                _DebugLog("Video stream failed: " + _syncUrl);
+                _DebugLog("Error code: " + code);
             }
 
             _UpdatePlayerStateError(videoError);
@@ -1501,7 +1489,7 @@ namespace Texel
             {
                 if (streamFallback || videoFallback)
                 {
-                    if (_usingDebug) DebugLog($"Retrying URL in {(streamFallback ? "stream" : "video")} mode");
+                    if (_usingDebug) _DebugLog($"Retrying URL in {(streamFallback ? "stream" : "video")} mode");
 
                     bool isStreamFallback = streamFallback;
                     fallbackSourceOverride = streamFallback ? VideoSource.VIDEO_SOURCE_AVPRO : VideoSource.VIDEO_SOURCE_UNITY;
@@ -1520,7 +1508,7 @@ namespace Texel
                     }
                 }
 
-                if (_usingDebug) DebugLog($"Error retry action: {action}");
+                if (_usingDebug) _DebugLog($"Error retry action: {action}");
 
                 _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
 
@@ -1551,7 +1539,7 @@ namespace Texel
                 {
                     if (streamFallback || videoFallback)
                     {
-                        if (_usingDebug) DebugLog($"Retrying URL in {(streamFallback ? "stream" : "video")} mode");
+                        if (_usingDebug) _DebugLog($"Retrying URL in {(streamFallback ? "stream" : "video")} mode");
 
                         bool isStreamFallback = streamFallback;
                         fallbackSourceOverride = streamFallback ? VideoSource.VIDEO_SOURCE_AVPRO : VideoSource.VIDEO_SOURCE_UNITY;
@@ -1570,7 +1558,7 @@ namespace Texel
 
         public void _OnSourceChange()
         {
-            if (traceLogging) DebugTrace($"Event OnSourceChange activeSourceType={videoMux.ActiveSourceType}");
+            if (_usingTrace) _DebugTrace($"Event OnSourceChange activeSourceType={videoMux.ActiveSourceType}");
 
             if (urlRemapper)
                 urlRemapper._SetVideoSource(videoMux.ActiveSource);
@@ -1588,7 +1576,7 @@ namespace Texel
             if (audioManager.SelectedChannelGroup)
                 groupName = audioManager.SelectedChannelGroup.groupName;
 
-            if (traceLogging) DebugTrace($"Event OnAudioProfileChanged channelGroup={groupName}");
+            if (_usingTrace) _DebugTrace($"Event OnAudioProfileChanged channelGroup={groupName}");
 
             if (urlRemapper)
             {
@@ -1613,8 +1601,8 @@ namespace Texel
 
         public bool _IsAdmin()
         {
-            if (_hasAccessControl)
-                return accessControl._LocalHasAccess();
+            if (hasAccessControl)
+                return base._AccessCheck();
 
             VRCPlayerApi player = Networking.LocalPlayer;
             if (!Utilities.IsValid(player))
@@ -1623,23 +1611,38 @@ namespace Texel
             return player.isMaster || player.isInstanceOwner;
         }
 
+        protected override bool _AccessCheck()
+        {
+            if (_overrideLock || !_syncLocked)
+                return true;
+
+            return _IsAdmin();
+        }
+
+        protected override bool _AccessCheck(VRCPlayerApi player)
+        {
+            if (_overrideLock || !_syncLocked)
+                return true;
+
+            if (!hasAccessControl)
+            {
+                if (!Utilities.IsValid(player))
+                    return false;
+
+                return player.isMaster || player.isInstanceOwner;
+            }
+
+            return base._AccessCheck(player);
+        }
+
         public override bool _CanTakeControl()
         {
-            if (_overrideLock)
-                return true;
-            if (_hasAccessControl)
-                return !_syncLocked || accessControl._LocalHasAccess();
-
-            VRCPlayerApi player = Networking.LocalPlayer;
-            if (!Utilities.IsValid(player))
-                return false;
-
-            return player.isMaster || player.isInstanceOwner || !_syncLocked;
+            return _AccessCheck();
         }
 
         public override bool _TakeControl()
         {
-            if (traceLogging) DebugTrace("Take Control");
+            if (_usingTrace) _DebugTrace("Take Control");
             if (!_CanTakeControl())
                 return false;
 
@@ -1649,25 +1652,73 @@ namespace Texel
             return true;
         }
 
-        //public override bool OnOwnershipRequest(VRCPlayerApi requestingPlayer, VRCPlayerApi requestedOwner)
-        //{
-        //    return base.OnOwnershipRequest(requestingPlayer, requestedOwner);
-        //}
-
-        public override void OnOwnershipTransferred(VRCPlayerApi player)
+        protected override void _CaptureSyncShadow()
         {
-            base.OnOwnershipTransferred(player);
-
-            if (_usingDebug) DebugLog($"Ownership transferred to {player.displayName} [{player.playerId}]");
+            _shadowHoldVideos = _syncHoldVideos;
+            _shadowLocked = _syncLocked;
+            _shadowOwnerPaused = _syncOwnerPaused;
+            _shadowOwnerPlaying = _syncOwnerPlaying;
+            _shadowPauseNetworkTime = _syncPauseNetworkTime;
+            _shadowPlaybackNumber = _syncPlaybackNumber;
+            _shadowQuestUrl = _syncQuestUrl;
+            _shadowRepeatMode = syncRepeatMode;
+            _shadowScreenFit = _syncScreenFit;
+            _shadowUrl = _syncUrl;
+            _shadowUrlSourceIndex = _syncUrlSourceIndex;
+            _shadowVideoExpectedEndTime = _syncVideoExpectedEndTime;
+            _shadowVideoNumber = _syncVideoNumber;
+            _shadowVideoPlayerId = _syncVideoPlayerId;
+            _shadowVideoPlayerName = _syncVideoPlayerName;
+            _shadowVideoSource = _syncVideoSource;
+            _shadowVideoSourceOverride = _syncVideoSourceOverride;
+            _shadowVideoStartNetworkTime = _syncVideoStartNetworkTime;
+            _shadowVideoTargetTime = _syncVideoTargetTime;
         }
 
-        public override void OnDeserialization()
+        protected override void _RestoreSyncShadow()
         {
-            if (_usingDebug) DebugLog($"Deserialize: video #{_syncVideoNumber}");
+            _syncHoldVideos = _shadowHoldVideos;
+            _syncLocked = _shadowLocked;
+            _syncOwnerPaused = _shadowOwnerPaused;
+            _syncOwnerPlaying = _shadowOwnerPlaying;
+            _syncPauseNetworkTime = _shadowPauseNetworkTime;
+            _syncPlaybackNumber = _shadowPlaybackNumber;
+            _syncQuestUrl = _shadowQuestUrl;
+            syncRepeatMode = _shadowRepeatMode;
+            _syncScreenFit = _shadowScreenFit;
+            _syncUrl = _shadowUrl;
+            _syncUrlSourceIndex = _shadowUrlSourceIndex;
+            _syncVideoExpectedEndTime = _shadowVideoExpectedEndTime;
+            _syncVideoNumber = _shadowVideoNumber;
+            _syncVideoPlayerId = _shadowVideoPlayerId;
+            _syncVideoPlayerName = _shadowVideoPlayerName;
+            _syncVideoSource = _shadowVideoSource;
+            _syncVideoSourceOverride = _shadowVideoSourceOverride;
+            _syncVideoStartNetworkTime = _shadowVideoStartNetworkTime;
+            _syncVideoTargetTime = _shadowVideoTargetTime;
+        }
+
+        protected override void _OnSyncBlocked(DeserializationResult result)
+        {
+            if (_usingDebug) _DebugLog($"Deserialize blocked: video #{_syncVideoNumber}");
+
+            _initDeserialize = true;
+        }
+
+        protected override void _OnSyncReverted(DeserializationResult result)
+        {
+            if (_usingDebug) _DebugLog($"Deserialize reverted: video #{_syncVideoNumber}");
+
+            _initDeserialize = true;
+        }
+
+        protected override void _OnSyncApplied(DeserializationResult result)
+        {
+            if (_usingDebug) _DebugLog($"Deserialize applied: video #{_syncVideoNumber}");
 
             if (Networking.IsOwner(gameObject))
             {
-                if (_usingDebug) DebugLog("But you're the owner.  This should not happen.");
+                if (_usingDebug) _DebugLog("But you're the owner.  This should not happen.");
                 return;
             }
 
@@ -1722,25 +1773,9 @@ namespace Texel
 
             if (LocalPlaybackValid)
             {
-                if (_usingDebug) DebugLog("Starting video load from sync");
+                if (_usingDebug) _DebugLog("Starting video load from sync");
                 _StartVideoLoad();
             }
-        }
-
-        public override void OnPostSerialization(SerializationResult result)
-        {
-            if (!result.success)
-            {
-                if (_usingDebug) DebugLog("Failed to sync");
-                return;
-            }
-        }
-
-        public void RequestOwnerSync()
-        {
-            if (_usingDebug) DebugLog("RequestOwnerSync");
-            if (Networking.IsOwner(gameObject))
-                RequestSerialization();
         }
 
         void Update()
@@ -1848,14 +1883,14 @@ namespace Texel
             if (Mathf.Abs(offset) < syncThreshold && target >= 0)
                 return;
 
-            if (_usingDebug) DebugLog($"Sync video (off by {offset:N3}s) to {offsetTime:N3}");
+            if (_usingDebug) _DebugLog($"Sync video (off by {offset:N3}s) to {offsetTime:N3}");
 
             // Did we get into a situation where the player can't track?
             if (current == previousCurrent)
             {
                 if (offsetTime - previousTarget > syncFrequency * .8f)
                 {
-                    if (_usingDebug) DebugLog("Video did not advance during previous sync, forcing reload");
+                    if (_usingDebug) _DebugLog("Video did not advance during previous sync, forcing reload");
                     previousTarget = 0;
 
                     _ForceResync();
@@ -1928,7 +1963,7 @@ namespace Texel
         {
             if (mode != screenFit)
             {
-                if (_usingDebug) DebugLog($"Setting screen fit to {mode}");
+                if (_usingDebug) _DebugLog($"Setting screen fit to {mode}");
                 screenFit = mode;
                 _UpdateHandlers(EVENT_VIDEO_STATE_UPDATE);
             }
@@ -2028,46 +2063,9 @@ namespace Texel
             _UpdateHandlers(EVENT_VIDEO_INFO_UPDATE);
         }
 
-        // Debug
+        public override bool UsesDebugState => true;
 
-        void DebugLog(string message)
-        {
-            if (debugLogging)
-                Debug.Log("[VideoTXL:SyncPlayer] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write("SyncPlayer", message);
-        }
-
-        void DebugError(string message, bool force = false)
-        {
-            if (debugLogging || force)
-                Debug.LogError("[VideoTXL:SyncPlayer] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write("SyncPlayer", message);
-        }
-
-        void DebugTrace(string message)
-        {
-            DebugLog(message);
-        }
-
-        public void _SetDebugState(DebugState debug)
-        {
-            if (debugState)
-            {
-                debugState._Unregister(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
-                debugState = null;
-            }
-
-            if (!debug)
-                return;
-
-            debugState = debug;
-            debugState._Register(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
-            debugState._SetContext(this, nameof(_InternalUpdateDebugState), "SyncPlayer");
-        }
-
-        public void _InternalUpdateDebugState()
+        protected override void _UpdateDebugState()
         {
             VRCPlayerApi owner = Networking.GetOwner(gameObject);
             debugState._SetValue("isQuest", IsQuest.ToString());

@@ -11,14 +11,8 @@ using VRC.Udon;
 namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-    public class UrlInfoResolver : EventBase
+    public class UrlInfoResolver : DebugEventBase
     {
-        [Tooltip("Log debug statements to a world object")]
-        [SerializeField] internal DebugLog debugLog;
-        [SerializeField] internal bool vrcLogging = false;
-        [SerializeField] internal bool eventLogging = false;
-        [SerializeField] internal bool lowLevelLogging = false;
-
         DataDictionary typeCache;
         DataDictionary infoCache;
         DataDictionary errorCache;
@@ -208,7 +202,7 @@ namespace Texel
 
         public override void OnStringLoadSuccess(IVRCStringDownload result)
         {
-            _DebugLog($"String load bytes={result.ResultBytes.Length}");
+            if (_usingDebug) _DebugLog($"String load bytes={result.ResultBytes.Length}");
             errorCache.Remove(result.Url.Get());
 
             DataDictionary info = _ParseInfo(result.Url, result.Result);
@@ -220,7 +214,7 @@ namespace Texel
 
         public override void OnStringLoadError(IVRCStringDownload result)
         {
-            _DebugError(result.Error);
+            if (_usingError) _DebugError(result.Error);
             errorCache.SetValue(result.Url.Get(), result.Error);
 
             _UpdateHandlers(EVENT_URL_ERROR, result.Url);
@@ -270,7 +264,7 @@ namespace Texel
             string formatted = _Format(url.Get(), typecode, id, title, author);
             info.SetValue("f", formatted);
 
-            _DebugLog($"Parsed {typecode} i={id}, t={title}, a={author}");
+            if (_usingDebug) _DebugLog($"Parsed {typecode} i={id}, t={title}, a={author}");
 
             return info;
         }
@@ -307,28 +301,6 @@ namespace Texel
             if (type == TYPE_YOUTUBE)
                 return "YT";
             return "";
-        }
-
-        void _DebugLog(string message)
-        {
-            if (vrcLogging)
-                Debug.Log("[VideoTXL:InfoResolver] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write("InfoResolver", message);
-        }
-
-        void _DebugError(string message, bool force = false)
-        {
-            if (vrcLogging || force)
-                Debug.LogError("[VideoTXL:InfoResolver] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write("InfoResolver", message);
-        }
-
-        void _DebugLowLevel(string message)
-        {
-            if (lowLevelLogging)
-                _DebugLog(message);
         }
     }
 }
