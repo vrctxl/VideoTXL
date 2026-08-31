@@ -3,23 +3,16 @@ using System.Runtime.CompilerServices;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.Udon;
 
 [assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
 
 namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-    public class SourceManager : EventBase
+    public class SourceManager : DebugEventBase
     {
         [SerializeField, HideInInspector] internal TXLVideoPlayer videoPlayer;
         [SerializeField] internal VideoUrlSource[] sources;
-
-        [Tooltip("Log debug statements to a world object")]
-        [SerializeField] internal DebugLog debugLog;
-        [SerializeField] internal bool vrcLogging = false;
-        [SerializeField] internal bool eventLogging = false;
-        [SerializeField] internal bool lowLevelLogging = false;
 
         private int readySourceIndex;
         private VRCUrl readyUrl;
@@ -45,14 +38,13 @@ namespace Texel
         {
             base._Init();
 
+            _SetComponentName("SourceManager", "VideoTXL");
+
             _ResetReady();
 
             sources = (VideoUrlSource[])UtilityTxl.ArrayCompact(sources);
             for (int i = 0; i < sources.Length; i++)
                 sources[i]._SetSourceManager(this, i);
-
-            if (eventLogging)
-                eventDebugLog = debugLog;
         }
 
         public void _BindVideoPlayer(TXLVideoPlayer videoPlayer) {
@@ -261,7 +253,7 @@ namespace Texel
 
             foreach (VideoUrlSource source in sources)
             {
-                _DebugLowLevel($"Source {source} valid={source.IsValid} aa={source.AutoAdvance} canMove={source._CanMoveNext()}");
+                if (_usingVerbose) _DebugVerbose($"Source {source} valid={source.IsValid} aa={source.AutoAdvance} canMove={source._CanMoveNext()}");
                 if (source._CanMoveNext() && source._MoveNext())
                     return true;
             }
@@ -287,12 +279,12 @@ namespace Texel
 
         public bool _AdvanceNext(string currentUrl = null)
         {
-            _DebugLowLevel("AdvanceNext");
+            if (_usingVerbose) _DebugVerbose("AdvanceNext");
             _ResetReady();
 
             foreach (VideoUrlSource source in sources)
             {
-                _DebugLowLevel($"Source {source} valid={source.IsValid} aa={source.AutoAdvance} canMove={source._CanMoveNext()}");
+                if (_usingVerbose) _DebugVerbose($"Source {source} valid={source.IsValid} aa={source.AutoAdvance} canMove={source._CanMoveNext()}");
                 if (!source.IsValid || !source.AutoAdvance)
                     continue;
 
@@ -306,7 +298,7 @@ namespace Texel
 
                 if (source._CanMoveNext() && source._MoveNext())
                 {
-                    _DebugLowLevel($"Advanced source {source}");
+                    if (_usingVerbose) _DebugVerbose($"Advanced source {source}");
                     return true;
                 }
             }
@@ -330,7 +322,7 @@ namespace Texel
 
         protected internal void _OnSourceInterrupt(int sourceIndex)
         {
-            _DebugLog($"OnSourceInterrupt source={sourceIndex}");
+            if (_usingDebug) _DebugLog($"OnSourceInterrupt source={sourceIndex}");
             if (sourceIndex < 0 || sourceIndex >= sources.Length)
                 return;
 
@@ -345,14 +337,14 @@ namespace Texel
 
             if (Networking.IsOwner(videoPlayer.gameObject))
             {
-                _DebugLog($"Interrupting ready source={readySourceIndex}");
+                if (_usingDebug) _DebugLog($"Interrupting ready source={readySourceIndex}");
                 _AdvanceNext(videoPlayer.currentUrl.Get());
             }
         }
 
         protected internal void _OnUrlReady(int sourceIndex)
         {
-            _DebugLog($"OnURLReady source={sourceIndex}");
+            if (_usingDebug) _DebugLog($"OnURLReady source={sourceIndex}");
             _ResetReady();
 
             if (sourceIndex < 0 || sourceIndex >= sources.Length)
@@ -383,28 +375,6 @@ namespace Texel
                     other._ResetSource();
                 }
             }
-        }
-
-        void _DebugLog(string message)
-        {
-            if (vrcLogging)
-                Debug.Log("[VideoTXL:SourceManager] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write("SourceManager", message);
-        }
-
-        void _DebugError(string message, bool force = false)
-        {
-            if (vrcLogging || force)
-                Debug.LogError("[VideoTXL:SourceManager] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write("SourceManager", message);
-        }
-
-        void _DebugLowLevel(string message)
-        {
-            if (lowLevelLogging)
-                _DebugLog(message);
         }
     }
 }

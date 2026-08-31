@@ -2,14 +2,13 @@
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Persistence;
-using VRC.SDK3.Rendering;
 using VRC.SDKBase;
 using VRC.Udon;
 
 namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-    public class AudioManager : EventBase
+    public class AudioManager : DebugEventBase
     {
         //public SyncAudioManager syncAudioManager;
         //public bool useSync = false;
@@ -31,11 +30,6 @@ namespace Texel
 
         public bool masterVolumePersistence;
         public string persistenceKey = "100";
-
-        public bool debugLogging = false;
-        public bool debugEvents = false;
-        public DebugLog debugLog;
-        public DebugState debugState;
 
         AudioChannelGroup selectedChannelGroup;
         VideoSource selectedVideoSource;
@@ -105,22 +99,23 @@ namespace Texel
 
         protected override void _Init()
         {
-            _DebugLog("Init");
+            _SetComponentName("AudioManager", "VideoTXL");
+
+            if (_usingDebug) _DebugLog("Init");
 
             if (!videoPlayer)
             {
-                _DebugError($"Audio manager has no associated video player.");
+                if (_usingDebug) _DebugError($"Audio manager has no associated video player.");
                 videoPlayer = gameObject.transform.parent.GetComponentInParent<TXLVideoPlayer>();
-                if (videoPlayer)
-                    _DebugLog($"Found video player on parent: {videoPlayer.gameObject.name}");
-                else
-                    _DebugError("Could not find parent video player.  Audio playback will not work.", true);
+
+                if (_usingDebug)
+                {
+                    if (videoPlayer)
+                        _DebugLog($"Found video player on parent: {videoPlayer.gameObject.name}");
+                    else
+                        _DebugError("Could not find parent video player.  Audio playback will not work.");
+                }
             }
-
-            _SetDebugState(debugState);
-
-            if (debugEvents)
-                eventDebugLog = debugLog;
 
             if (!Utilities.IsValid(audioControls))
                 audioControls = new Component[0];
@@ -243,7 +238,7 @@ namespace Texel
                 return;
 
             selectedChannelGroup = group;
-            _DebugLog($"Selected Audio Channel Group {group.groupName}");
+            if (_usingDebug) _DebugLog($"Selected Audio Channel Group {group.groupName}");
 
             _UpdateActiveAudioGroup();
 
@@ -763,39 +758,9 @@ namespace Texel
             _UpdateHandlers(EVENT_AUDIOLINK_CHANGED);
         }
 
-        void _DebugLog(string message)
-        {
-            if (debugLogging)
-                Debug.Log("[VideoTXL:AudioManager] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write("AudioManager", message);
-        }
+        public override bool UsesDebugState => true;
 
-        void _DebugError(string message, bool force = false)
-        {
-            if (debugLogging || force)
-                Debug.LogError("[VideoTXL:AudioManager] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write("AudioManager", message);
-        }
-
-        public void _SetDebugState(DebugState debug)
-        {
-            if (debugState)
-            {
-                debugState._Unregister(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
-                debugState = null;
-            }
-
-            if (!debug)
-                return;
-
-            debugState = debug;
-            debugState._Register(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
-            debugState._SetContext(this, nameof(_InternalUpdateDebugState), "AudioManager");
-        }
-
-        public void _InternalUpdateDebugState()
+        protected override void _UpdateDebugState()
         {
             VRCPlayerApi owner = Networking.GetOwner(gameObject);
             debugState._SetValue("muteSourceForInactiveVideo", muteSourceForInactiveVideo.ToString());

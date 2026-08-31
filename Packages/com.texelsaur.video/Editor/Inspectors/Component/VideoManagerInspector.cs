@@ -25,18 +25,12 @@ namespace Texel
         SerializedProperty youtubeFallbackUnityProperty;
         SerializedProperty youtubeFallbackLocalProperty;
 
-        SerializedProperty debugLogProperty;
-        SerializedProperty debugStateProperty;
-        SerializedProperty debugLoggingProperty;
-        SerializedProperty traceLoggingProperty;
-        SerializedProperty eventLoggingProperty;
+        DebugInspectorBlock debugBlock;
 
         DateTime lastValidate;
         bool audioValid = true;
 
         GenericMenu addMenu;
-
-        static bool expandDebug = false;
 
         private void OnEnable()
         {
@@ -53,11 +47,7 @@ namespace Texel
             youtubeFallbackUnityProperty = serializedObject.FindProperty(nameof(VideoManager.youtubeFallbackUnity));
             youtubeFallbackLocalProperty = serializedObject.FindProperty(nameof(VideoManager.youtubeFallbackLocal));
 
-            debugLogProperty = serializedObject.FindProperty(nameof(VideoManager.debugLog));
-            debugStateProperty = serializedObject.FindProperty(nameof(VideoManager.debugState));
-            debugLoggingProperty = serializedObject.FindProperty(nameof(VideoManager.debugLogging));
-            traceLoggingProperty = serializedObject.FindProperty(nameof(VideoManager.traceLogging));
-            eventLoggingProperty = serializedObject.FindProperty(nameof(VideoManager.eventLogging));
+            debugBlock = new DebugInspectorBlock(serializedObject);
 
             addMenu = new GenericMenu();
             addMenu.AddItem(new GUIContent("AVPro Video 1080p Low-Latency Source"), false, () => VideoTxlManager.AddAVProSource1080LL());
@@ -167,15 +157,7 @@ namespace Texel
             }
 
             EditorGUILayout.Space();
-            expandDebug = EditorGUILayout.Foldout(expandDebug, "Debug Options", true, boldFoldoutStyle);
-            if (expandDebug)
-            {
-                EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
-                EditorGUILayout.PropertyField(debugStateProperty, new GUIContent("Debug State", "Track periodically refreshed internal state in a world object"));
-                EditorGUILayout.PropertyField(eventLoggingProperty, new GUIContent("Include Events", "Include additional event traffic in debug log"));
-                EditorGUILayout.PropertyField(traceLoggingProperty, new GUIContent("Include Trace", "Include low-level tracing of video component calls"));
-                EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
-            }
+            debugBlock.Draw(TXLGUI.Styles.BoldFoldout);
 
             serializedObject.ApplyModifiedProperties();
         }

@@ -34,11 +34,6 @@ namespace Texel
         SerializedProperty persistenceKeyProperty;
         SerializedProperty masterVolumePersistenceProperty;
 
-        SerializedProperty debugLogProperty;
-        SerializedProperty debugStateProperty;
-        SerializedProperty debugLoggingProperty;
-        SerializedProperty debugEventsProperty;
-
         //SerializedProperty channelAudioListProperty;
         //SerializedProperty channelNameListProperty;
         //SerializedProperty channelVolumeListProperty;
@@ -53,6 +48,8 @@ namespace Texel
 
         SerializedProperty audioLinkProperty;
         SerializedProperty vrslAudioDmxRuntimeProperty;
+
+        DebugInspectorBlock debugBlock;
 
         GenericMenu addMenu;
 
@@ -99,10 +96,7 @@ namespace Texel
             audioLinkProperty = serializedObject.FindProperty(nameof(AudioManager.audioLinkSystem));
             vrslAudioDmxRuntimeProperty = serializedObject.FindProperty(nameof(AudioManager.vrslAudioDMXRuntime));
 
-            debugLogProperty = serializedObject.FindProperty(nameof(AudioManager.debugLog));
-            debugStateProperty = serializedObject.FindProperty(nameof(AudioManager.debugState));
-            debugLoggingProperty = serializedObject.FindProperty(nameof(AudioManager.debugLogging));
-            debugEventsProperty = serializedObject.FindProperty(nameof(AudioManager.debugEvents));
+            debugBlock = new DebugInspectorBlock(serializedObject);
 
             addMenu = new GenericMenu();
             addMenu.AddItem(new GUIContent("Default Profile"), false, () => VideoTxlManager.AddDefaultProfile());
@@ -294,16 +288,7 @@ namespace Texel
             }
 
             EditorGUILayout.Space();
-
-            expandDebug = EditorGUILayout.Foldout(expandDebug, "Debug Options", true, boldFoldoutStyle);
-            if (expandDebug)
-            {
-                //EditorGUILayout.LabelField("Debug Options", EditorStyles.boldLabel);
-                EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
-                EditorGUILayout.PropertyField(debugStateProperty, new GUIContent("Debug State", "Log debug statements to a world object"));
-                EditorGUILayout.PropertyField(debugEventsProperty, new GUIContent("Include Events", "Include additional event traffic in debug log"));
-                EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
-            }
+            debugBlock.Draw(TXLGUI.Styles.BoldFoldout);
 
             serializedObject.ApplyModifiedProperties();
         }

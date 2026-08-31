@@ -1,10 +1,8 @@
 ﻿
 using System;
-using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components.Video;
 using VRC.SDKBase;
-using VRC.Udon;
 using System.Text.RegularExpressions;
 using System.Runtime.CompilerServices;
 
@@ -38,7 +36,7 @@ namespace Texel
         Quest,
     }
 
-    public abstract class TXLVideoPlayer : EventBase
+    public abstract class TXLVideoPlayer : AccessEventBase
     {
         public const int EVENT_VIDEO_STATE_UPDATE = 0;
         public const int EVENT_VIDEO_TRACKING_UPDATE = 1;

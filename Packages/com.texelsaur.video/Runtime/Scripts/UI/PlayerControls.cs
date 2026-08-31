@@ -1,11 +1,11 @@
-﻿using UdonSharp;
+﻿using System;
+using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
-using VRC.SDKBase;
-using VRC.Udon;
 using VRC.SDK3.Components;
 using VRC.SDK3.Components.Video;
-using System;
+using VRC.SDKBase;
+using VRC.Udon;
 
 namespace Texel
 {
@@ -94,6 +94,8 @@ namespace Texel
         UrlEntryMode urlMode;
         //bool addToQueue = false;
         bool sourcePanelOpen = false;
+
+        int logChannel = -1;
 
         [NonSerialized]
         public VRCUrl internalArgUrl;
@@ -208,8 +210,8 @@ namespace Texel
 
                 _RegisterAudioManagerListeners();
 
-                if (videoPlayer.accessControl)
-                    videoPlayer.accessControl._Register(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateAccess));
+                if (videoPlayer.AccessControl)
+                    videoPlayer.AccessControl._Register(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateAccess));
 
                 if (videoPlayer.urlInfoResolver)
                     videoPlayer.urlInfoResolver._Register(UrlInfoResolver.EVENT_URL_INFO, this, nameof(_OnUrlInfoReady), nameof(internalArgUrl));
@@ -235,8 +237,8 @@ namespace Texel
 
                 _UnregisterAudioManagerListeners();
 
-                if (videoPlayer.accessControl)
-                    videoPlayer.accessControl._Unregister(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateAccess));
+                if (videoPlayer.AccessControl)
+                    videoPlayer.AccessControl._Unregister(AccessControl.EVENT_VALIDATE, this, nameof(_ValidateAccess));
 
                 if (videoPlayer.urlInfoResolver)
                     videoPlayer.urlInfoResolver._Unregister(UrlInfoResolver.EVENT_URL_INFO, this, nameof(_OnUrlInfoReady));
@@ -1119,7 +1121,7 @@ namespace Texel
 
         public string _MakeOwnerMessage()
         {
-            if (videoPlayer && videoPlayer.accessControl)
+            if (videoPlayer && videoPlayer.AccessControl)
                 return $"Controls locked by access control";
             if (instanceMaster == instanceOwner || instanceOwner == "")
                 return $"Controls locked to master {instanceMaster}";
@@ -1150,7 +1152,7 @@ namespace Texel
             _SetIconEnabled(masterIcon, false);
             _SetIconEnabled(whitelistIcon, false);
 
-            if (!videoPlayer || !videoPlayer.accessControl)
+            if (!videoPlayer || !videoPlayer.AccessControl)
             {
                 _SetIconEnabled(masterIcon, videoPlayer && videoPlayer._IsAdmin());
                 return;
@@ -1160,7 +1162,7 @@ namespace Texel
             if (!Utilities.IsValid(player))
                 return;
 
-            AccessControl acl = videoPlayer.accessControl;
+            AccessControl acl = videoPlayer.AccessControl;
             if (acl.allowInstanceOwner && player.isInstanceOwner)
                 _SetIconEnabled(masterIcon, true);
             else if (acl.allowMaster && player.isMaster)
@@ -1199,7 +1201,7 @@ namespace Texel
             {
                 videoPlayer = transform.parent.GetComponent<SyncPlayer>();
                 if (videoPlayer)
-                    videoPlayer.debugLog._Write("PlayerControls", "Missing syncplayer reference, found one on parent");
+                    _DebugLog("Missing syncplayer reference, found one on parent");
                 else
                     Debug.LogError("Missing syncplayer reference, also could not find one on parent!");
             }
@@ -1275,32 +1277,47 @@ namespace Texel
             if (!Utilities.IsValid(playlistText))
                 playlistText = (Text)_FindComponent("MainPanel/LowerRow/InputProgress/PlaylistText", typeof(Text));
 
-            if (!Utilities.IsValid(urlInput) && Utilities.IsValid(videoPlayer) && Utilities.IsValid(videoPlayer.debugLog))
-                videoPlayer.debugLog._Write("PlayerControls", "Could not resolve URL input component: is your VRC SDK missing VRCUrlInput?");
+            if (!Utilities.IsValid(urlInput))
+                _DebugLog("Could not resolve URL input component: is your VRC SDK missing VRCUrlInput?");
         }
 
         GameObject _FindGameObject(string path)
         {
-            if (Utilities.IsValid(videoPlayer) && Utilities.IsValid(videoPlayer.debugLog))
-                videoPlayer.debugLog._Write("PlayerControls", $"Missing UI Game Object {path}");
-
             Transform t = transform.Find(path);
             if (!Utilities.IsValid(t))
+            {
+                _DebugLog($"Missing UI Game Object {path}");
                 return null;
+            }
 
             return t.gameObject;
         }
 
         Component _FindComponent(string path, System.Type type)
         {
-            if (Utilities.IsValid(videoPlayer) && Utilities.IsValid(videoPlayer.debugLog))
-                videoPlayer.debugLog._Write("PlayerControls", $"Missing UI Component {path}:{type}");
-
             Transform t = transform.Find(path);
             if (!Utilities.IsValid(t))
+            {
+                _DebugLog($"Missing UI Component {path}:{type}");
                 return null;
+            }
 
             return t.GetComponent(type);
+        }
+
+        void _DebugLog(string message)
+        {
+            if (!videoPlayer)
+                return;
+
+            DebugLogProvider provider = videoPlayer.LogProvider;
+            if (!provider)
+                return;
+
+            if (logChannel < 0)
+                logChannel = provider._RegisterChannel("VideoTXL", "PlayerControls", null);
+
+            provider._WriteInfo(logChannel, message);
         }
     }
 }

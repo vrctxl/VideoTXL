@@ -5,7 +5,6 @@ using UnityEditor.SceneManagement;
 using UdonSharpEditor;
 using System.Collections.Generic;
 using System;
-using VRC.SDKBase;
 
 #if UNITY_2019
 using UnityEditor.Experimental.SceneManagement;
@@ -21,20 +20,15 @@ namespace Texel
         SerializedProperty sourceManagerProperty;
         SerializedProperty remapperProperty;
         SerializedProperty urlInfoResolverProperty;
-        SerializedProperty accessControlProperty;
-        SerializedProperty debugLogProperty;
-        SerializedProperty debugStageProperty;
-        SerializedProperty eventLoggingProperty;
-        SerializedProperty traceLoggingProperty;
         SerializedProperty playbackZoneProperty;
         SerializedProperty exclusionZonesProperty;
         SerializedProperty defaultLocalPlaybackEnabledProperty;
         SerializedProperty runBuildHooksProperty;
+        SerializedProperty debugStateProperty;
 
         SerializedProperty defaultUrlProperty;
         SerializedProperty defaultUrlInterruptibleProperty;
         SerializedProperty defaultLockedProperty;
-        SerializedProperty debugLoggingProperty;
         SerializedProperty loopProperty;
         SerializedProperty retryOnErrorProperty;
         SerializedProperty autoFailbackAVProProperty;
@@ -47,8 +41,38 @@ namespace Texel
         SerializedProperty defaultVideoModeProperty;
         SerializedProperty defaultScreenFitProperty;
 
-        static bool expandDebug = false;
+        AccessInspectorBlock accessBlock;
+        DebugInspectorBlock debugBlock;
+
+        //static bool expandDebug = false;
         static bool expandAdvanced = false;
+
+        static readonly GUIContent labelDefaultUrl = new GUIContent("Default URL", "Optional default URL to play on world load.  If a separate URL Source is also provided, the default URL will play first.");
+        static readonly GUIContent labelInterruptible = new GUIContent("Interruptible", "Whether the default URL playback can be interrupted by other interrupting sources, like queues.");
+        static readonly GUIContent labelSourceManager = new GUIContent("URL Source Manager", "Manager for queues, playlists, and other URL sources.");
+        static readonly GUIContent labelSourceManagerAdd = new GUIContent("+", "Create new Source Manager");
+        static readonly GUIContent labelRemapper = new GUIContent("URL Remapper", "Set of input URLs to remap to alternate URLs on a per-platform basis.");
+        static readonly GUIContent labelRemapperAdd = new GUIContent("+", "Create new URL Remapper");
+        static readonly GUIContent labelResolver = new GUIContent("URL Info Resolver", "A resolver and cache for finding additional info about a URL, like title or author.");
+        static readonly GUIContent labelResolverAdd = new GUIContent("+", "Create new URL Info Resolver");
+        static readonly GUIContent labelPlaybackEnabled = new GUIContent("Playback Enabled", "Whether or not playback is enabled for each player locally on world load.\n\nLocal playback is controllable by API and independent of playback zones.");
+        static readonly GUIContent labelPlaybackZone = new GUIContent("Playback Zone", "Optional tracked trigger zone the player must be in to sustain playback.  Disables playing video on world load if player does not start in zone.");
+        static readonly GUIContent labelPlaybackZoneAdd = new GUIContent("+", "Create new Tracked Trigger Zone");
+        static readonly GUIContent labelExclusionZones = new GUIContent("Exclusion Zones", "Optional one or more tracked tricker zones that will locally halt playback when the player enters them.");
+        static readonly GUIContent labelDefaultLocked = new GUIContent("Default Locked", "Whether player controls are locked to master and instance owner by default.");
+        static readonly GUIContent labelLoop = new GUIContent("Loop", "Automatically loop track when finished.");
+        static readonly GUIContent labelRetry = new GUIContent("Retry on Error", "Whether to keep playing the same URL if an error occurs.");
+        static readonly GUIContent labelFailover = new GUIContent("Auto Failover to AVPro", "If AVPro component is available and enabled, automatically fail back to AVPro when auto mode failed under certain conditions to play in video mode.");
+        static readonly GUIContent labelHoldVideos = new GUIContent("Hold Loaded Videos", "Preload videos, but do not start playing them until prompted by an external signal.");
+        static readonly GUIContent labelDefaultSource = new GUIContent("Default Video Source", "The video source that should be active by default, or auto to let the player determine on a per-URL basis.");
+        static readonly GUIContent labelDefaultFit = new GUIContent("Default Screen Fit", "How content not matching a screen's aspect ratio should be fit by default.  Affects the output CRT and materials with the screen fit property mapped.");
+        static readonly GUIContent labelBuildHooks = new GUIContent("Run Build Hooks", "Checks video player object hierarchy and fixes any component that's internally out of sync at build time.");
+        static readonly GUIContent labelSyncFrequency = new GUIContent("Sync Frequency", "How often to check if video playback has fallen out of sync.");
+        static readonly GUIContent labelSyncThreshold = new GUIContent("Sync Threshold", "How far video playback must have fallen out of sync to perform a correction.");
+        static readonly GUIContent labelAutoAVSync = new GUIContent("Auto Internal AV Sync", "Experimental.  Video playback will periodically resync audio and video.  May cause stuttering or temporary playback failure.");
+        static readonly GUIContent labelAdvanced = new GUIContent("Advanced Options");
+
+        static readonly string[] videoSourceNames = new string[] { "Auto", "AVPro", "Unity Video" };
 
         DateTime lastValidate;
         List<VideoManager> cachedVideoManagers;
@@ -61,20 +85,15 @@ namespace Texel
             sourceManagerProperty = serializedObject.FindProperty(nameof(SyncPlayer.sourceManager));
             remapperProperty = serializedObject.FindProperty(nameof(SyncPlayer.urlRemapper));
             urlInfoResolverProperty = serializedObject.FindProperty(nameof(SyncPlayer.urlInfoResolver));
-            accessControlProperty = serializedObject.FindProperty(nameof(SyncPlayer.accessControl));
-            debugLogProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugLog));
-            debugStageProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugState));
-            eventLoggingProperty = serializedObject.FindProperty(nameof(SyncPlayer.eventLogging));
-            traceLoggingProperty = serializedObject.FindProperty(nameof(SyncPlayer.traceLogging));
             playbackZoneProperty = serializedObject.FindProperty(nameof(SyncPlayer.trackedZoneTrigger));
             exclusionZonesProperty = serializedObject.FindProperty(nameof(SyncPlayer.exclusionZones));
             defaultLocalPlaybackEnabledProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultLocalPlaybackEnabled));
             runBuildHooksProperty = serializedObject.FindProperty(nameof(SyncPlayer.runBuildHooks));
+            debugStateProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugState));
 
             defaultUrlProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultUrl));
             defaultUrlInterruptibleProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultUrlInterruptible));
             defaultLockedProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultLocked));
-            debugLoggingProperty = serializedObject.FindProperty(nameof(SyncPlayer.debugLogging));
             loopProperty = serializedObject.FindProperty(nameof(SyncPlayer.loop));
             retryOnErrorProperty = serializedObject.FindProperty(nameof(SyncPlayer.retryOnError));
             autoFailbackAVProProperty = serializedObject.FindProperty(nameof(SyncPlayer.autoFailbackToAVPro));
@@ -86,6 +105,11 @@ namespace Texel
 
             defaultVideoModeProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultVideoSource));
             defaultScreenFitProperty = serializedObject.FindProperty(nameof(SyncPlayer.defaultScreenFit));
+
+            accessBlock = new AccessInspectorBlock(serializedObject, AccessBlockOptions.Synced);
+            debugBlock = new DebugInspectorBlock(serializedObject);
+
+            accessBlock.ContributeDebugRows(debugBlock);
 
             // Automatically generate resources and update components when prefab is dropped into the scene
             // The hidden prefabInitizlied property is set false on the shipped video player variants
@@ -105,9 +129,6 @@ namespace Texel
             serializedObject.Update();
             if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
                 return;
-
-            GUIStyle boldFoldoutStyle = new GUIStyle(EditorStyles.foldout);
-            boldFoldoutStyle.fontStyle = FontStyle.Bold;
 
             SyncPlayer videoPlayer = (SyncPlayer)serializedObject.targetObject;
 
@@ -148,49 +169,46 @@ namespace Texel
 
             EditorGUILayout.LabelField("URLs & URL Sources", EditorStyles.boldLabel);
 
-            EditorGUILayout.PropertyField(defaultUrlProperty, new GUIContent("Default URL", "Optional default URL to play on world load.  If a separate URL Source is also provided, the default URL will play first."));
+            EditorGUILayout.PropertyField(defaultUrlProperty, labelDefaultUrl);
             if (videoPlayer.defaultUrl != null && videoPlayer.defaultUrl.Get() != "")
             {
                 EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(defaultUrlInterruptibleProperty, new GUIContent("Interruptible", "Whether the default URL playback can be interrupted by other interrupting sources, like queues."));
+                EditorGUILayout.PropertyField(defaultUrlInterruptibleProperty, labelInterruptible);
                 EditorGUI.indentLevel--;
             }
 
-            if (TXLGUI.DrawObjectFieldWithAdd(sourceManagerProperty, new GUIContent("URL Source Manager", "Manager for queues, playlists, and other URL sources."), new GUIContent("+", "Create new Source Manager")))
+            if (TXLGUI.DrawObjectFieldWithAdd(sourceManagerProperty, labelSourceManager, labelSourceManagerAdd))
                 VideoTxlManager.AddSourceManagerToScene(true);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Optional Components", EditorStyles.boldLabel);
 
-            if (TXLGUI.DrawObjectFieldWithAdd(remapperProperty, new GUIContent("URL Remapper", "Set of input URLs to remap to alternate URLs on a per-platform basis."), new GUIContent("+", "Create new URL Remapper")))
+            if (TXLGUI.DrawObjectFieldWithAdd(remapperProperty, labelRemapper, labelRemapperAdd))
                 VideoTxlManager.AddUrlRemapperToScene(true);
-            if (TXLGUI.DrawObjectFieldWithAdd(urlInfoResolverProperty, new GUIContent("URL Info Resolver", "A resolver and cache for finding additional info about a URL, like title or author."), new GUIContent("+", "Create new URL Info Resolver")))
+            if (TXLGUI.DrawObjectFieldWithAdd(urlInfoResolverProperty, labelResolver, labelResolverAdd))
                 VideoTxlManager.AddUrlInfoResolverToScene(true);
-            if (TXLGUI.DrawObjectFieldWithAdd(accessControlProperty, new GUIContent("Access Control", "Control access to player controls based on player type or whitelist."), new GUIContent("+", "Create new Access Control")))
-                VideoTxlManager.AddAccessControlToScene(true);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Local Playback Options", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(defaultLocalPlaybackEnabledProperty, new GUIContent("Playback Enabled", "Whether or not playback is enabled for each player locally on world load.\n\nLocal playback is controllable by API and independent of playback zones."));
-            if (TXLGUI.DrawObjectFieldWithAdd(playbackZoneProperty, new GUIContent("Playback Zone", "Optional tracked trigger zone the player must be in to sustain playback.  Disables playing video on world load if player does not start in zone."), new GUIContent("+", "Create new Tracked Trigger Zone")))
+            EditorGUILayout.PropertyField(defaultLocalPlaybackEnabledProperty, labelPlaybackEnabled);
+            if (TXLGUI.DrawObjectFieldWithAdd(playbackZoneProperty, labelPlaybackZone, labelPlaybackZoneAdd))
                 VideoTxlManager.AddSyncPlaybackZoneToScene(true);
-            EditorGUILayout.PropertyField(exclusionZonesProperty, new GUIContent("Exclusion Zones", "Optional one or more tracked tricker zones that will locally halt playback when the player enters them."));
+            EditorGUILayout.PropertyField(exclusionZonesProperty, labelExclusionZones);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Default Options", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(defaultLockedProperty, new GUIContent("Default Locked", "Whether player controls are locked to master and instance owner by default."));
-            EditorGUILayout.PropertyField(loopProperty, new GUIContent("Loop", "Automatically loop track when finished."));
-            EditorGUILayout.PropertyField(retryOnErrorProperty, new GUIContent("Retry on Error", "Whether to keep playing the same URL if an error occurs."));
-            EditorGUILayout.PropertyField(autoFailbackAVProProperty, new GUIContent("Auto Failover to AVPro", "If AVPro component is available and enabled, automatically fail back to AVPro when auto mode failed under certain conditions to play in video mode."));
-            EditorGUILayout.PropertyField(holdLoadedVideosProperty, new GUIContent("Hold Loaded Videos", "Preload videos, but do not start playing them until prompted by an external signal."));
+            EditorGUILayout.PropertyField(defaultLockedProperty, labelDefaultLocked);
+            EditorGUILayout.PropertyField(loopProperty, labelLoop);
+            EditorGUILayout.PropertyField(retryOnErrorProperty, labelRetry);
+            EditorGUILayout.PropertyField(autoFailbackAVProProperty, labelFailover);
+            EditorGUILayout.PropertyField(holdLoadedVideosProperty, labelHoldVideos);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Video Sources", EditorStyles.boldLabel);
 
             EditorGUILayout.Space();
-            GUIContent desc = new GUIContent("Default Video Source", "The video source that should be active by default, or auto to let the player determine on a per-URL basis.");
-            defaultVideoModeProperty.intValue = EditorGUILayout.Popup(desc, defaultVideoModeProperty.intValue, new string[] { "Auto", "AVPro", "Unity Video" });
-            EditorGUILayout.PropertyField(defaultScreenFitProperty, new GUIContent("Default Screen Fit", "How content not matching a screen's aspect ratio should be fit by default.  Affects the output CRT and materials with the screen fit property mapped."));
+            defaultVideoModeProperty.intValue = EditorGUILayout.Popup(labelDefaultSource, defaultVideoModeProperty.intValue, videoSourceNames);
+            EditorGUILayout.PropertyField(defaultScreenFitProperty, labelDefaultFit);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Update", EditorStyles.boldLabel);
@@ -198,27 +216,22 @@ namespace Texel
                 VideoComponentUpdater.UpdateComponents((TXLVideoPlayer)serializedObject.targetObject);
 
             EditorGUILayout.Space();
-            expandAdvanced = EditorGUILayout.Foldout(expandAdvanced, "Advanced Options", true, boldFoldoutStyle);
+            expandAdvanced = EditorGUILayout.Foldout(expandAdvanced, labelAdvanced, true, TXLGUI.Styles.BoldFoldout);
             if (expandAdvanced)
             {
-                EditorGUILayout.PropertyField(runBuildHooksProperty, new GUIContent("Run Build Hooks", "Checks video player object hierarchy and fixes any component that's internally out of sync at build time."));
+                EditorGUILayout.PropertyField(runBuildHooksProperty, labelBuildHooks);
 
                 EditorGUILayout.Space();
-                EditorGUILayout.PropertyField(syncFrequencyProperty, new GUIContent("Sync Frequency", "How often to check if video playback has fallen out of sync."));
-                EditorGUILayout.PropertyField(syncThresholdProperty, new GUIContent("Sync Threshold", "How far video playback must have fallen out of sync to perform a correction."));
-                EditorGUILayout.PropertyField(autoAVSyncProperty, new GUIContent("Auto Internal AV Sync", "Experimental.  Video playback will periodically resync audio and video.  May cause stuttering or temporary playback failure."));
+                EditorGUILayout.PropertyField(syncFrequencyProperty, labelSyncFrequency);
+                EditorGUILayout.PropertyField(syncThresholdProperty, labelSyncThreshold);
+                EditorGUILayout.PropertyField(autoAVSyncProperty, labelAutoAVSync);
             }
 
             EditorGUILayout.Space();
-            expandDebug = EditorGUILayout.Foldout(expandDebug, "Debug Options", true, boldFoldoutStyle);
-            if (expandDebug)
-            {
-                EditorGUILayout.PropertyField(debugLogProperty, new GUIContent("Debug Log", "Log debug statements to a world object"));
-                EditorGUILayout.PropertyField(debugStageProperty, new GUIContent("Debug State", "Log debug statements to a world object"));
-                EditorGUILayout.PropertyField(eventLoggingProperty, new GUIContent("Include Events", "Include additional event traffic in debug log"));
-                EditorGUILayout.PropertyField(traceLoggingProperty, new GUIContent("Include Trace", "Include significantly more function call statements in debug log"));
-                EditorGUILayout.PropertyField(debugLoggingProperty, new GUIContent("VRC Logging", "Write out video player events to VRChat log."));
-            }
+            accessBlock.Draw(TXLGUI.Styles.BoldFoldout);
+
+            EditorGUILayout.Space();
+            debugBlock.Draw(TXLGUI.Styles.BoldFoldout);
 
             if (EditorGUI.EndChangeCheck())
                 serializedObject.ApplyModifiedProperties();

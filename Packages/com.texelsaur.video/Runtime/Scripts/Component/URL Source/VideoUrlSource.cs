@@ -1,11 +1,9 @@
-﻿using Newtonsoft.Json.Serialization;
+﻿
 using System;
 using System.Runtime.CompilerServices;
-using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components.Video;
 using VRC.SDKBase;
-using VRC.Udon;
 
 [assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
 
@@ -33,7 +31,7 @@ namespace Texel
         Logo,
     }
 
-    public abstract class VideoUrlSource : EventBase
+    public abstract class VideoUrlSource : DebugEventBase
     {
         public const int EVENT_BIND_VIDEOPLAYER = 0;
         public const int EVENT_OPTION_CHANGE = 1;

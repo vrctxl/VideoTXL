@@ -36,17 +36,10 @@ namespace Texel
     }
 
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-    public class ScreenManager : EventBase
+    public class ScreenManager : DebugEventBase
     {
         [Tooltip("A proxy for dispatching video-related events to this object")]
         [SerializeField] internal TXLVideoPlayer videoPlayer;
-
-        [Tooltip("Log debug statements to a world object")]
-        [SerializeField] internal DebugLog debugLog;
-        [SerializeField] internal DebugState debugState;
-        [SerializeField] internal bool vrcLogging = false;
-        [SerializeField] internal bool eventLogging = false;
-        [SerializeField] internal bool lowLevelLogging = false;
 
         [Tooltip("Prevent screen state from cycling between loading and error placeholders.")]
         [SerializeField] internal bool latchErrorState = true;
@@ -208,7 +201,6 @@ namespace Texel
         float currentAspectRatio;
         bool currentValid = false;
         Vector2Int currentRes;
-        
 
         int globalTexPropertyId = -1;
 
@@ -236,16 +228,17 @@ namespace Texel
 
         protected override void _Init()
         {
-            _DebugLog("Init");
+            _SetComponentName("ScreenManager", "VideoTXL");
+
+            if (_usingDebug) _DebugLog("Init");
 
             if (!videoPlayer)
             {
-                //_DebugError($"Screen manager has no associated video player.");
                 videoPlayer = gameObject.transform.parent.GetComponentInParent<TXLVideoPlayer>();
                 if (videoPlayer)
-                    _DebugLog($"Found video player on parent: {videoPlayer.gameObject.name}");
+                    if (_usingDebug) _DebugLog($"Found video player on parent: {videoPlayer.gameObject.name}");
                 else
-                    _DebugError("Could not find parent video player.  Video playback will not work.", true);
+                    if (_usingError) _DebugError("Could not find parent video player.  Video playback will not work.");
             }
 
             block = new MaterialPropertyBlock();
@@ -310,12 +303,6 @@ namespace Texel
                     imageDownloader.DownloadImage(downloadLogoImageUrl, null, (IUdonEventReceiver)this, info);
                 }
             }
-
-            if (Utilities.IsValid(debugState))
-                _SetDebugState(debugState);
-
-            if (eventLogging)
-                eventDebugLog = debugLog;
         }
 
         protected override void _PostInit()
@@ -594,7 +581,7 @@ namespace Texel
 
         public void _InternalOnVideoStateUpdate()
         {
-            _DebugLowLevel("Event OnVideoStateUpdate");
+            if (_usingVerbose) _DebugVerbose("Event OnVideoStateUpdate");
 
             if (!videoPlayer)
             {
@@ -626,7 +613,7 @@ namespace Texel
 
         public void _InternalOnSourceChanged()
         {
-            _DebugLowLevel("Event OnSourceChanged");
+            if (_usingVerbose) _DebugVerbose("Event OnSourceChanged");
 
             if (videoPlayer && videoPlayer.VideoManager)
             {
@@ -691,7 +678,7 @@ namespace Texel
 
         void _UpdateScreenMaterial(int screenMode)
         {
-            _DebugLowLevel($"Update screen material: mode={screenMode}");
+            if (_usingVerbose) _DebugVerbose($"Update screen material: mode={screenMode}");
 
             int fit = _VideoScreenFit();
             if (_screenMode == screenMode && _screenFit == fit)
@@ -802,7 +789,7 @@ namespace Texel
             }
             else
             {
-                _DebugLog("Capture valid");
+                if (_usingDebug) _DebugLog("Capture valid");
                 _UpdateHandlers(EVENT_CAPTURE_VALID);
 
                 if (monitorCaptureSource)
@@ -847,7 +834,7 @@ namespace Texel
             bool textureChanged = _ValidateCapture();
             bool prevValid = currentValid;
             currentValid = Utilities.IsValid(validatedTexture);
-            _DebugLowLevel($"Check Update Screen Material: valid={currentValid}");
+            if (_usingVerbose) _DebugVerbose($"Check Update Screen Material: valid={currentValid}");
 
             int screenIndex = _CalculateScreenIndex(currentValid);
 
@@ -880,7 +867,7 @@ namespace Texel
             {
                 if (!prevValid)
                 {
-                    _DebugLog("Capture valid");
+                    if (_usingDebug) _DebugLog("Capture valid");
                     _UpdateHandlers(EVENT_CAPTURE_VALID);
                 }
                 if (monitorCaptureSource)
@@ -1079,7 +1066,7 @@ namespace Texel
         {
             if (!Utilities.IsValid(captureRenderer))
             {
-                _DebugLowLevel("No valid capture renderer");
+                if (_usingVerbose) _DebugVerbose("No valid capture renderer");
                 return false;
             }
 
@@ -1096,7 +1083,7 @@ namespace Texel
                     return _UpdateValidatedTexture(null);
 
                 if (!currentValid)
-                    _DebugLog($"Resolution {tex.width} x {tex.height}");
+                    if (_usingDebug) _DebugLog($"Resolution {tex.width} x {tex.height}");
 
                 return _UpdateValidatedTexture(tex);
             }
@@ -1111,12 +1098,12 @@ namespace Texel
                     return _UpdateValidatedTexture(null);
 
                 if (!currentValid)
-                    _DebugLog($"Resolution {tex.width} x {tex.height}");
+                    if (_usingDebug) _DebugLog($"Resolution {tex.width} x {tex.height}");
 
                 return _UpdateValidatedTexture(tex);
             }
 
-            _DebugLowLevel("No valid screen source selected");
+            if (_usingVerbose) _DebugVerbose("No valid screen source selected");
 
             return _UpdateValidatedTexture(null);
         }
@@ -1774,7 +1761,7 @@ namespace Texel
                 {
                     vrslBuffer = new RenderTexture(vrslDmxRT.descriptor);
                     vrslBuffer.Create();
-                    _DebugLog($"Initialized VRSL buffer {vrslBuffer.width}x{vrslBuffer.height}");
+                    if (_usingDebug) _DebugLog($"Initialized VRSL buffer {vrslBuffer.width}x{vrslBuffer.height}");
                 }
 
                 if (vrslBlitMat)
@@ -1789,7 +1776,7 @@ namespace Texel
                 {
                     vrslBuffer.Release();
                     vrslBuffer = null;
-                    _DebugLog("Released VRSL buffer");
+                    if (_usingDebug) _DebugLog("Released VRSL buffer");
                 }
 
                 if (vrslBlitMat)
@@ -1834,45 +1821,9 @@ namespace Texel
 
         #region Debug
 
-        void _DebugLog(string message)
-        {
-            if (vrcLogging)
-                Debug.Log("[VideoTXL:ScreenManager] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write("ScreenManager", message);
-        }
+        public override bool UsesDebugState => true;
 
-        void _DebugError(string message, bool force = false)
-        {
-            if (vrcLogging || force)
-                Debug.LogError("[VideoTXL:ScreenManager] " + message);
-            if (Utilities.IsValid(debugLog))
-                debugLog._Write("ScreenManager", message);
-        }
-
-        void _DebugLowLevel(string message)
-        {
-            if (lowLevelLogging)
-                _DebugLog(message);
-        }
-
-        public void _SetDebugState(DebugState debug)
-        {
-            if (debugState)
-            {
-                debugState._Unregister(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
-                debugState = null;
-            }
-
-            if (!debug)
-                return;
-
-            debugState = debug;
-            debugState._Register(DebugState.EVENT_UPDATE, this, nameof(_InternalUpdateDebugState));
-            debugState._SetContext(this, nameof(_InternalUpdateDebugState), "ScreenManager");
-        }
-
-        public void _InternalUpdateDebugState()
+        protected override void _UpdateDebugState()
         {
             VRCPlayerApi owner = Networking.GetOwner(gameObject);
             debugState._SetValue("videoPlayer", videoPlayer ? videoPlayer.ToString() : "--");
