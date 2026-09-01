@@ -133,6 +133,7 @@ namespace Texel
         bool _inExclusionZone = false;
         bool _localEnabled = true;
         bool _initDeserialize = false;
+        bool _internalLoop = false;
 
         float localOffset = 0f;
 
@@ -328,10 +329,8 @@ namespace Texel
 
             if (videoMux)
             {
-                if (!enableLoop)
-                    videoMux._VideoSetLoop(false);
-                else if (enableLoop && videoMux.ActiveSourceType == VideoSource.VIDEO_SOURCE_UNITY)
-                    videoMux._VideoSetLoop(true);
+                _internalLoop = enableLoop && videoMux.ActiveSourceType == VideoSource.VIDEO_SOURCE_UNITY;
+                videoMux._VideoSetLoop(_internalLoop);
             }
         }
 
@@ -1564,6 +1563,8 @@ namespace Texel
                 urlRemapper._SetVideoSource(videoMux.ActiveSource);
 
             playerSource = (short)videoMux.ActiveSourceType;
+
+            _UpdateVideoManagerLoop();
             _UpdateHandlers(EVENT_VIDEO_SOURCE_CHANGE);
 
             if (!_suppressSourceUpdate && LocalPlaybackValid)
@@ -1651,6 +1652,8 @@ namespace Texel
 
             return true;
         }
+
+        public override bool SupportsStrictSync => true;
 
         protected override void _CaptureSyncShadow()
         {
@@ -1927,7 +1930,11 @@ namespace Texel
             if (_syncOwnerPaused)
                 startTime += serverTime - _syncPauseNetworkTime;
 
-            return Mathf.Clamp(serverTime - startTime + offset, 0f, duration);
+            float elapsed = serverTime - startTime + offset;
+            if (_internalLoop && seekableSource && duration > 0 && elapsed > duration)
+                elapsed = Mathf.Repeat(elapsed, duration);
+
+            return Mathf.Clamp(elapsed, 0f, duration);
         }
 
         public void _ForceResync()
@@ -2063,7 +2070,7 @@ namespace Texel
             _UpdateHandlers(EVENT_VIDEO_INFO_UPDATE);
         }
 
-        public override bool UsesDebugState => true;
+        public override bool SupportsDebugState => true;
 
         protected override void _UpdateDebugState()
         {

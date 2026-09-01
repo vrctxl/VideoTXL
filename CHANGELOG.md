@@ -1,6 +1,10 @@
 # Changelog
 
-## [2.6.0-beta.1] - 07-20-26
+## [2.6.0-beta.2] - 09-01-26
+- Requirse CommonTXL 2.1.1+
+- Fixed video looping in both Unity and AVPro modes
+
+## [2.6.0-beta.1] - 08-31-26
 - Requires CommonTXL 2.1.0+
 - BREAKING: Any debug log or debug state objects on components have probably been unassigned
 - SyncPlayer now extends from AccessEventBase with some additinal security checks
