@@ -758,7 +758,7 @@ namespace Texel
             _UpdateHandlers(EVENT_AUDIOLINK_CHANGED);
         }
 
-        public override bool UsesDebugState => true;
+        public override bool SupportsDebugState => true;
 
         protected override void _UpdateDebugState()
         {

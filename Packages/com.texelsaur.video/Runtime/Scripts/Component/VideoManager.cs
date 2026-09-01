@@ -844,7 +844,7 @@ namespace Texel
             _DebugLogSource(source, message, DebugLogLevel.Trace);
         }
 
-        public override bool UsesDebugState => true;
+        public override bool SupportsDebugState => true;
 
         protected override void _UpdateDebugState()
         {
